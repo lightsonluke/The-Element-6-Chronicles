@@ -1,18 +1,13 @@
-# Final build-safe replacement files
+# Complete Supabase account and cloud-save update
 
-1. Download the `Element6Chronicles-FINAL-build-safe-replacements.zip` file.
-2. Open your existing game project folder (the one connected to GitHub).
-3. Drag everything in this folder into that project folder. Choose **Replace**
-   whenever your computer asks.
-4. Keep the `public` folder structure: the city image must end up at
-   `public/assets/split-city-background.png`.
-5. Commit and push the changed files to GitHub. GitHub Pages will deploy them.
+Use this pack instead of every previous Supabase ZIP.
 
-`LANShapeshiftSelect.jsx` is new: add it; do not look for an old version.
+1. Upload and replace every file in this folder to the matching place in your
+   GitHub repository. Keep `.github/workflows/deploy.yml` in that exact nested
+   folder path.
+2. In Supabase SQL Editor, run `Supabase-cloud-save-setup.sql` once.
+3. Wait for the GitHub Actions deployment to finish.
+4. Open the game, then Settings -> Account & Cloud Saves, and create an account.
 
-This pack restores incomplete files from the Base44 export and fixes every
-source-tree import found in the merged files. Use this pack instead of any
-earlier one-file or replacement ZIP.
-
-Music is ready for local files, but no MP3s are inside this replacement pack.
-Put only music you have permission to use into `public/audio/` later.
+The included `package.json` and workflow install the Supabase JavaScript package
+before building. This prevents the missing-package build error.
