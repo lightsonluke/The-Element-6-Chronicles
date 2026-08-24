@@ -1,0 +1,14 @@
+{
+  "name": "The Element 6 — Heroes of Color",
+  "short_name": "Element 6",
+  "description": "A 2D platform fighter where every character wields a unique elemental power. Battle, soccer, story, and online modes.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#06040f",
+  "theme_color": "#7744FF",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

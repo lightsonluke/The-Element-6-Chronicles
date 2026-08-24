@@ -1,0 +1,69 @@
+{
+  "name": "Flyer",
+  "type": "object",
+  "properties": {
+    "owner_user_id": {
+      "type": "string"
+    },
+    "owner_username": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Looking for Players",
+        "Tournament",
+        "Clan Recruitment",
+        "Community Event",
+        "Trading",
+        "Stage Promotion",
+        "Creator Campaign Promotion",
+        "General"
+      ],
+      "default": "General"
+    },
+    "likes": {
+      "type": "number",
+      "default": 0
+    },
+    "liked_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "views": {
+      "type": "number",
+      "default": 0
+    },
+    "reported_count": {
+      "type": "number",
+      "default": 0
+    },
+    "reporters": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "hidden": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "owner_user_id",
+    "title",
+    "body"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

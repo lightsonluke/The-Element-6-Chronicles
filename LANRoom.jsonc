@@ -1,0 +1,75 @@
+{
+  "name": "LANRoom",
+  "type": "object",
+  "properties": {
+    "room_code": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "connected",
+        "closed"
+      ],
+      "default": "open"
+    },
+    "host_user_id": {
+      "type": "string"
+    },
+    "host_name": {
+      "type": "string"
+    },
+    "guest_user_id": {
+      "type": "string"
+    },
+    "guest_name": {
+      "type": "string"
+    },
+    "game_mode": {
+      "type": "string",
+      "default": "fight"
+    },
+    "host_char": {
+      "type": "string"
+    },
+    "guest_char": {
+      "type": "string"
+    },
+    "host_element": {
+      "type": "string",
+      "default": "basic"
+    },
+    "guest_element": {
+      "type": "string",
+      "default": "basic"
+    },
+    "host_sdp": {
+      "type": "string"
+    },
+    "guest_sdp": {
+      "type": "string"
+    },
+    "host_ice": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "guest_ice": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "room_code",
+    "status",
+    "host_user_id"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

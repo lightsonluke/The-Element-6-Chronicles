@@ -1,0 +1,54 @@
+{
+  "name": "HonoredBotMatch",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "username": {
+      "type": "string"
+    },
+    "char_id": {
+      "type": "string"
+    },
+    "char_name": {
+      "type": "string"
+    },
+    "bot_char_id": {
+      "type": "string"
+    },
+    "bot_char_name": {
+      "type": "string"
+    },
+    "winner": {
+      "type": "string",
+      "enum": [
+        "player",
+        "bot"
+      ],
+      "default": "bot"
+    },
+    "player_stocks": {
+      "type": "number",
+      "default": 0
+    },
+    "bot_stocks": {
+      "type": "number",
+      "default": 0
+    },
+    "match_duration_seconds": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "user_id",
+    "username",
+    "char_id",
+    "winner"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

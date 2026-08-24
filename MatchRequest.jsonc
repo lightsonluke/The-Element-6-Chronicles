@@ -1,0 +1,48 @@
+{
+  "name": "MatchRequest",
+  "type": "object",
+  "properties": {
+    "from_user_id": {
+      "type": "string"
+    },
+    "to_user_id": {
+      "type": "string"
+    },
+    "from_username": {
+      "type": "string"
+    },
+    "to_username": {
+      "type": "string"
+    },
+    "sport": {
+      "type": "string",
+      "enum": [
+        "fight",
+        "soccer",
+        "volleyball",
+        "1v1"
+      ],
+      "default": "fight"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "declined",
+        "expired"
+      ],
+      "default": "pending"
+    }
+  },
+  "required": [
+    "from_user_id",
+    "to_user_id",
+    "sport",
+    "status"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

@@ -1,0 +1,180 @@
+{
+  "name": "LeaderboardEntry",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "user_name": {
+      "type": "string"
+    },
+    "total_xp": {
+      "type": "number",
+      "default": 0
+    },
+    "soccer_xp": {
+      "type": "number",
+      "default": 0
+    },
+    "combat_xp": {
+      "type": "number",
+      "default": 0
+    },
+    "baseball_xp": {
+      "type": "number",
+      "default": 0
+    },
+    "volleyball_xp": {
+      "type": "number",
+      "default": 0
+    },
+    "tennis_xp": {
+      "type": "number",
+      "default": 0
+    },
+    "track_xp": {
+      "type": "number",
+      "default": 0
+    },
+    "basketball_xp": {
+      "type": "number",
+      "default": 0
+    },
+    "dodgeball_xp": {
+      "type": "number",
+      "default": 0
+    },
+    "wins": {
+      "type": "number",
+      "default": 0
+    },
+    "losses": {
+      "type": "number",
+      "default": 0
+    },
+    "soccer_goals": {
+      "type": "number",
+      "default": 0
+    },
+    "soccer_saves": {
+      "type": "number",
+      "default": 0
+    },
+    "soccer_shots": {
+      "type": "number",
+      "default": 0
+    },
+    "soccer_shots_on_target": {
+      "type": "number",
+      "default": 0
+    },
+    "soccer_count": {
+      "type": "number",
+      "default": 0
+    },
+    "combat_kills": {
+      "type": "number",
+      "default": 0
+    },
+    "combat_deaths": {
+      "type": "number",
+      "default": 0
+    },
+    "fight_count": {
+      "type": "number",
+      "default": 0
+    },
+    "baseball_count": {
+      "type": "number",
+      "default": 0
+    },
+    "baseball_runs": {
+      "type": "number",
+      "default": 0
+    },
+    "baseball_hits": {
+      "type": "number",
+      "default": 0
+    },
+    "volleyball_count": {
+      "type": "number",
+      "default": 0
+    },
+    "volleyball_spikes": {
+      "type": "number",
+      "default": 0
+    },
+    "volleyball_digs": {
+      "type": "number",
+      "default": 0
+    },
+    "tennis_count": {
+      "type": "number",
+      "default": 0
+    },
+    "tennis_points": {
+      "type": "number",
+      "default": 0
+    },
+    "tennis_aces": {
+      "type": "number",
+      "default": 0
+    },
+    "track_count": {
+      "type": "number",
+      "default": 0
+    },
+    "track_best_time": {
+      "type": "number",
+      "default": 0
+    },
+    "basketball_count": {
+      "type": "number",
+      "default": 0
+    },
+    "basketball_points": {
+      "type": "number",
+      "default": 0
+    },
+    "basketball_assists": {
+      "type": "number",
+      "default": 0
+    },
+    "basketball_steals": {
+      "type": "number",
+      "default": 0
+    },
+    "basketball_rebounds": {
+      "type": "number",
+      "default": 0
+    },
+    "dodgeball_count": {
+      "type": "number",
+      "default": 0
+    },
+    "dodgeball_hits": {
+      "type": "number",
+      "default": 0
+    },
+    "dodgeball_throws": {
+      "type": "number",
+      "default": 0
+    },
+    "dodgeball_super_throws": {
+      "type": "number",
+      "default": 0
+    },
+    "dodgeball_dodges": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "user_id",
+    "user_name"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}
