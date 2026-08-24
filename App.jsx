@@ -1,7 +1,7 @@
 import { Toaster } from "./toaster.jsx"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from './query-client.js'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { HashRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './PageNotFound.jsx';
 import { AuthProvider, useAuth } from './AuthContext.jsx';
 import UserNotRegisteredError from './UserNotRegisteredError.jsx';
