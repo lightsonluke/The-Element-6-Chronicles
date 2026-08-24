@@ -1,0 +1,57 @@
+{
+  "name": "TradeGift",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "gift",
+        "trade_request",
+        "trade_completed"
+      ],
+      "default": "gift"
+    },
+    "from_user_id": {
+      "type": "string"
+    },
+    "to_user_id": {
+      "type": "string"
+    },
+    "from_username": {
+      "type": "string"
+    },
+    "to_username": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "declined",
+        "completed",
+        "expired"
+      ],
+      "default": "pending"
+    },
+    "give": {
+      "type": "object"
+    },
+    "request": {
+      "type": "object"
+    },
+    "room_code": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "type",
+    "from_user_id",
+    "to_user_id",
+    "status"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

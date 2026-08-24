@@ -1,0 +1,44 @@
+{
+  "name": "Subscription",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "battle_pass_plus"
+      ],
+      "default": "battle_pass_plus"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "cancelled",
+        "expired",
+        "past_due"
+      ],
+      "default": "active"
+    },
+    "stripe_subscription_id": {
+      "type": "string"
+    },
+    "stripe_customer_id": {
+      "type": "string"
+    },
+    "current_period_end": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "type",
+    "status"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

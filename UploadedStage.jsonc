@@ -1,0 +1,76 @@
+{
+  "name": "UploadedStage",
+  "type": "object",
+  "properties": {
+    "owner_user_id": {
+      "type": "string"
+    },
+    "owner_username": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "emoji": {
+      "type": "string",
+      "default": "\ud83c\udfa8"
+    },
+    "backdrop": {
+      "type": "string",
+      "default": "city"
+    },
+    "stage_data": {
+      "type": "object"
+    },
+    "is_private": {
+      "type": "boolean",
+      "default": false
+    },
+    "plays": {
+      "type": "number",
+      "default": 0
+    },
+    "likes": {
+      "type": "number",
+      "default": 0
+    },
+    "liked_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "favorited_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reported_count": {
+      "type": "number",
+      "default": 0
+    },
+    "reporters": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "hidden": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "owner_user_id",
+    "name",
+    "stage_data"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}
