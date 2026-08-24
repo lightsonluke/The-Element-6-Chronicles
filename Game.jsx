@@ -84,7 +84,7 @@ import { getEmoteById, EMOTES as ALL_EMOTES } from './emotes.js';
 import { generateDailyQuests, getTodayKey, needsDailyReset } from './dailyQuests.js';
 import { applyUiTheme } from './uiThemes.js';
 import { setCustomBackdropUrl, clearCustomBackdrop } from './customBackdrop.js';
-import { formatNumber } from '../lib/formatNumber';
+import { formatNumber } from './formatNumber.js';
 import TouchControls from './TouchControls.jsx';
 import { useGamepadMenuNav } from './useGamepadMenuNav.js';
 
