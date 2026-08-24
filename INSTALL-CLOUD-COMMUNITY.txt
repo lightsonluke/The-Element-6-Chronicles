@@ -1,0 +1,31 @@
+ELEMENT 6 — CLOUD CHAT + COMMUNITY CONTENT + MUSIC FIX
+
+STEP 1 — SUPABASE
+Open Supabase → SQL Editor → New query.
+Open Supabase-community-chat-setup.sql from this pack, copy ALL its contents,
+paste them into the query, and click Run once.
+
+STEP 2 — GITHUB ROOT
+Upload these files to the top level of the repository and replace the old files:
+ChatPanel.jsx
+cloudCommunity.js
+WorldStages.jsx
+CommunityCampaignBrowser.jsx
+MyStages.jsx
+StageEditor.jsx
+CreatorMode.jsx
+music.js
+
+Do not upload the SQL or this instruction file to GitHub.
+
+STEP 3 — DEPLOY AND TEST
+Wait for GitHub Actions to turn green. Hard-refresh the game.
+Test chat with two accepted friend accounts in separate browser windows.
+Create/save a stage and confirm it appears in World Stages in the other window.
+Publish a campaign and confirm it appears in Community Campaigns.
+Click or press a key once after loading if the browser initially blocks music.
+
+NOTES
+Public stages and campaigns can be browsed and played without logging in.
+Publishing, liking, favoriting, reporting, and direct messaging require login.
+Direct messages are restricted to accepted friends by Supabase policies.

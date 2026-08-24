@@ -75,9 +75,17 @@ class MusicManager {
     this.muted = false;
     this._allAudioEls = []; // track every Audio element so stop() can kill them all
 
-    this._interactionHandler = () => { this.init(); if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); };
-    window.addEventListener('click', this._interactionHandler, { once: true });
-    window.addEventListener('keydown', this._interactionHandler, { once: true });
+    // Browsers reject audio started before a click/tap. Retry the already chosen
+    // track on that first interaction instead of leaving the homescreen silent.
+    this._interactionHandler = () => {
+      this.init();
+      if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+      if (this.audioEl && this.audioEl.paused) this.audioEl.play().then(() => { this._pendingPlayback = false; }).catch(() => { this._pendingPlayback = true; });
+    };
+    this._pendingPlayback = false;
+    window.addEventListener('pointerdown', this._interactionHandler);
+    window.addEventListener('touchstart', this._interactionHandler, { passive: true });
+    window.addEventListener('keydown', this._interactionHandler);
 
     // Reaper: kill ANY audio/video element on the page that this manager didn't create.
     // This guarantees only volume-bar-controlled music can ever play.
@@ -121,10 +129,12 @@ class MusicManager {
     this.currentScene = 'custom';
     this.currentUrl = url;
     this.audioEl = new Audio(url);
+    this.audioEl.preload = 'auto';
     this._allAudioEls.push(this.audioEl);
     this.audioEl.loop = true;
     this.audioEl.volume = this.muted ? 0 : this.volume;
-    this.audioEl.play().catch(() => { });
+    this.audioEl.load();
+    this.audioEl.play().then(() => { this._pendingPlayback = false; }).catch(() => { this._pendingPlayback = true; });
   }
 
   play(sceneName) {
@@ -166,10 +176,12 @@ class MusicManager {
     }
 
     this.audioEl = new Audio(url);
+    this.audioEl.preload = 'auto';
     this._allAudioEls.push(this.audioEl);
     this.audioEl.loop = true;
     this.audioEl.volume = this.muted ? 0 : this.volume;
-    this.audioEl.play().catch(() => { });
+    this.audioEl.load();
+    this.audioEl.play().then(() => { this._pendingPlayback = false; }).catch(() => { this._pendingPlayback = true; });
   }
 
   // Internal stop — always halts playback. Used when switching to a new scene.
