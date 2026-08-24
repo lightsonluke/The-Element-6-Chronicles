@@ -1,0 +1,72 @@
+{
+  "name": "CustomRoom",
+  "type": "object",
+  "properties": {
+    "room_code": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "playing",
+        "closed"
+      ],
+      "default": "open"
+    },
+    "host_user_id": {
+      "type": "string"
+    },
+    "host_char": {
+      "type": "string"
+    },
+    "stage_platforms": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "stage_spawn_points": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "stage_name": {
+      "type": "string",
+      "default": "Split City"
+    },
+    "max_players": {
+      "type": "number",
+      "default": 8
+    },
+    "players": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "game_state": {
+      "type": "object"
+    },
+    "guest_inputs": {
+      "type": "object"
+    },
+    "settings": {
+      "type": "object"
+    },
+    "winner": {
+      "type": "string",
+      "default": "none"
+    }
+  },
+  "required": [
+    "room_code",
+    "status",
+    "host_user_id"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

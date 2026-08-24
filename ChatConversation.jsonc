@@ -1,0 +1,46 @@
+{
+  "name": "ChatConversation",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "dm",
+        "group"
+      ],
+      "default": "dm"
+    },
+    "name": {
+      "type": "string"
+    },
+    "member_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "member_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "owner_user_id": {
+      "type": "string"
+    },
+    "last_message": {
+      "type": "string"
+    },
+    "last_message_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "type",
+    "member_ids"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "name": "CustomCharacter",
+  "type": "object",
+  "properties": {
+    "owner_user_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "secondary_color": {
+      "type": "string"
+    },
+    "weapon": {
+      "type": "string"
+    },
+    "power_name": {
+      "type": "string"
+    },
+    "stats": {
+      "type": "object"
+    },
+    "appearance": {
+      "type": "object"
+    },
+    "abilities": {
+      "type": "object"
+    },
+    "power_effect": {
+      "type": "object"
+    },
+    "lore": {
+      "type": "string"
+    },
+    "is_custom": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "owner_user_id",
+    "name"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "DailyReward",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "last_claim_date": {
+      "type": "string"
+    },
+    "streak_day": {
+      "type": "number",
+      "default": 0
+    },
+    "total_tokens_earned": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "user_id"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "name": "Campaign",
+  "type": "object",
+  "properties": {
+    "owner_user_id": {
+      "type": "string"
+    },
+    "owner_username": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": [
+        "easy",
+        "normal",
+        "hard",
+        "expert",
+        "nightmare"
+      ],
+      "default": "normal"
+    },
+    "estimated_minutes": {
+      "type": "number",
+      "default": 15
+    },
+    "is_public": {
+      "type": "boolean",
+      "default": true
+    },
+    "thumbnail": {
+      "type": "string",
+      "default": "\ud83c\udfae"
+    },
+    "battles": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "dialogues": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "plays": {
+      "type": "number",
+      "default": 0
+    },
+    "likes": {
+      "type": "number",
+      "default": 0
+    },
+    "liked_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "favorited_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reported_count": {
+      "type": "number",
+      "default": 0
+    },
+    "reporters": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "hidden": {
+      "type": "boolean",
+      "default": false
+    },
+    "version": {
+      "type": "number",
+      "default": 1
+    }
+  },
+  "required": [
+    "owner_user_id",
+    "name",
+    "battles"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

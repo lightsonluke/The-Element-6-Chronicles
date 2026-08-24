@@ -1,0 +1,27 @@
+{
+  "name": "ChatMessage",
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "string"
+    },
+    "sender_user_id": {
+      "type": "string"
+    },
+    "sender_username": {
+      "type": "string"
+    },
+    "text": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "conversation_id",
+    "sender_user_id",
+    "text"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

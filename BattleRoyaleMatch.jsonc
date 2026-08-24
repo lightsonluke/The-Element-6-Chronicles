@@ -1,0 +1,81 @@
+{
+  "name": "BattleRoyaleMatch",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "searching",
+        "active",
+        "playing",
+        "finished"
+      ],
+      "default": "searching"
+    },
+    "host_user_id": {
+      "type": "string"
+    },
+    "host_username": {
+      "type": "string"
+    },
+    "players": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "char_id": {
+            "type": "string"
+          },
+          "element": {
+            "type": "string",
+            "default": "basic"
+          },
+          "is_bot": {
+            "type": "boolean",
+            "default": false
+          },
+          "accessories": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "default": []
+          }
+        }
+      },
+      "default": []
+    },
+    "max_players": {
+      "type": "number",
+      "default": 30
+    },
+    "match_state": {
+      "type": "object"
+    },
+    "guest_inputs": {
+      "type": "object"
+    },
+    "winner": {
+      "type": "string",
+      "default": "none"
+    },
+    "settings": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "status",
+    "host_user_id",
+    "players"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}
