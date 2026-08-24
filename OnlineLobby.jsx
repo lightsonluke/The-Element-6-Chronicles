@@ -1,4 +1,4 @@
-import db from q{./localBackend};
+import db from './localBackend';
 
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
