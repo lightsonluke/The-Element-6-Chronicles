@@ -1,0 +1,31 @@
+-- Run this once in Supabase: SQL Editor -> New query -> Run.
+-- It safely creates the cloud-save table if it is missing.
+create table if not exists public.user_progress (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  progress_json jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.user_progress
+  add column if not exists progress_json jsonb not null default '{}'::jsonb;
+
+alter table public.user_progress
+  add column if not exists updated_at timestamptz not null default now();
+
+alter table public.user_progress enable row level security;
+
+drop policy if exists "Players can read their own progress" on public.user_progress;
+create policy "Players can read their own progress"
+on public.user_progress for select to authenticated
+using (auth.uid() = user_id);
+
+drop policy if exists "Players can create their own progress" on public.user_progress;
+create policy "Players can create their own progress"
+on public.user_progress for insert to authenticated
+with check (auth.uid() = user_id);
+
+drop policy if exists "Players can update their own progress" on public.user_progress;
+create policy "Players can update their own progress"
+on public.user_progress for update to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);

@@ -87,6 +87,7 @@ import { setCustomBackdropUrl, clearCustomBackdrop } from './customBackdrop.js';
 import { formatNumber } from './formatNumber.js';
 import TouchControls from './TouchControls.jsx';
 import { useGamepadMenuNav } from './useGamepadMenuNav.js';
+import { loadCloudProgress, saveCloudProgress } from './cloudSaves.js';
 
 const DEFAULT_SPLIT_CITY_BACKDROP = `${import.meta.env.BASE_URL}assets/split-city-background.png`;
 import { getKeybinds } from './keybinds.js';
@@ -167,9 +168,7 @@ let _cloudSaveTimer = null;
 let _lastProgress = null;
 
 async function _doCloudSave(prog) {
-  // Cloud saves will use the standalone Supabase adapter when it is wired in.
-  // Local saves still happen immediately in saveProgress below.
-  void prog;
+  try { await saveCloudProgress(prog); } catch { /* Offline play still saves locally. */ }
 }
 
 function saveProgress(prog) {
@@ -208,6 +207,18 @@ export default function Game() {
   const [onlineMode, setOnlineMode] = useState('unranked'); // ranked | unranked | soccer
   const [showCutscene, setShowCutscene] = useState(!localStorage.getItem('element6_progress'));
   const [progress, setProgress] = useState(loadProgress);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadCloudProgress().then(cloudProgress => {
+      if (!cancelled && cloudProgress) {
+        const merged = { ...DEFAULT_PROGRESS, ...cloudProgress };
+        localStorage.setItem('element6_progress', JSON.stringify(merged));
+        setProgress(merged);
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
   const [tokenFlash, setTokenFlash] = useState(null);
   const [storyRewardToast, setStoryRewardToast] = useState(null);
   const [battleResult, setBattleResult] = useState(null);

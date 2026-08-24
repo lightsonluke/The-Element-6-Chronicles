@@ -16,6 +16,7 @@ import GameIcon from "./GameIcon.jsx";
 
 import { THEMES, applyUiTheme } from './uiThemes.js';
 import { setCustomBackdropUrl, clearCustomBackdrop } from './customBackdrop.js';
+import AccountPanel from './AccountPanel.jsx';
 
 const DIFFICULTIES = ['newcomer', 'beginner', 'easy', 'amateur', 'regular', 'pro', 'hard', 'insane', 'honored'];
 const MATCH_TIMES = [
@@ -189,6 +190,8 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
           <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
         </div>
       </div>
+
+      <AccountPanel />
 
       {/* AUDIO */}
       <div className="bg-card border border-border rounded-xl p-5">
