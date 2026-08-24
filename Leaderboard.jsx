@@ -5,6 +5,8 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import GameIcon from "./GameIcon.jsx";
 import HonoredBotTracking from './HonoredBotTracking.jsx';
+import { supabase } from './supabaseClient.js';
+import { loadSharedLeaderboard } from './sharedLeaderboard.js';
 
 const FILTERS = [
   { key: 'overall', label: 'OVERALL' },
@@ -35,10 +37,10 @@ export default function Leaderboard({ onBack }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const user = await db.auth.me().catch(() => null);
-        if (user) setMyId(user.id);
-        const data = await db.entities.LeaderboardEntry.list('-total_xp', 200);
-        setEntries(data || []);
+        const { data: auth } = await supabase.auth.getUser();
+        if (auth.user) setMyId(auth.user.id);
+        const data = await loadSharedLeaderboard();
+        setEntries(data);
       } catch {}
       setLoading(false);
     };

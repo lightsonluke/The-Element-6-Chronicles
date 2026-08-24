@@ -89,6 +89,7 @@ import TouchControls from './TouchControls.jsx';
 import { useGamepadMenuNav } from './useGamepadMenuNav.js';
 import { loadCloudProgress, saveCloudProgress } from './cloudSaves.js';
 import { supabase } from './supabaseClient.js';
+import { syncSharedLeaderboard } from './sharedLeaderboard.js';
 
 const DEFAULT_SPLIT_CITY_BACKDROP = `${import.meta.env.BASE_URL}assets/split-city-background.png`;
 import { getKeybinds } from './keybinds.js';
@@ -334,6 +335,7 @@ export default function Game() {
       if (won) entry.wins = (entry.wins || 0) + 1;
       else entry.losses = (entry.losses || 0) + 1;
       await db.entities.LeaderboardEntry.update(entry.id, entry);
+      syncSharedLeaderboard(entry).catch(() => {});
     } catch {}
   };
   const progressRef = useRef(progress);
