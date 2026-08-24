@@ -1,0 +1,38 @@
+{
+  "name": "RockClimbScore",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "user_name": {
+      "type": "string"
+    },
+    "char_id": {
+      "type": "string"
+    },
+    "char_name": {
+      "type": "string"
+    },
+    "time_ms": {
+      "type": "number",
+      "default": 0
+    },
+    "checkpoints_used": {
+      "type": "number",
+      "default": 0
+    },
+    "no_checkpoint_run": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "user_id",
+    "time_ms"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "name": "Presence",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "username": {
+      "type": "string"
+    },
+    "last_active": {
+      "type": "string"
+    },
+    "hub_server": {
+      "type": "string"
+    },
+    "hub_x": {
+      "type": "number",
+      "default": 400
+    },
+    "hub_y": {
+      "type": "number",
+      "default": 340
+    },
+    "hub_facing": {
+      "type": "number",
+      "default": 1
+    },
+    "hub_frame": {
+      "type": "number",
+      "default": 0
+    },
+    "hub_char_id": {
+      "type": "string"
+    },
+    "hub_color": {
+      "type": "string"
+    },
+    "hub_title": {
+      "type": "string"
+    },
+    "hub_skin": {
+      "type": "string"
+    },
+    "hub_acc": {
+      "type": "string"
+    },
+    "hub_killfx": {
+      "type": "string"
+    },
+    "hub_emote": {
+      "type": "string"
+    },
+    "hub_emote_t": {
+      "type": "number",
+      "default": 0
+    },
+    "hub_level": {
+      "type": "number",
+      "default": 1
+    }
+  },
+  "required": [
+    "user_id"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

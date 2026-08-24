@@ -1,0 +1,38 @@
+{
+  "name": "Party",
+  "type": "object",
+  "properties": {
+    "host_user_id": {
+      "type": "string"
+    },
+    "host_username": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "member_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "member_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "hub_server": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "host_user_id",
+    "name"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

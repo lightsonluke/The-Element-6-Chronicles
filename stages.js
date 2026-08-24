@@ -1,0 +1,53 @@
+// Shared stage list — used by Training, Custom Rooms, and LAN Play for full stage selection.
+import { MAP_PLATFORMS } from './PlatformFighter.jsx';
+
+export const STAGE_LIST = [
+  { id: 'splitcity', name: 'Split City' },
+  { id: 'basic', name: 'Basic' },
+  { id: 'silvermansion', name: 'Silver Mansion' },
+  { id: 'controllerforest', name: 'Controller Forest' },
+  { id: 'traininggrounds', name: 'Training Grounds' },
+  { id: 'voidplane', name: 'The Void' },
+  { id: 'neonspire', name: 'Neon Spire' },
+  { id: 'sunsetridge', name: 'Sunset Ridge' },
+  { id: 'frozenlake', name: 'Frozen Lake' },
+  { id: 'lavafalls', name: 'Lava Falls' },
+  { id: 'crystalcavern', name: 'Crystal Cavern' },
+  { id: 'skysanctuary', name: 'Sky Sanctuary' },
+  { id: 'underworld', name: 'Underworld' },
+  { id: 'auroraborealis', name: 'Aurora Borealis' },
+  { id: 'goldentemple', name: 'Golden Temple' },
+  { id: 'stormpeak', name: 'Storm Peak' },
+  { id: 'toxicmarsh', name: 'Toxic Marsh' },
+  { id: 'cosmicvoid', name: 'Cosmic Void' },
+  { id: 'emberforge', name: 'Ember Forge' },
+  { id: 'tidalreef', name: 'Tidal Reef' },
+  { id: 'shadowrealm', name: 'Shadow Realm' },
+  { id: 'dawnbreak', name: 'Dawn Break' },
+  { id: 'midnighttower', name: 'Midnight Tower' },
+  { id: 'junglecanopy', name: 'Jungle Canopy' },
+  { id: 'desertoasis', name: 'Desert Oasis' },
+  { id: 'icepalace', name: 'Ice Palace' },
+  { id: 'volcanocrater', name: 'Volcano Crater' },
+  { id: 'starlightmeadow', name: 'Starlight Meadow' },
+  { id: 'thunderdome', name: 'Thunderdome' },
+  { id: 'rainbowbridge', name: 'Rainbow Bridge' },
+  { id: 'coralreef', name: 'Coral Reef' },
+  { id: 'obsidianfield', name: 'Obsidian Field' },
+  { id: 'solflare', name: 'Sol Flare' },
+  { id: 'mintgardens', name: 'Mint Gardens' },
+  { id: 'cobaltmines', name: 'Cobalt Mines' },
+  { id: 'crimsonarena', name: 'Crimson Arena' },
+  { id: 'phoenixroost', name: 'Phoenix Roost' },
+  { id: 'nebulareach', name: 'Nebula Reach' },
+  { id: 'emeraldcove', name: 'Emerald Cove' },
+  { id: 'grandarena', name: 'Grand Arena' },
+  { id: 'skycitadel', name: 'Sky Citadel' },
+  { id: 'colossalcoliseum', name: 'Colossal Coliseum' },
+  { id: 'infiniteexpanse', name: 'Infinite Expanse' },
+  { id: 'opalcave', name: 'Opal Cave' },
+];
+
+export function getStagePlatforms(stageId) {
+  return MAP_PLATFORMS[stageId] || MAP_PLATFORMS.splitcity;
+}

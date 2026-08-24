@@ -1,0 +1,30 @@
+{
+  "name": "ParkourScore",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "user_name": {
+      "type": "string"
+    },
+    "char_id": {
+      "type": "string"
+    },
+    "char_name": {
+      "type": "string"
+    },
+    "distance": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "user_id",
+    "distance"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "name": "OnlineMatch",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "searching",
+        "matched",
+        "active",
+        "playing",
+        "finished"
+      ],
+      "default": "searching"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "ranked",
+        "unranked",
+        "soccer"
+      ],
+      "default": "unranked"
+    },
+    "sport": {
+      "type": "string",
+      "enum": [
+        "fight",
+        "soccer",
+        "volleyball",
+        "baseball",
+        "dodgeball",
+        "banger"
+      ],
+      "default": "fight"
+    },
+    "host_user_id": {
+      "type": "string"
+    },
+    "host_username": {
+      "type": "string"
+    },
+    "guest_user_id": {
+      "type": "string"
+    },
+    "guest_username": {
+      "type": "string"
+    },
+    "host_char": {
+      "type": "string"
+    },
+    "guest_char": {
+      "type": "string"
+    },
+    "host_loadout": {
+      "type": "object"
+    },
+    "guest_loadout": {
+      "type": "object"
+    },
+    "host_state": {
+      "type": "object"
+    },
+    "guest_state": {
+      "type": "object"
+    },
+    "host_hit": {
+      "type": "object"
+    },
+    "guest_hit": {
+      "type": "object"
+    },
+    "host_elo": {
+      "type": "number",
+      "default": 1000
+    },
+    "guest_elo": {
+      "type": "number",
+      "default": 1000
+    },
+    "winner": {
+      "type": "string",
+      "enum": [
+        "host",
+        "guest",
+        "none"
+      ],
+      "default": "none"
+    }
+  },
+  "required": [
+    "status",
+    "mode"
+  ],
+  "rls": {
+    "read": true,
+    "write": true
+  }
+}
