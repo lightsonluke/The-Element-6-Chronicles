@@ -8,8 +8,7 @@ import { GUARDIANS } from './guardians.js';
 import { sfx } from './sfx.js';
 import GameIcon from "./GameIcon.jsx";
 
-const LORE_URL = '/lore.txt';
-
+const LORE_URL = `${import.meta.env.BASE_URL}lore.txt`;
 // Book markers — these lines in the lore file indicate a new book starts
 const BOOK_MARKERS = [
   { book: 'g1', marker: 'Dawn of Heroes - G1' },
