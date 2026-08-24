@@ -90,6 +90,12 @@
     font-family: var(--font-body);
   }
 
+  /* A keyboard/controller focus ring makes menu navigation easy to see. */
+  :focus-visible {
+    outline: 3px solid #FFD447;
+    outline-offset: 3px;
+  }
+
   /* ── Gen 1 theme: deep purple cityscape with gold glow ── */
   body.theme-gen1 {
     background: radial-gradient(ellipse at 50% 0%, #1e0a36 0%, #120B1A 45%, #0a0512 100%);

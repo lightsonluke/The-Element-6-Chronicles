@@ -1,4 +1,5 @@
-import db from './localBackend';
+import db from q{./localBackend};
+
 
 import React, { useState, useEffect } from 'react';
 
@@ -7,8 +8,8 @@ import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { getCharNumber } from './characterNumber.js';
-import PlatformFighter from './PlatformFighter.jsx';
-import SoccerFighter from './SoccerFighter.jsx';
+import PlatformFighter from './PlatformFighter';
+import SoccerFighter from './SoccerFighter';
 import VolleyballGame from './VolleyballGame.jsx';
 import BaseballGame from './BaseballGame.jsx';
 
@@ -18,14 +19,18 @@ import { STAGE_LIST } from './stages.js';
 import { getControlOptions } from './keybinds.js';
 import { withCustomChars } from './characterNumber.js';
 import UniversalCharacterSelect from './UniversalCharacterSelect.jsx';
+import LANShapeshiftSelect from './LANShapeshiftSelect';
 import GameIcon from "./GameIcon.jsx";
 
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 const charById = (id) => ALL.find(c => c.id === id);
 
-export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equippedSkins = {}, equippedAccessories = {}, settings = {}, sfxVolume = 70, musicVolume = 50, equippedElements = {}, customCharsData = {}, customNumberMap = {} }) {
+export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equippedSkins = {}, equippedAccessories = {}, settings = {}, sfxVolume = 70, musicVolume = 50, equippedElements = {}, customCharsData = {}, customNumberMap = {}, onEquipElement, charLevels = {}, equippedShikigami = {}, ownedShikigami = [], ownedAccessories = [], onEquipAccessory, ownedCrossovers = [], equippedCrossovers = {}, onEquipCrossover }) {
   const [phase, setPhase] = useState('menu'); // menu | host_select | guest_enter | connecting | fighting
   const [myChar, setMyChar] = useState(favoriteId || unlockedIds?.[0] || 'yellow');
+  const [myTeam, setMyTeam] = useState(null); // 3-char team for shapeshift
+  const [opponentTeam, setOpponentTeam] = useState(null);
+  const [teamSynced, setTeamSynced] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [userId, setUserId] = useState('');
   const [userName, setUserName] = useState('');
@@ -34,6 +39,24 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
   const [stage, setStage] = useState('splitcity');
   const [localScheme, setLocalScheme] = useState('p1'); // p1=arrows / p2=wasd — each device picks its own
   const lan = useLANConnection();
+
+  // ── Receive opponent's shapeshift team via data channel ──
+  useEffect(() => {
+    const unsub = lan.onMessage((msg) => {
+      if (msg?.type === '__shapeshift_team' && msg.team) {
+        setOpponentTeam(msg.team);
+        setTeamSynced(true);
+      }
+    });
+    return unsub;
+  }, [lan]);
+
+  // ── Send my shapeshift team to opponent after connection ──
+  useEffect(() => {
+    if (lan.status === 'connected' && myTeam && fightMode === 'shapeshift') {
+      lan.sendMessage({ type: '__shapeshift_team', team: myTeam });
+    }
+  }, [lan.status, myTeam, fightMode, lan]);
 
   useEffect(() => {
     db.auth.me().then(u => {
@@ -53,19 +76,33 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
     if (lan.status === 'error' && phase === 'connecting') setPhase('guest_enter');
   }, [lan.status, phase]);
 
-  const handleCreateRoom = async (charId) => {
+  const handleCreateRoom = async (charOrTeam) => {
     if (!userId) return;
-    const char = charId || myChar;
-    if (charId) setMyChar(charId);
-    await lan.createRoom(userId, userName, gameMode === 'soccer' ? 'soccer' : 'fight', char, equippedElements?.[char] || 'basic');
+    const isShapeshift = fightMode === 'shapeshift';
+    if (isShapeshift && Array.isArray(charOrTeam)) {
+      setMyTeam(charOrTeam);
+      setMyChar(charOrTeam[0]);
+      await lan.createRoom(userId, userName, 'fight', charOrTeam[0], equippedElements?.[charOrTeam[0]] || 'basic');
+    } else {
+      const char = typeof charOrTeam === 'string' ? charOrTeam : myChar;
+      if (typeof charOrTeam === 'string') setMyChar(charOrTeam);
+      await lan.createRoom(userId, userName, gameMode === 'soccer' ? 'soccer' : 'fight', char, equippedElements?.[char] || 'basic');
+    }
     setPhase('connecting');
   };
 
-  const handleJoinRoom = async (charId) => {
+  const handleJoinRoom = async (charOrTeam) => {
     if (!userId || joinCode.length < 4) return;
-    const char = charId || myChar;
-    if (charId) setMyChar(charId);
-    await lan.joinRoom(joinCode.toUpperCase(), userId, userName, char, equippedElements?.[char] || 'basic');
+    const isShapeshift = fightMode === 'shapeshift';
+    if (isShapeshift && Array.isArray(charOrTeam)) {
+      setMyTeam(charOrTeam);
+      setMyChar(charOrTeam[0]);
+      await lan.joinRoom(joinCode.toUpperCase(), userId, userName, charOrTeam[0], equippedElements?.[charOrTeam[0]] || 'basic');
+    } else {
+      const char = typeof charOrTeam === 'string' ? charOrTeam : myChar;
+      if (typeof charOrTeam === 'string') setMyChar(charOrTeam);
+      await lan.joinRoom(joinCode.toUpperCase(), userId, userName, char, equippedElements?.[char] || 'basic');
+    }
     setPhase('connecting');
   };
 
@@ -79,23 +116,26 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
 
   // ── Fighting ──
   if (phase === 'fighting' && lan.opponentChar) {
+    const _shapeshift = fightMode === 'shapeshift';
+    // Shapeshift: wait for opponent's team to sync via data channel before starting
+    if (_shapeshift && !teamSynced) {
+      return (
+        <div className="flex flex-col items-center gap-4 w-full max-w-md py-8">
+          <h2 className="text-2xl font-heading text-accent">SYNCING TEAMS...</h2>
+          <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">Waiting for opponent's Shapeshift team...</p>
+          <button onClick={() => { lan.closeConnection(); setPhase('menu'); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="←" size={14} /> CANCEL</button>
+        </div>
+      );
+    }
     const p1Char = lan.isHost ? myChar : lan.opponentChar;
     const p2Char = lan.isHost ? lan.opponentChar : myChar;
     const p1Element = lan.isHost ? (equippedElements?.[myChar] || 'basic') : (lan.opponentElement || 'basic');
     const p2Element = lan.isHost ? (lan.opponentElement || 'basic') : (equippedElements?.[myChar] || 'basic');
     const onQuitLan = () => { lan.closeConnection(); setPhase('menu'); };
-    // Shapeshift: build 3-character teams (picked char + 2 randoms from unlocked pool)
-    const _shapeshift = fightMode === 'shapeshift';
-    const _buildTeam = (charId) => {
-      if (!_shapeshift) return null;
-      const pool = (unlockedIds || ['yellow']).filter(id => id !== 'evil');
-      const team = [charId];
-      while (team.length < 3 && pool.length > 0) { team.push(pool[Math.floor(Math.random() * pool.length)]); }
-      while (team.length < 3) team.push(charId);
-      return team;
-    };
-    const p1Team = _shapeshift ? (lan.isHost ? _buildTeam(myChar) : _buildTeam(lan.opponentChar)) : null;
-    const p2Team = _shapeshift ? (lan.isHost ? _buildTeam(lan.opponentChar) : _buildTeam(myChar)) : null;
+    // Use synced 3-character teams (no auto-fill)
+    const p1Team = _shapeshift ? (lan.isHost ? myTeam : opponentTeam) : null;
+    const p2Team = _shapeshift ? (lan.isHost ? opponentTeam : myTeam) : null;
     if (gameMode === 'soccer') {
       return (
         <SoccerFighter
@@ -185,6 +225,27 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
 
   // ── Character Select (host) ──
   if (phase === 'host_select') {
+    if (fightMode === 'shapeshift') {
+      return (
+        <LANShapeshiftSelect
+          title="PICK YOUR SHAPESHIFT TEAM"
+          startLabel="CREATE ROOM →"
+          unlockedIds={unlockedIds || ['yellow']}
+          favoriteId={favoriteId}
+          equippedSkins={equippedSkins}
+          equippedAccessories={equippedAccessories}
+          ownedAccessories={ownedAccessories}
+          onEquipAccessory={onEquipAccessory}
+          charLevels={charLevels}
+          equippedElements={equippedElements}
+          onEquipElement={onEquipElement}
+          equippedShikigami={equippedShikigami}
+          ownedShikigami={ownedShikigami}
+          onStart={(team) => handleCreateRoom(team)}
+          onBack={() => setPhase('menu')}
+        />
+      );
+    }
     return (
       <UniversalCharacterSelect
         title="SELECT YOUR FIGHTER"
@@ -194,8 +255,18 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
         customCharsData={customCharsData}
         equippedSkins={equippedSkins}
         equippedAccessories={equippedAccessories}
+        ownedAccessories={ownedAccessories}
+        onEquipAccessory={onEquipAccessory}
+        charLevels={charLevels}
+        equippedElements={equippedElements}
+        onEquipElement={onEquipElement}
+        equippedShikigami={equippedShikigami}
+        ownedShikigami={ownedShikigami}
+        ownedCrossovers={ownedCrossovers}
+        equippedCrossovers={equippedCrossovers}
+        onEquipCrossover={onEquipCrossover}
         playerCount={1}
-        onStart={(c1) => { setMyChar(c1); handleCreateRoom(); }}
+        onStart={(c1) => { setMyChar(c1); handleCreateRoom(c1); }}
         onBack={() => setPhase('menu')}
       />
     );
@@ -203,6 +274,27 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
 
   // ── Enter Code + Select (guest) ──
   if (phase === 'guest_enter') {
+    if (fightMode === 'shapeshift') {
+      return (
+        <LANShapeshiftSelect
+          title="PICK YOUR SHAPESHIFT TEAM"
+          startLabel={joinCode.length >= 4 ? 'JOIN →' : 'ENTER CODE FIRST'}
+          unlockedIds={unlockedIds || ['yellow']}
+          favoriteId={favoriteId}
+          equippedSkins={equippedSkins}
+          equippedAccessories={equippedAccessories}
+          ownedAccessories={ownedAccessories}
+          onEquipAccessory={onEquipAccessory}
+          charLevels={charLevels}
+          equippedElements={equippedElements}
+          onEquipElement={onEquipElement}
+          equippedShikigami={equippedShikigami}
+          ownedShikigami={ownedShikigami}
+          onStart={(team) => handleJoinRoom(team)}
+          onBack={() => setPhase('menu')}
+        />
+      );
+    }
     return (
       <UniversalCharacterSelect
         title="JOIN ROOM"
@@ -212,8 +304,18 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
         customCharsData={customCharsData}
         equippedSkins={equippedSkins}
         equippedAccessories={equippedAccessories}
+        ownedAccessories={ownedAccessories}
+        onEquipAccessory={onEquipAccessory}
+        charLevels={charLevels}
+        equippedElements={equippedElements}
+        onEquipElement={onEquipElement}
+        equippedShikigami={equippedShikigami}
+        ownedShikigami={ownedShikigami}
+        ownedCrossovers={ownedCrossovers}
+        equippedCrossovers={equippedCrossovers}
+        onEquipCrossover={onEquipCrossover}
         playerCount={1}
-        onStart={(c1) => { setMyChar(c1); handleJoinRoom(); }}
+        onStart={(c1) => { setMyChar(c1); handleJoinRoom(c1); }}
         onBack={() => setPhase('menu')}
         extraControls={
           <div className="flex flex-col items-center gap-1 bg-card/60 border border-border rounded-lg p-2">

@@ -1,16 +1,17 @@
-import db from './localBackend';
+import db from q{./localBackend};
+
 
 import React, { useState, useEffect, useRef } from 'react';
 import { music } from './music.js';
 import { FIGHT_TRACK_LIBRARY } from './music.js';
 import { sfx } from './sfx.js';
 
-import EditControls from './EditControls.jsx';
+import EditControls from './EditControls';
 import { getKeybinds } from './keybinds.js';
 import { PROFILE_TITLES, getTitleColor, ownsTitle } from './profileTitles.js';
 import { ERAS } from './eras.js';
 import SoundButton from './SoundButton.jsx';
-import { useGamepad } from './useGamepad.js';
+import { useGamepad } from '../../hooks/useGamepad';
 import GameIcon from "./GameIcon.jsx";
 
 import { THEMES, applyUiTheme } from './uiThemes.js';
@@ -399,6 +400,17 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
               <option value="close">Close</option><option value="normal">Normal</option><option value="far">Far</option>
             </select>
           </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-body text-muted-foreground w-32">Stage zoom:</span>
+            <input type="range" min="0.2" max="1.0" step="0.05" value={local.stageZoom ?? 1.0} onChange={e => apply({ stageZoom: parseFloat(e.target.value) })} className="flex-1 accent-primary" />
+            <span className="text-xs font-heading text-foreground w-10 text-right">{(local.stageZoom ?? 1.0).toFixed(2)}x</span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            <span className="text-[10px] text-muted-foreground font-body w-full mb-0.5">Quick presets:</span>
+            {[{v:0.2,l:'0.2x'},{v:0.35,l:'0.35x'},{v:0.5,l:'0.5x'},{v:0.65,l:'0.65x'},{v:0.8,l:'0.8x'},{v:1.0,l:'1.0x'}].map(p => (
+              <button key={p.v} onClick={() => apply({ stageZoom: p.v })} className={`px-2 py-0.5 rounded text-[9px] font-heading border ${(local.stageZoom ?? 1.0) === p.v ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground border-border'}`}>{p.l}</button>
+            ))}
+          </div>
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Default game mode:</span>
             <select value={local.defaultGameMode || 'regular'} onChange={e => apply({ defaultGameMode: e.target.value })} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded text-xs font-body">
               {GAME_MODES.map(m => <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>)}
@@ -544,7 +556,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-5"><p className="text-[10px] text-muted-foreground font-body">Settings are saved automatically. Theme changes apply immediately. For account or billing issues, contact local administrator.</p></div>
+      <div className="bg-card border border-border rounded-xl p-5"><p className="text-[10px] text-muted-foreground font-body">Settings are saved automatically. Theme changes apply immediately.</p></div>
 
       <div className="bg-destructive/10 border-2 border-destructive rounded-xl p-5 text-center">
         <h3 className="font-heading text-sm text-destructive mb-2">DANGER ZONE</h3>

@@ -1,58 +1,60 @@
-import db from './localBackend';
-
 // Music manager — MP3 file playback with scene-based management, looping, and custom uploads.
 // AudioContext is kept for SFX compatibility (sfx.js uses music.ctx).
 
+// All audio served from local public/audio/ directory
+// BASE_URL keeps audio working from both localhost and a GitHub Pages project URL.
+const A = (name) => `${import.meta.env.BASE_URL}audio/${name}`;
+
 // Homescreen menu music cycle — rotates through these 6 tracks each visit.
 const MENU_TRACKS = [
-  '', // Night Shade (original)
-  '',                                   // Pixel Rebound
-  '',                                  // Turbo Cartridge
-  '',    // Cherry Cola
-  '',                                            // Josa
-  '',                                          // Medium
+  A('nightshade.mp3'),    // Night Shade (original)
+  A('pixelrebound.mp3'),  // Pixel Rebound
+  A('turbocartridge.mp3'),// Turbo Cartridge
+  A('cherrycola.mp3'),   // Cherry Cola
+  A('josa.mp3'),          // Josa
+  A('medium.mp3'),        // Medium
 ];
-const PARKOUR_TRACK = '';
-const ROCKCLIMB_TRACK = '';
+const PARKOUR_TRACK = A('robotcity.mp3');
+const ROCKCLIMB_TRACK = A('powerup.mp3');
 // Built-in fight/sports track library. New tracks are selectable presets
 // in Settings → Fight & Sports Music (and join the auto-rotation).
 export const FIGHT_TRACK_LIBRARY = [
-  { id: 'powerup', name: 'Power Up', url: '' },
-  { id: 'dubhub', name: 'Dub Hub', url: '' },
-  { id: 'robotcity', name: 'Robot City', url: '' },
-  { id: 'cherrycola', name: 'Cherry Cola', url: '' },
-  { id: 'actionman', name: 'Action Man', url: '' },
-  { id: 'pixelrush', name: 'Pixel Rush', url: '' },
-  { id: 'victoryparade', name: 'Victory Parade', url: '' },
-  { id: 'glitchdrift', name: 'Glitch Drift', url: '' },
-  { id: 'turbocart', name: 'Turbo Cartridge', url: '' },
-  { id: 'bossraid', name: 'Boss Raid', url: '' },
-  { id: 'quick', name: 'Quick', url: '' },
-  { id: 'final', name: 'Final', url: '' },
-  { id: 'bossstage', name: 'Boss Stage', url: '' },
-  { id: 'pixeldrift', name: 'Pixel Drift', url: '' },
-  { id: 'josa', name: 'Josa', url: '' },
-  { id: 'medium', name: 'Medium', url: '' },
-  { id: 'pixelrebound', name: 'Pixel Rebound', url: '' },
-  { id: 'pixelheartrush', name: 'Pixel Heart Rush', url: '' },
-  { id: 'growingpixel', name: 'Growing Pixel', url: '' },
-  { id: 'pixelbossshowdown', name: 'Pixel Boss Showdown', url: '' },
+  { id: 'powerup', name: 'Power Up', url: A('powerup.mp3') },
+  { id: 'dubhub', name: 'Dub Hub', url: A('dubhub.mp3') },
+  { id: 'robotcity', name: 'Robot City', url: A('robotcity.mp3') },
+  { id: 'cherrycola', name: 'Cherry Cola', url: A('cherrycola.mp3') },
+  { id: 'actionman', name: 'Action Man', url: A('actionman.mp3') },
+  { id: 'pixelrush', name: 'Pixel Rush', url: A('pixelrush.mp3') },
+  { id: 'victoryparade', name: 'Victory Parade', url: A('victoryparade.mp3') },
+  { id: 'glitchdrift', name: 'Glitch Drift', url: A('glitchdrift.mp3') },
+  { id: 'turbocart', name: 'Turbo Cartridge', url: A('turbocartridge.mp3') },
+  { id: 'bossraid', name: 'Boss Raid', url: A('bossraid.mp3') },
+  { id: 'quick', name: 'Quick', url: A('quick.mp3') },
+  { id: 'final', name: 'Final', url: A('final.mp3') },
+  { id: 'bossstage', name: 'Boss Stage', url: A('bossstage.mp3') },
+  { id: 'pixeldrift', name: 'Pixel Drift', url: A('pixeldrift.mp3') },
+  { id: 'josa', name: 'Josa', url: A('josa.mp3') },
+  { id: 'medium', name: 'Medium', url: A('medium.mp3') },
+  { id: 'pixelrebound', name: 'Pixel Rebound', url: A('pixelrebound.mp3') },
+  { id: 'pixelheartrush', name: 'Pixel Heart Rush', url: A('pixelheartrush.mp3') },
+  { id: 'growingpixel', name: 'Growing Pixel', url: A('growingpixel.mp3') },
+  { id: 'pixelbossshowdown', name: 'Pixel Boss Showdown', url: A('pixelbossshowdown.mp3') },
 ];
 const FIGHT_TRACKS = FIGHT_TRACK_LIBRARY.map(t => t.url);
 
 // Grand Circuit track pool — only these tracks play during Grand Circuit matches.
 // The "Final" track is reserved for the championship match.
 export const GRAND_CIRCUIT_TRACKS = [
-  '', // Turbo Cartridge
-  '',         // Boss Raid
-  '',      // Pixel Rush
-  '',          // Quick
-  '',      // Boss Stage
-  '',      // Pixel Drift
-  '',            // Josa
-  '',         // Medium
+  A('turbocartridge.mp3'), // Turbo Cartridge
+  A('bossraid.mp3'),       // Boss Raid
+  A('pixelrush.mp3'),      // Pixel Rush
+  A('quick.mp3'),          // Quick
+  A('bossstage.mp3'),      // Boss Stage
+  A('pixeldrift.mp3'),     // Pixel Drift
+  A('josa.mp3'),           // Josa
+  A('medium.mp3'),         // Medium
 ];
-export const GRAND_CIRCUIT_FINAL_TRACK = '';
+export const GRAND_CIRCUIT_FINAL_TRACK = A('final.mp3');
 
 // Singleton guard: if HMR reloads this module, reuse the existing instance so
 // we don't create a second MusicManager whose audio plays alongside the old one.

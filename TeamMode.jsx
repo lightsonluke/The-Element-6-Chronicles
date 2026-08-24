@@ -12,10 +12,10 @@ import { getAccessory, getEquippedAccessories, isBehindAccessory, drawAccessory,
 import { drawShikigamiFollower } from './shikigami.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
 import { getEmoteForKey } from './emoteSlots.js';
-import { useClipRecorder } from './useClipRecorder.js';
-import PauseMenu from './PauseMenu.jsx';
-import CharStats from './CharStats.jsx';
-import ElementSelect from './ElementSelect.jsx';
+import { useClipRecorder } from '../../hooks/useClipRecorder';
+import PauseMenu from './PauseMenu';
+import CharStats from './CharStats';
+import ElementSelect from './ElementSelect';
 import { applyElement } from './elements.js';
 import GameIcon from "./GameIcon.jsx";
 
@@ -485,7 +485,8 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
         const fitZoom = Math.min(W / Math.max(spreadX, 400), H / Math.max(spreadY, 300));
         camZoom = Math.max(0.70, Math.min(0.95, fitZoom));
         const zoomMul = settings.cameraZoom === 'close' ? 1.1 : settings.cameraZoom === 'far' ? 0.85 : 1.0;
-        camZoom *= zoomMul;
+        const _stageZoom = settings.stageZoom != null ? settings.stageZoom : 1.0;
+        camZoom *= zoomMul * _stageZoom;
         camX = ((minX + maxX) / 2 - W / 2) * (1 - camZoom);
         camY = ((minY + maxY) / 2 - 50 - H / 2) * (1 - camZoom);
       }

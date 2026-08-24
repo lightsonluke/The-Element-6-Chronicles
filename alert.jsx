@@ -1,47 +1,45 @@
 import * as React from "react"
-import { cva } from "class-variance-authority";
+import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 
 import { cn } from "./utils.js"
+import { buttonVariants } from "@/components/ui/button"
 
-const alertVariants = cva(
-  "relative w-full rounded-lg border px-4 py-3 text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground [&>svg~*]:pl-7",
-  {
-    variants: {
-      variant: {
-        default: "bg-background text-foreground",
-        destructive:
-          "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
+const AlertDialog = AlertDialogPrimitive.Root
+
+const AlertDialogTrigger = AlertDialogPrimitive.Trigger
+
+const AlertDialogPortal = AlertDialogPrimitive.Portal
+
+const AlertDialogOverlay = React.forwardRef(({ className, ...props }, ref) => (
+  <AlertDialogPrimitive.Overlay
+    className={cn(
+      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      className
+    )}
+    {...props}
+    ref={ref} />
+))
+AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName
+
+const AlertDialogContent = React.forwardRef(({ className, ...props }, ref) => (
+  <AlertDialogPortal>
+    <AlertDialogOverlay />
+    <AlertDialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        className
+      )}
+      {...props} />
+  </AlertDialogPortal>
+))
+AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName
+
+const AlertDialogHeader = ({
+  className,
+  ...props
+}) => (
+  <div
+    className={cn("flex flex-col space-y-2 text-center sm:text-left", className)}
+    {...props} />
 )
-
-const Alert = React.forwardRef(({ className, variant, ...props }, ref) => (
-  <div
-    ref={ref}
-    role="alert"
-    className={cn(alertVariants({ variant }), className)}
-    {...props} />
-))
-Alert.displayName = "Alert"
-
-const AlertTitle = React.forwardRef(({ className, ...props }, ref) => (
-  <h5
-    ref={ref}
-    className={cn("mb-1 font-medium leading-none tracking-tight", className)}
-    {...props} />
-))
-AlertTitle.displayName = "AlertTitle"
-
-const AlertDescription = React.forwardRef(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("text-sm [&_p]:leading-relaxed", className)}
-    {...props} />
-))
-AlertDescription.displayName = "AlertDescription"
-
-export { Alert, AlertTitle, AlertDescription }

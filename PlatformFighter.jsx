@@ -11,11 +11,11 @@ import {
   drawHitSparks, drawDoubleJumpParticles, drawSuperFlash,
   STAGE_MAPS,
 } from './renderer.js';
-import PauseMenu from './PauseMenu.jsx';
+import PauseMenu from './PauseMenu';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import { getKeybinds, readPlayerInput, readSinglePlayerInput, getSchemeKeybinds, getSoloKeybinds } from './keybinds.js';
-import { useClipRecorder } from './useClipRecorder.js';
+import { useClipRecorder } from '../../hooks/useClipRecorder';
 import { drawMaterialOverlay } from './materials.js';
 import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor, getEquippedAccessories } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
@@ -1217,6 +1217,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const g = gameRef.current;
       const fdx = Math.abs(f2.x - f1.x), fdy = Math.abs(f2.y - f1.y);
       const zoomMul = settings.cameraZoom === 'close' ? 1.15 : settings.cameraZoom === 'far' ? 0.85 : 1.0;
+      const stageZoom = settings.stageZoom != null ? settings.stageZoom : 1.0;
       let targetZoom = Math.max(0.60, Math.min(0.95, 0.95 - fdx / 1200 - fdy / 1000));
       const spreadX = fdx + 280;
       const spreadY = fdy + 280;
@@ -1224,7 +1225,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const fitZoomY = H / Math.max(spreadY, 200);
       const fitZoom = Math.min(fitZoomX, fitZoomY);
       targetZoom = Math.min(targetZoom, Math.max(0.50, fitZoom));
-      targetZoom *= zoomMul;
+      targetZoom *= zoomMul * stageZoom;
       g.camZoom += (targetZoom - g.camZoom) * 0.05;
       if (hitstop > 0) g.camZoom += 0.015;
       const midX = (f1.x + f2.x) / 2;

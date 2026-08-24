@@ -1,4 +1,5 @@
-import db from './localBackend';
+import db from q{./localBackend};
+
 
 import React, { useState, useRef, useEffect } from 'react';
 import MainMenu from './MainMenu.jsx';
@@ -83,9 +84,11 @@ import { getEmoteById, EMOTES as ALL_EMOTES } from './emotes.js';
 import { generateDailyQuests, getTodayKey, needsDailyReset } from './dailyQuests.js';
 import { applyUiTheme } from './uiThemes.js';
 import { setCustomBackdropUrl, clearCustomBackdrop } from './customBackdrop.js';
-import { formatNumber } from './formatNumber.js';
+import { formatNumber } from '../lib/formatNumber';
 import TouchControls from './TouchControls.jsx';
 import { useGamepadMenuNav } from './useGamepadMenuNav.js';
+
+const DEFAULT_SPLIT_CITY_BACKDROP = `${import.meta.env.BASE_URL}assets/split-city-background.png`;
 import { getKeybinds } from './keybinds.js';
 import UsernamePrompt from './UsernamePrompt.jsx';
 import GameIcon from "./GameIcon.jsx";
@@ -164,18 +167,9 @@ let _cloudSaveTimer = null;
 let _lastProgress = null;
 
 async function _doCloudSave(prog) {
-  try {
-    const { default: b44 } = await import('./localBackend.js');
-    const me = await b44.auth.me();
-    if (!me) return;
-    const existing = await b44.entities.UserProgress.filter({ user_id: me.id });
-    const json = JSON.stringify(prog);
-    if (existing[0]) {
-      await b44.entities.UserProgress.update(existing[0].id, { progress_json: json });
-    } else {
-      await b44.entities.UserProgress.create({ user_id: me.id, progress_json: json });
-    }
-  } catch {}
+  // Cloud saves will use the standalone Supabase adapter when it is wired in.
+  // Local saves still happen immediately in saveProgress below.
+  void prog;
 }
 
 function saveProgress(prog) {
@@ -585,10 +579,15 @@ export default function Game() {
     sfx.click();
   };
 
-  // Paid packs are intentionally unavailable in the standalone build.
-  const handleBuyPack = (packId) => {
-    sfx.warning();
-    alert(`Online checkout is not enabled in this local build (pack: ).`);
+  // Stripe checkout placeholder — wired to the Stripe backend in a follow-up response
+  const handleBuyPack = async (packId) => {
+    sfx.click();
+    try {
+      await db.functions.invoke('stripeCheckout', { packId });
+    } catch (e) {
+      sfx.warning();
+      alert('Stripe checkout is coming soon! This pack will be purchasable once Stripe is integrated.');
+    }
   };
 
   // Custom character saved (new) — add to unlocks
@@ -1545,11 +1544,11 @@ export default function Game() {
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            backgroundImage: `url(${progress?.settings?.customBackdrop || ''})`,
+            backgroundImage: `url(${progress?.settings?.customBackdrop || DEFAULT_SPLIT_CITY_BACKDROP})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
-            opacity: progress?.settings?.customBackdrop ? 0.4 : 0.18,
+            opacity: progress?.settings?.customBackdrop ? 0.4 : 0.32,
             zIndex: 0,
           }}
         />
@@ -2213,6 +2212,9 @@ export default function Game() {
             onEquipElement={equipElement}
             equippedShikigami={progress.equippedShikigami || {}}
             equippedEmotes={progress.equippedEmotes || {}}
+            ownedAccessories={progress.ownedAccessories || []}
+            ownedShikigami={progress.ownedShikigami || []}
+            onEquipAccessory={equipAccessory}
           />
         )}
 
@@ -2229,6 +2231,14 @@ export default function Game() {
             musicVolume={progress.settings?.musicVolume ?? 50}
             charLevels={progress.charLevels || {}}
             equippedElements={progress.equippedElements || {}}
+            onEquipElement={equipElement}
+            equippedShikigami={progress.equippedShikigami || {}}
+            ownedShikigami={progress.ownedShikigami || []}
+            ownedAccessories={progress.ownedAccessories || []}
+            onEquipAccessory={equipAccessory}
+            ownedCrossovers={progress.ownedCrossovers || []}
+            equippedCrossovers={progress.equippedCrossovers || {}}
+            onEquipCrossover={equipCrossover}
             customCharsData={customCharData} customNumberMap={customNumberMap}
           />
         )}

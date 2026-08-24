@@ -8,17 +8,17 @@ import {
   drawTimer, drawPlatforms, drawBackground, drawHitSparks,
   drawDoubleJumpParticles, drawSuperFlash, STAGE_MAPS,
 } from './renderer.js';
-import { MAP_PLATFORMS } from './PlatformFighter.jsx';
+import { MAP_PLATFORMS } from './PlatformFighter';
 import { applyStageMaterials } from './stageMaterials.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { getAccessory, isBehindAccessory, drawAccessory, resolveAccColor } from './cosmetics.js';
 import { drawShikigamiFollower } from './shikigami.js';
-import { useClipRecorder } from './useClipRecorder.js';
-import PauseMenu from './PauseMenu.jsx';
-import CharStats from './CharStats.jsx';
-import ElementSelect from './ElementSelect.jsx';
+import { useClipRecorder } from '../../hooks/useClipRecorder';
+import PauseMenu from './PauseMenu';
+import CharStats from './CharStats';
+import ElementSelect from './ElementSelect';
 import { applyElement } from './elements.js';
 import { withCustomChars } from './characterNumber.js';
 import { buildHazardsFromStage, buildObjectsFromStage, updateSandboxHazards, updateSandboxObjects, processSandboxObjectHits, drawHazards as drawSBHazards, drawObjects as drawSBObjects } from './stageHazards.js';
@@ -534,6 +534,8 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
         const spreadY = (maxY - minY) + 280;
         const fitZoom = Math.min(W / Math.max(spreadX, 300), H / Math.max(spreadY, 250));
         let targetZoom = Math.max(isLarge ? 0.40 : 0.45, Math.min(0.90, fitZoom));
+        const _stageZoom = settings.stageZoom != null ? settings.stageZoom : 1.0;
+        targetZoom *= _stageZoom;
         const g = gameRef.current;
         g.camZoom += (targetZoom - g.camZoom) * 0.05;
         const midX = (minX + maxX) / 2;

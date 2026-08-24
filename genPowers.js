@@ -442,12 +442,21 @@ export function activateGenPower(fighter, opponent, effect) {
       break;
     }
 
-    // Daichi — Tech Bomb: A bomb that explodes after a short fuse
+    // Daichi — Tech Bomb: aims at opponent like Whami's potion, collides with platforms,
+    // explodes on contact with opponent OR when fuse runs out
     case 'gen_bomb': {
+      const opps = getOpps(fighter, opponent);
+      const tgt = opps.length > 0 ? opps[Math.floor(Math.random() * opps.length)] : opponent;
+      const tx = tgt ? tgt.x : fighter.x + fighter.facing * 600;
+      const ty = tgt ? tgt.y - 30 : fighter.y - 100;
+      const bdx = tx - fighter.x, bdy = ty - (fighter.y - 40);
+      const bdist = Math.sqrt(bdx * bdx + bdy * bdy) || 1;
+      const bspeed = 11;
       fighter.genProjectiles.push({
-        type: 'gen_bomb', x: fighter.x + fighter.facing * 30, y: fighter.y - 20,
-        vx: fighter.facing * 4, vy: -6,
-        damage: dmg, color, life: 90, fuse: 60, exploded: false, explosionR: 0, maxExplosionR: 120,
+        type: 'gen_bomb', x: fighter.x + fighter.facing * 24, y: fighter.y - 40,
+        vx: (bdx / bdist) * bspeed, vy: (bdy / bdist) * bspeed - 2,
+        damage: dmg, color, life: 150, fuse: 60, exploded: false, explosionR: 0, maxExplosionR: 120,
+        target: tgt, gravity: 0.18, hitApplied: false,
       });
       fighter.powerActive = 'gen_bomb'; fighter.powerTimer = 6;
       break;
@@ -973,9 +982,32 @@ export function updateGenProjectiles(fighter, opponent) {
     }
     if (p.type === 'gen_bomb') {
       if (!p.exploded) {
-        p.vy += 0.4; p.x += p.vx; p.y += p.vy;
+        p.vy += (p.gravity || 0.4); p.x += p.vx; p.y += p.vy;
         p.fuse--;
-        if (p.fuse <= 0) {
+        // ── Contact explosion: if bomb touches an opponent before fuse ends, explode immediately ──
+        for (const opp of opps) {
+          if (!p.hitApplied && Math.abs(opp.x - p.x) < 40 && Math.abs((opp.y - 30) - p.y) < 55 && (opp.invincible || 0) <= 0) {
+            p.hitApplied = true; p.exploded = true; p.fuse = 0;
+            opp.damage += p.damage; opp.hitstun = 25; opp.state = 'hitstun';
+            opp.vx = (opp.x > p.x ? 1 : -1) * 14 * KNOCKBACK_SCALE; opp.vy = -12 * KNOCKBACK_SCALE; opp.grounded = false;
+            break;
+          }
+        }
+        // ── Platform collision: bomb bounces/rests on solid platforms ──
+        if (!p.exploded && fighter._platforms) {
+          for (const plat of fighter._platforms) {
+            const mat = plat.material || 'normal';
+            if (['water','lava','cloud','acid','tar','antigravity'].includes(mat)) continue;
+            if (plat._deleted > 0 || plat.h < 18) continue;
+            if (p.x > plat.x - 16 && p.x < plat.x + plat.w + 16 && p.vy > 0 && p.y >= plat.y && p.y < plat.y + 20) {
+              p.y = plat.y; p.vy = -p.vy * 0.3; p.vx *= 0.6;
+              if (Math.abs(p.vy) < 1) p.vy = 0;
+              break;
+            }
+          }
+        }
+        // ── Fuse explosion (normal behavior if no contact) ──
+        if (p.fuse <= 0 && !p.exploded) {
           p.exploded = true;
           opps.forEach(opp => {
             if (Math.abs(opp.x - p.x) < 80 && Math.abs((opp.y - 30) - p.y) < 80 && (opp.invincible || 0) <= 0) {

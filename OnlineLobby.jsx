@@ -1,4 +1,5 @@
-import db from './localBackend';
+import db from q{./localBackend};
+
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
@@ -8,19 +9,19 @@ import { GUARDIANS } from './guardians.js';
 import { getCharNumber } from './characterNumber.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
-import OnlineFight from './OnlineFight.jsx';
-import OnlineSoccerFight from './OnlineSoccerFight.jsx';
+import OnlineFight from './OnlineFight';
+import OnlineSoccerFight from './OnlineSoccerFight';
 import UniversalCharacterSelect from './UniversalCharacterSelect.jsx';
-import ElementSelect from './ElementSelect.jsx';
+import ElementSelect from './ElementSelect';
 import GameIcon from "./GameIcon.jsx";
 
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 
-export default function OnlineLobby({ mode, onBack, onEnd, unlockedIds, favoriteId, equippedSkins = {}, equippedAccessories = {}, sfxVolume = 70, musicVolume = 50, settings = {}, botElo = 1000, onlineElo = 1000, charLevels = {}, equippedElements = {}, onEquipElement, equippedShikigami = {}, equippedEmotes = {} }) {
+export default function OnlineLobby({ mode, onBack, onEnd, unlockedIds, favoriteId, equippedSkins = {}, equippedAccessories = {}, sfxVolume = 70, musicVolume = 50, settings = {}, botElo = 1000, onlineElo = 1000, charLevels = {}, equippedElements = {}, onEquipElement, equippedShikigami = {}, equippedEmotes = {}, ownedAccessories = [], ownedShikigami = [], onEquipAccessory }) {
   const [me, setMe] = useState(null);
   const [myChar, setMyChar] = useState(favoriteId || 'yellow');
   const [myElement, setMyElement] = useState(equippedElements?.[favoriteId || 'yellow'] || 'basic');
-  const [phase, setPhase] = useState('pick'); // pick | element | searching | matched | fight
+  const [phase, setPhase] = useState('pick'); // pick | searching | matched | fight
   const [matchId, setMatchId] = useState(null);
   const [role, setRole] = useState('host');
   const [match, setMatch] = useState(null);
@@ -43,6 +44,9 @@ export default function OnlineLobby({ mode, onBack, onEnd, unlockedIds, favorite
     db.auth.me().then(u => setMe(u)).catch(() => setMe(null));
     return () => music.stop();
   }, [musicVolume, sfxVolume]);
+
+  // Sync myElement when equippedElements changes (e.g. user picks element on pedestal)
+  useEffect(() => { setMyElement(equippedElements?.[myChar] || 'basic'); }, [equippedElements, myChar]);
 
   // Subscribe to the active match once we have a matchId.
   useEffect(() => {
@@ -200,28 +204,24 @@ export default function OnlineLobby({ mode, onBack, onEnd, unlockedIds, favorite
           {error && <p className="text-xs text-destructive font-body">{error}</p>}
           <UniversalCharacterSelect
             title="PICK YOUR FIGHTER"
-            startLabel="➜ NEXT"
+            startLabel="🔍 FIND MATCH"
             unlockedIds={unlockedIds || ['yellow']}
             favoriteId={favoriteId}
             playerCount={1}
             banCustomChars
-            hidePedestals
-            onStart={(c1) => { setMyChar(c1); setMyElement(equippedElements?.[c1] || 'basic'); setPhase('element'); }}
+            equippedSkins={equippedSkins}
+            equippedAccessories={equippedAccessories}
+            ownedAccessories={ownedAccessories}
+            onEquipAccessory={onEquipAccessory}
+            charLevels={charLevels}
+            equippedElements={equippedElements}
+            onEquipElement={onEquipElement}
+            equippedShikigami={equippedShikigami}
+            ownedShikigami={ownedShikigami}
+            onStart={(c1) => { setMyChar(c1); setMyElement(equippedElements?.[c1] || 'basic'); findMatch(c1); }}
             onBack={onBack}
           />
         </>
-      )}
-
-      {phase === 'element' && (
-        <div className="flex flex-col items-center gap-4 w-full max-w-md">
-          {error && <p className="text-xs text-destructive font-body">{error}</p>}
-          <p className="text-xs font-heading text-muted-foreground">FIGHTER: <span className="text-accent">{ALL.find(c => c.id === myChar)?.name}</span></p>
-          <ElementSelect charId={myChar} currentElement={myElement} onSelect={setMyElement} charLevels={charLevels} label="YOUR ELEMENT" />
-          <div className="flex gap-2">
-            <button onClick={() => setPhase('pick')} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
-            <button onClick={() => findMatch()} className="px-6 py-2 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90 shadow-lg">🔍 FIND MATCH</button>
-          </div>
-        </div>
       )}
 
       {phase === 'searching' && (

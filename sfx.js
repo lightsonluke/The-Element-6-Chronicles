@@ -1,9 +1,7 @@
-import db from './localBackend';
-
 // Procedural sound effects engine using Web Audio API — no external files needed.
 // Shares the AudioContext with the music manager for efficiency.
 
-import { music } from './music.js';
+import { music } from './music';
 
 class SfxManager {
   constructor() {
@@ -229,7 +227,7 @@ class SfxManager {
     if (!music.ctx || !this.gainNode) return;
     // Lazy-load the crowd cheering audio clip (shared across all cheers)
     if (!this._cheerAudio) {
-      this._cheerAudio = new Audio('');
+      this._cheerAudio = new Audio('/audio/cheer.mp3');
       this._cheerAudio.crossOrigin = 'anonymous';
       this._cheerAudio.preload = 'auto';
       try {

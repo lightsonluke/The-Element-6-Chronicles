@@ -1,6 +1,6 @@
 // botAI.js — CPU AI logic extracted from fighter.js for maintainability.
-import { COMBOS, comboMoveReady as comboMoveReadyUtil, comboMoveToInput } from './combos.js';
-import { selectTarget, navigateToward, platformNavigate as navPlatformNavigate } from './botNavigation.js';
+import { COMBOS, comboMoveReady as comboMoveReadyUtil, comboMoveToInput } from '../data/combos';
+import { selectTarget, navigateToward, platformNavigate as navPlatformNavigate } from './botNavigation';
 
 export const CPU_DIFFICULTY = {
   newcomer: { reactionTime: 200, skillChance: 0.03, jumpChance: 0.03, attackChance: 0.05, edgeGuard: false, combo: false, superUse: false, heavyChance: 0.02 },
@@ -108,6 +108,45 @@ function honoredDecide(fighter, opponent, platforms, dx, dy, dist) {
 function _mvAway(fighter, px) { return fighter.x < px ? { left: true, right: false } : { left: false, right: true }; }
 const _NO_INPUT = { left:false, right:false, jump:false, up:false, down:false, sig:false, power:false, superMove:false, heavy:false };
 
+// ── Homing projectile flee logic ──
+// Bots only panic-flee homing projectiles when within 50% of the mode's auto-KO threshold.
+// Outside that range they still dodge but don't run away blindly.
+function _getKOThreshold(fighter) {
+  if (fighter._isBR) return 500;
+  if (fighter._gcNoBlast) return 450;
+  return 1500;
+}
+function _isHomingProjectile(t) {
+  return t === 'fireball' || t === 'electric' || t === 'energy_ball' || t === 'energy';
+}
+// Choose a flee direction that won't run the bot off-stage or into a wall
+function _safeFleeDir(fighter, fromX) {
+  const wantLeft = fighter.x < fromX;
+  const STAGE_LEFT = 80;
+  const STAGE_RIGHT = 880;
+  let leftSafe = fighter.x > STAGE_LEFT;
+  let rightSafe = fighter.x < STAGE_RIGHT;
+  // Check for solid walls in either direction
+  const plats = fighter._platforms || [];
+  for (const p of plats) {
+    if (p._deleted > 0) continue;
+    const mat = p.material || 'normal';
+    if (['water','lava','cloud','acid','tar','antigravity'].includes(mat)) continue;
+    if (p.h < 18) continue;
+    // Wall to the left of fighter
+    if (p.x + p.w < fighter.x && fighter.x - (p.x + p.w) < 60 && Math.abs(p.y - fighter.y) < 80) leftSafe = false;
+    // Wall to the right of fighter
+    if (p.x > fighter.x && p.x - fighter.x < 60 && Math.abs(p.y - fighter.y) < 80) rightSafe = false;
+  }
+  if (wantLeft && leftSafe) return { left: true, right: false };
+  if (!wantLeft && rightSafe) return { left: false, right: true };
+  // Preferred direction blocked — go the other way if it's safe
+  if (wantLeft && rightSafe) return { left: false, right: true };
+  if (!wantLeft && leftSafe) return { left: true, right: false };
+  // Both directions unsafe — stay put and jump
+  return { left: false, right: false };
+}
+
 function projectileThreat(fighter, p) {
   const fx = fighter.x, bodyY = fighter.y - 30;
   const dx = p.x - fx, dy = p.y - bodyY;
@@ -116,8 +155,13 @@ function projectileThreat(fighter, p) {
   if (t === 'fireball' || t === 'electric' || t === 'energy_ball' || t === 'energy') {
     if (dist > 320) return null;
     if (p.target !== fighter && dist > 200) return null;
+    // Only panic-flee homing projectiles when within 50% of the mode's auto-KO threshold
+    const koThreshold = _getKOThreshold(fighter);
+    const inDangerZone = (fighter.damage || 0) >= koThreshold * 0.5;
+    if (!inDangerZone) return null; // outside danger range — still dodge intelligently via normal AI
     const urgency = 1 - Math.min(1, dist / 320);
-    return { urgency, inputs: { ..._NO_INPUT, ..._mvAway(fighter, p.x), jump: fighter.grounded, down: !fighter.grounded && fighter.y < p.y } };
+    const fleeDir = _safeFleeDir(fighter, p.x);
+    return { urgency, inputs: { ..._NO_INPUT, ...fleeDir, jump: fighter.grounded, down: !fighter.grounded && fighter.y < p.y } };
   }
   if (t === 'beam' || t === 'stage_slice') {
     if (Math.abs(dy) > 55) return null;
