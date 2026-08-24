@@ -1,0 +1,27 @@
+ELEMENT 6 — SOCIAL + MUSIC REPLACEMENT
+
+1. Replace these files at the TOP level of your GitHub repository:
+   - AccountPanel.jsx
+   - FriendsScreen.jsx
+   - music.js
+
+2. Open the public folder, then audio. Upload every MP3 from this pack's
+   public/audio folder into that same public/audio folder in GitHub.
+   Replace files if GitHub asks. Do not upload this ZIP itself.
+
+3. In Supabase: SQL Editor → New query.
+   Open Supabase-social-setup.sql from this pack, copy ALL of its text,
+   paste it into Supabase, and press Run. Do this once only.
+
+4. Wait for the GitHub Actions deployment to finish. Then test with TWO
+   separate accounts (one regular browser window and one incognito window).
+
+What changed:
+- Login and Create Account are now separate choices.
+- Create Account asks for username + email + password.
+- Every account has a visible E6-XXXXXXXX friend code.
+- Friend search uses Supabase usernames/codes, not browser-local data.
+- Home and home-2 rotate every two hours only on the homescreen.
+- Parkour and Rock Climbing use parkour.mp3.
+- Final.mp3 is the Grand Circuit final track and is also in battle rotation.
+- All other supplied songs rotate only between matches and loop during one.
