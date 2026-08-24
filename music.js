@@ -5,54 +5,55 @@
 // BASE_URL keeps audio working from both localhost and a GitHub Pages project URL.
 const A = (name) => `${import.meta.env.BASE_URL}audio/${name}`;
 
-// Homescreen menu music cycle — rotates through these 6 tracks each visit.
+// Homescreen music is intentionally separate from battle music. The selected
+// track changes every two hours, never while the player is already on a match.
 const MENU_TRACKS = [
-  A('nightshade.mp3'),    // Night Shade (original)
-  A('pixelrebound.mp3'),  // Pixel Rebound
-  A('turbocartridge.mp3'),// Turbo Cartridge
-  A('cherrycola.mp3'),   // Cherry Cola
-  A('josa.mp3'),          // Josa
-  A('medium.mp3'),        // Medium
+  A('home.mp3'),
+  A('home-2.mp3'),
 ];
-const PARKOUR_TRACK = A('robotcity.mp3');
-const ROCKCLIMB_TRACK = A('powerup.mp3');
+const HOME_ROTATION_MS = 2 * 60 * 60 * 1000;
+const PARKOUR_TRACK = A('parkour.mp3');
+const ROCKCLIMB_TRACK = A('parkour.mp3');
 // Built-in fight/sports track library. New tracks are selectable presets
 // in Settings → Fight & Sports Music (and join the auto-rotation).
 export const FIGHT_TRACK_LIBRARY = [
-  { id: 'powerup', name: 'Power Up', url: A('powerup.mp3') },
-  { id: 'dubhub', name: 'Dub Hub', url: A('dubhub.mp3') },
-  { id: 'robotcity', name: 'Robot City', url: A('robotcity.mp3') },
-  { id: 'cherrycola', name: 'Cherry Cola', url: A('cherrycola.mp3') },
-  { id: 'actionman', name: 'Action Man', url: A('actionman.mp3') },
-  { id: 'pixelrush', name: 'Pixel Rush', url: A('pixelrush.mp3') },
-  { id: 'victoryparade', name: 'Victory Parade', url: A('victoryparade.mp3') },
-  { id: 'glitchdrift', name: 'Glitch Drift', url: A('glitchdrift.mp3') },
-  { id: 'turbocart', name: 'Turbo Cartridge', url: A('turbocartridge.mp3') },
-  { id: 'bossraid', name: 'Boss Raid', url: A('bossraid.mp3') },
-  { id: 'quick', name: 'Quick', url: A('quick.mp3') },
+  { id: 'blade-of-dawn-one', name: 'Blade of Dawn I', url: A('blade-of-dawn-one.mp3') },
+  { id: 'blade-of-dawn', name: 'Blade of Dawn', url: A('blade-of-dawn.mp3') },
+  { id: 'boss-fight-circuit', name: 'Boss Fight Circuit', url: A('boss-fight-circuit.mp3') },
+  { id: 'boss-raid', name: 'Boss Raid', url: A('boss-raid.mp3') },
+  { id: 'boss-stage', name: 'Boss Stage', url: A('boss-stage.mp3') },
+  { id: 'pixel-boss-showdown', name: 'Pixel Boss Showdown', url: A('pixel-boss-showdown.mp3') },
+  { id: 'pixel-drift-one', name: 'Pixel Drift I', url: A('pixel-drift-one.mp3') },
+  { id: 'pixel-heart-rush', name: 'Pixel Heart Rush', url: A('pixel-heart-rush.mp3') },
+  { id: 'pixel-quest-loop', name: 'Pixel Quest Loop', url: A('pixel-quest-loop.mp3') },
+  { id: 'pixel-rebound-one', name: 'Pixel Rebound I', url: A('pixel-rebound-one.mp3') },
+  { id: 'pixel-rebound', name: 'Pixel Rebound', url: A('pixel-rebound.mp3') },
+  { id: 'pixel-rush-one', name: 'Pixel Rush I', url: A('pixel-rush-one.mp3') },
+  { id: 'pixel-rush', name: 'Pixel Rush', url: A('pixel-rush.mp3') },
+  { id: 'pixelated-skyline', name: 'Pixelated Skyline', url: A('pixelated-skyline.mp3') },
+  { id: 'turbo-cartridge-one', name: 'Turbo Cartridge I', url: A('turbo-cartridge-one.mp3') },
+  { id: 'turbo-cartridge', name: 'Turbo Cartridge', url: A('turbo-cartridge.mp3') },
+  { id: 'victory-pixel-parade', name: 'Victory Pixel Parade', url: A('victory-pixel-parade.mp3') },
   { id: 'final', name: 'Final', url: A('final.mp3') },
-  { id: 'bossstage', name: 'Boss Stage', url: A('bossstage.mp3') },
-  { id: 'pixeldrift', name: 'Pixel Drift', url: A('pixeldrift.mp3') },
-  { id: 'josa', name: 'Josa', url: A('josa.mp3') },
-  { id: 'medium', name: 'Medium', url: A('medium.mp3') },
-  { id: 'pixelrebound', name: 'Pixel Rebound', url: A('pixelrebound.mp3') },
-  { id: 'pixelheartrush', name: 'Pixel Heart Rush', url: A('pixelheartrush.mp3') },
-  { id: 'growingpixel', name: 'Growing Pixel', url: A('growingpixel.mp3') },
-  { id: 'pixelbossshowdown', name: 'Pixel Boss Showdown', url: A('pixelbossshowdown.mp3') },
+  { id: 'glitch-drift-quest-one', name: 'Glitch Drift Quest I', url: A('glitch-drift-quest-one.mp3') },
+  { id: 'glitch-drift-quest', name: 'Glitch Drift Quest', url: A('glitch-drift-quest.mp3') },
+  { id: 'turbo-cartridge-two', name: 'Turbo Cartridge II', url: A('turbo-cartridge-two.mp3') },
+  { id: 'turbo-cartridge-three', name: 'Turbo Cartridge III', url: A('turbo-cartridge-three.mp3') },
+  { id: 'pixel-quest', name: 'Pixel Quest', url: A('pixel-quest.mp3') },
+  { id: 'coin-op-reaper', name: 'Coin Op Reaper', url: A('coin-op-reaper.mp3') },
+  { id: 'neon-glitch', name: 'Neon Glitch', url: A('neon-glitch.mp3') },
 ];
 const FIGHT_TRACKS = FIGHT_TRACK_LIBRARY.map(t => t.url);
 
 // Grand Circuit track pool — only these tracks play during Grand Circuit matches.
 // The "Final" track is reserved for the championship match.
 export const GRAND_CIRCUIT_TRACKS = [
-  A('turbocartridge.mp3'), // Turbo Cartridge
-  A('bossraid.mp3'),       // Boss Raid
-  A('pixelrush.mp3'),      // Pixel Rush
-  A('quick.mp3'),          // Quick
-  A('bossstage.mp3'),      // Boss Stage
-  A('pixeldrift.mp3'),     // Pixel Drift
-  A('josa.mp3'),           // Josa
-  A('medium.mp3'),         // Medium
+  A('boss-fight-circuit.mp3'),
+  A('boss-raid.mp3'),
+  A('boss-stage.mp3'),
+  A('pixel-boss-showdown.mp3'),
+  A('turbo-cartridge-three.mp3'),
+  A('neon-glitch.mp3'),
 ];
 export const GRAND_CIRCUIT_FINAL_TRACK = A('final.mp3');
 
@@ -138,8 +139,10 @@ class MusicManager {
     let url;
     if (this.customTracks[sceneName]) {
       url = this.customTracks[sceneName];
-    } else if (sceneName === 'menu' || sceneName === 'story') {
-      url = MENU_TRACKS[this.menuIndex % MENU_TRACKS.length];
+    } else if (sceneName === 'menu') {
+      url = MENU_TRACKS[Math.floor(Date.now() / HOME_ROTATION_MS) % MENU_TRACKS.length];
+    } else if (sceneName === 'story') {
+      url = FIGHT_TRACKS[this.fightIndex % FIGHT_TRACKS.length];
     } else if (sceneName === 'parkour') {
       url = PARKOUR_TRACK;
     } else if (sceneName === 'rockclimb') {
@@ -147,7 +150,7 @@ class MusicManager {
     } else if (sceneName === 'fight' || sceneName === 'soccer') {
       url = FIGHT_TRACKS[this.fightIndex % FIGHT_TRACKS.length];
     } else {
-      url = MENU_TRACKS[this.menuIndex % MENU_TRACKS.length];
+      url = MENU_TRACKS[Math.floor(Date.now() / HOME_ROTATION_MS) % MENU_TRACKS.length];
     }
     if (!url) return;
 
@@ -158,10 +161,7 @@ class MusicManager {
     this.currentScene = sceneName;
     this.currentUrl = url;
 
-    if (sceneName === 'menu' || sceneName === 'story') {
-      this.menuIndex = (this.menuIndex + 1) % MENU_TRACKS.length;
-    }
-    if ((sceneName === 'fight' || sceneName === 'soccer') && !this.customTracks[sceneName]) {
+    if ((sceneName === 'fight' || sceneName === 'soccer' || sceneName === 'story') && !this.customTracks[sceneName]) {
       this.fightIndex = (this.fightIndex + 1) % FIGHT_TRACKS.length;
     }
 
