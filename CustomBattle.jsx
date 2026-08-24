@@ -15,7 +15,7 @@ import { sfx } from './sfx.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { getAccessory, isBehindAccessory, drawAccessory, resolveAccColor } from './cosmetics.js';
 import { drawShikigamiFollower } from './shikigami.js';
-import { useClipRecorder } from '../../hooks/useClipRecorder';
+import { useClipRecorder } from './useClipRecorder.js';
 import PauseMenu from './PauseMenu';
 import CharStats from './CharStats';
 import ElementSelect from './ElementSelect';

@@ -15,7 +15,7 @@ import PauseMenu from './PauseMenu';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import { getKeybinds, readPlayerInput, readSinglePlayerInput, getSchemeKeybinds, getSoloKeybinds } from './keybinds.js';
-import { useClipRecorder } from '../../hooks/useClipRecorder';
+import { useClipRecorder } from './useClipRecorder.js';
 import { drawMaterialOverlay } from './materials.js';
 import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor, getEquippedAccessories } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';

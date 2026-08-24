@@ -11,7 +11,7 @@ import { getKeybinds } from './keybinds.js';
 import { PROFILE_TITLES, getTitleColor, ownsTitle } from './profileTitles.js';
 import { ERAS } from './eras.js';
 import SoundButton from './SoundButton.jsx';
-import { useGamepad } from '../../hooks/useGamepad';
+import { useGamepad } from './useGamepad.js';
 import GameIcon from "./GameIcon.jsx";
 
 import { THEMES, applyUiTheme } from './uiThemes.js';

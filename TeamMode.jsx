@@ -12,7 +12,7 @@ import { getAccessory, getEquippedAccessories, isBehindAccessory, drawAccessory,
 import { drawShikigamiFollower } from './shikigami.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
 import { getEmoteForKey } from './emoteSlots.js';
-import { useClipRecorder } from '../../hooks/useClipRecorder';
+import { useClipRecorder } from './useClipRecorder.js';
 import PauseMenu from './PauseMenu';
 import CharStats from './CharStats';
 import ElementSelect from './ElementSelect';
