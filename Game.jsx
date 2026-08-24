@@ -88,6 +88,7 @@ import { formatNumber } from './formatNumber.js';
 import TouchControls from './TouchControls.jsx';
 import { useGamepadMenuNav } from './useGamepadMenuNav.js';
 import { loadCloudProgress, saveCloudProgress } from './cloudSaves.js';
+import { supabase } from './supabaseClient.js';
 
 const DEFAULT_SPLIT_CITY_BACKDROP = `${import.meta.env.BASE_URL}assets/split-city-background.png`;
 import { getKeybinds } from './keybinds.js';
@@ -957,11 +958,22 @@ export default function Game() {
     });
   };
 
-  // Load username + title for HUD display
+  // Load the local profile first, then replace it with the signed-in Supabase
+  // account profile. The auth listener updates the top bar immediately after
+  // account creation or login.
   useEffect(() => {
     db.auth.me().then(u => {
       setUserProfile({ username: u.username || (u.full_name || (u.email || 'Player')).split('@')[0], title: u.profile_title || '' });
     }).catch(() => {});
+    const applyCloudProfile = (user) => {
+      if (!user) return;
+      const meta = user.user_metadata || {};
+      const username = meta.username || meta.full_name || (user.email || 'Player').split('@')[0];
+      setUserProfile(prev => ({ ...prev, username }));
+    };
+    supabase.auth.getUser().then(({ data }) => applyCloudProfile(data.user)).catch(() => {});
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => applyCloudProfile(session?.user));
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   // Load custom character data for the fight engine
