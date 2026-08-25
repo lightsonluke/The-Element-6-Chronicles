@@ -1,0 +1,22 @@
+INSTALL THIS REPAIR IN THIS ORDER
+
+1. Supabase -> SQL Editor -> New query.
+2. Open Supabase-online-match-host-id-repair.sql.
+3. Copy ALL its contents into the query and press Run.
+4. Upload Game.jsx and ActualSportsOnlineMatch.jsx to the ROOT of GitHub.
+5. Replace Game.jsx when GitHub asks. ActualSportsOnlineMatch.jsx is a new file.
+6. Commit. Wait for GitHub Actions to finish successfully.
+7. Hard-refresh each browser (Cmd+Shift+R on Mac) before testing.
+
+What this fixes:
+- host_id NOT NULL matchmaking crash in Ranked and Unranked fights
+- online Soccer / Volleyball 1v1 / Dodgeball screens failing blank
+- guest Dodgeball controls accidentally driving player one
+- winner result field mismatch in Volleyball/Dodgeball
+- sport errors become a safe Return to Sports screen instead of crashing the app
+- selected online character and element use the per-player Supabase loadout
+
+This package does NOT overwrite any offline sport component.
+
+Not included yet: LAN room repair, Shapeshift LAN code field, and 2v2/3v3
+online sport rewrites. Those need separate work after this deploy is stable.
