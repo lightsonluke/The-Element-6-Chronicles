@@ -1,0 +1,20 @@
+REAL 1V1 ONLINE SPORTS
+
+Upload these files to the ROOT of your GitHub repository:
+
+  Game.jsx                (replace the existing file)
+  ActualSportsOnlineMatch.jsx (new file)
+
+No SQL is needed. You already installed the Online Sports SQL tables/functions.
+
+This changes only the ONLINE SPORTS match screen for:
+  - Soccer Ranked and Soccer Online
+  - Volleyball Ranked 1v1
+  - Dodgeball Ranked and Dodgeball Online
+
+It uses the real existing SoccerFighter, VolleyballGame, and DodgeballGame
+components. It does NOT replace or edit any offline sport file.
+
+The connection is Supabase Realtime. The generic drawn rollback arena is no
+longer used for those 1v1 modes. 2v2 Volleyball and 3v3 Banger remain on the
+old screen until their separate multiplayer work is installed.
