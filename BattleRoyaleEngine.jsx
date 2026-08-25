@@ -411,7 +411,6 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           brObjects: serializeObjects(brObjects),
         } : {}),
         alive: aliveList().length,
-        time: matchTime,
       };
       try { db.entities.BattleRoyaleMatch.update(matchId, { match_state: state }).catch(checkRate); } catch {}
     };

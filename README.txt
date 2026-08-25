@@ -1,26 +1,16 @@
-ELEMENT 6 — ONLINE FIGHTS: SHARED STAGES + ELO LIMIT
+ELEMENT 6 — BUILD REPAIR
 
-Install in this order:
+This fixes the exact two build messages in the screenshot.
 
-1. Supabase -> SQL Editor -> New query.
-2. Open Supabase-online-fights-stage-elo.sql and copy ALL of it into Supabase.
-3. Press Run. Do not type the filename into the editor.
-4. Upload these files to your GitHub repository root and replace the existing files:
-   - RankedOnlineLobby.jsx
-   - RollbackOnlineFight.jsx
-5. Upload element6Simulation.js into the rollback folder in GitHub:
+1. Upload BattleRoyaleEngine.jsx to the ROOT of your GitHub repository and choose Replace.
+2. Open the rollback folder in your GitHub repository.
+3. Upload element6Simulation.js INTO that rollback folder and choose Replace.
+   The final GitHub path must be exactly:
    rollback/element6Simulation.js
-6. Commit and wait for GitHub Pages to deploy.
-7. Test with two signed-in accounts in two browsers.
+   It must NOT be at the repository root.
+4. Commit the changes and wait for the action to finish.
 
-What this update does:
-- The server randomly selects the same built-in, non-custom stage and platform layout for both players.
-- Both players use their own selected character, element, shikigami, skins, and accessories saved in their matchmaking loadout.
-- Each player controls only their own fighter from their own device using their Settings control preset: Arrows, WASD, custom bindings, or controller.
-- Ranked Fight, Soccer Ranked, Volleyball Ranked, and Dodgeball Ranked ratings are clamped between 0 and 4000 on the server.
-
-This package changes only Ranked and Unranked Fights. The existing sport matchmaking remains separate.
-
-Parkour, Rock Climbing, Zipline, and Honored Bot leaderboard records use older,
-separate score paths. They are deliberately not changed by this online-fight
-package; they need their own shared-score update rather than a risky partial fix.
+Why it failed:
+- RollbackOnlineFight.jsx needs getOnlineStagePlatforms.
+- That export is in the replacement element6Simulation.js, but GitHub still had an older copy in rollback/.
+- BattleRoyaleEngine.jsx had the word "time" twice in the same saved object.
