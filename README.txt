@@ -1,18 +1,12 @@
-ELEMENT 6 — OFFLINE SOCCER + VOLLEYBALL BOT FIX
+ELEMENT 6 — RANKED + UNRANKED MATCHMAKING REPAIR
 
-This is a two-file replacement package. No Supabase SQL is needed.
+1. Open Supabase Dashboard -> SQL Editor -> New query.
+2. Open Supabase-ranked-unranked-repair.sql.
+3. Copy all of its text into Supabase. Do NOT type the filename into the editor.
+4. Click Run once.
+5. There are no GitHub files to upload for this repair.
+6. Refresh the game and test Ranked and Unranked with two different signed-in accounts.
 
-1. Unzip this download.
-2. Open your GitHub repository.
-3. Upload BOTH files from this folder to the repository root:
-   - SoccerMode.jsx
-   - VolleyballGame.jsx
-4. Choose “Replace” for each existing file, then commit the changes.
-5. Wait for the GitHub Pages deployment to finish, then hard-refresh the game.
-
-What changed:
-- Offline Soccer no longer renders a blank screen while its opponent state is being created.
-- Volleyball team bots bump normal returns 90% of the time.
-- When a bot's teammate sets the ball, that bot still jumps and spikes it.
-
-Nothing in this package changes Online Sports, Supabase, rankings, or multiplayer.
+This repair fixes the old random_seed, host_id, and room_code requirements
+and replaces the fight matchmaking RPC with a version that supplies all
+required values itself.
