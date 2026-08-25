@@ -185,6 +185,8 @@ function SupabaseFightLobby({
         oppLoadout={opponentLoadout}
         myElo={role === 'host' ? (match.host_elo ?? myRating) : (match.guest_elo ?? myRating)}
         oppElo={role === 'host' ? (match.guest_elo ?? 1000) : (match.host_elo ?? 1000)}
+        myUsername={role === 'host' ? (match.host_username || 'YOU') : (match.guest_username || 'YOU')}
+        oppUsername={role === 'host' ? (match.guest_username || 'OPPONENT') : (match.host_username || 'OPPONENT')}
         sfxVolume={sfxVolume}
         musicVolume={musicVolume}
         settings={settings}

@@ -70,6 +70,8 @@ export default function RollbackOnlineFight({
   oppLoadout = {},
   myElo,
   oppElo,
+  myUsername = 'YOU',
+  oppUsername = 'OPPONENT',
   sfxVolume = 70,
   musicVolume = 50,
   settings = {},
@@ -184,13 +186,13 @@ export default function RollbackOnlineFight({
       ctx.clearRect(0, 0, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT);
       drawBackground(ctx, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT, state.frame, 'splitcity');
       drawPlatforms(ctx, ONLINE_PLATFORMS, state.frame, 'splitcity');
-      drawFighter(hostFighter, hostCharacter, hostLoadout, isHost ? 'YOU' : 'OPPONENT');
-      drawFighter(guestFighter, guestCharacter, guestLoadout, isHost ? 'OPPONENT' : 'YOU');
+      drawFighter(hostFighter, hostCharacter, hostLoadout, isHost ? myUsername : oppUsername);
+      drawFighter(guestFighter, guestCharacter, guestLoadout, isHost ? oppUsername : myUsername);
 
       ctx.fillStyle = 'rgba(0,0,0,0.72)';
       ctx.fillRect(0, ONLINE_STAGE_HEIGHT - 80, ONLINE_STAGE_WIDTH, 80);
-      drawHealthBar(ctx, 40, ONLINE_STAGE_HEIGHT - 66, hostFighter.damage, 280, hostCharacter.color, `${hostCharacter.name}${isHost ? ' (YOU)' : ''}`, hostFighter.stocks);
-      drawHealthBar(ctx, ONLINE_STAGE_WIDTH - 320, ONLINE_STAGE_HEIGHT - 66, guestFighter.damage, 280, guestCharacter.color, `${guestCharacter.name}${!isHost ? ' (YOU)' : ''}`, guestFighter.stocks);
+      drawHealthBar(ctx, 40, ONLINE_STAGE_HEIGHT - 66, hostFighter.damage, 280, hostCharacter.color, `${isHost ? myUsername : oppUsername} · ${hostCharacter.name}`, hostFighter.stocks);
+      drawHealthBar(ctx, ONLINE_STAGE_WIDTH - 320, ONLINE_STAGE_HEIGHT - 66, guestFighter.damage, 280, guestCharacter.color, `${!isHost ? myUsername : oppUsername} · ${guestCharacter.name}`, guestFighter.stocks);
       ctx.fillStyle = '#FFD700';
       ctx.font = 'bold 12px Orbitron';
       ctx.textAlign = 'center';

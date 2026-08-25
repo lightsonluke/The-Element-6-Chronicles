@@ -7,6 +7,7 @@ import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { sfx } from './sfx.js';
 import GameIcon from "./GameIcon.jsx";
+import { sendOnlineChallenge } from './onlineChallenges.js';
 
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 
@@ -72,11 +73,11 @@ export default function PlayerProfileModal({ player, me, onClose, onPlayCampaign
     } catch { sfx.warning(); flash('Could not invite to party.'); }
   };
 
-  const inviteMatch = async () => {
+  const inviteMatch = async (mode = 'unranked') => {
     try {
-      await db.entities.MatchRequest.create({ from_user_id: me.id, to_user_id: player.id, from_username: me.name, to_username: player.username || player.name, sport: '1v1', status: 'pending' });
-      flash('Match invite sent!');
-    } catch { sfx.warning(); flash('Could not invite to match.'); }
+      await sendOnlineChallenge(player.id, mode);
+      flash(`${mode === 'ranked' ? 'Ranked' : 'Unranked'} challenge sent!`);
+    } catch { sfx.warning(); flash('Could not send challenge.'); }
   };
 
   const trade = () => { sfx.click(); onClose?.('trade', player); };
@@ -113,7 +114,8 @@ export default function PlayerProfileModal({ player, me, onClose, onPlayCampaign
     ['Add Friend', addFriend],
     ['Direct Message', dm],
     ['Invite to Party', inviteParty],
-    ['Invite to Match', inviteMatch],
+    ['Challenge: Unranked', () => inviteMatch('unranked')],
+    ['Challenge: Ranked', () => inviteMatch('ranked')],
     ['Trade', trade],
     ['Gift', gift],
     ['View Stages', loadStages],

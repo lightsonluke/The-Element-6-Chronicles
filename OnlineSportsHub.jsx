@@ -60,7 +60,7 @@ export default function OnlineSportsHub({ onBack, unlockedIds, favoriteId, equip
         <p className="text-4xl font-heading text-accent">{joined} / {queue.requiredPlayers}</p>
         <p className="text-xs text-muted-foreground">{waiting ? `Waiting for ${waiting} more player${waiting === 1 ? '' : 's'}.` : 'Starting the synchronized match…'}</p>
         <div className="grid grid-cols-2 gap-2 text-xs font-body text-left">
-          {players.map(player => <div key={player.user_id} className="rounded bg-secondary/50 px-2 py-1">TEAM {player.team} · {player.character_id}</div>)}
+          {players.map(player => <div key={player.user_id} className="rounded bg-secondary/50 px-2 py-1">TEAM {player.team} · {player.username || 'Player'} · {player.character_id}</div>)}
         </div>
       </div>
       {error && <p className="text-destructive text-xs">{error}</p>}
