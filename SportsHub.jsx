@@ -159,20 +159,6 @@ export default function SportsHub({ onBack, onPlaySoccer, onShop, onAward, onEnd
         Every sport awards XP, has its own leaderboard column, and supports Quick Match + Tournament mode.
         Pick a sport, choose your fighters (Random works for P1, P2, and CPU), and win!
       </p>
-      {onCustomRoom && (
-        <div className="w-full mt-1">
-          <p className="text-xs font-heading text-muted-foreground mb-2 text-center">PLAY WITH FRIENDS (LAN)</p>
-          <div className="flex gap-2 flex-wrap justify-center">
-            {SPORTS.filter(s => ['soccer', 'volleyball', 'baseball', 'banger'].includes(s.id)).map(s => (
-              <button key={s.id} onClick={() => onCustomRoom(s.id)}
-                className="px-4 py-2 bg-primary/20 border border-primary text-primary rounded-lg font-heading text-xs hover:bg-primary hover:text-primary-foreground transition">
-                {s.emoji} {s.name.toUpperCase()} ROOM
-              </button>
-            ))}
-          </div>
-          <p className="text-[9px] text-muted-foreground font-body text-center mt-1">Create a room, invite friends via code, add bots, and play together.</p>
-        </div>
-      )}
       {onOnlineSports && <button onClick={onOnlineSports} className="w-full mt-2 px-6 py-4 bg-accent/20 border-2 border-accent text-accent rounded-xl font-heading text-base hover:bg-accent hover:text-accent-foreground transition">ONLINE SPORTS</button>}
     </div>
   );

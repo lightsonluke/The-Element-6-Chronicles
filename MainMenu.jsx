@@ -52,6 +52,7 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
       { label: 'LAN Play', key: 'lan' },
       { label: 'Friends', key: 'friends' },
       { label: 'Chat', key: 'chat' },
+      { label: 'ELO', key: 'elo' },
     ]},
     { type: 'button', label: 'STORY MODE', key: 'story' },
     { type: 'button', label: 'SPORTS', key: 'sports' },
@@ -83,7 +84,6 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
     { type: 'tab', id: 'creator', label: 'CAMPAIGN', items: [
       { label: 'Campaign', key: 'creatormode' },
     ]},
-    { type: 'button', label: 'ELO', key: 'elo' },
     { type: 'button', label: 'SHOP', key: 'shop' },
     { type: 'button', label: 'SAVE CODES', key: 'savecodes' },
   ];

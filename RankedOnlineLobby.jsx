@@ -201,7 +201,7 @@ function SupabaseFightLobby({
         <button onClick={() => { cancel(); onBack(); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
       </div>
       <div className="bg-card border border-border rounded-xl p-3 w-full max-w-md text-center">
-        <p className="text-xs font-heading text-primary">SUPABASE GLOBAL MATCHMAKING</p>
+        <p className="text-xs font-heading text-primary">GLOBAL MATCHMAKING</p>
         {mode === 'ranked' && <p className="text-xs text-accent font-heading mt-1">SERVER RATING: {myRating}</p>}
         <p className="text-[10px] text-muted-foreground font-body mt-1">Two-player rollback · keyboard or controller</p>
       </div>
