@@ -67,3 +67,12 @@ export async function reportOnlineSportResult({ matchId, winnerTeam, finalFrame,
   if (error) throw error;
   return data;
 }
+
+export async function getOnlineSportLeaderboard(mode, username = '') {
+  const { data, error } = await supabase.rpc('get_element6_elo_leaderboard', {
+    p_mode: mode,
+    p_username: username.trim() || null,
+  });
+  if (error) throw error;
+  return data || [];
+}

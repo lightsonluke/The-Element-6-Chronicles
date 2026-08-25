@@ -166,7 +166,7 @@ function SupabaseFightLobby({
         ratingPending = true;
       }
     }
-    onEnd?.({ ...result, serverRating, ratingPending });
+    onEnd?.({ ...result, characterId: myChar, serverRating, ratingPending });
   };
 
   if (phase === 'fight' && match && role) {

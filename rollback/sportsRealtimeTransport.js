@@ -14,6 +14,6 @@ export class SportsRealtimeTransport {
   send(event, payload) { return this.channel.send({ type: 'broadcast', event, payload }); }
   sendInput(payload) { return this.send('input', payload); }
   sendChecksum(payload) { return this.send('checksum', payload); }
-  sendControl(kind) { return this.send('control', { version: 1, matchId: this.matchId, playerId: this.playerId, kind }); }
+  sendControl(kind, data = {}) { return this.send('control', { version: 1, matchId: this.matchId, playerId: this.playerId, kind, ...data }); }
   close() { return this.channel ? supabase.removeChannel(this.channel) : Promise.resolve(); }
 }

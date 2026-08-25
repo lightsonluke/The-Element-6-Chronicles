@@ -1,27 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import GameIcon from './GameIcon.jsx';
-import { getMyRankedRating } from './rankedOnline.js';
+import { getMyRankedRating, getRankedLeaderboard } from './rankedOnline.js';
 import { getMyOnlineSportRatings } from './sportsOnline.js';
 
-function rankFor(elo) {
-  if (elo >= 2200) return 'ELEMENT 6 ELITE';
-  if (elo >= 1900) return 'DIAMOND';
-  if (elo >= 1600) return 'PLATINUM';
-  if (elo >= 1300) return 'GOLD';
-  if (elo >= 1000) return 'SILVER';
-  return 'BRONZE';
-}
-function percent(wins, losses) { const total = (wins || 0) + (losses || 0); return total ? `${Math.round((wins || 0) * 100 / total)}%` : '—'; }
+const MODES = [['ranked', 'Ranked Fights'], ['soccer_ranked', 'Soccer Ranked'], ['volleyball_1v1_ranked', 'Volleyball Ranked'], ['dodgeball_ranked', 'Dodgeball Ranked']];
+function rankFor(elo = 1000) { if (elo >= 2200) return 'ELEMENT 6 ELITE'; if (elo >= 1900) return 'DIAMOND'; if (elo >= 1600) return 'PLATINUM'; if (elo >= 1300) return 'GOLD'; if (elo >= 1000) return 'SILVER'; return 'BRONZE'; }
+function winRate(wins = 0, losses = 0) { const total = wins + losses; return total ? `${Math.round((wins * 100) / total)}%` : '—'; }
 
 export default function EloScreen({ onBack, botRankedElo = 1000 }) {
   const [fight, setFight] = useState(null); const [sports, setSports] = useState({});
-  useEffect(() => { getMyRankedRating().then(setFight).catch(() => {}); getMyOnlineSportRatings().then(setSports).catch(() => {}); }, []);
-  const rows = [
-    ['Ranked Fights', fight],
-    ['Bot Ranked', { rating: botRankedElo, wins: 0, losses: 0 }],
-    ['Soccer Ranked', sports.soccer_ranked],
-    ['Dodgeball Ranked', sports.dodgeball_ranked],
-    ['Volleyball Ranked', sports.volleyball_1v1_ranked],
-  ];
-  return <div className="w-full max-w-3xl flex flex-col gap-4"><div className="flex justify-between items-center"><h2 className="text-2xl font-heading text-accent">ELO</h2><button onClick={onBack} className="px-4 py-2 bg-secondary rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> MENU</button></div><div className="overflow-x-auto rounded-xl border border-border"><table className="w-full text-left text-xs"><thead className="bg-secondary"><tr><th className="p-3">MODE</th><th className="p-3">RANK</th><th className="p-3">ELO</th><th className="p-3">WIN RATE</th><th className="p-3">W / L</th></tr></thead><tbody>{rows.map(([name, stats]) => { const elo = stats?.rating ?? 1000; return <tr key={name} className="border-t border-border"><td className="p-3 font-heading">{name}</td><td className="p-3 text-primary">{rankFor(elo)}</td><td className="p-3 text-accent font-heading">{elo}</td><td className="p-3">{percent(stats?.wins, stats?.losses)}</td><td className="p-3">{stats ? `${stats.wins || 0} / ${stats.losses || 0}` : '0 / 0'}</td></tr>; })}</tbody></table></div><p className="text-[10px] text-muted-foreground">Online ratings are finalized after the match result is verified. Bot Ranked is your local single-player rating.</p></div>;
+  const [leaderMode, setLeaderMode] = useState('ranked'); const [leaders, setLeaders] = useState([]);
+  const [search, setSearch] = useState(''); const [loading, setLoading] = useState(true); const [message, setMessage] = useState('');
+  useEffect(() => { Promise.all([getMyRankedRating(), getMyOnlineSportRatings()]).then(([f, s]) => { setFight(f); setSports(s || {}); }).catch(() => setMessage('Could not refresh your ELO yet.')); }, []);
+  const loadLeaders = async (username = '') => { setLoading(true); setMessage(''); try { const rows = await getRankedLeaderboard(leaderMode, username); setLeaders(rows); if (username && !rows.length) setMessage('No player found with that username.'); } catch (error) { setMessage(error?.message || 'Could not load rankings. Run the ELO SQL update.'); } finally { setLoading(false); } };
+  useEffect(() => { loadLeaders(); }, [leaderMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  const rows = [['Ranked Fights', fight], ['Bot Ranked', { rating: botRankedElo, wins: 0, losses: 0 }], ['Soccer Ranked', sports.soccer_ranked], ['Dodgeball Ranked', sports.dodgeball_ranked], ['Volleyball Ranked', sports.volleyball_1v1_ranked]];
+  return <div className="w-full max-w-4xl flex flex-col gap-4"><div className="flex justify-between items-center"><h2 className="text-2xl font-heading text-accent">ELO</h2><button onClick={onBack} className="px-4 py-2 bg-secondary rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> MENU</button></div><div className="overflow-x-auto rounded-xl border border-border"><table className="w-full text-left text-xs"><thead className="bg-secondary"><tr><th className="p-3">MODE</th><th className="p-3">RANK</th><th className="p-3">ELO</th><th className="p-3">WIN RATE</th><th className="p-3">W / L</th></tr></thead><tbody>{rows.map(([name, stats]) => { const elo = stats?.rating ?? 1000; return <tr key={name} className="border-t border-border"><td className="p-3 font-heading">{name}</td><td className="p-3 text-primary">{rankFor(elo)}</td><td className="p-3 text-accent font-heading">{elo}</td><td className="p-3">{winRate(stats?.wins, stats?.losses)}</td><td className="p-3">{stats ? `${stats.wins || 0} / ${stats.losses || 0}` : '0 / 0'}</td></tr>; })}</tbody></table></div><div className="rounded-xl border border-border bg-card p-4 space-y-3"><div className="flex flex-wrap gap-2 items-center justify-between"><h3 className="font-heading text-primary">TOP 100 RANKED PLAYERS</h3><select value={leaderMode} onChange={e => setLeaderMode(e.target.value)} className="px-2 py-1 bg-secondary rounded text-xs">{MODES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></div><form className="flex gap-2" onSubmit={e => { e.preventDefault(); loadLeaders(search); }}><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search any username and see their rank" className="flex-1 px-3 py-2 bg-secondary rounded text-sm" maxLength={20} /><button className="px-4 py-2 bg-accent text-accent-foreground rounded font-heading text-xs">SEARCH</button><button type="button" onClick={() => { setSearch(''); loadLeaders(); }} className="px-3 py-2 bg-secondary rounded font-heading text-xs">TOP 100</button></form>{message && <p className="text-xs text-destructive">{message}</p>}<div className="max-h-80 overflow-y-auto">{loading ? <p className="text-xs text-muted-foreground p-3">LOADING…</p> : <table className="w-full text-left text-xs"><thead className="sticky top-0 bg-secondary"><tr><th className="p-2">#</th><th className="p-2">PLAYER</th><th className="p-2">RANK</th><th className="p-2">ELO</th><th className="p-2">W / L</th></tr></thead><tbody>{leaders.map(row => <tr key={row.user_id} className="border-t border-border"><td className="p-2 text-accent">{row.rank_position}</td><td className="p-2 font-heading">{row.username}</td><td className="p-2">{rankFor(row.rating)}</td><td className="p-2 text-accent">{row.rating}</td><td className="p-2">{row.wins} / {row.losses}</td></tr>)}</tbody></table>}</div></div></div>;
 }

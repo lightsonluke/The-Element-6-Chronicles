@@ -119,6 +119,25 @@ export class RollbackSession {
     return { ...this.stats, currentFrame: this.currentFrame, confirmedFrame: this.confirmedFrame };
   }
 
+  // A confirmed host snapshot is used only as a recovery checkpoint after a
+  // checksum mismatch. Both peers pause briefly, replace their prediction
+  // history, then resume from exactly this frame instead of ending the match.
+  replaceState(snapshot, frame = snapshot?.frame) {
+    if (!snapshot || !Number.isSafeInteger(frame) || frame < 0) return false;
+    this.state = cloneState(snapshot);
+    this.currentFrame = frame;
+    this.state.frame = frame;
+    this.confirmedFrame = frame;
+    this.stateHistory = new Map([[frame, cloneState(this.state)]]);
+    this.localInputs.clear(); this.remoteInputs.clear(); this.predictedRemoteInputs.clear();
+    this.localChecksums.clear(); this.remoteChecksums.clear(); this.lastChecksumSent = 0;
+    for (let offset = 0; offset < this.inputDelay; offset += 1) {
+      this.localInputs.set(frame + offset, NEUTRAL_INPUT_MASK);
+      this.remoteInputs.set(frame + offset, NEUTRAL_INPUT_MASK);
+    }
+    return true;
+  }
+
   #inputFor(map, frame, fallback) {
     return map.has(frame) ? map.get(frame) : fallback;
   }

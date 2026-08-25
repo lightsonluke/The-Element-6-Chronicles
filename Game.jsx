@@ -45,7 +45,7 @@ import ComboTrainer from './ComboTrainer.jsx';
 import OnlineSportsLobby from './OnlineSportsLobby.jsx';
 import OnlineSportsHub from './OnlineSportsHub.jsx';
 import EloScreen from './EloScreen.jsx';
-import ActualSportsOnlineMatch from './ActualSportsOnlineMatch.jsx';
+import SportsRollbackArena from './SportsRollbackArena.jsx';
 import BattleRoyaleLobby from './BattleRoyaleLobby.jsx';
 import ShapeshiftSelect from './ShapeshiftSelect.jsx';
 
@@ -1904,7 +1904,7 @@ export default function Game() {
         )}
 
         {screen === 'soccer' && (
-          <SoccerMode onBack={goBack} onShop={() => setScreen('shop')} onOnlinePlay={() =>         { if (progress?.settings?.mobileMode === true) { alert('Mobile Mode is ON\n\nOnline multiplayer is restricted in Mobile Mode. Use LAN Play for multiplayer.'); return; } setOnlineMode('soccer'); setScreen('onlinelobby'); }}
+          <SoccerMode onBack={goBack} onShop={() => setScreen('shop')} onOnlinePlay={() =>         { if (progress?.settings?.mobileMode === true) { alert('Mobile Mode is ON\n\nOnline multiplayer is restricted in Mobile Mode. Use LAN Play for multiplayer.'); return; } setReturnScreen('soccer'); setScreen('onlinesports'); }}
             onAward={(result) => {
               if (result.groupTournament) {
                 bumpTrophy('sport');
@@ -2058,17 +2058,15 @@ export default function Game() {
         )}
 
         {screen === 'onlinesportsmatch' && onlineSportsLobby && (
-          <ActualSportsOnlineMatch
+          <SportsRollbackArena
             match={onlineSportsLobby.match}
             players={onlineSportsLobby.players}
             settings={progress.settings || {}}
-            sfxVolume={progress.settings?.sfxVolume ?? 70}
-            musicVolume={progress.settings?.musicVolume ?? 50}
-            equippedSkins={progress.equippedSkins || {}}
-            equippedAccessories={progress.equippedAccessories || {}}
-            equippedElements={progress.equippedElements || {}}
-            customCharsData={customCharData}
-            onEnd={() => { setOnlineSportsLobby(null); setScreen('sports'); }}
+            onEnd={(res) => {
+              // Online wins grow only the fighter the player actually queued.
+              if (res?.won && res?.characterId) addXP(res.characterId, 45);
+              setOnlineSportsLobby(null); setScreen('sports');
+            }}
           />
         )}
 
@@ -2244,6 +2242,7 @@ export default function Game() {
             mode={onlineMode}
             onBack={goBack}
             onEnd={(res) => {
+              if (res?.won && res?.characterId) addXP(res.characterId, 45);
               // Ranked ELO is calculated and written by Supabase, never by the browser.
               if (onlineMode === 'ranked' && Number.isFinite(res?.serverRating)) {
                 setProgress(prev => {

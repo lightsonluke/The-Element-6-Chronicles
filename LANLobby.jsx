@@ -1,4 +1,4 @@
-import db from './localBackend';
+import { supabase } from './supabaseClient.js';
 
 
 import React, { useState, useEffect } from 'react';
@@ -59,9 +59,11 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
   }, [lan.status, myTeam, fightMode, lan]);
 
   useEffect(() => {
-    db.auth.me().then(u => {
+    supabase.auth.getUser().then(({ data }) => {
+      const u = data.user;
+      if (!u) return;
       setUserId(u.id);
-      setUserName(u.full_name || u.email || 'Player');
+      setUserName(u.user_metadata?.username || u.user_metadata?.full_name || u.email || 'Player');
     }).catch(() => {});
   }, []);
 
@@ -78,32 +80,22 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
 
   const handleCreateRoom = async (charOrTeam) => {
     if (!userId) return;
-    const isShapeshift = fightMode === 'shapeshift';
-    if (isShapeshift && Array.isArray(charOrTeam)) {
-      setMyTeam(charOrTeam);
-      setMyChar(charOrTeam[0]);
-      await lan.createRoom(userId, userName, 'fight', charOrTeam[0], equippedElements?.[charOrTeam[0]] || 'basic');
-    } else {
-      const char = typeof charOrTeam === 'string' ? charOrTeam : myChar;
-      if (typeof charOrTeam === 'string') setMyChar(charOrTeam);
-      await lan.createRoom(userId, userName, gameMode === 'soccer' ? 'soccer' : 'fight', char, equippedElements?.[char] || 'basic');
-    }
-    setPhase('connecting');
+    try {
+      const isShapeshift = fightMode === 'shapeshift';
+      if (isShapeshift && Array.isArray(charOrTeam)) { setMyTeam(charOrTeam); setMyChar(charOrTeam[0]); await lan.createRoom(userId, userName, 'fight', charOrTeam[0], equippedElements?.[charOrTeam[0]] || 'basic'); }
+      else { const char = typeof charOrTeam === 'string' ? charOrTeam : myChar; if (typeof charOrTeam === 'string') setMyChar(charOrTeam); await lan.createRoom(userId, userName, gameMode, char, equippedElements?.[char] || 'basic'); }
+      setPhase('connecting');
+    } catch (error) { alert(error?.message || 'Could not create the LAN room. Run the online reliability SQL first.'); }
   };
 
   const handleJoinRoom = async (charOrTeam) => {
     if (!userId || joinCode.length < 4) return;
-    const isShapeshift = fightMode === 'shapeshift';
-    if (isShapeshift && Array.isArray(charOrTeam)) {
-      setMyTeam(charOrTeam);
-      setMyChar(charOrTeam[0]);
-      await lan.joinRoom(joinCode.toUpperCase(), userId, userName, charOrTeam[0], equippedElements?.[charOrTeam[0]] || 'basic');
-    } else {
-      const char = typeof charOrTeam === 'string' ? charOrTeam : myChar;
-      if (typeof charOrTeam === 'string') setMyChar(charOrTeam);
-      await lan.joinRoom(joinCode.toUpperCase(), userId, userName, char, equippedElements?.[char] || 'basic');
-    }
-    setPhase('connecting');
+    try {
+      const isShapeshift = fightMode === 'shapeshift';
+      if (isShapeshift && Array.isArray(charOrTeam)) { setMyTeam(charOrTeam); setMyChar(charOrTeam[0]); await lan.joinRoom(joinCode.toUpperCase(), userId, userName, charOrTeam[0], equippedElements?.[charOrTeam[0]] || 'basic'); }
+      else { const char = typeof charOrTeam === 'string' ? charOrTeam : myChar; if (typeof charOrTeam === 'string') setMyChar(charOrTeam); await lan.joinRoom(joinCode.toUpperCase(), userId, userName, char, equippedElements?.[char] || 'basic'); }
+      setPhase('connecting');
+    } catch (error) { alert(error?.message || 'Could not join that LAN room.'); }
   };
 
   const handleFightEnd = (result) => {
@@ -290,6 +282,7 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
           onEquipElement={onEquipElement}
           equippedShikigami={equippedShikigami}
           ownedShikigami={ownedShikigami}
+          extraControls={<div className="w-full max-w-sm"><input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} placeholder="ENTER ROOM CODE" className="w-full px-3 py-2 bg-card border border-border rounded font-heading text-sm tracking-widest text-center" maxLength={6} /></div>}
           onStart={(team) => handleJoinRoom(team)}
           onBack={() => setPhase('menu')}
         />

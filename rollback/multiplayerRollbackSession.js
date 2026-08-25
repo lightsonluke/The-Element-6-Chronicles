@@ -42,6 +42,16 @@ export class MultiplayerRollbackSession {
   }
   getState() { return cloneState(this.state); }
   getStats() { return { ...this.stats, frame: this.frame, confirmedFrame: this.confirmedFrame }; }
+  replaceState(snapshot, frame = snapshot?.frame) {
+    if (!snapshot || !Number.isSafeInteger(frame) || frame < 0) return false;
+    this.state = cloneState(snapshot); this.state.frame = frame; this.frame = frame; this.confirmedFrame = frame;
+    this.stateHistory = new Map([[frame, cloneState(this.state)]]);
+    this.inputs = new Map(this.playerIds.map(id => [id, new Map()]));
+    this.predicted = new Map(this.playerIds.map(id => [id, new Map()]));
+    this.localChecksums.clear(); this.remoteChecksums.clear(); this.lastSentChecksum = 0;
+    for (let offset = 0; offset < this.inputDelay; offset += 1) this.playerIds.forEach(id => this.inputs.get(id).set(frame + offset, NEUTRAL_INPUT_MASK));
+    return true;
+  }
   #lastInput(id, frame) { const inputs = this.inputs.get(id); for (let f = frame - 1; f >= Math.max(0, frame - this.historySize); f -= 1) if (inputs.has(f)) return inputs.get(f); return NEUTRAL_INPUT_MASK; }
   #step(replay) {
     const frame = this.frame, frameInputs = {};

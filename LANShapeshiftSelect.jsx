@@ -28,6 +28,7 @@ export default function LANShapeshiftSelect({
   ownedShikigami = [],
   onStart,
   onBack,
+  extraControls = null,
 }) {
   const unlockedSet = new Set(unlockedIds);
   const [team, setTeam] = useState(() => {
@@ -249,6 +250,7 @@ export default function LANShapeshiftSelect({
 
       {/* Start button */}
       <div className="flex flex-col gap-1 items-center">
+        {extraControls}
         <button onClick={handleStart} disabled={!teamReady}
           className={`px-8 py-2.5 rounded-lg font-heading text-base transition shadow-lg ${teamReady ? 'bg-accent text-accent-foreground hover:opacity-90' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
           {teamReady ? startLabel : 'FILL ALL 3 SLOTS'}

@@ -1,4 +1,4 @@
-import db from './localBackend';
+import { supabase } from './supabaseClient.js';
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 
@@ -160,24 +160,21 @@ export function useLANConnection() {
     await pc.setLocalDescription(offer);
     await waitForIce(pc);
 
-    const room = await db.entities.LANRoom.create({
-      room_code: code,
-      status: 'open',
-      host_user_id: hostUserId,
-      host_name: hostName,
-      game_mode: gameMode,
-      host_char: hostChar,
-      host_element: hostElement || 'basic',
-      host_sdp: JSON.stringify(pc.localDescription),
-      host_ice: iceCandidates,
+    const { data: room, error: roomError } = await supabase.rpc('create_element6_lan_room', {
+      p_room_code: code, p_game_mode: gameMode, p_host_char: hostChar,
+      p_host_element: hostElement || 'basic', p_host_sdp: JSON.stringify(pc.localDescription), p_host_ice: iceCandidates,
     });
+    if (roomError) throw roomError;
+    const createdRoom = Array.isArray(room) ? room[0] : room;
+    if (!createdRoom?.id) throw new Error('LAN room was not created.');
 
-    roomIdRef.current = room.id;
+    roomIdRef.current = createdRoom.id;
     setRoomCode(code);
 
     pollRef.current = setInterval(async () => {
       try {
-        const updated = await db.entities.LANRoom.get(room.id);
+        const { data: updated } = await supabase.from('element6_lan_rooms').select('*').eq('id', createdRoom.id).maybeSingle();
+        if (!updated) return;
         if (updated.guest_sdp && pc.currentRemoteDescription === null) {
           await pc.setRemoteDescription(JSON.parse(updated.guest_sdp));
           setOpponentChar(updated.guest_char);
@@ -202,8 +199,8 @@ export function useLANConnection() {
     setStatus('joining');
     setError(null);
 
-    const rooms = await db.entities.LANRoom.filter({ room_code: code, status: 'open' });
-    if (rooms.length === 0) {
+    const { data: rooms, error: findError } = await supabase.from('element6_lan_rooms').select('*').eq('room_code', code).eq('status', 'open').limit(1);
+    if (findError || !rooms?.length) {
       setError('Room not found or already closed');
       setStatus('error');
       return;
@@ -237,15 +234,11 @@ export function useLANConnection() {
     await pc.setLocalDescription(answer);
     await waitForIce(pc);
 
-    await db.entities.LANRoom.update(room.id, {
-      guest_user_id: guestUserId,
-      guest_name: guestName,
-      guest_char: guestChar,
-      guest_element: guestElement || 'basic',
-      guest_sdp: JSON.stringify(pc.localDescription),
-      guest_ice: iceCandidates,
-      status: 'connected',
+    const { error: joinError } = await supabase.rpc('join_element6_lan_room', {
+      p_room_code: code, p_guest_char: guestChar, p_guest_element: guestElement || 'basic',
+      p_guest_sdp: JSON.stringify(pc.localDescription), p_guest_ice: iceCandidates,
     });
+    if (joinError) throw joinError;
 
     pollRef.current = setInterval(async () => {
       try {
@@ -258,7 +251,7 @@ export function useLANConnection() {
           clearInterval(pollRef.current);
           return;
         }
-        const updated = await db.entities.LANRoom.get(room.id);
+        const { data: updated } = await supabase.from('element6_lan_rooms').select('*').eq('id', room.id).maybeSingle();
         if (updated.status === 'closed') {
           setStatus('closed');
           clearInterval(pollRef.current);
@@ -273,7 +266,7 @@ export function useLANConnection() {
     if (dcRef.current) dcRef.current.close();
     if (pcRef.current) pcRef.current.close();
     if (roomIdRef.current) {
-      try { await db.entities.LANRoom.update(roomIdRef.current, { status: 'closed' }); } catch (_) { /* ignore */ }
+      try { await supabase.rpc('close_element6_lan_room', { p_room_id: roomIdRef.current }); } catch (_) { /* ignore */ }
     }
     setStatus('idle');
     setRoomCode(null);

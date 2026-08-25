@@ -75,3 +75,13 @@ export async function waitForRankedFinalization(matchId, timeoutMs = 15000) {
   return { finalized: false, waiting_for_opponent: true };
 }
 
+// Returns the top 100 for a mode.  When `username` is supplied the server
+// returns that player's row too, even when they are outside the top 100.
+export async function getRankedLeaderboard(mode = 'ranked', username = '') {
+  const { data, error } = await supabase.rpc('get_element6_elo_leaderboard', {
+    p_mode: mode,
+    p_username: username.trim() || null,
+  });
+  if (error) throw error;
+  return data || [];
+}
