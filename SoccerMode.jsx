@@ -84,9 +84,24 @@ export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePla
       const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, 15);
       setBracket({ slots: [p1, ...shuffled], results: {}, currentRound: 0 });
       setPhase('bracket');
-    } else if (mode === 'quick') {
-      setPhase('prematch');
     } else {
+      // Populate this synchronously before changing screens.  The old code
+      // waited for an effect, leaving one render where SoccerFighter had no
+      // opponent and returned a completely blank page.
+      if (mode === '2v2') {
+        const pool = ALL.filter(c => c.id !== 'evil' && c.id !== p1 && c.id !== p1b);
+        const first = pool[Math.floor(Math.random() * pool.length)]?.id || 'blue';
+        const secondPool = pool.filter(c => c.id !== first);
+        const second = secondPool[Math.floor(Math.random() * secondPool.length)]?.id || first;
+        fightOppRef.current = { p2Char: first, p2bChar: second };
+      } else {
+        fightOppRef.current = { p2Char: p2, p2bChar: null };
+      }
+      setFightOpp(fightOppRef.current);
+    }
+    if (mode === 'quick') {
+      setPhase('prematch');
+    } else if (mode !== 'tournament') {
       setPhase('fight');
     }
   };
@@ -141,6 +156,11 @@ export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePla
   };
 
   const continueFromBracket = () => {
+    const rawOpp = bracket?.currentRound === 0 ? bracket?.slots?.[1]
+      : bracket?.results?.[bracket.currentRound - 1]?.[1];
+    const opponent = ALL.some(c => c.id === rawOpp) ? rawOpp : 'blue';
+    fightOppRef.current = { p2Char: opponent, p2bChar: null };
+    setFightOpp(fightOppRef.current);
     setPhase('prematch');
   };
 
@@ -193,8 +213,12 @@ export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePla
   // ── Fight phase ──
   if (phase === 'fight') {
     if (gameMode === 'tournament' && (!bracket || !bracket.slots)) {
-      setPhase('select');
-      return null;
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-5 text-foreground">
+          <p className="font-heading text-xl">PREPARING SOCCER BRACKET…</p>
+          <button onClick={() => setPhase('select')} className="px-6 py-3 rounded-lg bg-accent text-accent-foreground font-heading">BACK TO SOCCER</button>
+        </div>
+      );
     }
     const fallbackPool = ALL.filter(c => c.id !== p1 && c.id !== 'evil');
     const randomId = (exclude) => {
@@ -216,8 +240,15 @@ export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePla
     };
 
     // Use frozen opponents from fightOppRef (set when fight phase started)
-    const frozen = fightOppRef.current;
-    if (!frozen) return null; // shouldn't happen — fight phase sets this before rendering
+    const frozen = fightOppRef.current || (gameMode !== 'tournament' ? { p2Char: p2, p2bChar: null } : null);
+    if (!frozen) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-5 text-foreground">
+          <p className="font-heading text-xl">PREPARING SOCCER MATCH…</p>
+          <button onClick={() => setPhase('select')} className="px-6 py-3 rounded-lg bg-accent text-accent-foreground font-heading">BACK TO SOCCER</button>
+        </div>
+      );
+    }
 
     if (gameMode === '2v2') {
       return (

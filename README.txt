@@ -1,19 +1,18 @@
-MINI CURSOR + FINAL MUSIC PATCH
+ELEMENT 6 — OFFLINE SOCCER + VOLLEYBALL BOT FIX
 
-Upload these files to the ROOT of your GitHub repository:
+This is a two-file replacement package. No Supabase SQL is needed.
 
-  index.css                 Replace existing file
-  music.js                  Replace existing file
-  public/audio/final.mp3    Replace/add this file
+1. Unzip this download.
+2. Open your GitHub repository.
+3. Upload BOTH files from this folder to the repository root:
+   - SoccerMode.jsx
+   - VolleyballGame.jsx
+4. Choose “Replace” for each existing file, then commit the changes.
+5. Wait for the GitHub Pages deployment to finish, then hard-refresh the game.
 
-The ZIP keeps the public/audio folder path for final.mp3. If GitHub's uploader
-does not preserve it, open public -> audio in GitHub first, then upload final.mp3
-into that folder.
+What changed:
+- Offline Soccer no longer renders a blank screen while its opponent state is being created.
+- Volleyball team bots bump normal returns 90% of the time.
+- When a bot's teammate sets the ball, that bot still jumps and spikes it.
 
-No Supabase SQL is needed for this patch.
-
-The CSS removes the text cursor from regular game UI. It remains a text cursor
-only inside text inputs, textareas, and editable text fields.
-
-music.js explicitly puts Final in the fight/sports battle rotation and keeps it
-as the Grand Circuit championship track.
+Nothing in this package changes Online Sports, Supabase, rankings, or multiplayer.
