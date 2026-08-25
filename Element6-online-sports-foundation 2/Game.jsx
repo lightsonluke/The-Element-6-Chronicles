@@ -45,6 +45,7 @@ import ComboTrainer from './ComboTrainer.jsx';
 import OnlineSportsLobby from './OnlineSportsLobby.jsx';
 import OnlineSportsHub from './OnlineSportsHub.jsx';
 import EloScreen from './EloScreen.jsx';
+import SportsRollbackArena from './SportsRollbackArena.jsx';
 import BattleRoyaleLobby from './BattleRoyaleLobby.jsx';
 import ShapeshiftSelect from './ShapeshiftSelect.jsx';
 
@@ -2052,7 +2053,16 @@ export default function Game() {
             equippedSkins={progress.equippedSkins || {}}
             equippedAccessories={progress.equippedAccessories || {}}
             equippedShikigami={progress.equippedShikigami || {}}
-            onMatchReady={() => { alert('The queue is ready. The multi-player rollback match simulation is the next required replacement package.'); }}
+            onMatchReady={({ match, players }) => { setOnlineSportsLobby({ match, players }); setScreen('onlinesportsmatch'); }}
+          />
+        )}
+
+        {screen === 'onlinesportsmatch' && onlineSportsLobby && (
+          <SportsRollbackArena
+            match={onlineSportsLobby.match}
+            players={onlineSportsLobby.players}
+            settings={progress.settings || {}}
+            onEnd={() => { setOnlineSportsLobby(null); setScreen('sports'); }}
           />
         )}
 

@@ -56,3 +56,14 @@ export async function getMyOnlineSportRatings() {
   if (error) throw error;
   return data || {};
 }
+
+export async function reportOnlineSportResult({ matchId, winnerTeam, finalFrame, checksum }) {
+  const { data, error } = await supabase.rpc('report_online_sport_result', {
+    p_match_id: matchId,
+    p_winner_team: winnerTeam,
+    p_final_frame: finalFrame,
+    p_final_checksum: checksum,
+  });
+  if (error) throw error;
+  return data;
+}
