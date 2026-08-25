@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SPORTS, getSport } from './sports.js';
 import SportsShell from './SportsShell.jsx';
 import VolleyballGame from './VolleyballGame.jsx';
@@ -21,7 +21,15 @@ const GAME_COMPONENTS = {
 export default function SportsHub({ onBack, onPlaySoccer, onShop, onAward, onEnd, onCustomRoom, onOnlineSports, unlockedIds, favoriteId, equippedAccessories = {}, equippedSkins = {}, settings = {}, charLevels = {}, equippedElements = {}, onEquipElement, sfxVolume, musicVolume, customCharsData = {}, customNumberMap = {}, charMastery = {}, equippedEmotes = {} }) {
   const [sport, setSport] = useState(null);
 
-  if (sport === 'soccer') { onPlaySoccer?.(); return null; }
+  // Soccer is an existing offline screen owned by Game.jsx.  Do not call the
+  // parent navigation setter while this component is rendering: React can
+  // discard that update, which made the offline Soccer button intermittently
+  // fail after the online-sports screens were added.
+  useEffect(() => {
+    if (sport === 'soccer') onPlaySoccer?.();
+  }, [sport, onPlaySoccer]);
+
+  if (sport === 'soccer') return null;
 
   if (sport === 'parkour') {
     return (
