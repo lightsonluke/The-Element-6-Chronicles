@@ -9,7 +9,7 @@ import { GUARDIANS } from './guardians.js';
 import { getCharNumber } from './characterNumber.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
-import OnlineFight from './OnlineFight';
+import RollbackOnlineFight from './RollbackOnlineFight.jsx';
 import OnlineSoccerFight from './OnlineSoccerFight';
 import UniversalCharacterSelect from './UniversalCharacterSelect.jsx';
 import ElementSelect from './ElementSelect';
@@ -166,10 +166,10 @@ export default function OnlineLobby({ mode, onBack, onEnd, unlockedIds, favorite
   if (phase === 'fight' && match) {
     const oppChar = role === 'host' ? match.guest_char : match.host_char;
     const oppLoadout = role === 'host' ? (match.guest_loadout || {}) : (match.host_loadout || {});
-    const FightComponent = mode === 'soccer' ? OnlineSoccerFight : OnlineFight;
+    const FightComponent = mode === 'soccer' ? OnlineSoccerFight : RollbackOnlineFight;
     return (
       <FightComponent
-        matchId={matchId} role={role} mode={mode}
+        matchId={matchId} playerId={me?.id} role={role} mode={mode}
         myChar={myChar} oppChar={oppChar}
         myLoadout={loadout} oppLoadout={oppLoadout}
         myElo={role === 'host' ? (match.host_elo ?? myElo) : (match.guest_elo ?? myElo)}

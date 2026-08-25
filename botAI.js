@@ -1,6 +1,6 @@
 // botAI.js — CPU AI logic extracted from fighter.js for maintainability.
 import { COMBOS, comboMoveReady as comboMoveReadyUtil, comboMoveToInput } from './combos.js';
-import { selectTarget, navigateToward, platformNavigate as navPlatformNavigate } from './botNavigation';
+import { selectTarget, navigateToward, platformNavigate as navPlatformNavigate } from './botNavigation.js';
 
 export const CPU_DIFFICULTY = {
   newcomer: { reactionTime: 200, skillChance: 0.03, jumpChance: 0.03, attackChance: 0.05, edgeGuard: false, combo: false, superUse: false, heavyChance: 0.02 },

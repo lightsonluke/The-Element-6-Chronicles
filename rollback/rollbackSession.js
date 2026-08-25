@@ -39,7 +39,7 @@ export class RollbackSession {
     this.onFrame = onFrame;
 
     this.currentFrame = 0;
-    this.confirmedFrame = -1;
+    this.confirmedFrame = this.inputDelay - 1;
     this.state = cloneState(initialState);
     this.state.frame = 0;
     this.stateHistory = new Map([[0, cloneState(this.state)]]);
@@ -48,7 +48,14 @@ export class RollbackSession {
     this.predictedRemoteInputs = new Map();
     this.localChecksums = new Map();
     this.remoteChecksums = new Map();
+    this.lastChecksumSent = 0;
     this.stats = { rollbackCount: 0, rolledBackFrames: 0, largestRollback: 0, lateInputs: 0, desyncs: 0 };
+    // Input-delay frames before the first captured input are known neutral on
+    // both peers, so they can be considered confirmed immediately.
+    for (let frame = 0; frame < this.inputDelay; frame += 1) {
+      this.localInputs.set(frame, NEUTRAL_INPUT_MASK);
+      this.remoteInputs.set(frame, NEUTRAL_INPUT_MASK);
+    }
   }
 
   captureLocalInput(rawInput) {
@@ -83,6 +90,7 @@ export class RollbackSession {
     }
 
     this.#updateConfirmedFrame();
+    this.#publishConfirmedChecksum();
     return true;
   }
 
@@ -91,7 +99,7 @@ export class RollbackSession {
     if (!Number.isSafeInteger(packet.frame) || typeof packet.checksum !== 'string') return false;
     this.remoteChecksums.set(packet.frame, packet.checksum);
     const local = this.localChecksums.get(packet.frame);
-    if (local && local !== packet.checksum) {
+    if (packet.frame <= this.confirmedFrame + 1 && local && local !== packet.checksum) {
       this.stats.desyncs += 1;
       this.onDesync({ frame: packet.frame, localChecksum: local, remoteChecksum: packet.checksum });
     }
@@ -100,6 +108,11 @@ export class RollbackSession {
 
   getRenderableState() {
     return cloneState(this.state);
+  }
+
+  getStateAtFrame(frame) {
+    const snapshot = this.stateHistory.get(frame);
+    return snapshot ? cloneState(snapshot) : null;
   }
 
   getStats() {
@@ -137,17 +150,8 @@ export class RollbackSession {
     if (this.currentFrame % this.checksumInterval === 0) {
       const checksum = checksumState(this.state);
       this.localChecksums.set(this.currentFrame, checksum);
-      if (!replaying && this.sendChecksum) {
-        Promise.resolve(this.sendChecksum({
-          version: 1,
-          matchId: this.matchId,
-          playerId: this.playerId,
-          frame: this.currentFrame,
-          checksum,
-        })).catch(() => {});
-      }
       const remote = this.remoteChecksums.get(this.currentFrame);
-      if (remote && remote !== checksum) {
+      if (this.currentFrame <= this.confirmedFrame + 1 && remote && remote !== checksum) {
         this.stats.desyncs += 1;
         this.onDesync({ frame: this.currentFrame, localChecksum: checksum, remoteChecksum: remote });
       }
@@ -178,6 +182,29 @@ export class RollbackSession {
     while (this.remoteInputs.has(this.confirmedFrame + 1)) this.confirmedFrame += 1;
   }
 
+  #publishConfirmedChecksum() {
+    if (!this.sendChecksum) return;
+    const stateFrame = Math.floor((this.confirmedFrame + 1) / this.checksumInterval) * this.checksumInterval;
+    if (stateFrame <= 0 || stateFrame <= this.lastChecksumSent) return;
+    const confirmedState = this.stateHistory.get(stateFrame);
+    if (!confirmedState) return;
+    const checksum = checksumState(confirmedState);
+    this.localChecksums.set(stateFrame, checksum);
+    this.lastChecksumSent = stateFrame;
+    Promise.resolve(this.sendChecksum({
+      version: 1,
+      matchId: this.matchId,
+      playerId: this.playerId,
+      frame: stateFrame,
+      checksum,
+    })).catch(() => {});
+    const remote = this.remoteChecksums.get(stateFrame);
+    if (remote && remote !== checksum) {
+      this.stats.desyncs += 1;
+      this.onDesync({ frame: stateFrame, localChecksum: checksum, remoteChecksum: remote });
+    }
+  }
+
   #trimHistory() {
     const oldest = Math.max(0, this.currentFrame - this.historySize);
     for (const collection of [this.stateHistory, this.localInputs, this.remoteInputs, this.predictedRemoteInputs, this.localChecksums, this.remoteChecksums]) {
@@ -185,4 +212,3 @@ export class RollbackSession {
     }
   }
 }
-

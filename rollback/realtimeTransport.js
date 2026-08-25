@@ -5,11 +5,12 @@ const ALLOWED_MODES = new Set(['ranked', 'unranked']);
 
 /** Supabase Realtime Broadcast transport for a single 1v1 match. */
 export class SupabaseRollbackTransport {
-  constructor({ matchId, playerId, mode, client = supabase, heartbeatMs = 5000 }) {
+  constructor({ matchId, playerId, peerPlayerId = null, mode, client = supabase, heartbeatMs = 5000 }) {
     if (!matchId || !playerId) throw new Error('Transport requires matchId and playerId.');
     if (!ALLOWED_MODES.has(mode)) throw new Error('Rollback transport currently supports ranked and unranked only.');
     this.matchId = String(matchId);
     this.playerId = String(playerId);
+    this.peerPlayerId = peerPlayerId ? String(peerPlayerId) : null;
     this.mode = mode;
     this.client = client;
     this.heartbeatMs = heartbeatMs;
@@ -74,7 +75,12 @@ export class SupabaseRollbackTransport {
   }
 
   #isPeerPayload(payload) {
-    return Boolean(payload && payload.matchId === this.matchId && payload.playerId !== this.playerId);
+    return Boolean(
+      payload &&
+      payload.matchId === this.matchId &&
+      payload.playerId !== this.playerId &&
+      (!this.peerPlayerId || payload.playerId === this.peerPlayerId)
+    );
   }
 
   async #broadcast(event, payload) {
@@ -119,4 +125,3 @@ export class SupabaseRollbackTransport {
     this.channel = null;
   }
 }
-

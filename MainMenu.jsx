@@ -83,6 +83,7 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
     { type: 'tab', id: 'creator', label: 'CAMPAIGN', items: [
       { label: 'Campaign', key: 'creatormode' },
     ]},
+    { type: 'button', label: 'ELO', key: 'elo' },
     { type: 'button', label: 'SHOP', key: 'shop' },
     { type: 'button', label: 'SAVE CODES', key: 'savecodes' },
   ];

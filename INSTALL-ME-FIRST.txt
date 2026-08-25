@@ -1,0 +1,33 @@
+ELEMENT 6 — ALL ROLLBACK REPLACEMENTS
+
+This folder contains every replacement/new file needed for:
+• Online Ranked and Online Unranked 1v1 rollback fighting
+• Supabase matchmaking and protected ranked ELO
+• Online Sports menu and ELO screen
+• 2 / 4 / 6 player sports queues and the multiplayer rollback foundation
+
+DO THIS EXACTLY:
+
+1. Open Supabase SQL Editor.
+2. Run the complete contents of Supabase-ranked-online-setup.sql.
+   Skip this only if you already ran it successfully.
+3. Run the complete contents of Supabase-online-sports-setup.sql.
+   Skip this only if you already ran it successfully.
+4. Open your GitHub repository.
+5. Open the repository ROOT. It is the page where Game.jsx and package.json live.
+6. Upload the CONTENTS of this folder there. Do NOT upload this folder as a
+   nested folder and do NOT upload the ZIP itself.
+7. GitHub will ask to replace Game.jsx and other existing files. Allow it.
+8. Keep the rollback folder structure: upload its FILES into your existing
+   rollback folder. Do not make rollback/rollback/.
+9. Commit. Wait for the GitHub Pages Actions run to complete successfully.
+10. Open the game and hard refresh: Cmd + Shift + R (Mac) or Ctrl + Shift + R.
+
+WHAT TO SEE:
+• Home menu: ELO button between Campaign and Shop.
+• Sports: one long ONLINE SPORTS button below the nine sport buttons.
+• Online Sports: seven choices, with the player count shown for each.
+
+IMPORTANT:
+The SQL only creates database support. The Game.jsx / SportsHub.jsx /
+MainMenu.jsx replacements create what you can see in the game.

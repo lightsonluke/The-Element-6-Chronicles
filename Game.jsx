@@ -43,13 +43,16 @@ import LoreLibrary from './LoreLibrary.jsx';
 import DailyRewards from './DailyRewards.jsx';
 import ComboTrainer from './ComboTrainer.jsx';
 import OnlineSportsLobby from './OnlineSportsLobby.jsx';
+import OnlineSportsHub from './OnlineSportsHub.jsx';
+import EloScreen from './EloScreen.jsx';
+import SportsRollbackArena from './SportsRollbackArena.jsx';
 import BattleRoyaleLobby from './BattleRoyaleLobby.jsx';
 import ShapeshiftSelect from './ShapeshiftSelect.jsx';
 
 import CharacterCreator from './CharacterCreator.jsx';
 import FriendsScreen from './FriendsScreen.jsx';
 import ChatPanel from './ChatPanel.jsx';
-import OnlineLobby from './OnlineLobby.jsx';
+import RankedOnlineLobby from './RankedOnlineLobby.jsx';
 import LANLobby from './LANLobby.jsx';
 import CustomRoomLobby from './CustomRoomLobby.jsx';
 import Leaderboard from './Leaderboard.jsx';
@@ -786,6 +789,7 @@ export default function Game() {
     else if (dest === 'friends') setScreen('friends');
     else if (dest === 'chat') setScreen('chat');
     else if (dest === 'leaderboard') setScreen('leaderboard');
+    else if (dest === 'elo') setScreen('elo');
     else if (dest === 'regularbattle') { setPending({ mode: 'regular' }); setScreen('charSelect'); }
     else if (dest === 'onlineranked') { setOnlineMode('ranked'); setScreen('onlinelobby'); }
     else if (dest === 'onlineunranked') { setOnlineMode('unranked'); setScreen('onlinelobby'); }
@@ -2019,7 +2023,7 @@ export default function Game() {
             onAward={(result) => { awardSportMatch(result.sport, result); if (result.tournamentWon) setTokenFlash(result.reward || 50); }}
             onEnd={() => {}}
             onCustomRoom={(sportId) => { setCustomRoomMode(sportId); setReturnScreen('sports'); setScreen('customrooms'); }}
-            onOnlinePlay={(sportId) => { setOnlineSport(sportId); setReturnScreen('sports'); setScreen('sportslobby'); }}
+            onOnlineSports={() => { setReturnScreen('sports'); setScreen('onlinesports'); }}
             unlockedIds={progress.unlockedIds} favoriteId={progress.favoriteId}
             equippedAccessories={progress.equippedAccessories || {}} equippedSkins={progress.equippedSkins || {}}
             settings={progress.settings || {}} charLevels={progress.charLevels || {}} equippedElements={progress.equippedElements || {}} onEquipElement={equipElement}
@@ -2030,7 +2034,7 @@ export default function Game() {
           />
             )}
 
-            {screen === 'team' && (
+        {screen === 'team' && (
           <TeamMode onBack={goBack} onEnd={(result) => {
             if (result.p1Won) {
               addCoins(20);
@@ -2039,6 +2043,30 @@ export default function Game() {
             setScreen('menu');
           }} unlockedIds={progress.unlockedIds} favoriteId={progress.favoriteId} musicVolume={progress.settings?.musicVolume ?? 50} sfxVolume={progress.settings?.sfxVolume ?? 70} matchTime={progress.settings?.matchTime ?? 240} settings={progress.settings || {}} equippedAccessories={progress.equippedAccessories || {}} equippedSkins={progress.equippedSkins || {}} equippedShikigami={progress.equippedShikigami || {}} charLevels={progress.charLevels || {}} equippedElements={progress.equippedElements || {}} onEquipElement={equipElement} customCharsData={customCharData} customNumberMap={customNumberMap} equippedEmotes={progress.equippedEmotes || {}} />
         )}
+
+        {screen === 'onlinesports' && (
+          <OnlineSportsHub
+            onBack={goBack}
+            unlockedIds={progress.unlockedIds}
+            favoriteId={progress.favoriteId}
+            equippedElements={progress.equippedElements || {}}
+            equippedSkins={progress.equippedSkins || {}}
+            equippedAccessories={progress.equippedAccessories || {}}
+            equippedShikigami={progress.equippedShikigami || {}}
+            onMatchReady={({ match, players }) => { setOnlineSportsLobby({ match, players }); setScreen('onlinesportsmatch'); }}
+          />
+        )}
+
+        {screen === 'onlinesportsmatch' && onlineSportsLobby && (
+          <SportsRollbackArena
+            match={onlineSportsLobby.match}
+            players={onlineSportsLobby.players}
+            settings={progress.settings || {}}
+            onEnd={() => { setOnlineSportsLobby(null); setScreen('sports'); }}
+          />
+        )}
+
+        {screen === 'elo' && <EloScreen onBack={goBack} botRankedElo={progress.rankedRating || 1000} />}
 
         {screen === 'meet' && (
           <MeetCharacters onBack={goBack} favoriteId={progress.favoriteId} onSetFavorite={setFavorite} progress={progress} customCharsData={customCharData} customNumberMap={customNumberMap} />
@@ -2206,22 +2234,28 @@ export default function Game() {
         )}
 
         {screen === 'onlinelobby' && (
-          <OnlineLobby
+          <RankedOnlineLobby
             mode={onlineMode}
             onBack={goBack}
             onEnd={(res) => {
-              // Update Online Ranked ELO.
-              if (onlineMode === 'ranked' && res && res.won !== undefined && !res.disconnected) {
-                const won = res.won === true;
+              // Ranked ELO is calculated and written by Supabase, never by the browser.
+              if (onlineMode === 'ranked' && Number.isFinite(res?.serverRating)) {
                 setProgress(prev => {
-                  const elo = prev.onlineRankedRating || 1000;
-                  const change = won ? 25 : -15;
-                  const next = { ...prev, onlineRankedRating: Math.max(0, elo + change) };
+                  const next = { ...prev, onlineRankedRating: res.serverRating };
                   saveProgress(next);
                   return next;
                 });
               }
               setScreen('menu');
+            }}
+            onRatingChange={(serverRating) => {
+              if (!Number.isFinite(serverRating)) return;
+              setProgress(prev => {
+                if (prev.onlineRankedRating === serverRating) return prev;
+                const next = { ...prev, onlineRankedRating: serverRating };
+                saveProgress(next);
+                return next;
+              });
             }}
             unlockedIds={progress.unlockedIds}
             favoriteId={progress.favoriteId}

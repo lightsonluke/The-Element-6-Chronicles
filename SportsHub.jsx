@@ -18,7 +18,7 @@ const GAME_COMPONENTS = {
 
 // Sports tab: pick a sport, then play. Soccer delegates to the existing
 // Soccer flow inside Game.jsx (onPlaySoccer); the 5 new sports use SportsShell.
-export default function SportsHub({ onBack, onPlaySoccer, onShop, onAward, onEnd, onCustomRoom, onOnlinePlay, unlockedIds, favoriteId, equippedAccessories = {}, equippedSkins = {}, settings = {}, charLevels = {}, equippedElements = {}, onEquipElement, sfxVolume, musicVolume, customCharsData = {}, customNumberMap = {}, charMastery = {}, equippedEmotes = {} }) {
+export default function SportsHub({ onBack, onPlaySoccer, onShop, onAward, onEnd, onCustomRoom, onOnlineSports, unlockedIds, favoriteId, equippedAccessories = {}, equippedSkins = {}, settings = {}, charLevels = {}, equippedElements = {}, onEquipElement, sfxVolume, musicVolume, customCharsData = {}, customNumberMap = {}, charMastery = {}, equippedEmotes = {} }) {
   const [sport, setSport] = useState(null);
 
   if (sport === 'soccer') { onPlaySoccer?.(); return null; }
@@ -173,20 +173,7 @@ export default function SportsHub({ onBack, onPlaySoccer, onShop, onAward, onEnd
           <p className="text-[9px] text-muted-foreground font-body text-center mt-1">Create a room, invite friends via code, add bots, and play together.</p>
         </div>
       )}
-      {onOnlinePlay && (
-        <div className="w-full mt-1">
-          <p className="text-xs font-heading text-muted-foreground mb-2 text-center">PLAY ONLINE</p>
-          <div className="flex gap-2 flex-wrap justify-center">
-            {SPORTS.map(s => (
-              <button key={s.id} onClick={() => onOnlinePlay(s.id)}
-                className="px-4 py-2 bg-accent/20 border border-accent text-accent rounded-lg font-heading text-xs hover:bg-accent hover:text-accent-foreground transition">
-                {s.emoji} {s.name.toUpperCase()}
-              </button>
-            ))}
-          </div>
-          <p className="text-[9px] text-muted-foreground font-body text-center mt-1">Match up with players online. Host-authoritative sync for smooth play.</p>
-        </div>
-      )}
+      {onOnlineSports && <button onClick={onOnlineSports} className="w-full mt-2 px-6 py-4 bg-accent/20 border-2 border-accent text-accent rounded-xl font-heading text-base hover:bg-accent hover:text-accent-foreground transition">ONLINE SPORTS</button>}
     </div>
   );
 }

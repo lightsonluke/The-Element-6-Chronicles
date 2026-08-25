@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient.js';
 
-const columns = ['total_xp', 'soccer_xp', 'combat_xp', 'ranked_elo', 'wins', 'losses', 'soccer_goals', 'soccer_saves', 'combat_kills', 'combat_deaths'];
+// ranked_elo is intentionally excluded: only the ranked-result SQL may write it.
+const columns = ['total_xp', 'soccer_xp', 'combat_xp', 'wins', 'losses', 'soccer_goals', 'soccer_saves', 'combat_kills', 'combat_deaths'];
 
 export async function syncSharedLeaderboard(localEntry) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -13,7 +14,11 @@ export async function syncSharedLeaderboard(localEntry) {
 }
 
 export async function loadSharedLeaderboard() {
-  const { data, error } = await supabase.from('shared_leaderboard').select('*').order('total_xp', { ascending: false }).limit(200);
+  const [{ data, error }, ratingsResult] = await Promise.all([
+    supabase.from('shared_leaderboard').select('*').order('total_xp', { ascending: false }).limit(200),
+    supabase.from('ranked_ratings').select('user_id,rating'),
+  ]);
   if (error) throw error;
-  return (data || []).map(row => ({ ...row, user_name: row.username }));
+  const ratings = new Map((ratingsResult.data || []).map(row => [row.user_id, row.rating]));
+  return (data || []).map(row => ({ ...row, ranked_elo: ratings.get(row.user_id) ?? row.ranked_elo ?? 1000, user_name: row.username }));
 }
