@@ -28,9 +28,9 @@ import { useClipRecorder } from './useClipRecorder.js';
 import { RollbackSession } from './rollback/rollbackSession.js';
 import { SupabaseRollbackTransport } from './rollback/realtimeTransport.js';
 import { checksumState } from './rollback/stateChecksum.js';
-import { leaveOnlineMatch } from './rankedOnline.js';
 import {
   createElement6OnlineState,
+  getOnlineStagePlatforms,
   ONLINE_PLATFORMS,
   ONLINE_STAGE_HEIGHT,
   ONLINE_STAGE_WIDTH,
@@ -71,6 +71,7 @@ export default function RollbackOnlineFight({
   oppLoadout = {},
   myElo,
   oppElo,
+  stageId = 'splitcity',
   myUsername = 'YOU',
   oppUsername = 'OPPONENT',
   sfxVolume = 70,
@@ -82,7 +83,6 @@ export default function RollbackOnlineFight({
   const pausedRef = useRef(false);
   const showDiagnosticsRef = useRef(false);
   const resultProofRef = useRef(null);
-  const resyncingRef = useRef(false);
   const [paused, setPaused] = useState(false);
   const [winner, setWinner] = useState(null);
   const [countdown, setCountdown] = useState(3);
@@ -132,6 +132,7 @@ export default function RollbackOnlineFight({
     const initialState = createElement6OnlineState({
       matchId,
       mode,
+      stageId,
       host: {
         character: hostCharacter,
         elementId: hostLoadout.element || 'basic',
@@ -186,8 +187,11 @@ export default function RollbackOnlineFight({
       const hostFighter = fighters.host;
       const guestFighter = fighters.guest;
       ctx.clearRect(0, 0, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT);
-      drawBackground(ctx, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT, state.frame, 'splitcity');
-      drawPlatforms(ctx, ONLINE_PLATFORMS, state.frame, 'splitcity');
+      // The server chooses one normal stage when the match is made.  Both
+      // browsers receive the same saved ID, never a player-made/custom stage.
+      const sharedStage = state.stageId || stageId || 'splitcity';
+      drawBackground(ctx, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT, state.frame, sharedStage);
+      drawPlatforms(ctx, getOnlineStagePlatforms(sharedStage) || ONLINE_PLATFORMS, state.frame, sharedStage);
       drawFighter(hostFighter, hostCharacter, hostLoadout, isHost ? myUsername : oppUsername);
       drawFighter(guestFighter, guestCharacter, guestLoadout, isHost ? oppUsername : myUsername);
 
@@ -202,6 +206,7 @@ export default function RollbackOnlineFight({
       ctx.fillStyle = 'rgba(255,255,255,0.55)';
       ctx.font = '9px Orbitron';
       ctx.fillText(`ELO ${myElo || 1000} vs ${oppElo || 1000}`, ONLINE_STAGE_WIDTH / 2, ONLINE_STAGE_HEIGHT - 34);
+      ctx.fillText(`STAGE: ${String(sharedStage).replace(/_/g, ' ').toUpperCase()}`, ONLINE_STAGE_WIDTH / 2, ONLINE_STAGE_HEIGHT - 18);
 
       if (showDiagnosticsRef.current && session) {
         const stats = session.getStats();
@@ -246,14 +251,7 @@ export default function RollbackOnlineFight({
           inputDelay: 2,
           maxRollbackFrames: 12,
           historySize: 120,
-          checksumInterval: 15,
-          onDesync: () => {
-            if (resyncingRef.current) return;
-            resyncingRef.current = true;
-            setNetworkError(null); setConnectionText('SYNCING MATCH…');
-            if (isHost) transport.sendControl('resync-state', { frame: session.currentFrame, state: session.getRenderableState() }).catch(() => {});
-            setTimeout(() => { resyncingRef.current = false; setConnectionText('CONNECTED'); }, 850);
-          },
+          onDesync: () => setNetworkError('The match desynced. Open diagnostics with F3.'),
           onFrame: ({ state }) => {
             for (const event of state.events || []) {
               if (event.type === 'superHit') sfx.superImpact();
@@ -275,11 +273,6 @@ export default function RollbackOnlineFight({
             markPeerReady();
           } else if (packet.kind === 'ready-ack') markPeerReady();
           else if (packet.kind === 'disconnect') finishMatch(role);
-          else if (packet.kind === 'resync-state' && packet.state) {
-            resyncingRef.current = true; setConnectionText('SYNCING MATCH…');
-            session.replaceState(packet.state, packet.frame);
-            setTimeout(() => { resyncingRef.current = false; setConnectionText('CONNECTED'); }, 500);
-          }
         });
 
         await transport.connect();
@@ -302,7 +295,6 @@ export default function RollbackOnlineFight({
           lastTime = now;
           let steps = 0;
           while (accumulator >= FRAME_MS && steps < 6) {
-            if (resyncingRef.current) { accumulator -= FRAME_MS; steps += 1; continue; }
             const gamepad = settings?.controllerEnabled === false ? null : readGamepadInput(0);
             const input = pausedRef.current ? NO_INPUT : mergeInput(readPlayerInput(keys, keybinds.p1), gamepad);
             const state = session.advance(input);
@@ -338,10 +330,10 @@ export default function RollbackOnlineFight({
       window.removeEventListener('keyup', onKeyUp);
       transport?.close('screen-left').catch(() => {});
     };
-  }, [gameStarted, matchId, playerId, opponentPlayerId, role, mode, myChar, oppChar]);
+  }, [gameStarted, matchId, playerId, opponentPlayerId, role, mode, myChar, oppChar, stageId]);
 
   const handleQuit = () => {
-    leaveOnlineMatch(matchId).catch(() => {});
+    try { db.entities.OnlineMatch.update(matchId, { status: 'finished', winner: isHost ? 'guest' : 'host' }).catch(() => {}); } catch {}
     onEnd?.({ won: false, disconnected: true, forfeited: true, mode });
   };
 
@@ -372,6 +364,7 @@ export default function RollbackOnlineFight({
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
       </div>
       {networkError && <p className="text-xs text-destructive font-body">{networkError}</p>}
+      <p className="text-[10px] text-muted-foreground font-body">Your device controls your selected fighter. Use Arrows, WASD, or your Settings custom control preset.</p>
       <canvas ref={canvasRef} width={ONLINE_STAGE_WIDTH} height={ONLINE_STAGE_HEIGHT} className="border-2 border-border rounded-lg shadow-2xl w-full" style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">

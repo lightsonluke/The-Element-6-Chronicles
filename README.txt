@@ -1,12 +1,26 @@
-ELEMENT 6 — RANKED + UNRANKED MATCHMAKING REPAIR
+ELEMENT 6 — ONLINE FIGHTS: SHARED STAGES + ELO LIMIT
 
-1. Open Supabase Dashboard -> SQL Editor -> New query.
-2. Open Supabase-ranked-unranked-repair.sql.
-3. Copy all of its text into Supabase. Do NOT type the filename into the editor.
-4. Click Run once.
-5. There are no GitHub files to upload for this repair.
-6. Refresh the game and test Ranked and Unranked with two different signed-in accounts.
+Install in this order:
 
-This repair fixes the old random_seed, host_id, and room_code requirements
-and replaces the fight matchmaking RPC with a version that supplies all
-required values itself.
+1. Supabase -> SQL Editor -> New query.
+2. Open Supabase-online-fights-stage-elo.sql and copy ALL of it into Supabase.
+3. Press Run. Do not type the filename into the editor.
+4. Upload these files to your GitHub repository root and replace the existing files:
+   - RankedOnlineLobby.jsx
+   - RollbackOnlineFight.jsx
+5. Upload element6Simulation.js into the rollback folder in GitHub:
+   rollback/element6Simulation.js
+6. Commit and wait for GitHub Pages to deploy.
+7. Test with two signed-in accounts in two browsers.
+
+What this update does:
+- The server randomly selects the same built-in, non-custom stage and platform layout for both players.
+- Both players use their own selected character, element, shikigami, skins, and accessories saved in their matchmaking loadout.
+- Each player controls only their own fighter from their own device using their Settings control preset: Arrows, WASD, custom bindings, or controller.
+- Ranked Fight, Soccer Ranked, Volleyball Ranked, and Dodgeball Ranked ratings are clamped between 0 and 4000 on the server.
+
+This package changes only Ranked and Unranked Fights. The existing sport matchmaking remains separate.
+
+Parkour, Rock Climbing, Zipline, and Honored Bot leaderboard records use older,
+separate score paths. They are deliberately not changed by this online-fight
+package; they need their own shared-score update rather than a risky partial fix.
