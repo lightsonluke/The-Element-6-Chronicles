@@ -30,7 +30,6 @@ import { SupabaseRollbackTransport } from './rollback/realtimeTransport.js';
 import { checksumState } from './rollback/stateChecksum.js';
 import {
   createElement6OnlineState,
-  getOnlineStagePlatforms,
   ONLINE_PLATFORMS,
   ONLINE_STAGE_HEIGHT,
   ONLINE_STAGE_WIDTH,
@@ -191,7 +190,10 @@ export default function RollbackOnlineFight({
       // browsers receive the same saved ID, never a player-made/custom stage.
       const sharedStage = state.stageId || stageId || 'splitcity';
       drawBackground(ctx, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT, state.frame, sharedStage);
-      drawPlatforms(ctx, getOnlineStagePlatforms(sharedStage) || ONLINE_PLATFORMS, state.frame, sharedStage);
+      // Keep the rollback collision layout from the currently installed
+      // simulation module. This avoids importing an export older installs do
+      // not have, while still rendering the shared stage selected by Supabase.
+      drawPlatforms(ctx, ONLINE_PLATFORMS, state.frame, sharedStage);
       drawFighter(hostFighter, hostCharacter, hostLoadout, isHost ? myUsername : oppUsername);
       drawFighter(guestFighter, guestCharacter, guestLoadout, isHost ? oppUsername : myUsername);
 
