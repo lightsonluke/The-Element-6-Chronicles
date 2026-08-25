@@ -81,6 +81,22 @@
   }
 }
 
+/* Game cursor: use the normal arrow everywhere, but keep a text caret in
+   fields where the player can actually type. */
+html, body, #root, #root * {
+  cursor: default;
+}
+
+button, a, [role="button"], select, summary, label[for], input[type="checkbox"],
+input[type="radio"], input[type="range"] {
+  cursor: pointer;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea, [contenteditable="true"] {
+  cursor: text;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
