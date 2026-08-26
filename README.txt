@@ -1,35 +1,40 @@
-ELEMENT 6 — RESTORE REAL 1V1 ONLINE SPORTS
+ELEMENT 6 — ONLINE STATE VERIFICATION + RESYNC
 
-This restores the actual offline game presentation and rules for these ONLINE queues:
+This update does NOT end a match merely because the two browsers drift apart.
+It pauses briefly with RESYNCING… and replaces the predicted state with the
+authoritative host snapshot before continuing.
 
-  • Soccer Online
-  • Soccer Ranked
-  • Volleyball Ranked 1v1
-  • Dodgeball Online
-  • Dodgeball Ranked
+WHAT IS CHECKED
 
-It deliberately does NOT replace or edit these offline files:
+• Match frame / stage timer / score
+• Every player's position, velocity, facing and relevant movement state
+• Ball position, velocity, last team touch and score-related state
+• Existing rollback checksums for regular ranked/unranked fights and generic
+  rollback sports matches
 
-  • SoccerMode.jsx / SoccerFighter.jsx
-  • VolleyballGame.jsx
-  • DodgeballGame.jsx
+WHAT IT UPDATES
 
-Instead, the online match screen runs those existing real sport components and
-uses Supabase Realtime to send each player's inputs / host state.  The generic
-SportsRollbackArena placeholder is no longer used for these five 1v1 modes.
+• Soccer Online and Soccer Ranked now use host-authoritative snapshots every
+  50ms, alongside input forwarding. A meaningful player/ball difference opens
+  a short RESYNCING… overlay and corrects the state instead of ending a match.
+• Volleyball 1v1 and Dodgeball Online/Ranked keep their existing host-state
+  rendering and now share the same resync overlay.
+• RollbackOnlineFight.jsx and SportsRollbackArena.jsx use the stronger
+  checksum-recovery version: mismatch → temporary pause → host snapshot → resume.
 
-INSTALL
+INSTALL — KEEP THE FOLDERS
 
-1. Upload BOTH files in this folder to the ROOT of the GitHub repository.
-2. Let GitHub replace Game.jsx.
-3. ActualSportsOnlineMatch.jsx is a new root file.
-4. Commit to main and wait for the GitHub Pages workflow to finish.
+Upload the contents of this folder to the ROOT of the GitHub repository.
+Let GitHub replace files when it asks.
 
-No SQL is needed. Your existing online sports tables and matchmaking setup are
-already used by this update.
+Root files:
+  ActualSportsOnlineMatch.jsx
+  SoccerFighter.jsx
+  RollbackOnlineFight.jsx
+  SportsRollbackArena.jsx
 
-IMPORTANT
+Nested files — these MUST stay inside the repository's existing rollback folder:
+  rollback/multiplayerRollbackSession.js
+  rollback/rollbackSession.js
 
-This folder is only for the five listed 1v1 online sports queues. It does not
-change 2v2 Volleyball, Banger, LAN, Custom Rooms, normal fights, or any offline
-sport mode.
+Do not replace Game.jsx with this update. No Supabase SQL is required.

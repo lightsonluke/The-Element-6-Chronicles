@@ -68,7 +68,7 @@ const PEN_SHOTS_PER_PLAYER = 5;
 
 // ── Soccer AI + penalty AI are imported from ../../game/engine/soccerAI.js ──
 
-export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false, cpuDifficulty, round, totalRounds, onEnd, onRematch, sfxVolume = 70, musicVolume = 50, headSoccer = false, penaltiesEnabled = false, penaltiesOnly = false, settings = {}, teamMode = false, p1bChar, p2bChar, extraPlatforms = null,   p1Jersey = true, p2Jersey = true, p1Element = 'basic', p2Element = 'basic', tournamentMode = false, equippedSkins = {}, equippedAccessories = {}, localScheme = null, enableStream = false, lanConnection = null, lanRole = null, customCharsData = {}, equippedCrossovers = {}, equippedShikigami = {}, equippedEmotes = {} }) {
+export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false, cpuDifficulty, round, totalRounds, onEnd, onRematch, sfxVolume = 70, musicVolume = 50, headSoccer = false, penaltiesEnabled = false, penaltiesOnly = false, settings = {}, teamMode = false, p1bChar, p2bChar, extraPlatforms = null,   p1Jersey = true, p2Jersey = true, p1Element = 'basic', p2Element = 'basic', tournamentMode = false, equippedSkins = {}, equippedAccessories = {}, localScheme = null, enableStream = false, lanConnection = null, lanRole = null, customCharsData = {}, equippedCrossovers = {}, equippedShikigami = {}, equippedEmotes = {}, remoteState = null, onStateExport = null, isOnlineHost = false, onSyncStateChange = null }) {
   const canvasRef = useRef(null);
   const gameRef = useRef(null);
   const keysRef = useRef({});
@@ -113,10 +113,16 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
   const p2PenDirRef = useRef(null);
   useClipRecorder(canvasRef);
   const remoteInputRef = useRef(null);
+  const remoteStateRef = useRef(null);
+  const onStateExportRef = useRef(null);
+  const lastSnapshotAtRef = useRef(0);
+  const lastCorrectedFrameRef = useRef(-1);
   const p1EmoteRef = useRef(null);
   const p2EmoteRef = useRef(null);
   const equippedShikigamiRef = useRef(equippedShikigami);
   equippedShikigamiRef.current = equippedShikigami;
+  useEffect(() => { remoteStateRef.current = remoteState; }, [remoteState]);
+  useEffect(() => { onStateExportRef.current = onStateExport; }, [onStateExport]);
 
   // Host canvas streaming for LAN spectators (JPEG frames over the data channel)
   useEffect(() => {
@@ -192,6 +198,47 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
     const baseDisplayTime = headSoccer ? 60 : 90;
     const baseTime = baseDisplayTime * 2;
     gameRef.current = { f1, f2, allFighters, fieldPlatforms, ball, running: true, timer: 0, maxTime: baseTime, displayTimer: 0, goalLog: [], startedAt: performance.now(), weather: ['rainy','thunder','snow','sunny','cloudy'][Math.floor(Math.random()*5)] };
+
+    // Online soccer has a host-authoritative snapshot in addition to normal
+    // input forwarding.  The snapshot contains every gameplay-critical value:
+    // stage timer/score, each fighter's position and velocity, and the ball.
+    // This corrects even a one-pixel ball drift without ever ending a match.
+    const fighterSnapshot = (fighter) => ({
+      x: fighter.x, y: fighter.y, vx: fighter.vx, vy: fighter.vy,
+      facing: fighter.facing, grounded: fighter.grounded,
+      doubleJumped: fighter.doubleJumped, damage: fighter.damage,
+      hitstun: fighter.hitstun, invuln: fighter.invuln,
+      attackData: fighter.attackData ? { ...fighter.attackData } : null,
+      frame: fighter.frame, animTimer: fighter.animTimer,
+    });
+    const snapshot = () => ({
+      version: 'soccer-state-v1',
+      frame: Math.floor((performance.now() - gameRef.current.startedAt) / (1000 / 60)),
+      stage: { timer: gameRef.current.timer, maxTime: gameRef.current.maxTime, displayTimer: gameRef.current.displayTimer, weather: gameRef.current.weather },
+      score: { ...scoreRef.current },
+      fighters: allFighters.map(fighterSnapshot),
+      ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy, r: ball.r, damage: ball.damage, lastTeam: ball.lastTeam, prevX: ball.prevX },
+      resetCountdown: resetCountdownRef.current,
+    });
+    const restoreSnapshot = (next) => {
+      if (!next || next.version !== 'soccer-state-v1' || !Array.isArray(next.fighters)) return false;
+      const local = snapshot();
+      const drift = Math.abs((local.ball.x || 0) - (next.ball?.x || 0)) + Math.abs((local.ball.y || 0) - (next.ball?.y || 0))
+        + Math.abs((local.fighters[0]?.x || 0) - (next.fighters[0]?.x || 0))
+        + Math.abs((local.fighters[1]?.x || 0) - (next.fighters[1]?.x || 0));
+      next.fighters.forEach((data, index) => { if (allFighters[index] && data) Object.assign(allFighters[index], data); });
+      if (next.ball) Object.assign(ball, next.ball, { trail: [] });
+      if (next.stage) Object.assign(gameRef.current, next.stage);
+      if (next.score) { scoreRef.current = { ...next.score }; setScore({ ...next.score }); }
+      if (Number.isFinite(next.resetCountdown)) resetCountdownRef.current = next.resetCountdown;
+      // Only announce a correction once per received frame. Tiny normal
+      // prediction differences are silently corrected; meaningful drift pauses.
+      if (drift > 8 && lastCorrectedFrameRef.current !== next.frame) {
+        lastCorrectedFrameRef.current = next.frame;
+        onSyncStateChange?.();
+      }
+      return true;
+    };
 
     const soccerStats = {
       p1: { shots: 0, shotsOnTarget: 0, goals: 0, misses: 0, saves: 0, possession: 0 },
@@ -397,6 +444,10 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
       const ts = inSlowMo ? 0.3 : 1;
       lastTime = now;
       const { f1, f2, ball } = gameRef.current;
+      // Guests predict locally between packets, then use the authoritative host
+      // snapshot as a correction point. This keeps both canvases on the same
+      // field position even when packets arrive late or a ball collision differs.
+      if (!isOnlineHost && remoteStateRef.current) restoreSnapshot(remoteStateRef.current);
       if (!suddenDeathRef.current && resetCountdownRef.current <= 0) { const _mt = gameRef.current.maxTime || baseTime; if (gameRef.current.timer < _mt) gameRef.current.timer += dt; }
       if (resetCountdownRef.current > 0) resetCountdownRef.current -= dt;
 
@@ -882,6 +933,11 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         } else {
           finish(p1Won);
         }
+      }
+
+      if (isOnlineHost && onStateExportRef.current && now - lastSnapshotAtRef.current >= 50) {
+        lastSnapshotAtRef.current = now;
+        onStateExportRef.current(snapshot());
       }
 
       // Camera shake
