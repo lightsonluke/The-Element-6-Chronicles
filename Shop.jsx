@@ -49,10 +49,22 @@ export default function Shop({ progress = {}, onBuy, onEquip, onBuyPack, onBuySh
   const ownedShikigami = progress.ownedShikigami || [];
   const ownedTitles = progress.ownedTitles || [];
 
-  useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
+  useEffect(() => {
+    try { music?.play?.('menu'); } catch {}
+    return () => { try { music?.stop?.(); } catch {} };
+  }, []);
   const callCheckout = item => { onBuyPack?.(item.id); setNotice(`${item.name || item.label || item.amount + ' Tokens'} will open checkout once payments are connected.`); };
   const featured = useMemo(() => [TOKEN_PACKS[2], BUNDLES.emotes[2], SUPPORT_PACKS[2]], []);
-  const charAccessories = accessoriesFor(selectedChar).filter(a => !a.exclusiveTo || a.exclusiveTo === selectedChar).slice(0, 16);
+  const charAccessories = useMemo(() => {
+    if (!selectedChar) return [];
+    try {
+      return (accessoriesFor?.(selectedChar) || [])
+        .filter(a => !a.exclusiveTo || a.exclusiveTo === selectedChar)
+        .slice(0, 16);
+    } catch {
+      return [];
+    }
+  }, [selectedChar]);
 
   return <div className="w-full max-w-6xl mx-auto flex flex-col gap-4">
     <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/40 bg-card/80 p-4">
