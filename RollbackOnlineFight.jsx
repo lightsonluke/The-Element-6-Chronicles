@@ -30,6 +30,7 @@ import { SupabaseRollbackTransport } from './rollback/realtimeTransport.js';
 import { checksumState } from './rollback/stateChecksum.js';
 import {
   createElement6OnlineState,
+  getOnlineStagePlatforms,
   ONLINE_PLATFORMS,
   ONLINE_STAGE_HEIGHT,
   ONLINE_STAGE_WIDTH,
@@ -70,6 +71,9 @@ export default function RollbackOnlineFight({
   oppLoadout = {},
   myElo,
   oppElo,
+  stageId = 'splitcity',
+  myUsername = 'YOU',
+  oppUsername = 'OPPONENT',
   sfxVolume = 70,
   musicVolume = 50,
   settings = {},
@@ -85,6 +89,7 @@ export default function RollbackOnlineFight({
   const [gameStarted, setGameStarted] = useState(false);
   const [connectionText, setConnectionText] = useState('CONNECTING…');
   const [networkError, setNetworkError] = useState(null);
+  const [resyncing, setResyncing] = useState(false);
   useClipRecorder(canvasRef);
 
   const isHost = role === 'host';
@@ -117,6 +122,7 @@ export default function RollbackOnlineFight({
     let readyTimer = null;
     let stopped = false;
     let finished = false;
+    let resyncing = false;
     let lastPeerMessageAt = Date.now();
     let transport;
     let session;
@@ -128,6 +134,7 @@ export default function RollbackOnlineFight({
     const initialState = createElement6OnlineState({
       matchId,
       mode,
+      stageId,
       host: {
         character: hostCharacter,
         elementId: hostLoadout.element || 'basic',
@@ -182,15 +189,18 @@ export default function RollbackOnlineFight({
       const hostFighter = fighters.host;
       const guestFighter = fighters.guest;
       ctx.clearRect(0, 0, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT);
-      drawBackground(ctx, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT, state.frame, 'splitcity');
-      drawPlatforms(ctx, ONLINE_PLATFORMS, state.frame, 'splitcity');
-      drawFighter(hostFighter, hostCharacter, hostLoadout, isHost ? 'YOU' : 'OPPONENT');
-      drawFighter(guestFighter, guestCharacter, guestLoadout, isHost ? 'OPPONENT' : 'YOU');
+      // The server chooses one normal stage when the match is made.  Both
+      // browsers receive the same saved ID, never a player-made/custom stage.
+      const sharedStage = state.stageId || stageId || 'splitcity';
+      drawBackground(ctx, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT, state.frame, sharedStage);
+      drawPlatforms(ctx, getOnlineStagePlatforms(sharedStage) || ONLINE_PLATFORMS, state.frame, sharedStage);
+      drawFighter(hostFighter, hostCharacter, hostLoadout, isHost ? myUsername : oppUsername);
+      drawFighter(guestFighter, guestCharacter, guestLoadout, isHost ? oppUsername : myUsername);
 
       ctx.fillStyle = 'rgba(0,0,0,0.72)';
       ctx.fillRect(0, ONLINE_STAGE_HEIGHT - 80, ONLINE_STAGE_WIDTH, 80);
-      drawHealthBar(ctx, 40, ONLINE_STAGE_HEIGHT - 66, hostFighter.damage, 280, hostCharacter.color, `${hostCharacter.name}${isHost ? ' (YOU)' : ''}`, hostFighter.stocks);
-      drawHealthBar(ctx, ONLINE_STAGE_WIDTH - 320, ONLINE_STAGE_HEIGHT - 66, guestFighter.damage, 280, guestCharacter.color, `${guestCharacter.name}${!isHost ? ' (YOU)' : ''}`, guestFighter.stocks);
+      drawHealthBar(ctx, 40, ONLINE_STAGE_HEIGHT - 66, hostFighter.damage, 280, hostCharacter.color, `${isHost ? myUsername : oppUsername} · ${hostCharacter.name}`, hostFighter.stocks);
+      drawHealthBar(ctx, ONLINE_STAGE_WIDTH - 320, ONLINE_STAGE_HEIGHT - 66, guestFighter.damage, 280, guestCharacter.color, `${!isHost ? myUsername : oppUsername} · ${guestCharacter.name}`, guestFighter.stocks);
       ctx.fillStyle = '#FFD700';
       ctx.font = 'bold 12px Orbitron';
       ctx.textAlign = 'center';
@@ -198,6 +208,7 @@ export default function RollbackOnlineFight({
       ctx.fillStyle = 'rgba(255,255,255,0.55)';
       ctx.font = '9px Orbitron';
       ctx.fillText(`ELO ${myElo || 1000} vs ${oppElo || 1000}`, ONLINE_STAGE_WIDTH / 2, ONLINE_STAGE_HEIGHT - 34);
+      ctx.fillText(`STAGE: ${String(sharedStage).replace(/_/g, ' ').toUpperCase()}`, ONLINE_STAGE_WIDTH / 2, ONLINE_STAGE_HEIGHT - 18);
 
       if (showDiagnosticsRef.current && session) {
         const stats = session.getStats();
@@ -242,7 +253,16 @@ export default function RollbackOnlineFight({
           inputDelay: 2,
           maxRollbackFrames: 12,
           historySize: 120,
-          onDesync: () => setNetworkError('The match desynced. Open diagnostics with F3.'),
+          onDesync: () => {
+            // A checksum mismatch is recoverable: pause both simulations and
+            // use the host's authoritative confirmed snapshot.
+            if (resyncing) return;
+            resyncing = true;
+            setResyncing(true);
+            setConnectionText('RESYNCING…');
+            if (isHost) transport?.sendControl('resync-state', { frame: session?.getStats().currentFrame || 0, state: session?.getRenderableState() }).catch(() => {});
+            else transport?.sendControl('resync-request').catch(() => {});
+          },
           onFrame: ({ state }) => {
             for (const event of state.events || []) {
               if (event.type === 'superHit') sfx.superImpact();
@@ -263,7 +283,15 @@ export default function RollbackOnlineFight({
             transport.sendControl('ready-ack').catch(() => {});
             markPeerReady();
           } else if (packet.kind === 'ready-ack') markPeerReady();
-          else if (packet.kind === 'disconnect') finishMatch(role);
+          else if (packet.kind === 'resync-request' && isHost) {
+            transport.sendControl('resync-state', { frame: session.getStats().currentFrame, state: session.getRenderableState() }).catch(() => {});
+          } else if (packet.kind === 'resync-state' && packet.state) {
+            session.replaceState(packet.state, Number(packet.frame) || packet.state.frame || 0);
+            resyncing = false;
+            setResyncing(false);
+            setNetworkError(null);
+            setConnectionText('CONNECTED · RESYNCED');
+          } else if (packet.kind === 'disconnect') finishMatch(role);
         });
 
         await transport.connect();
@@ -285,7 +313,7 @@ export default function RollbackOnlineFight({
           accumulator += Math.min(100, now - lastTime);
           lastTime = now;
           let steps = 0;
-          while (accumulator >= FRAME_MS && steps < 6) {
+          while (!resyncing && accumulator >= FRAME_MS && steps < 6) {
             const gamepad = settings?.controllerEnabled === false ? null : readGamepadInput(0);
             const input = pausedRef.current ? NO_INPUT : mergeInput(readPlayerInput(keys, keybinds.p1), gamepad);
             const state = session.advance(input);
@@ -321,7 +349,7 @@ export default function RollbackOnlineFight({
       window.removeEventListener('keyup', onKeyUp);
       transport?.close('screen-left').catch(() => {});
     };
-  }, [gameStarted, matchId, playerId, opponentPlayerId, role, mode, myChar, oppChar]);
+  }, [gameStarted, matchId, playerId, opponentPlayerId, role, mode, myChar, oppChar, stageId]);
 
   const handleQuit = () => {
     try { db.entities.OnlineMatch.update(matchId, { status: 'finished', winner: isHost ? 'guest' : 'host' }).catch(() => {}); } catch {}
@@ -355,6 +383,8 @@ export default function RollbackOnlineFight({
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
       </div>
       {networkError && <p className="text-xs text-destructive font-body">{networkError}</p>}
+      {resyncing && <div className="absolute inset-0 z-20 grid place-items-center bg-black/70 font-heading text-accent text-2xl">RESYNCING MATCH…</div>}
+      <p className="text-[10px] text-muted-foreground font-body">Your device controls your selected fighter. Use Arrows, WASD, or your Settings custom control preset.</p>
       <canvas ref={canvasRef} width={ONLINE_STAGE_WIDTH} height={ONLINE_STAGE_HEIGHT} className="border-2 border-border rounded-lg shadow-2xl w-full" style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">

@@ -1,38 +1,20 @@
-ELEMENT 6 — PAID TAB + VOLLEYBALL 2v2 UPDATE
+ELEMENT 6 ONLINE FINAL REPAIR
 
-This package restores the normal shop. Every regular shop tab remains exactly
-as it was: accessories, characters, emotes, etc. still use Tokens.
+1. Run Supabase-elo-leaderboard-fix.sql in Supabase SQL Editor (this fixes the
+   ambiguous user_id error in Top 100).
+2. Upload every .jsx file in this folder to the repository root and allow GitHub
+   to replace same-named files.
+3. Upload the rollback folder to the repository root, replacing rollback/rollbackSession.js.
+4. Upload the public/404.html file into the repository's public folder, then
+   commit and wait for the build to finish before opening the game.
 
-ONLY the existing PAID tab changes. It receives the new paid-pack list. No new
-shop navigation, category pages, or changes to Token purchasing are included.
+The Banger online queue uses six player slots. Each browser only sends its own
+slot's key/action; when the ball reaches a player, only that player's slot can
+perform the Banger action.
 
-INSTALL
-1. Unzip this package.
-2. In GitHub, upload the .jsx and .js files to your repository ROOT.
-3. Upload the files inside rollback/ into your repository's rollback/ folder.
-4. Let GitHub replace matching files, commit, and wait for deployment.
+This package intentionally does not touch offline sport files.
 
-DO NOT upload BaseBallGame.jsx (it is not needed). No SQL query is needed for
-this update if your online-sports SQL was already run.
-
-VOLLEYBALL 2v2
-- Uses the actual offline VolleyballGame court, physics, player rendering,
-  scoring, ball, and rules instead of a generic online canvas.
-- Four queued players map to four individual players: slots 0/2 are Team 1;
-  slots 1/3 are Team 2.
-- Every browser sends input only for its own slot. Keyboard custom bindings,
-  WASD/arrow configurations, and controller slot 0 control only that one
-  selected character. Other players' input comes from the network.
-- Host checkpoints are exported to every player, so every screen is drawn from
-  the same confirmed state. The existing rollback transport files remain in
-  the package for the sports matchmaking/checksum layer.
-
-OFFLINE BOTS
-- Volleyball and Baseball already accept any valid roster character internally.
-- SportsShell now draws CPU opponents/teammates from the full roster.
-- Banger CPU teams and 2v2 Team Battle CPU slots can use locked characters;
-  this never affects the local player's own unlocks.
-
-PAYMENTS
-The Paid tab only lists the products. Real purchases still require your Stripe
-Checkout/webhook to be configured before money can be charged or items granted.
+URL note: the game now changes browser paths such as /home, /shop, /fights,
+and /onlinesports while navigating. GitHub Pages needs a SPA fallback to make
+a direct reload of a deep path work; use the normal home address if GitHub
+Pages has not been configured with that fallback yet.

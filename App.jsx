@@ -1,7 +1,7 @@
 import { Toaster } from "./toaster.jsx"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from './query-client.js'
-import { HashRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './PageNotFound.jsx';
 import { AuthProvider, useAuth } from './AuthContext.jsx';
 import UserNotRegisteredError from './UserNotRegisteredError.jsx';
@@ -34,8 +34,7 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      <Route path="/" element={<Game />} />
-      <Route path="*" element={<PageNotFound />} />
+      <Route path="*" element={<Game />} />
     </Routes>
   );
 };

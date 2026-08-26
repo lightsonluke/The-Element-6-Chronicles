@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient.js';
 import SoccerFighter from './SoccerFighter.jsx';
 import VolleyballGame from './VolleyballGame.jsx';
 import DodgeballGame from './DodgeballGame.jsx';
+import BangerGame from './BangerGame.jsx';
 import { reportOnlineSportResult } from './sportsOnline.js';
 
 // Runs the existing sport components. This file does not replace or modify
@@ -13,6 +14,7 @@ function getSport(mode = '') {
   if (mode.startsWith('soccer_')) return 'soccer';
   if (mode.startsWith('volleyball_')) return 'volleyball';
   if (mode.startsWith('dodgeball_')) return 'dodgeball';
+  if (mode === 'banger_online') return 'banger';
   return null;
 }
 
@@ -25,6 +27,7 @@ export default function ActualSportsOnlineMatch({
   const [remoteState, setRemoteState] = useState(null);
   const [status, setStatus] = useState('CONNECTING…');
   const [result, setResult] = useState(null);
+  const [syncing, setSyncing] = useState(false);
   const messageHandler = useRef(null);
   const channel = useRef(null);
   const lastStateSent = useRef(0);
@@ -61,7 +64,11 @@ export default function ActualSportsOnlineMatch({
         if (active && payload?.sender !== me.id) messageHandler.current?.(payload?.message);
       })
       .on('broadcast', { event: 'state' }, ({ payload }) => {
-        if (active && !isHost && payload?.state) setRemoteState(payload.state);
+        if (active && !isHost && payload?.state) {
+          setSyncing(true);
+          setRemoteState(payload.state);
+          window.setTimeout(() => active && setSyncing(false), 120);
+        }
       })
       .on('broadcast', { event: 'result' }, ({ payload }) => {
         if (active && payload?.winnerTeam) setResult(payload);
@@ -121,7 +128,8 @@ export default function ActualSportsOnlineMatch({
   }, [result, me?.id, match?.id]);
 
   if (!me) return <p className="font-heading text-accent text-center">SIGN IN TO PLAY ONLINE</p>;
-  if (!sport || (!isVolleyball2v2 && orderedPlayers.length !== 2) || (isVolleyball2v2 && orderedPlayers.length !== 4) || !p1 || !p2) {
+  const requiredPlayers = sport === 'banger' ? 6 : isVolleyball2v2 ? 4 : 2;
+  if (!sport || orderedPlayers.length !== requiredPlayers || !p1 || !p2) {
     return <p className="text-center text-muted-foreground">Waiting until every required player has joined this online match.</p>;
   }
   if (result) return <div className="text-center space-y-5"><h2 className="text-4xl font-heading text-accent">TEAM {result.winnerTeam} WINS!</h2><button onClick={() => onEnd?.()} className="px-6 py-3 rounded bg-primary text-primary-foreground font-heading">CONTINUE</button></div>;
@@ -133,13 +141,17 @@ export default function ActualSportsOnlineMatch({
   };
   const elementFor = player => player.loadout?.element || equippedElements[player.character_id] || 'basic';
 
-  return <div className="w-full flex flex-col items-center gap-2">
+  return <div className="w-full flex flex-col items-center gap-2 relative">
     <p className="font-heading text-accent text-sm">{sport.toUpperCase()} ONLINE · {status}</p>
     {sport === 'soccer' && <SoccerFighter
       {...shared}
       p1Char={p1.character_id} p2Char={p2.character_id}
       p1IsCPU={false} p2IsCPU={false} cpuDifficulty="regular"
       p1Element={elementFor(p1)} p2Element={elementFor(p2)}
+      remoteState={isHost ? null : remoteState}
+      onStateExport={isHost ? onStateExport : undefined}
+      isOnlineHost={isHost}
+      onSyncStateChange={setSyncing}
       round={1} totalRounds={1} onRematch={() => {}}
       onEnd={matchResult => { if (isHost) finish(matchResult?.p1Won ? 1 : 2); }}
     />}
@@ -167,5 +179,19 @@ export default function ActualSportsOnlineMatch({
       remoteState={isHost ? null : remoteState}
       isOnlineHost={isHost}
     />}
+    {sport === 'banger' && <BangerGame
+      {...shared}
+      p1Chars={p1Team.map(player => player.character_id)}
+      p2Chars={p2Team.map(player => player.character_id)}
+      p1IsCPU={false} p2IsCPU={false} difficulty="regular"
+      p1Elements={p1Team.map(elementFor)} p2Elements={p2Team.map(elementFor)}
+      remoteState={isHost ? null : remoteState}
+      onStateExport={isHost ? onStateExport : undefined}
+      isOnlineHost={isHost}
+      localPlayerSlot={Number(mePlayer?.slot || 1) - 1}
+      onResult={matchResult => { if (isHost) finish(matchResult?.p1Won ? 1 : 2); }}
+      onQuit={onEnd}
+    />}
+    {syncing && <div className="absolute inset-0 z-20 grid place-items-center bg-black/70 font-heading text-accent text-xl">RESYNCING…</div>}
   </div>;
 }

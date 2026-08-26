@@ -45,6 +45,7 @@ import ComboTrainer from './ComboTrainer.jsx';
 import OnlineSportsLobby from './OnlineSportsLobby.jsx';
 import OnlineSportsHub from './OnlineSportsHub.jsx';
 import EloScreen from './EloScreen.jsx';
+import SportsRollbackArena from './SportsRollbackArena.jsx';
 import ActualSportsOnlineMatch from './ActualSportsOnlineMatch.jsx';
 import BattleRoyaleLobby from './BattleRoyaleLobby.jsx';
 import ShapeshiftSelect from './ShapeshiftSelect.jsx';
@@ -204,7 +205,18 @@ const ALL = [...ALL_CHARS];
 const TOUCH_SCREENS = ['fighting', 'soccer', 'sports', 'training', 'tutorial', 'lan', 'team', 'customrooms', 'experimental', 'sportslobby'];
 
 export default function Game() {
-  const [screen, setScreen] = useState('menu');
+  const SCREEN_PATHS = { menu: '/home', shop: '/shop', modeSelect: '/fights', onlinelobby: '/online', onlinesports: '/onlinesports', sports: '/sports', elo: '/elo', hubserverselect: '/community', leaderboard: '/leaderboards', settings: '/settings' };
+  const PATH_SCREENS = Object.fromEntries(Object.entries(SCREEN_PATHS).map(([name, path]) => [path, name]));
+  const githubPrefix = window.location.hostname.endsWith('.github.io')
+    ? `/${window.location.pathname.split('/').filter(Boolean)[0] || 'The-Element-6-Chronicles'}`
+    : '';
+  const [screen, setScreen] = useState(() => {
+    const recoveredPath = sessionStorage.getItem('element6_requested_path');
+    if (recoveredPath) sessionStorage.removeItem('element6_requested_path');
+    const rawPath = recoveredPath || window.location.pathname;
+    const finalSegment = `/${rawPath.split('/').filter(Boolean).pop() || 'home'}`;
+    return PATH_SCREENS[rawPath] || PATH_SCREENS[finalSegment] || 'menu';
+  });
   const [returnScreen, setReturnScreen] = useState('menu');
   const [hubServer, setHubServer] = useState(null);
   const [fighters, setFighters] = useState(null);
@@ -251,6 +263,18 @@ export default function Game() {
   const chatInitRef = useRef(false);
   const prevUnreadRef = useRef(0);
   const onChatScreenRef = useRef(false);
+
+  // Human-readable URLs work while browsing. GitHub Pages still needs its
+  // normal SPA fallback for a direct refresh on a non-root URL.
+  useEffect(() => {
+    const syncFromBrowser = () => setScreen(PATH_SCREENS[window.location.pathname] || 'menu');
+    window.addEventListener('popstate', syncFromBrowser);
+    return () => window.removeEventListener('popstate', syncFromBrowser);
+  }, []);
+  useEffect(() => {
+    const path = SCREEN_PATHS[screen] ? `${githubPrefix}${SCREEN_PATHS[screen]}` : null;
+    if (path && window.location.pathname !== path) window.history.pushState({ screen }, '', path);
+  }, [screen]);
 
   // Controller menu navigation — active everywhere. During active matches each
   // game component sets window.__el6GameplayActive to suppress menu-nav so the
@@ -2064,11 +2088,14 @@ export default function Game() {
             settings={progress.settings || {}}
             sfxVolume={progress.settings?.sfxVolume ?? 70}
             musicVolume={progress.settings?.musicVolume ?? 50}
-            equippedSkins={progress.equippedSkins || {}}
             equippedAccessories={progress.equippedAccessories || {}}
             equippedElements={progress.equippedElements || {}}
             customCharsData={customCharData}
-            onEnd={() => { setOnlineSportsLobby(null); setScreen('sports'); }}
+            onEnd={(res) => {
+              // Online wins grow only the fighter the player actually queued.
+              if (res?.won && res?.characterId) addXP(res.characterId, 45);
+              setOnlineSportsLobby(null); setScreen('sports');
+            }}
           />
         )}
 

@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Element 6</title></head>
+  <body>
+    <script>
+      (function () {
+        var requested = window.location.pathname;
+        sessionStorage.setItem('element6_requested_path', requested);
+        var isGithubProjectSite = /\.github\.io$/i.test(window.location.hostname);
+        var parts = requested.split('/').filter(Boolean);
+        var base = isGithubProjectSite && parts.length ? '/' + parts[0] + '/' : '/';
+        window.location.replace(base);
+      }());
+    </script>
+  </body>
+</html>

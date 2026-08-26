@@ -56,6 +56,9 @@ export default function BangerGame({
   equippedSkins = {}, equippedAccessories = {}, sfxVolume = 70, musicVolume = 50, settings = {},
   customCharsData = {}, lanConnection = null, lanRole = null, localScheme = null,
   remoteState = null, onStateExport = null, isOnlineHost = false,
+  // In six-device Banger this is the immutable queue slot (0 through 5).
+  // A device may only fire when its own selected character is the active hitter.
+  localPlayerSlot = null,
 }) {
   const canvasRef = useRef(null);
   const [countdown, setCountdown] = useState(3);
@@ -76,6 +79,13 @@ export default function BangerGame({
   const ballSpeed = matchSettings.ballSpeed ?? 1.0;
   const musicTrack = matchSettings.music ?? 'arena';
   const weather = matchSettings.weather ?? 'clear';
+  const localSide = Number.isInteger(localPlayerSlot) ? (localPlayerSlot % 2 === 0 ? 1 : 2) : null;
+  const localTeamSlot = Number.isInteger(localPlayerSlot) ? Math.floor(localPlayerSlot / 2) : null;
+  const localCanAct = (state, side) => localSide == null || (localSide === side && state[`active${side}`] === localTeamSlot);
+  const localCanBanger = state => {
+    const target = state.ball.bangerTarget;
+    return localSide == null || Boolean(target && target.side === localSide && target.slot === localTeamSlot);
+  };
 
   // Merge bot cosmetics for CPU characters — bots get random accessories every match
   const botAccsRef = useRef(null);
@@ -150,11 +160,11 @@ export default function BangerGame({
         lanConnection.sendMessage({ type: 'key', key: rk, down: true });
       }
       const s = stRef.current;
-      if (s.phase === 'aim' && !p1IsCPU && s.aimSide === 1 && sigKeys(1).includes(k)) { strike(1); e.preventDefault(); }
-      else if (s.phase === 'aim' && !p2IsCPU && s.aimSide === 2 && sigKeys(2).includes(k)) { strike(2); e.preventDefault(); }
+      if (s.phase === 'aim' && !p1IsCPU && s.aimSide === 1 && localCanAct(s, 1) && sigKeys(1).includes(k)) { strike(1); e.preventDefault(); }
+      else if (s.phase === 'aim' && !p2IsCPU && s.aimSide === 2 && localCanAct(s, 2) && sigKeys(2).includes(k)) { strike(2); e.preventDefault(); }
       if (s.ball.bangerWindow > 0) {
-        if (!p1IsCPU && s.ball.bangerBy === 1 && powKeys(1).includes(k)) { callBanger(); e.preventDefault(); }
-        else if (!p2IsCPU && s.ball.bangerBy === 2 && powKeys(2).includes(k)) { callBanger(); e.preventDefault(); }
+        if (!p1IsCPU && s.ball.bangerBy === 1 && localCanBanger(s) && powKeys(1).includes(k)) { callBanger(); e.preventDefault(); }
+        else if (!p2IsCPU && s.ball.bangerBy === 2 && localCanBanger(s) && powKeys(2).includes(k)) { callBanger(); e.preventDefault(); }
       }
     };
     const ku = (e) => {
@@ -166,18 +176,20 @@ export default function BangerGame({
     };
     if (lanConnection) {
       lanConnection.onMessage((msg) => {
-        if (msg?.type === 'key') {
+      if (msg?.type === 'key') {
           remoteKeysProc.current = true;
           const k = msg.key.toLowerCase();
+          const remoteSlot = Number.isInteger(msg.playerSlot) ? msg.playerSlot : null;
+          const remoteSide = remoteSlot == null ? null : (remoteSlot % 2 === 0 ? 1 : 2);
+          const remoteTeamSlot = remoteSlot == null ? null : Math.floor(remoteSlot / 2);
           if (msg.down) keysRef.current[k] = true; else keysRef.current[k] = false;
           const s = stRef.current;
-          if (msg.down && s.phase === 'aim' && s.aimSide === (lanRole === 'host' ? 2 : 1)) {
-            const side = lanRole === 'host' ? 2 : 1;
-            if (sigKeys(side).includes(k)) strike(side);
+          if (msg.down && remoteSide != null && s.phase === 'aim' && s.aimSide === remoteSide && s[`active${remoteSide}`] === remoteTeamSlot) {
+            // The remote device may only fire for its own queued slot.
+            if ([kb.p1.sig, kb.p2.sig, 'z', 'x', 'j', 'k'].map(String).map(v => v.toLowerCase()).includes(k)) strike(remoteSide);
           }
-          if (msg.down && s.ball.bangerWindow > 0 && s.ball.bangerBy === (lanRole === 'host' ? 2 : 1)) {
-            const side = lanRole === 'host' ? 2 : 1;
-            if (powKeys(side).includes(k)) callBanger();
+          if (msg.down && remoteSide != null && s.ball.bangerWindow > 0 && s.ball.bangerTarget?.side === remoteSide && s.ball.bangerTarget?.slot === remoteTeamSlot) {
+            if ([kb.p1.power, kb.p2.power, 'z', 'x', 'j', 'k'].map(String).map(v => v.toLowerCase()).includes(k)) callBanger();
           }
           setTimeout(() => { remoteKeysProc.current = false; }, 0);
         }

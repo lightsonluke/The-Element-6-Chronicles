@@ -172,6 +172,7 @@ function SupabaseFightLobby({
   if (phase === 'fight' && match && role) {
     const opponentCharacter = role === 'host' ? match.guest_char : match.host_char;
     const opponentLoadout = role === 'host' ? (match.guest_loadout || {}) : (match.host_loadout || {});
+    const myMatchLoadout = role === 'host' ? (match.host_loadout || loadout) : (match.guest_loadout || loadout);
     return (
       <RollbackOnlineFight
         matchId={match.id}
@@ -181,7 +182,7 @@ function SupabaseFightLobby({
         mode={mode}
         myChar={myChar}
         oppChar={opponentCharacter}
-        myLoadout={loadout}
+        myLoadout={myMatchLoadout}
         oppLoadout={opponentLoadout}
         myElo={role === 'host' ? (match.host_elo ?? myRating) : (match.guest_elo ?? myRating)}
         oppElo={role === 'host' ? (match.guest_elo ?? 1000) : (match.host_elo ?? 1000)}
