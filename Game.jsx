@@ -45,7 +45,7 @@ import ComboTrainer from './ComboTrainer.jsx';
 import OnlineSportsLobby from './OnlineSportsLobby.jsx';
 import OnlineSportsHub from './OnlineSportsHub.jsx';
 import EloScreen from './EloScreen.jsx';
-import SportsRollbackArena from './SportsRollbackArena.jsx';
+import ActualSportsOnlineMatch from './ActualSportsOnlineMatch.jsx';
 import BattleRoyaleLobby from './BattleRoyaleLobby.jsx';
 import ShapeshiftSelect from './ShapeshiftSelect.jsx';
 
@@ -2058,15 +2058,17 @@ export default function Game() {
         )}
 
         {screen === 'onlinesportsmatch' && onlineSportsLobby && (
-          <SportsRollbackArena
+          <ActualSportsOnlineMatch
             match={onlineSportsLobby.match}
             players={onlineSportsLobby.players}
             settings={progress.settings || {}}
-            onEnd={(res) => {
-              // Online wins grow only the fighter the player actually queued.
-              if (res?.won && res?.characterId) addXP(res.characterId, 45);
-              setOnlineSportsLobby(null); setScreen('sports');
-            }}
+            sfxVolume={progress.settings?.sfxVolume ?? 70}
+            musicVolume={progress.settings?.musicVolume ?? 50}
+            equippedSkins={progress.equippedSkins || {}}
+            equippedAccessories={progress.equippedAccessories || {}}
+            equippedElements={progress.equippedElements || {}}
+            customCharsData={customCharData}
+            onEnd={() => { setOnlineSportsLobby(null); setScreen('sports'); }}
           />
         )}
 
