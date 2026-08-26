@@ -83,7 +83,7 @@ export default function ActualSportsOnlineMatch({
     },
     sendMessage(message) {
       if (channel.current && me?.id) {
-        channel.current.send({ type: 'broadcast', event: 'input', payload: { sender: me.id, message: { ...message, playerSlot: Number(mePlayer?.slot || 1) - 1 } });
+        channel.current.send({ type: 'broadcast', event: 'input', payload: { sender: me.id, message: { ...message, playerSlot: Number(mePlayer?.slot || 1) - 1 } } });
       }
     },
     stalled: false,
