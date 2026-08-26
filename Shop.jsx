@@ -1,549 +1,91 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ACCESSORIES, accessoriesFor, drawAccessory } from './cosmetics.js';
+import { SHIKIGAMI, getShikigami } from './shikigami.js';
+import { EMOTES, getEmoteById } from './emotes.js';
+import { PROFILE_TITLES, getTitleColor } from './profileTitles.js';
 import { HEROES } from './heroes.js';
-import { VILLAINS } from './villains.js';
-import { GUARDIANS } from './guardians.js';
-import { ACCESSORIES, getAccessory, drawAccessory, accessoriesFor, isBehindAccessory, resolveAccColor, getEquippedAccessories, getEquippedAccessoryIds } from './cosmetics.js';
-import { drawSportChar } from './sportDraw.jsx';
-import { shopSkinsForChar as skinsForChar, getSkin, getSkinParts, getCharRenderColor, RARITY_COLORS } from './skins.js';
-import { KILL_FX, getKillFX, drawKillFX } from './killFX.js';
-import { drawStickman } from './renderer.js';
 import { music } from './music.js';
-import DonateTab from './DonateTab.jsx';
 import { formatNumber } from './formatNumber.js';
-import { PAID_PACKS, SUBSCRIPTIONS } from './shopPacks.js';
-import { PROFILE_TITLES, getTitleColor, ownsTitle } from './profileTitles.js';
-import { charPrice, charCategory, charEra, CATEGORY_COLORS } from './charPrices.js';
-import { CROSSOVERS, crossoversForChar, getCrossoverColor } from './crossovers.js';
-import { SHIKIGAMI, getShikigami, getShikigamiStat } from './shikigami.js';
-import { EMOTES as ALL_EMOTES, getEmoteById } from './emotes.js';
-import EmotePreview from './EmotePreview.jsx';
-import { ALL_CHARS, getRosterForEra, getEraForCharId, ERAS } from './allCharacters.js';
-import EraTabBar from './EraTabBar.jsx';
-import SoundButton from './SoundButton.jsx';
-import GameIcon from "./GameIcon.jsx";
+import GameIcon from './GameIcon.jsx';
 
-const ALL = ALL_CHARS;
+// The storefront deliberately contains no skin products: skins have been retired.
+const NAV = [
+  ['featured', 'FEATURED'], ['accessories', 'ACCESSORIES'], ['emotes', 'EMOTES'],
+  ['shikigami', 'SHIKIGAMI'], ['profile', 'PROFILE'], ['battlepass', 'BATTLE PASS'],
+  ['tokens', 'TOKENS'], ['support', 'SUPPORT ELEMENT 6'],
+];
 
-// Shop ordering: the 6 original heroes first, then everyone else by gen 1→5.
-const CHEAP_HERO_ORDER = ['yellow', 'blue', 'purple', 'orange', 'green', 'pink'];
-const ERA_ORDER = ['g1', 'g2', 'g3', 'g4', 'g5'];
-function shopCharOrder(c) {
-  const cheapIdx = CHEAP_HERO_ORDER.indexOf(c.id);
-  if (cheapIdx >= 0) return cheapIdx; // 0-5 — always first
-  const era = getEraForCharId(c.id)?.id || 'g5';
-  const eraIdx = ERA_ORDER.indexOf(era);
-  return 100 + (eraIdx < 0 ? 99 : eraIdx); // 100+ so they come after the 6
-}
-const SHOP_SORTED = [...ALL].sort((a, b) => shopCharOrder(a) - shopCharOrder(b));
+const TOKEN_PACKS = [
+  { id: 'tokens_5000', amount: 5000, price: '$1.99', color: '#f6d449' },
+  { id: 'tokens_15000', amount: 15000, price: '$4.99', color: '#ffa928', badge: 'POPULAR' },
+  { id: 'tokens_50000', amount: 50000, price: '$9.99', color: '#ff7a28', badge: 'BEST VALUE' },
+  { id: 'tokens_100000', amount: 100000, price: '$19.99', color: '#ff4b54' },
+];
 
-export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin, onBuyKillFX, onEquipKillFX, onBuyCharacter, onBuyPack, onEquipTitle, onBuyCrossover, onEquipCrossover, onBuyShikigami, onEquipShikigami, onBuyEmote, onBack }) {
-  const [selected, setSelected] = useState(progress?.favoriteId || HEROES[0].id);
-  const [tryOn, setTryOn] = useState(null); // accessory id being previewed
-  const [justBought, setJustBought] = useState(null); // post-buy "equip in shop" overlay
-  const [shopTab, setShopTab] = useState('accessories');
-  const [eraFilter, setEraFilter] = useState('all');
-  const coins = progress?.coins || 0;
-  const owned = progress?.ownedAccessories || [];
-  const equipped = progress?.equippedAccessories || {};
-  const equippedSkins = progress?.equippedSkins || {};
-  const ownedKillFX = progress?.ownedKillFX || [];
-  const equippedKillFX = progress?.equippedKillFX || 'none';
-  const ownedShikigami = progress?.ownedShikigami || [];
-  const equippedShikigami = progress?.equippedShikigami || {};
-  const char = ALL.find(c => c.id === selected);
+const SUPPORT_PACKS = [
+  { id: 'supporter_pack', name: 'SUPPORTER PACK', price: '$4.99', emoji: '💜', items: ['Exclusive title', 'Exclusive profile banner', '5,000 Tokens'] },
+  { id: 'founder_pack', name: 'FOUNDER PACK', price: '$9.99', emoji: '👑', items: ['Exclusive accessory', 'Exclusive title', 'Exclusive profile icon', '15,000 Tokens'] },
+  { id: 'ultimate_supporter_pack', name: 'ULTIMATE SUPPORTER', price: '$24.99', emoji: '✨', items: ['Exclusive accessory & shikigami', 'Exclusive emotes & profile cosmetics', '100,000 Tokens', '+10 Custom Character Slots'] },
+];
 
-  // Reset try-on when switching characters
-  useEffect(() => { setTryOn(null); }, [selected]);
+const BUNDLES = {
+  accessories: [{ id: 'accessory_random_10', label: '10 RANDOM ACCESSORIES', price: '$4.99', count: 10 }],
+  emotes: [
+    { id: 'emote_random_3', label: '3 RANDOM EMOTES', price: '$4.99', count: 3 },
+    { id: 'emote_random_6', label: '6 RANDOM EMOTES', price: '$7.99', count: 6 },
+    { id: 'emote_random_10', label: '10 RANDOM EMOTES', price: '$9.99', count: 10 },
+  ],
+  shikigami: [{ id: 'shikigami_random_5', label: '5 RANDOM SHIKIGAMI', price: '$4.99', count: 5 }],
+  profile: [{ id: 'profile_random_5', label: '5 RANDOM PROFILE ITEMS', price: '$4.99', count: 5 }],
+};
+
+export default function Shop({ progress = {}, onBuy, onEquip, onBuyPack, onBuyShikigami, onEquipShikigami, onBuyEmote, onEquipTitle, onBack }) {
+  const [tab, setTab] = useState('featured');
+  const [selectedChar, setSelectedChar] = useState(progress.favoriteId || HEROES[0]?.id);
+  const [notice, setNotice] = useState(null);
+  const coins = progress.coins || 0;
+  const ownedAccessories = progress.ownedAccessories || [];
+  const ownedEmotes = progress.ownedEmotes || [];
+  const ownedShikigami = progress.ownedShikigami || [];
+  const ownedTitles = progress.ownedTitles || [];
 
   useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
+  const callCheckout = item => { onBuyPack?.(item.id); setNotice(`${item.name || item.label || item.amount + ' Tokens'} will open checkout once payments are connected.`); };
+  const featured = useMemo(() => [TOKEN_PACKS[2], BUNDLES.emotes[2], SUPPORT_PACKS[2]], []);
+  const charAccessories = accessoriesFor(selectedChar).filter(a => !a.exclusiveTo || a.exclusiveTo === selectedChar).slice(0, 16);
 
-  const equippedIds = getEquippedAccessoryIds(equipped, char?.id);
-  const equippedAccs = getEquippedAccessories(equipped, char?.id);
-  const shownAccessory = tryOn ? getAccessory(tryOn) : equippedAccs[0] || null;
-  const available = accessoriesFor(selected);
-  const equippedSkinId = equippedSkins[char?.id];
-  const previewSkinColor = equippedSkinId ? getSkin(equippedSkinId)?.color : null;
-  const previewSkinParts = equippedSkinId ? getSkinParts(char?.id, equippedSkins) : [];
+  return <div className="w-full max-w-6xl mx-auto flex flex-col gap-4">
+    <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/40 bg-card/80 p-4">
+      <div><h2 className="font-heading text-2xl text-accent tracking-wider">ELEMENT 6 SHOP</h2><p className="text-xs text-muted-foreground">Cosmetics, profiles and optional support — never gameplay power.</p></div>
+      <div className="flex items-center gap-3"><div className="rounded-xl bg-accent/15 px-4 py-2 text-right"><p className="text-[10px] text-muted-foreground">YOUR TOKENS</p><p className="font-heading text-lg text-accent">{formatNumber(coins)} ◆</p></div><button onClick={onBack} className="rounded-lg bg-secondary px-4 py-2 font-heading text-sm">← BACK</button></div>
+    </header>
+    <nav className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">{NAV.map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`rounded-lg px-2 py-2 font-heading text-[10px] ${tab === id ? 'bg-primary text-primary-foreground shadow-lg' : 'bg-secondary text-secondary-foreground'}`}>{label}</button>)}</nav>
 
-  return (
-    <div className="w-full max-w-4xl flex flex-col gap-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-heading text-accent tracking-wider">SHOP</h2>
-          <p className="text-xs text-muted-foreground font-body">Element 6 Tokens: <span className="text-accent font-heading">{formatNumber(coins)}</span> <GameIcon emoji="◆" size={14} /></p>
-        </div>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
-      </div>
+    {tab === 'featured' && <section className="space-y-4"><SectionTitle title="FEATURED" subtitle="Rotating highlights from across the Element 6 store." /><div className="grid md:grid-cols-3 gap-4">{featured.map(item => <FeatureCard key={item.id} item={item} onBuy={() => callCheckout(item)} />)}</div><div className="rounded-2xl border border-accent/50 bg-gradient-to-r from-primary/25 to-accent/20 p-5"><h3 className="font-heading text-xl text-accent">PREMIUM BATTLE PASS — $7.99</h3><p className="text-sm text-muted-foreground">Unlock the premium reward track: accessories, emotes, shikigami, titles, profile cosmetics and Tokens.</p><button onClick={() => setTab('battlepass')} className="mt-3 rounded-lg bg-accent px-4 py-2 font-heading text-sm text-accent-foreground">VIEW BATTLE PASS</button></div></section>}
 
-      <div className="flex gap-2">
-        <button onClick={() => setShopTab('accessories')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'accessories' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>ACCESSORIES</button>
-        <button onClick={() => setShopTab('kits')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'kits' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>KITS</button>
-        <button onClick={() => setShopTab('killfx')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'killfx' ? 'bg-destructive text-destructive-foreground' : 'bg-secondary text-secondary-foreground'}`}>KILL FX</button>
-        <button onClick={() => setShopTab('characters')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'characters' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>CHARACTERS</button>
-        <button onClick={() => setShopTab('titles')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'titles' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon emoji="🏷️" size={14} /> TITLES</button>
-        <button onClick={() => setShopTab('crossovers')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'crossovers' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon emoji="🔀" size={14} /> CROSSOVERS</button>
-        <button onClick={() => setShopTab('shikigami')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'shikigami' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>🪶 SHIKIGAMI</button>
-        <button onClick={() => setShopTab('emotes')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'emotes' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>EMOTES</button>
-        <button onClick={() => setShopTab('paid')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'paid' ? 'bg-primary text-primary-foreground' : 'bg-primary/50 text-primary-foreground'}`}><GameIcon emoji="💰" size={14} /> PAID</button>
-        <button onClick={() => setShopTab('donate')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'donate' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon emoji="💖" size={14} /> DONATE</button>
-      </div>
+    {tab === 'accessories' && <section className="space-y-4"><SectionTitle title="ACCESSORIES" subtitle="Choose a fighter, preview accessories, or collect a larger random bundle." /><div className="flex gap-2 overflow-x-auto pb-1">{HEROES.slice(0, 12).map(c => <button key={c.id} onClick={() => setSelectedChar(c.id)} title={c.name} className={`h-9 w-9 shrink-0 rounded-full border-2 ${selectedChar === c.id ? 'border-accent' : 'border-border'}`} style={{ background:c.color }} />)}</div><BundleRow bundles={BUNDLES.accessories} onBuy={callCheckout} /><div className="grid grid-cols-2 md:grid-cols-4 gap-3">{charAccessories.map(a => <ProductCard key={a.id} title={a.name} price="$1.99" preview={<AccessoryPreview accessory={a} />} owned={ownedAccessories.includes(a.id)} onBuy={() => callCheckout({ id:`accessory_${a.id}`, name:a.name })} /></div></section>}
 
-      {['accessories', 'kits'].includes(shopTab) && (
-      <div className="flex gap-4">
-        {/* Character picker */}
-        <div className="w-56">
-          <p className="text-[10px] font-heading text-muted-foreground mb-1">EQUIP ON</p>
-          <div className="mb-1">
-            <EraTabBar selectedEra={eraFilter} onEraChange={setEraFilter} compact />
-          </div>
-          <div className="grid grid-cols-6 gap-1 max-h-56 overflow-y-auto">
-            {(eraFilter === 'all' ? ALL : getRosterForEra(eraFilter)).map(c => (
-              <button key={c.id} onClick={() => setSelected(c.id)}
-                className={`w-8 h-8 rounded-full border-2 ${selected === c.id ? 'border-accent' : 'border-border'}`}
-                style={{ backgroundColor: c.color }} title={c.name} />
-            ))}
-          </div>
-        </div>
+    {tab === 'emotes' && <section className="space-y-4"><SectionTitle title="EMOTES" subtitle="Animated expression cosmetics for matches and the Community Hub." /><BundleRow bundles={BUNDLES.emotes} onBuy={callCheckout} /><div className="grid grid-cols-2 md:grid-cols-4 gap-3">{EMOTES.filter(e => e.price !== 0).slice(0, 24).map(e => <ProductCard key={e.id} title={e.name} price="$1.99" preview={<div className="grid h-20 place-items-center text-4xl animate-pulse">{e.emoji || '✦'}</div>} owned={ownedEmotes.includes(e.id)} onBuy={() => callCheckout({ id:`emote_${e.id}`, name:e.name })} />)}</div></section>}
 
-        {/* Try-on preview */}
-        <div className="flex-1 flex flex-col items-center bg-card border border-border rounded-xl p-4">
-          <PreviewCanvas char={char} accessories={tryOn ? [getAccessory(tryOn)] : equippedAccs} skinColor={previewSkinColor} skinParts={previewSkinParts} />
-          <p className="text-[9px] font-heading text-muted-foreground mt-2">EQUIPPED {equippedIds.length}/4</p>
-          {tryOn ? (
-            <p className="text-xs font-heading text-accent mt-1">Trying on: {shownAccessory?.name}</p>
-          ) : equippedIds.length > 0 ? (
-            <p className="text-xs font-heading text-accent mt-1">Wearing: {equippedAccs.map(a => a.name).join(', ')}</p>
-          ) : (
-            <p className="text-xs text-muted-foreground font-body mt-1">No accessory equipped — click one to try on</p>
-          )}
-        </div>
-      </div>
-      )}
+    {tab === 'shikigami' && <section className="space-y-4"><SectionTitle title="SHIKIGAMI" subtitle="Spirit companions with large animated previews." /><BundleRow bundles={BUNDLES.shikigami} onBuy={callCheckout} /><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">{SHIKIGAMI.map(s => <ProductCard key={s.id} large title={s.name} price="$2.99" preview={<ShikigamiPreview id={s.id} />} owned={ownedShikigami.includes(s.id)} onBuy={() => callCheckout({ id:`shikigami_${s.id}`, name:s.name })} />)}</div></section>}
 
-      {/* Accessories grid — only the selected character's exclusive set */}
-      {shopTab === 'accessories' && (
-      <div>
-        <p className="text-[10px] font-heading text-muted-foreground mb-2">ACCESSORIES{char ? ` FOR ${char.name.toUpperCase()}` : ''}</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {available.filter(a => !a.exclusiveTo || a.exclusiveTo === selected).map(a => {
-            const isOwned = owned.includes(a.id);
-            const isEquipped = equipped[char?.id] === a.id;
-            const isTrying = tryOn === a.id;
-            return (
-              <div key={a.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center cursor-pointer transition ${isTrying ? 'border-accent' : 'border-border'}`}
-                onClick={() => setTryOn(isTrying ? null : a.id)}>
-                <AccessoryIcon accessory={a} />
-                <p className="font-heading text-xs text-foreground mt-1">{a.name}</p>
-                {a.exclusiveTo && <span className="text-[8px] text-primary font-heading">EXCLUSIVE</span>}
-                <p className="text-[10px] text-accent font-heading mb-2">{a.price} <GameIcon emoji="◆" size={14} /></p>
-                {isOwned ? (
-                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
-                ) : (
-                  <button onClick={(e) => { e.stopPropagation(); if (coins >= a.price) { onBuy(a.id); setJustBought({ label: a.name, equip: () => onEquip(char.id, a.id) }); } }}
-                    disabled={coins < a.price}
-                    className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= a.price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
-                    BUY
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      )}
+    {tab === 'profile' && <section className="space-y-4"><SectionTitle title="PROFILE" subtitle="Titles and profile cosmetics visible throughout Element 6." /><BundleRow bundles={BUNDLES.profile} onBuy={callCheckout} /><div className="grid grid-cols-2 md:grid-cols-4 gap-3">{PROFILE_TITLES.filter(t => t.price > 0).map(t => <ProductCard key={t.id} title={t.name} price="$0.99" preview={<ProfilePreview title={t} />} owned={ownedTitles.includes(t.id)} onBuy={() => callCheckout({ id:`profile_${t.id}`, name:t.name })} />)}</div></section>}
 
-      {/* Sport Kits grid */}
-      {shopTab === 'kits' && (
-      <div>
-        <p className="text-[10px] font-heading text-muted-foreground mb-2">SPORT KITS{char ? ` FOR ${char.name.toUpperCase()}` : ''}</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {available.filter(a => ['soccer_kit','volleyball_kit','baseball_kit'].includes(a.type)).map(a => {
-            const isOwned = owned.includes(a.id);
-            const isEquipped = equippedIds.includes(a.id);
-            const isTrying = tryOn === a.id;
-            const kitLabel = {soccer_kit:'SOCCER',volleyball_kit:'VOLLEYBALL',baseball_kit:'BASEBALL'}[a.type] || 'KIT';
-            return (
-              <div key={a.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center cursor-pointer transition ${isTrying ? 'border-accent' : 'border-border'}`}
-                onClick={() => setTryOn(isTrying ? null : a.id)}>
-                <AccessoryIcon accessory={a} />
-                <p className="font-heading text-xs text-foreground mt-1">{a.name}</p>
-                <span className="text-[8px] text-primary font-heading">{kitLabel}</span>
-                <p className="text-[10px] text-accent font-heading mb-2">{a.price} <GameIcon emoji="◆" size={14} /></p>
-                {isOwned ? (
-                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
-                ) : (
-                  <button onClick={(e) => { e.stopPropagation(); if (coins >= a.price) { onBuy(a.id); setJustBought({ label: a.name, equip: () => onEquip(char.id, a.id) }); } }}
-                    disabled={coins < a.price}
-                    className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= a.price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
-                    BUY
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      )}
-
-      {/* Characters grid */}
-      {shopTab === 'characters' && (
-      <div>
-        <div className="mb-3">
-          <EraTabBar selectedEra={eraFilter} onEraChange={setEraFilter} />
-        </div>
-        <p className="text-[10px] font-heading text-muted-foreground mb-2">CHARACTERS — Unlock fighters to use in battle</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {(eraFilter === 'all' ? SHOP_SORTED : getRosterForEra(eraFilter)).map(c => {
-            const isUnlocked = (progress?.unlockedIds || []).includes(c.id);
-            const price = charPrice(c.id);
-            const cat = charCategory(c.id);
-            const eraInfo = getEraForCharId(c.id);
-            return (
-              <div key={c.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center ${isUnlocked ? 'border-accent' : 'border-border'}`}>
-                <div className="w-12 h-12 rounded-full border-2 mb-1" style={{ backgroundColor: c.color, borderColor: c.color, boxShadow: `0 0 8px ${c.color}55` }} />
-                <p className="font-heading text-xs text-foreground mt-1 text-center leading-tight">{c.name}</p>
-                <span className="text-[8px] font-heading" style={{ color: CATEGORY_COLORS[cat] }}>{cat}</span>
-                {eraInfo && <span className="text-[7px] text-muted-foreground font-body">{eraInfo.short}</span>}
-                {isUnlocked ? (
-                  <span className="text-[10px] font-heading text-accent mt-2"><GameIcon emoji="✓" size={14} /> UNLOCKED</span>
-                ) : (
-                  <>
-                    <p className="text-[10px] text-accent font-heading mb-2 mt-1">{price} <GameIcon emoji="◆" size={14} /></p>
-                    <button onClick={() => onBuyCharacter(c.id)}
-                      disabled={coins < price}
-                      className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
-                      BUY
-                    </button>
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      )}
-
-      {/* Kill FX grid */}
-      {shopTab === 'killfx' && (
-      <div>
-        <p className="text-[10px] font-heading text-muted-foreground mb-2">KILL FX — Global effect on every KO (not per character)</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {KILL_FX.filter(k => k.price > 0).map(k => {
-            const isOwned = ownedKillFX.includes(k.id);
-            const isEquipped = equippedKillFX === k.id;
-            return (
-              <div key={k.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center ${isEquipped ? 'border-accent' : 'border-border'}`}>
-                <KillFXPreview fxId={k.id} color="#FFD700" />
-                <p className="font-heading text-xs text-foreground mt-1">{k.name}</p>
-                <p className="text-[9px] text-muted-foreground text-center mb-1">{k.desc}</p>
-                <p className="text-[10px] text-accent font-heading mb-2">{k.price} <GameIcon emoji="◆" size={14} /></p>
-                {isOwned ? (
-                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
-                ) : (
-                  <button onClick={() => { if (coins >= k.price) { onBuyKillFX(k.id); setJustBought({ label: k.name, equip: () => onEquipKillFX(k.id) }); } }}
-                    disabled={coins < k.price}
-                    className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= k.price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
-                    BUY
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      )}
-
-      {/* Crossovers tab */}
-      {shopTab === 'crossovers' && (
-      <div>
-        <p className="text-[10px] font-heading text-muted-foreground mb-2">CROSSOVERS — Thematic event skins that transform character visuals & attack colors. Hover a character to see their crossovers.</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {CROSSOVERS.map(cx => {
-            const isOwned = (progress?.ownedCrossovers || []).includes(cx.id);
-            const isEquipped = (progress?.equippedCrossovers || {})[cx.charId] === cx.id;
-            const char = ALL.find(c => c.id === cx.charId);
-            return (
-              <div key={cx.id} className={`bg-card border-2 rounded-xl p-3 flex flex-col items-center ${isEquipped ? 'border-accent' : 'border-border'}`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-10 h-10 rounded-full" style={{ backgroundColor: cx.colorMap.primary, boxShadow: `0 0 12px ${cx.colorMap.primary}` }} />
-                  <div className="text-left">
-                    <p className="font-heading text-sm text-foreground">{cx.name}</p>
-                    <p className="text-[9px] text-muted-foreground">{char?.name} · {cx.event}</p>
-                  </div>
-                </div>
-                <p className="text-[9px] text-muted-foreground text-center mb-1">Origin: {cx.origin}</p>
-                <p className="text-[8px] text-muted-foreground text-center mb-2 flex-1">{cx.desc}</p>
-                <div className="flex gap-1 mb-2">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: cx.colorMap.primary }} title="Primary" />
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: cx.colorMap.secondary }} title="Secondary" />
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: cx.colorMap.attack }} title="Attack" />
-                </div>
-                <p className="text-[10px] text-accent font-heading mb-2">{cx.price} <GameIcon emoji="◆" size={14} /></p>
-                {isOwned ? (
-                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
-                ) : (
-                  <button onClick={() => { if (coins >= cx.price) { onBuyCrossover?.(cx.id); setJustBought({ label: cx.name, equip: () => onEquipCrossover?.(cx.charId, cx.id) }); } }}
-                    disabled={coins < cx.price}
-                    className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= cx.price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
-                    BUY
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      )}
-
-      {/* Shikigami tab */}
-      {shopTab === 'shikigami' && (
-      <div>
-        <p className="text-[10px] font-heading text-muted-foreground mb-2">SHIKIGAMI — Purely cosmetic floating companions. Equip one per character; it follows you in every mode. No gameplay effect.</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {SHIKIGAMI.map(s => {
-            const isOwned = ownedShikigami.includes(s.id);
-            const isEquipped = equippedShikigami[char?.id] === s.id;
-            return (
-              <div key={s.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center ${isEquipped ? 'border-accent' : 'border-border'}`}>
-                <ShikigamiPreview shikigamiId={s.id} />
-                <p className="font-heading text-xs text-foreground mt-1">{s.name}</p>
-                <p className="text-[8px] text-muted-foreground text-center mb-1 leading-tight">{s.desc}</p>
-                <p className="text-[8px] text-accent font-heading text-center mb-1">+0.5 {(getShikigamiStat(s.id) || '').toUpperCase()}</p>
-                <p className="text-[10px] text-accent font-heading mb-2">{s.price} <GameIcon emoji="◆" size={14} /></p>
-                {isOwned ? (
-                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
-                ) : (
-                  <button onClick={() => { if (coins >= s.price) { onBuyShikigami?.(s.id); setJustBought({ label: s.name, equip: () => onEquipShikigami?.(char?.id, s.id) }); } }}
-                    disabled={coins < s.price}
-                    className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= s.price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
-                    BUY
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      )}
-
-      {/* Emotes tab */}
-      {shopTab === 'emotes' && (
-      <div>
-        <p className="text-[10px] font-heading text-muted-foreground mb-2">EMOTES — Animated character poses triggered with number keys (1-0) during battle. Free emotes are automatically owned.</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {ALL_EMOTES.map(e => {
-            const isOwned = (progress?.ownedEmotes || []).includes(e.id) || e.price === 0;
-            return (
-              <div key={e.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center ${isOwned ? 'border-accent' : 'border-border'}`}>
-                <EmotePreview emoteId={e.id} char={char || HEROES[0]} />
-                <p className="font-heading text-xs text-foreground mt-1">{e.name}</p>
-                <p className="text-[8px] text-muted-foreground text-center mb-1 leading-tight">{e.desc}</p>
-                {e.price === 0 ? (
-                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-accent/20 text-accent text-center block">FREE</span>
-                ) : isOwned ? (
-                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
-                ) : (
-                  <>
-                    <p className="text-[10px] text-accent font-heading mb-2">{e.price} <GameIcon emoji="◆" size={14} /></p>
-                    <button onClick={() => { if (coins >= e.price) { onBuyEmote?.(e.id); setJustBought({ label: e.name, equip: () => {} }); } }}
-                      disabled={coins < e.price}
-                      className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= e.price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
-                      BUY
-                    </button>
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      )}
-
-      {/* Donate tab */}
-      {shopTab === 'donate' && (
-        <DonateTab />
-      )}
-
-      {/* Profile Titles tab */}
-      {shopTab === 'titles' && (
-      <div>
-        <p className="text-[10px] font-heading text-muted-foreground mb-2">PROFILE TITLES — Displayed above your username in-game</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {PROFILE_TITLES.map(t => {
-            const isOwned = ownsTitle(t.id, progress);
-            const isEquipped = progress?.equippedTitle === t.id;
-            return (
-              <div key={t.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center ${isEquipped ? 'border-accent' : 'border-border'}`}>
-                <p className="font-heading text-sm text-center" style={{ color: getTitleColor(t.id) }}>{t.name}</p>
-                <span className="text-[8px] font-heading text-muted-foreground">{t.rarity.toUpperCase()}</span>
-                {isOwned ? (
-                  <button onClick={() => onEquipTitle?.(isEquipped ? null : t.id)}
-                    className={`mt-2 px-3 py-1 rounded font-heading text-[10px] w-full ${isEquipped ? 'bg-secondary text-secondary-foreground' : 'bg-accent text-accent-foreground'} hover:opacity-80`}>
-                    {isEquipped ? 'EQUIPPED' : 'EQUIP'}
-                  </button>
-                ) : (
-                  <span className="text-[9px] text-muted-foreground mt-2 text-center">Unlock via All Titles Pack ($5)</span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <div className="mt-3 bg-accent/10 border border-accent/30 rounded-lg p-3 text-center">
-          <p className="text-[10px] text-accent font-body">Unlock all titles (current + future) with the All Profile Titles Pack in the Paid tab.</p>
-        </div>
-      </div>
-      )}
-
-      {/* Paid Items tab */}
-      {shopTab === 'paid' && (
-      <div>
-        <p className="text-[10px] font-heading text-muted-foreground mb-2">PAID ITEMS — Real-money purchases via online checkout (coming soon). Includes 7 extra Custom Character Slots.</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {PAID_PACKS.map(p => {
-            const isOwned = (progress?.ownedPacks || []).includes(p.id);
-            return (
-              <div key={p.id} className="bg-card border-2 rounded-xl p-4 flex flex-col items-center text-center" style={{ borderColor: p.color + '66' }}>
-                <span className="text-4xl mb-1">{p.emoji}</span>
-                <p className="font-heading text-sm text-foreground">{p.name}</p>
-                <p className="text-[9px] text-muted-foreground mb-2 flex-1">{p.desc}</p>
-                <p className="font-heading text-lg mb-2" style={{ color: p.color }}>${(p.price / 100).toFixed(2)}</p>
-                {isOwned ? (
-                  <span className="px-3 py-1 bg-accent/20 text-accent rounded font-heading text-[10px] w-full"><GameIcon emoji="✓" size={14} /> OWNED</span>
-                ) : (
-                  <button onClick={() => onBuyPack?.(p.id)} disabled
-                    className="px-3 py-1 bg-muted text-muted-foreground rounded font-heading text-[10px] w-full cursor-not-allowed">
-                    COMING SOON
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        {/* Subscriptions */}
-        <p className="text-[10px] font-heading text-muted-foreground mt-4 mb-2">SUBSCRIPTIONS</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {SUBSCRIPTIONS.map(s => {
-            const isActive = progress?.battlePassPlus === true;
-            return (
-              <div key={s.id} className="bg-card border-2 rounded-xl p-4 flex flex-col items-center text-center" style={{ borderColor: s.color + '66' }}>
-                <span className="text-4xl mb-1">{s.emoji}</span>
-                <p className="font-heading text-sm text-foreground">{s.name}</p>
-                <p className="text-[9px] text-muted-foreground mb-2 flex-1">{s.desc}</p>
-                <p className="font-heading text-lg mb-2" style={{ color: s.color }}>${(s.price / 100).toFixed(2)}/mo</p>
-                {isActive ? (
-                  <span className="px-3 py-1 bg-accent/20 text-accent rounded font-heading text-[10px] w-full"><GameIcon emoji="✓" size={14} /> ACTIVE</span>
-                ) : (
-                  <button disabled className="px-3 py-1 bg-muted text-muted-foreground rounded font-heading text-[10px] w-full cursor-not-allowed">COMING SOON</button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      )}
-
-      {justBought && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-card border-2 border-accent rounded-xl p-5 flex flex-col items-center gap-2 max-w-xs text-center">
-            <p className="font-heading text-lg text-accent"><GameIcon emoji="✓" size={14} /> EQUIP IN SHOP</p>
-            <p className="text-sm font-heading text-foreground">{justBought.label}</p>
-            <p className="text-[10px] text-muted-foreground">Purchased! Equip it now or from the Equip tab later.</p>
-            <button onClick={() => { justBought.equip?.(); setJustBought(null); }} className="px-6 py-2 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-80">EQUIP NOW</button>
-            <button onClick={() => setJustBought(null)} className="text-xs text-muted-foreground hover:text-foreground">Maybe later</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    {tab === 'battlepass' && <BattlePass onBuy={() => callCheckout({ id:'premium_battle_pass', name:'Premium Battle Pass' })} />}
+    {tab === 'tokens' && <section className="space-y-4"><SectionTitle title="TOKENS" subtitle="Use Tokens for in-game cosmetic unlocks." /><div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">{TOKEN_PACKS.map(pack => <div key={pack.id} className="rounded-2xl border-2 p-5 text-center" style={{borderColor:pack.color}}>{pack.badge && <span className="rounded bg-accent px-2 py-1 text-[9px] font-heading text-accent-foreground">{pack.badge}</span>}<p className="mt-4 font-heading text-4xl" style={{color:pack.color}}>{formatNumber(pack.amount)}</p><p className="font-heading text-lg">TOKENS ◆</p><p className="my-3 font-heading text-2xl">{pack.price}</p><BuyButton onClick={() => callCheckout(pack)} /></div>)}</div></section>}
+    {tab === 'support' && <section className="space-y-5"><SectionTitle title="SUPPORT ELEMENT 6" subtitle="Optional packs that support the game and grant exclusive cosmetic thank-you items." /><div className="grid md:grid-cols-3 gap-4">{SUPPORT_PACKS.map(pack => <SupportCard key={pack.id} pack={pack} onBuy={() => callCheckout(pack)} />)}</div><div className="rounded-2xl border border-primary bg-card p-5"><h3 className="font-heading text-lg text-primary">CUSTOM CONTENT</h3><p className="mb-3 text-sm text-muted-foreground">Extra Custom Character Slots are separate from cosmetic purchases.</p><div className="grid sm:grid-cols-3 gap-3">{[{id:'custom_slots_2',label:'+2 SLOTS',price:'$1.99'},{id:'custom_slots_5',label:'+5 SLOTS',price:'$3.99'},{id:'custom_slots_10',label:'+10 SLOTS',price:'$6.99'}].map(slot => <div key={slot.id} className="rounded-xl bg-secondary/60 p-4 text-center"><p className="font-heading text-xl">{slot.label}</p><p className="my-2 font-heading text-accent">{slot.price}</p><BuyButton onClick={() => callCheckout(slot)} /></div>)}</div></div></section>}
+    {notice && <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-xl border border-accent bg-card px-5 py-3 text-sm shadow-2xl">{notice}<button onClick={() => setNotice(null)} className="ml-3 text-accent">OK</button></div>}
+  </div>;
 }
 
-function ShikigamiPreview({ shikigamiId }) {
-  const ref = React.useRef(null);
-  React.useEffect(() => {
-    const c = ref.current; if (!c) return;
-    const ctx = c.getContext('2d'); let f = 0; let r = true;
-    const def = getShikigami(shikigamiId);
-    const loop = () => {
-      if (!r) return; f++;
-      ctx.clearRect(0, 0, 64, 64);
-      ctx.fillStyle = '#111128'; ctx.fillRect(0, 0, 64, 64);
-      if (def) def.draw(ctx, 32, 30, f, 1.1);
-      requestAnimationFrame(loop);
-    };
-    loop();
-    return () => { r = false; };
-  }, [shikigamiId]);
-  return <canvas ref={ref} width={64} height={64} />;
-}
-
-function KillFXPreview({ fxId, color }) {
-  const ref = React.useRef(null);
-  React.useEffect(() => {
-    const c = ref.current; if (!c) return;
-    const ctx = c.getContext('2d'); let f = 0; let r = true;
-    const loop = () => {
-      if (!r) return; f++;
-      ctx.clearRect(0, 0, 64, 64);
-      ctx.fillStyle = '#111128'; ctx.fillRect(0, 0, 64, 64);
-      const progress = (f % 60) / 60;
-      drawKillFX(ctx, 32, 50, fxId, progress, color, f);
-      requestAnimationFrame(loop);
-    };
-    loop();
-    return () => { r = false; };
-  }, [fxId, color]);
-  return <canvas ref={ref} width={64} height={64} />;
-}
-
-function PreviewCanvas({ char, accessories = [], skinColor, skinParts = [] }) {
-  const ref = React.useRef(null);
-  React.useEffect(() => {
-    const c = ref.current; if (!c || !char) return;
-    const ctx = c.getContext('2d'); let f = 0; let r = true;
-    const renderColor = skinColor || char.color;
-    const loop = () => {
-      if (!r) return; f++;
-      ctx.clearRect(0, 0, 160, 180);
-      ctx.fillStyle = '#0a0820'; ctx.fillRect(0, 0, 160, 180);
-      const kitAcc = accessories.find(a => a.type === 'volleyball_kit' || a.type === 'baseball_kit');
-      const _sportForKit = kitAcc && (kitAcc.type === 'volleyball_kit' ? 'volleyball' : kitAcc.type === 'baseball_kit' ? 'baseball' : null);
-      if (_sportForKit) {
-        drawSportChar(ctx, 80, 150, char, { facing: 1, frame: f, scale: 1.3, jersey: true, sport: _sportForKit, teamColor: kitAcc.color, state: 'idle', equippedSkins: {}, equippedAccessories: {} });
-        requestAnimationFrame(loop); return;
-      }
-      skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, 80, 140, p.type, p.color, f, 1.3, char.id));
-      accessories.filter(a => isBehindAccessory(a.type)).forEach(a => {
-        const accColor = skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, char);
-        drawAccessory(ctx, 80, 140, a.type, accColor, f, 1.3, char.id);
-      });
-      drawStickman(ctx, 80, 140, renderColor, 1, f, 1.3, char.isSpirit, 'idle', char);
-      skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, 80, 140, p.type, p.color, f, 1.3, char.id));
-      accessories.filter(a => !isBehindAccessory(a.type)).forEach(a => {
-        const accColor = skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, char);
-        drawAccessory(ctx, 80, 140, a.type, accColor, f, 1.3, char.id);
-      });
-      requestAnimationFrame(loop);
-    };
-    loop();
-    return () => { r = false; };
-  }, [char, accessories, skinColor, skinParts]);
-  return <canvas ref={ref} width={160} height={180} className="rounded-lg" />;
-}
-
-function AccessoryIcon({ accessory }) {
-  const ref = React.useRef(null);
-  React.useEffect(() => {
-    const c = ref.current; if (!c) return;
-    const ctx = c.getContext('2d'); let f = 0; let r = true;
-    const loop = () => {
-      if (!r) return; f++;
-      ctx.clearRect(0, 0, 64, 64);
-      ctx.fillStyle = '#111128'; ctx.fillRect(0, 0, 64, 64);
-      drawAccessory(ctx, 32, 44, accessory.type, accessory.color, f, 0.55, accessory.exclusiveTo || '');
-      requestAnimationFrame(loop);
-    };
-    loop();
-    return () => { r = false; };
-  }, [accessory]);
-  return <canvas ref={ref} width={64} height={64} />;
-}
+const SectionTitle = ({ title, subtitle }) => <div><h3 className="font-heading text-2xl text-accent">{title}</h3><p className="text-sm text-muted-foreground">{subtitle}</p></div>;
+const BuyButton = ({ onClick }) => <button onClick={onClick} className="w-full rounded-lg bg-primary px-3 py-2 font-heading text-xs text-primary-foreground hover:opacity-90">PURCHASE</button>;
+function BundleRow({ bundles, onBuy }) { return <div className="grid md:grid-cols-3 gap-3">{bundles.map(b => <div key={b.id} className="rounded-2xl border-2 border-accent bg-accent/10 p-5 text-center"><p className="font-heading text-lg text-accent">{b.label}</p><p className="my-2 text-3xl font-heading">{b.count} <span className="text-sm">ITEMS</span></p><p className="mb-3 rounded bg-destructive/80 px-2 py-1 text-xs font-heading text-white">RANDOM</p><p className="mb-3 font-heading text-xl">{b.price}</p><BuyButton onClick={() => onBuy(b)} /></div>)}</div> }
+function ProductCard({ title, price, preview, owned, onBuy, large }) { return <div className={`rounded-xl border border-border bg-card p-3 text-center ${large ? 'min-h-56' : ''}`}>{preview}<p className="font-heading text-sm">{title}</p><p className="my-2 font-heading text-accent">{price}</p>{owned ? <span className="block rounded bg-accent/20 px-3 py-2 text-xs font-heading text-accent">OWNED</span> : <BuyButton onClick={onBuy} />}</div>; }
+function FeatureCard({ item, onBuy }) { const label=item.name || item.label || `${formatNumber(item.amount)} TOKENS`; const price=item.price; return <div className="rounded-2xl border-2 border-primary bg-gradient-to-b from-primary/20 to-card p-5 text-center"><p className="text-4xl">{item.emoji || '◆'}</p><p className="mt-2 font-heading text-lg">{label}</p><p className="my-3 font-heading text-2xl text-accent">{price}</p><BuyButton onClick={onBuy} /></div>; }
+function SupportCard({ pack, onBuy }) { return <div className="rounded-2xl border-2 border-accent bg-gradient-to-b from-accent/20 to-card p-5 text-center"><p className="text-4xl">{pack.emoji}</p><p className="mt-2 font-heading text-lg text-accent">{pack.name}</p><ul className="my-3 space-y-1 text-xs text-muted-foreground">{pack.items.map(x => <li key={x}>✓ {x}</li>)}</ul><p className="mb-3 font-heading text-2xl">{pack.price}</p><BuyButton onClick={onBuy} /></div>; }
+function AccessoryPreview({ accessory }) { const ref=React.useRef(null); useEffect(()=>{ const c=ref.current; if(!c)return; const x=c.getContext('2d'); let f=0, raf; const draw=()=>{f++;x.fillStyle='#0a0820';x.fillRect(0,0,80,80);drawAccessory(x,40,58,accessory.type,accessory.color,f,.7,accessory.exclusiveTo||'');raf=requestAnimationFrame(draw);};draw();return()=>cancelAnimationFrame(raf);},[accessory]);return <canvas ref={ref} width={80} height={80} className="mx-auto rounded-lg"/>; }
+function ShikigamiPreview({ id }) { const ref=React.useRef(null); useEffect(()=>{ const c=ref.current;if(!c)return;const x=c.getContext('2d');const s=getShikigami(id);let f=0,raf;const draw=()=>{f++;x.fillStyle='#0a0820';x.fillRect(0,0,170,130);s?.draw?.(x,85,75,f,2);raf=requestAnimationFrame(draw);};draw();return()=>cancelAnimationFrame(raf);},[id]);return <canvas ref={ref} width={170} height={130} className="mx-auto rounded-xl"/>; }
+function ProfilePreview({ title }) { return <div className="mx-auto mb-2 w-full rounded-lg border border-primary/50 bg-primary/10 p-3"><p className="text-[9px] text-muted-foreground">ELEMENT 6 PROFILE</p><p className="font-heading text-sm" style={{color:getTitleColor(title.id)}}>{title.name}</p><p className="text-xs">PLAYER</p></div>; }
+function BattlePass({ onBuy }) { const rewards=['Accessory','Emote','Shikigami','Title','Profile Cosmetic','5,000 Tokens','Accessory','Emote'];return <section className="space-y-4"><SectionTitle title="BATTLE PASS" subtitle="Complete matches and quests to advance. Premium adds an extra reward at every tier." /><div className="rounded-2xl border-2 border-accent bg-card p-5"><div className="flex flex-wrap justify-between gap-3"><div><p className="font-heading text-2xl text-accent">PREMIUM BATTLE PASS</p><p className="text-sm text-muted-foreground">$7.99 · Cosmetics and Tokens only</p></div><button onClick={onBuy} className="rounded-lg bg-accent px-6 py-3 font-heading text-accent-foreground">GET PREMIUM — $7.99</button></div><div className="mt-5 overflow-x-auto"><div className="min-w-[760px] space-y-3"><RewardTrack label="FREE" rewards={rewards.map((r,i)=>i%2?'Tokens':r)} /><RewardTrack label="PREMIUM" premium rewards={rewards} /></div></div></div></section>; }
+function RewardTrack({label,rewards,premium}) {return <div className="grid grid-cols-[90px_repeat(8,1fr)] gap-2 items-stretch"><div className={`grid place-items-center rounded font-heading text-xs ${premium?'bg-accent text-accent-foreground':'bg-secondary'}`}>{label}</div>{rewards.map((r,i)=><div key={i} className="min-h-20 rounded-lg border border-border bg-secondary/40 p-2 text-center text-[10px] font-heading">TIER {i+1}<br/><span className="text-accent">{r}</span></div>)}</div>; }

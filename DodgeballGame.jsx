@@ -74,7 +74,7 @@ export default function DodgeballGame({
   equippedAccessories = {}, equippedSkins = {}, sfxVolume = 70, musicVolume = 50,
   settings = {}, matchSettings, customCharsData = {}, p1TeamColor = TEAM_COLOR_P1, p2TeamColor = TEAM_COLOR_P2,
   lanConnection = null, lanRole = null, localScheme = null,
-  remoteState = null, onStateExport = null, isOnlineHost = false,
+  remoteState = null, onStateExport = null, isOnlineHost = false, onlineLocalOnly = false,
 }) {
   const canvasRef = useRef(null);
   // Merge bot cosmetics — bots get random accessories every match
@@ -157,7 +157,10 @@ export default function DodgeballGame({
   const readHuman = (side) => {
     const binds = side === 1 ? kb.p1 : kb.p2;
     const k = readPlayerInput(keysRef.current, binds);
-    const gp = readGamepadInput(side - 1) || {};
+    // Each online browser reads only its own controller (slot 0). The remote
+    // player's controls are supplied through the match transport instead.
+    const localSide = lanRole === 'guest' ? 2 : 1;
+    const gp = onlineLocalOnly && side !== localSide ? {} : (readGamepadInput(onlineLocalOnly ? 0 : side - 1) || {});
     let left = k.left || gp.left, right = k.right || gp.right,
       up = k.up || gp.up || gp.jump, down = k.down || gp.down,
       sig = k.sig || gp.sig, superMove = k.superMove || gp.superMove, power = k.power || gp.power;

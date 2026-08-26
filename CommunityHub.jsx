@@ -22,7 +22,6 @@ import TradeOfferModal from './TradeOfferModal.jsx';
 import HubChat from './HubChat.jsx';
 import PartyPanel from './PartyPanel.jsx';
 import GameIcon from "./GameIcon.jsx";
-import { getHubUser, updateHubPresence, clearHubPresence, loadHubPlayers, subscribeToHub } from './hubOnline.js';
 
 const HUB_ROOM_NAME = 'Community Hub';
 const HUB_GROUND_Y = 340; // canvas is 420 tall — player stands fully visible, no jump needed
@@ -128,7 +127,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
   // Load user + account stats for HUD
   const [stats, setStats] = useState({ xp: 0, wins: 0, kos: 0, rank: '—' });
   useEffect(() => {
-    getHubUser().then(async (u) => {
+    db.auth.me().then(async (u) => {
       setUserId(u.id);
       setUsername(u.username || (u.full_name || (u.email || 'Player')).split('@')[0]);
       setTitle(u.profile_title || '');
@@ -169,10 +168,9 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
   const equippedSkin = progress?.equippedSkins?.[favId];
   const equippedAcc = progress?.equippedAccessories?.[favId];
 
-  // Old browser-local presence is intentionally disabled. The next effect is
-  // the shared online hub backed by the authenticated account.
+  // Hub multiplayer via Presence — creates/updates own record, subscribes to others
   useEffect(() => {
-    if (!userId || true) return undefined;
+    if (!userId) return;
     let cancelled = false;
     let unsub = null;
     let tickTimer = null;
@@ -319,34 +317,6 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
       if (tickTimer) clearInterval(tickTimer);
     };
   }, [userId, serverCode]);
-
-  // Shared Community Hub presence. This synchronizes positions/cosmetics over
-  // Realtime; rollback is not used here because the hub is not a deterministic
-  // competitive match.
-  useEffect(() => {
-    if (!userId) return undefined;
-    let active = true;
-    const payload = () => {
-      const s = stateRef.current;
-      return { hub_server: serverCode, character_id: favId, color: charColor, title, x: s.px, y: s.py, facing: s.facing, frame: s.frame, emote: s.emote || null };
-    };
-    const refresh = async () => {
-      try {
-        const rows = await loadHubPlayers(serverCode, userId);
-        if (!active) return;
-        const others = rows.map(p => ({ id: p.user_id, name: p.username, username: p.username, color: p.color, charId: p.character_id, title: p.title, x: Number(p.x), skin: null, acc: null, killfx: 'none', emote: p.emote, emoteT: 0, level: 1 }));
-        setPlayers(others);
-        setRoom({ id: serverCode, players: others.map(p => ({ id: p.id, name: p.name, color: p.color, charId: p.charId })) });
-      } catch {}
-    };
-    updateHubPresence(payload()).catch(() => {});
-    refresh();
-    const unsubscribe = subscribeToHub(serverCode, refresh);
-    const timer = setInterval(() => { updateHubPresence(payload()).catch(() => {}); }, 250);
-    const leave = () => clearHubPresence().catch(() => {});
-    window.addEventListener('pagehide', leave);
-    return () => { active = false; unsubscribe(); clearInterval(timer); window.removeEventListener('pagehide', leave); leave(); };
-  }, [userId, serverCode, favId, charColor, title]);
 
   // Poll for party invites
   useEffect(() => {
@@ -869,6 +839,12 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
         <button onClick={() => setShowChat(true)} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon emoji="💬" size={14} /> CHAT</button>
         <button onClick={() => onNavigate?.('friends')} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="👥" size={14} /> FRIENDS</button>
         <button onClick={onBack} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-heading">
+        <span className="text-muted-foreground">CURRENT SERVER</span>
+        <span className="select-all text-accent tracking-widest">{serverCode}</span>
+        <span className="text-[9px] text-muted-foreground">Share this code to invite players{String(serverCode).toUpperCase().startsWith('PRV-') ? ' privately' : ''}.</span>
       </div>
 
       {/* Matchmaking quick queue — back returns to Hub */}

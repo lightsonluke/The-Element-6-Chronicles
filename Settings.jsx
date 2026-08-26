@@ -17,6 +17,7 @@ import GameIcon from "./GameIcon.jsx";
 import { THEMES, applyUiTheme } from './uiThemes.js';
 import { setCustomBackdropUrl, clearCustomBackdrop } from './customBackdrop.js';
 import AccountPanel from './AccountPanel.jsx';
+import { syncCurrentUsername } from './usernameSync.js';
 
 const DIFFICULTIES = ['newcomer', 'beginner', 'easy', 'amateur', 'regular', 'pro', 'hard', 'insane', 'honored'];
 const MATCH_TIMES = [
@@ -239,7 +240,10 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
                   const taken = entries.some(e => (e.user_name || '').toLowerCase() === lower && e.user_id !== myUserId)
                     || presences.some(p => (p.username || '').toLowerCase() === lower && p.user_id !== myUserId);
                   if (taken) { setUsernameError('That username is already taken by another player. Try another.'); sfx.warning(); return; }
-                  await db.auth.updateMe({ username: clean });
+                  // Update Supabase first so the name cannot revert on another
+                  // device. The SQL function mirrors it into every online view.
+                  try { await syncCurrentUsername(clean); }
+                  catch { await db.auth.updateMe({ username: clean }); }
                   // Mirror to leaderboard + presence so other players see the new name
                   const lb = entries.find(e => e.user_id === myUserId);
                   if (lb) await db.entities.LeaderboardEntry.update(lb.id, { user_name: clean });

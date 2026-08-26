@@ -25,14 +25,11 @@ export default function ActualSportsOnlineMatch({
   const [remoteState, setRemoteState] = useState(null);
   const [status, setStatus] = useState('CONNECTING…');
   const [result, setResult] = useState(null);
-  const [syncing, setSyncing] = useState(false);
   const messageHandler = useRef(null);
   const channel = useRef(null);
   const lastStateSent = useRef(0);
   const submitted = useRef(false);
   const startedAt = useRef(Date.now());
-  const resyncingRef = useRef(false);
-  const resyncTimer = useRef(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMe(data.user || null));
@@ -48,20 +45,6 @@ export default function ActualSportsOnlineMatch({
   const p1 = orderedPlayers.find(player => Number(player.team) === 1);
   const p2 = orderedPlayers.find(player => Number(player.team) === 2);
 
-  const beginResync = (reason = 'DESYNC DETECTED') => {
-    if (resyncingRef.current) return;
-    resyncingRef.current = true;
-    setSyncing(true);
-    setStatus(`${reason} · RESYNCING…`);
-    channel.current?.send({ type: 'broadcast', event: 'resync', payload: { sender: me?.id, reason } }).catch(() => {});
-    clearTimeout(resyncTimer.current);
-    resyncTimer.current = setTimeout(() => {
-      resyncingRef.current = false;
-      setSyncing(false);
-      setStatus('CONNECTED · VERIFIED');
-    }, 650);
-  };
-
   useEffect(() => {
     if (!match?.id || !me?.id || !sport) return undefined;
     let active = true;
@@ -76,9 +59,6 @@ export default function ActualSportsOnlineMatch({
       .on('broadcast', { event: 'state' }, ({ payload }) => {
         if (active && !isHost && payload?.state) setRemoteState(payload.state);
       })
-      .on('broadcast', { event: 'resync' }, () => {
-        if (active) beginResync();
-      })
       .on('broadcast', { event: 'result' }, ({ payload }) => {
         if (active && payload?.winnerTeam) setResult(payload);
       })
@@ -87,7 +67,6 @@ export default function ActualSportsOnlineMatch({
       });
     return () => {
       active = false;
-      clearTimeout(resyncTimer.current);
       channel.current = null;
       supabase.removeChannel(realtime);
     };
@@ -105,12 +84,10 @@ export default function ActualSportsOnlineMatch({
     },
     stalled: false,
     stalledRef: { current: false },
-    isResyncing: () => resyncingRef.current,
   }), [me?.id]);
 
   const onStateExport = state => {
-    // Send an authoritative snapshot containing the real stage, players,
-    // ball, velocity and score at ~20Hz, not an approximate game event.
+    // Existing games export every animation frame; send at ~20Hz instead.
     if (!isHost || !channel.current || performance.now() - lastStateSent.current < 50) return;
     lastStateSent.current = performance.now();
     channel.current.send({ type: 'broadcast', event: 'state', payload: { state } });
@@ -148,11 +125,11 @@ export default function ActualSportsOnlineMatch({
   const shared = {
     settings, sfxVolume, musicVolume, equippedSkins, equippedAccessories,
     customCharsData, lanConnection, lanRole: isHost ? 'host' : 'guest',
-    localScheme: isHost ? 'p1' : 'p2',
+    localScheme: isHost ? 'p1' : 'p2', onlineLocalOnly: true,
   };
   const elementFor = player => player.loadout?.element || equippedElements[player.character_id] || 'basic';
 
-  return <div className="w-full flex flex-col items-center gap-2 relative">
+  return <div className="w-full flex flex-col items-center gap-2">
     <p className="font-heading text-accent text-sm">{sport.toUpperCase()} ONLINE · {status}</p>
     {sport === 'soccer' && <SoccerFighter
       {...shared}
@@ -161,10 +138,6 @@ export default function ActualSportsOnlineMatch({
       p1Element={elementFor(p1)} p2Element={elementFor(p2)}
       round={1} totalRounds={1} onRematch={() => {}}
       onEnd={matchResult => { if (isHost) finish(matchResult?.p1Won ? 1 : 2); }}
-      onStateExport={isHost ? onStateExport : undefined}
-      remoteState={isHost ? null : remoteState}
-      isOnlineHost={isHost}
-      onSyncStateChange={beginResync}
     />}
     {sport === 'volleyball' && <VolleyballGame
       {...shared}
@@ -176,7 +149,6 @@ export default function ActualSportsOnlineMatch({
       onStateExport={isHost ? onStateExport : undefined}
       remoteState={isHost ? null : remoteState}
       isOnlineHost={isHost}
-      onSyncStateChange={beginResync}
     />}
     {sport === 'dodgeball' && <DodgeballGame
       {...shared}
@@ -188,8 +160,6 @@ export default function ActualSportsOnlineMatch({
       onStateExport={isHost ? onStateExport : undefined}
       remoteState={isHost ? null : remoteState}
       isOnlineHost={isHost}
-      onSyncStateChange={beginResync}
     />}
-    {syncing && <div className="absolute inset-0 z-20 grid place-items-center rounded-xl bg-black/75 font-heading text-xl text-accent">RESYNCING…</div>}
   </div>;
 }

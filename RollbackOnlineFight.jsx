@@ -28,7 +28,6 @@ import { useClipRecorder } from './useClipRecorder.js';
 import { RollbackSession } from './rollback/rollbackSession.js';
 import { SupabaseRollbackTransport } from './rollback/realtimeTransport.js';
 import { checksumState } from './rollback/stateChecksum.js';
-import { leaveOnlineMatch } from './rankedOnline.js';
 import {
   createElement6OnlineState,
   ONLINE_PLATFORMS,
@@ -71,8 +70,6 @@ export default function RollbackOnlineFight({
   oppLoadout = {},
   myElo,
   oppElo,
-  myUsername = 'YOU',
-  oppUsername = 'OPPONENT',
   sfxVolume = 70,
   musicVolume = 50,
   settings = {},
@@ -82,7 +79,6 @@ export default function RollbackOnlineFight({
   const pausedRef = useRef(false);
   const showDiagnosticsRef = useRef(false);
   const resultProofRef = useRef(null);
-  const resyncingRef = useRef(false);
   const [paused, setPaused] = useState(false);
   const [winner, setWinner] = useState(null);
   const [countdown, setCountdown] = useState(3);
@@ -188,13 +184,13 @@ export default function RollbackOnlineFight({
       ctx.clearRect(0, 0, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT);
       drawBackground(ctx, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT, state.frame, 'splitcity');
       drawPlatforms(ctx, ONLINE_PLATFORMS, state.frame, 'splitcity');
-      drawFighter(hostFighter, hostCharacter, hostLoadout, isHost ? myUsername : oppUsername);
-      drawFighter(guestFighter, guestCharacter, guestLoadout, isHost ? oppUsername : myUsername);
+      drawFighter(hostFighter, hostCharacter, hostLoadout, isHost ? 'YOU' : 'OPPONENT');
+      drawFighter(guestFighter, guestCharacter, guestLoadout, isHost ? 'OPPONENT' : 'YOU');
 
       ctx.fillStyle = 'rgba(0,0,0,0.72)';
       ctx.fillRect(0, ONLINE_STAGE_HEIGHT - 80, ONLINE_STAGE_WIDTH, 80);
-      drawHealthBar(ctx, 40, ONLINE_STAGE_HEIGHT - 66, hostFighter.damage, 280, hostCharacter.color, `${isHost ? myUsername : oppUsername} · ${hostCharacter.name}`, hostFighter.stocks);
-      drawHealthBar(ctx, ONLINE_STAGE_WIDTH - 320, ONLINE_STAGE_HEIGHT - 66, guestFighter.damage, 280, guestCharacter.color, `${!isHost ? myUsername : oppUsername} · ${guestCharacter.name}`, guestFighter.stocks);
+      drawHealthBar(ctx, 40, ONLINE_STAGE_HEIGHT - 66, hostFighter.damage, 280, hostCharacter.color, `${hostCharacter.name}${isHost ? ' (YOU)' : ''}`, hostFighter.stocks);
+      drawHealthBar(ctx, ONLINE_STAGE_WIDTH - 320, ONLINE_STAGE_HEIGHT - 66, guestFighter.damage, 280, guestCharacter.color, `${guestCharacter.name}${!isHost ? ' (YOU)' : ''}`, guestFighter.stocks);
       ctx.fillStyle = '#FFD700';
       ctx.font = 'bold 12px Orbitron';
       ctx.textAlign = 'center';
@@ -246,14 +242,7 @@ export default function RollbackOnlineFight({
           inputDelay: 2,
           maxRollbackFrames: 12,
           historySize: 120,
-          checksumInterval: 15,
-          onDesync: () => {
-            if (resyncingRef.current) return;
-            resyncingRef.current = true;
-            setNetworkError(null); setConnectionText('SYNCING MATCH…');
-            if (isHost) transport.sendControl('resync-state', { frame: session.currentFrame, state: session.getRenderableState() }).catch(() => {});
-            setTimeout(() => { resyncingRef.current = false; setConnectionText('CONNECTED'); }, 850);
-          },
+          onDesync: () => setNetworkError('The match desynced. Open diagnostics with F3.'),
           onFrame: ({ state }) => {
             for (const event of state.events || []) {
               if (event.type === 'superHit') sfx.superImpact();
@@ -275,11 +264,6 @@ export default function RollbackOnlineFight({
             markPeerReady();
           } else if (packet.kind === 'ready-ack') markPeerReady();
           else if (packet.kind === 'disconnect') finishMatch(role);
-          else if (packet.kind === 'resync-state' && packet.state) {
-            resyncingRef.current = true; setConnectionText('SYNCING MATCH…');
-            session.replaceState(packet.state, packet.frame);
-            setTimeout(() => { resyncingRef.current = false; setConnectionText('CONNECTED'); }, 500);
-          }
         });
 
         await transport.connect();
@@ -302,7 +286,6 @@ export default function RollbackOnlineFight({
           lastTime = now;
           let steps = 0;
           while (accumulator >= FRAME_MS && steps < 6) {
-            if (resyncingRef.current) { accumulator -= FRAME_MS; steps += 1; continue; }
             const gamepad = settings?.controllerEnabled === false ? null : readGamepadInput(0);
             const input = pausedRef.current ? NO_INPUT : mergeInput(readPlayerInput(keys, keybinds.p1), gamepad);
             const state = session.advance(input);
@@ -341,7 +324,7 @@ export default function RollbackOnlineFight({
   }, [gameStarted, matchId, playerId, opponentPlayerId, role, mode, myChar, oppChar]);
 
   const handleQuit = () => {
-    leaveOnlineMatch(matchId).catch(() => {});
+    try { db.entities.OnlineMatch.update(matchId, { status: 'finished', winner: isHost ? 'guest' : 'host' }).catch(() => {}); } catch {}
     onEnd?.({ won: false, disconnected: true, forfeited: true, mode });
   };
 

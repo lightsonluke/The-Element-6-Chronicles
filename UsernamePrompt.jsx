@@ -3,6 +3,7 @@ import db from './localBackend';
 import React, { useState, useEffect } from 'react';
 
 import { sfx } from './sfx.js';
+import { syncCurrentUsername } from './usernameSync.js';
 
 // UsernamePrompt — shows a one-time modal when a new player has no username
 // set (0 data). The entered name is saved to the user profile via updateMe and
@@ -35,7 +36,8 @@ export default function UsernamePrompt({ onSet }) {
     if (!trimmed || trimmed.length < 2) { sfx.warning(); return; }
     setBusy(true);
     try {
-      await db.auth.updateMe({ username: trimmed });
+      // Cloud is canonical. localBackend remains as a harmless offline fallback.
+      try { await syncCurrentUsername(trimmed); } catch (cloudError) { await db.auth.updateMe({ username: trimmed }); }
       sfx.purchaseSuccess();
       onSet?.(trimmed);
       setShow(false);

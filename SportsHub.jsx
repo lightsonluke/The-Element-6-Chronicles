@@ -18,7 +18,7 @@ const GAME_COMPONENTS = {
 
 // Sports tab: pick a sport, then play. Soccer delegates to the existing
 // Soccer flow inside Game.jsx (onPlaySoccer); the 5 new sports use SportsShell.
-export default function SportsHub({ onBack, onPlaySoccer, onShop, onAward, onEnd, onCustomRoom, onOnlineSports, unlockedIds, favoriteId, equippedAccessories = {}, equippedSkins = {}, settings = {}, charLevels = {}, equippedElements = {}, onEquipElement, sfxVolume, musicVolume, customCharsData = {}, customNumberMap = {}, charMastery = {}, equippedEmotes = {} }) {
+export default function SportsHub({ onBack, onPlaySoccer, onShop, onAward, onEnd, onCustomRoom, onOnlineSports, onOnlinePlay, unlockedIds, favoriteId, equippedAccessories = {}, equippedSkins = {}, settings = {}, charLevels = {}, equippedElements = {}, onEquipElement, sfxVolume, musicVolume, customCharsData = {}, customNumberMap = {}, charMastery = {}, equippedEmotes = {} }) {
   const [sport, setSport] = useState(null);
 
   // Soccer is an existing offline screen owned by Game.jsx.  Do not call the
@@ -167,7 +167,7 @@ export default function SportsHub({ onBack, onPlaySoccer, onShop, onAward, onEnd
         Every sport awards XP, has its own leaderboard column, and supports Quick Match + Tournament mode.
         Pick a sport, choose your fighters (Random works for P1, P2, and CPU), and win!
       </p>
-      {onOnlineSports && <button onClick={onOnlineSports} className="w-full mt-2 px-6 py-4 bg-accent/20 border-2 border-accent text-accent rounded-xl font-heading text-base hover:bg-accent hover:text-accent-foreground transition">ONLINE SPORTS</button>}
+      {(onOnlineSports || onOnlinePlay) && <button onClick={() => (onOnlineSports || (() => onOnlinePlay?.('soccer')))()} className="w-full mt-2 px-6 py-4 bg-accent/20 border-2 border-accent text-accent rounded-xl font-heading text-base hover:bg-accent hover:text-accent-foreground transition">ONLINE SPORTS</button>}
     </div>
   );
 }

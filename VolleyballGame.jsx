@@ -33,7 +33,7 @@ function newPlayer(x) { return { x, base: x, y: FLOOR, vx: 0, vy: 0, jump: 0, on
 function newPlayerStats() { return { spikes: 0, sets: 0, bumps: 0, digs: 0, receives: 0, points: 0, assists: 0 }; }
 function addStat(s, side, slot, field, n = 1) { const k = `${side}-${slot}`; if (s.playerStats[k]) s.playerStats[k][field] += n; }
 
-export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, onResult, onQuit, p1Jersey = true, p2Jersey = true, musicVolume = 50, sfxVolume = 70, p1Elements = [], p2Elements = [], equippedSkins = {}, equippedAccessories = {}, settings = {}, lanConnection = null, lanRole = null, localScheme = null, remoteState = null, onStateExport = null, isOnlineHost = false }) {
+export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, onResult, onQuit, p1Jersey = true, p2Jersey = true, musicVolume = 50, sfxVolume = 70, p1Elements = [], p2Elements = [], equippedSkins = {}, equippedAccessories = {}, settings = {}, lanConnection = null, lanRole = null, localScheme = null, remoteState = null, onStateExport = null, isOnlineHost = false, onlineLocalOnly = false }) {
   const is1v1 = p1Chars.length === 1;
   const canvasRef = useRef(null);
   const [countdown, setCountdown] = useState(3);
@@ -276,7 +276,9 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
     let gpRaf;
     const pollGamepad = () => {
       if (gpEnabled) {
-        for (const slot of [0, 1]) {
+        // An online browser owns one player only.  Remote controls arrive as
+        // network messages, so do not read a second local controller.
+        for (const slot of (onlineLocalOnly ? [0] : [0, 1])) {
           const gp = readGamepadInput(slot);
           gpRef.current[slot] = gp || {};
           if (gp) {
@@ -306,7 +308,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
     if (gpEnabled) gpRaf = requestAnimationFrame(pollGamepad);
 
     return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); if (gpRaf) cancelAnimationFrame(gpRaf); };
-  }, [started, p2IsCPU, p1Chars, p2Chars, onQuit, is1v1, settings?.controllerEnabled]);
+  }, [started, p2IsCPU, p1Chars, p2Chars, onQuit, is1v1, settings?.controllerEnabled, onlineLocalOnly]);
 
   // Game loop
   useEffect(() => {
@@ -743,12 +745,10 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
       const dir = side === 1 ? 1 : -1;
       const distToNet = Math.abs(b.x - NET_X);
       const isActiveNearNet = Math.abs(team[activeSlot].x - NET_X) < 180;
+      const teamLosing = side === 1 ? s.s1 < s.s2 : s.s2 < s.s1;
       let tmType = 'bump';
       if (b.spike || b.y < FLOOR - 100) tmType = 'bump';
-      // Normal teammate touches should be bumps almost every time.  A rare
-      // set gives the nearby teammate a chance to use the jump-spike logic
-      // above, instead of both bots trying to set on every return.
-      else if (distToNet > 120 && isActiveNearNet && Math.random() < 0.10) tmType = 'set';
+      else if (distToNet > 120 && isActiveNearNet && !(teamLosing && Math.random() < 0.5)) tmType = 'set';
       if (s.serveFirstCross && !s.serveReturned) tmType = 'bump';
       recordHit(s, side, botSlot, tmType, b);
       if (b.spike || b.y < FLOOR - 100) {
@@ -758,7 +758,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
         b.vx = bumpDir * Math.min(5, Math.abs(activeX - p.x) * 0.02 + 2); b.vy = -16;
         b.last = side; b.spike = false; b.setter = side; b.isSet = false;
         p.actionState = 'bump'; p.actionTimer = 15; sfx.hit();
-      } else if (tmType === 'set') {
+      } else if (distToNet > 120 && isActiveNearNet) {
         // Set up toward the active player near the net for a spike
         const activeX = team[activeSlot].x;
         const setDir = activeX > p.x ? 1 : -1;
@@ -995,10 +995,9 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
       if (isSame && b.consecTouches >= 2) return;
       if (b.spike && b.last !== 2) return;
       const distToNet = Math.abs(b.x - NET_X);
-      // Same rule for the CPU team: a regular return is a bump 90% of the
-      // time.  When the rare set happens, the teammate-set block above jumps
-      // and spikes it rather than performing another normal return.
-      const ciWillSet = !(s.serveFirstCross && !s.serveReturned) && !(b.spike || b.y < FLOOR - 100) && distToNet < 110 && Math.random() < 0.10;
+      const losing = s.s2 < s.s1;
+      const setChance = losing ? 0.4 : 0.6; // less setting when losing — go for direct bumps/spikes
+      const ciWillSet = !(s.serveFirstCross && !s.serveReturned) && !(b.spike || b.y < FLOOR - 100) && distToNet < 110 && Math.random() < setChance * mult;
       recordHit(s, 2, botIdx, ciWillSet ? 'set' : 'bump', b);
       if (b.spike || b.y < FLOOR - 100) {
         // Receive a spike — bump it up toward the teammate

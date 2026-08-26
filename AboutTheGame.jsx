@@ -59,6 +59,11 @@ export default function AboutTheGame({ onBack }) {
           </p>
         </div>
 
+        <div className="space-y-2 rounded-lg border border-primary/40 bg-primary/10 p-3 text-xs font-body">
+          <p><span className="font-heading text-accent">Our Youtube Channel:</span> <a className="text-primary underline hover:text-accent" href="https://www.youtube.com/@element6app" target="_blank" rel="noreferrer">youtube.com/@element6app</a></p>
+          <p><span className="font-heading text-accent">Our Discord Server:</span> <a className="text-primary underline hover:text-accent" href="https://discord.gg/az5rbaCxB" target="_blank" rel="noreferrer">discord.gg/az5rbaCxB</a></p>
+        </div>
+
         <div className="text-center pt-2 border-t border-border">
           <p className="text-xs text-muted-foreground font-body">© 2026 Element 6 Studios — Made with passion for platform fighter fans.</p>
         </div>
