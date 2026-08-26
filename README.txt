@@ -1,5 +1,9 @@
-ONE-FILE BUILD FIX
+EMERGENCY BUILD FIX
 
-Upload only ActualSportsOnlineMatch.jsx to the root of your GitHub repository,
-allow it to replace the existing file, then commit. This corrects the missing
-closing brace that caused the build error at line 86.
+Replace these exact files in the repository root:
+- RollbackOnlineFight.jsx
+- GameIcon.jsx
+
+Also replace rollback/element6Simulation.js inside the rollback folder.
+The missing stage-platform export is now included, and duplicate GameIcon keys
+have been removed.

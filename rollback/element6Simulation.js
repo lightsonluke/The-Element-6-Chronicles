@@ -6,6 +6,7 @@ import {
   updateProjectiles,
 } from '../fighter.js';
 import { applyElement } from '../elements.js';
+import { MAP_PLATFORMS } from '../PlatformFighter.jsx';
 import { decodeInput } from './inputBits.js';
 
 export const ONLINE_STAGE_WIDTH = 1280;
@@ -16,6 +17,13 @@ export const ONLINE_PLATFORMS = Object.freeze([
   Object.freeze({ x: 800, y: 440, w: 360, h: 20 }),
   Object.freeze({ x: 460, y: 270, w: 360, h: 20 }),
 ]);
+
+// Normal built-in layouts only. Custom player stages are intentionally never
+// accepted by online matchmaking, so collision layout stays identical on both
+// clients and remains safe for rollback.
+export function getOnlineStagePlatforms(stageId) {
+  return MAP_PLATFORMS[stageId] || ONLINE_PLATFORMS;
+}
 
 const REF_KEY = '__rollbackFighterRef';
 
@@ -101,7 +109,7 @@ function prepareCharacter(character, elementId, shikigamiId) {
   return prepared;
 }
 
-export function createElement6OnlineState({ matchId, mode, host, guest }) {
+export function createElement6OnlineState({ matchId, mode, stageId = 'splitcity', host, guest }) {
   if (mode !== 'ranked' && mode !== 'unranked') throw new Error('Element 6 rollback currently supports ranked and unranked only.');
   if (!host?.character || !guest?.character) throw new Error('Both online players require character data.');
 
@@ -120,6 +128,9 @@ export function createElement6OnlineState({ matchId, mode, host, guest }) {
     version: 1,
     frame: 0,
     mode,
+    // Included in rollback snapshots/checksums so both clients must agree on
+    // the server-selected normal stage before the match advances.
+    stageId,
     seed: hashSeed(String(matchId)),
     timerFrames: 4 * 60 * 60,
     winner: null,
@@ -152,8 +163,9 @@ export function stepElement6OnlineFrame(previousState, inputMasks) {
 
   const events = [];
   try {
-    updateFighter(fighters.host, hostInput, ONLINE_PLATFORMS, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT, fighters.guest);
-    updateFighter(fighters.guest, guestInput, ONLINE_PLATFORMS, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT, fighters.host);
+    const platforms = getOnlineStagePlatforms(state.stageId);
+    updateFighter(fighters.host, hostInput, platforms, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT, fighters.guest);
+    updateFighter(fighters.guest, guestInput, platforms, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT, fighters.host);
     updateProjectiles(fighters.host, fighters.guest);
     updateProjectiles(fighters.guest, fighters.host);
 
