@@ -40,10 +40,14 @@ export default function ActualSportsOnlineMatch({
     [players],
   );
   const sport = getSport(match?.mode);
+  const isVolleyball2v2 = match?.mode === 'volleyball_2v2_online';
   const hostId = match?.host_user_id || orderedPlayers[0]?.user_id;
   const isHost = Boolean(me?.id && String(me.id) === String(hostId));
-  const p1 = orderedPlayers.find(player => Number(player.team) === 1);
-  const p2 = orderedPlayers.find(player => Number(player.team) === 2);
+  const p1Team = orderedPlayers.filter(player => Number(player.team) === 1);
+  const p2Team = orderedPlayers.filter(player => Number(player.team) === 2);
+  const p1 = p1Team[0];
+  const p2 = p2Team[0];
+  const mePlayer = orderedPlayers.find(player => String(player.user_id) === String(me?.id));
 
   useEffect(() => {
     if (!match?.id || !me?.id || !sport) return undefined;
@@ -79,12 +83,12 @@ export default function ActualSportsOnlineMatch({
     },
     sendMessage(message) {
       if (channel.current && me?.id) {
-        channel.current.send({ type: 'broadcast', event: 'input', payload: { sender: me.id, message } });
+        channel.current.send({ type: 'broadcast', event: 'input', payload: { sender: me.id, message: { ...message, playerSlot: Number(mePlayer?.slot || 1) - 1 } });
       }
     },
     stalled: false,
     stalledRef: { current: false },
-  }), [me?.id]);
+  }), [me?.id, mePlayer?.slot]);
 
   const onStateExport = state => {
     // Existing games export every animation frame; send at ~20Hz instead.
@@ -117,15 +121,15 @@ export default function ActualSportsOnlineMatch({
   }, [result, me?.id, match?.id]);
 
   if (!me) return <p className="font-heading text-accent text-center">SIGN IN TO PLAY ONLINE</p>;
-  if (!sport || orderedPlayers.length !== 2 || !p1 || !p2) {
-    return <p className="text-center text-muted-foreground">This screen currently supports the 1v1 Soccer, Volleyball, and Dodgeball queues.</p>;
+  if (!sport || (!isVolleyball2v2 && orderedPlayers.length !== 2) || (isVolleyball2v2 && orderedPlayers.length !== 4) || !p1 || !p2) {
+    return <p className="text-center text-muted-foreground">Waiting until every required player has joined this online match.</p>;
   }
   if (result) return <div className="text-center space-y-5"><h2 className="text-4xl font-heading text-accent">TEAM {result.winnerTeam} WINS!</h2><button onClick={() => onEnd?.()} className="px-6 py-3 rounded bg-primary text-primary-foreground font-heading">CONTINUE</button></div>;
 
   const shared = {
     settings, sfxVolume, musicVolume, equippedSkins, equippedAccessories,
     customCharsData, lanConnection, lanRole: isHost ? 'host' : 'guest',
-    localScheme: isHost ? 'p1' : 'p2', onlineLocalOnly: true,
+    localScheme: isHost ? 'p1' : 'p2',
   };
   const elementFor = player => player.loadout?.element || equippedElements[player.character_id] || 'basic';
 
@@ -141,14 +145,16 @@ export default function ActualSportsOnlineMatch({
     />}
     {sport === 'volleyball' && <VolleyballGame
       {...shared}
-      p1Chars={[p1.character_id]} p2Chars={[p2.character_id]}
+      p1Chars={p1Team.map(player => player.character_id)} p2Chars={p2Team.map(player => player.character_id)}
       p1IsCPU={false} p2IsCPU={false} difficulty="regular"
-      p1Elements={[elementFor(p1)]} p2Elements={[elementFor(p2)]}
+      p1Elements={p1Team.map(elementFor)} p2Elements={p2Team.map(elementFor)}
       onResult={matchResult => { if (isHost) finish(matchResult?.won ? 1 : 2); }}
       onQuit={onEnd}
       onStateExport={isHost ? onStateExport : undefined}
       remoteState={isHost ? null : remoteState}
       isOnlineHost={isHost}
+      online2v2={isVolleyball2v2}
+      localPlayerSlot={Number(mePlayer?.slot || 1) - 1}
     />}
     {sport === 'dodgeball' && <DodgeballGame
       {...shared}

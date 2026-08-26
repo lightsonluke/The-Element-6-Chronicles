@@ -99,8 +99,15 @@ export default function TeamMode({ onBack, onEnd, unlockedIds, favoriteId, music
     return 'CPU';
   };
 
+  const isHumanSlot = (team, fighter) =>
+    (team === 1 && fighter === 1) ||
+    (team === 1 && fighter === 2 && teamFormat === 'pp_cc') ||
+    (team === 2 && fighter === 1 && teamFormat === 'pc_pc');
+
   const randomChar = (exclude = []) => {
-    const pool = ALL.filter(c => unlockedSet.has(c.id) && !exclude.includes(c.id));
+    // CPU fighters may use the whole roster; only human player selections
+    // are restricted by the local player's unlocks.
+    const pool = ALL.filter(c => !exclude.includes(c.id));
     return pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)].id : ALL[0].id;
   };
 
@@ -133,8 +140,8 @@ export default function TeamMode({ onBack, onEnd, unlockedIds, favoriteId, music
             </div>
             <div className="grid grid-cols-4 gap-1 max-h-40 overflow-y-auto p-1 border-2 rounded" style={{ borderColor: TEAM_COLORS[1] + '44' }}>
               {ALL.map(c => (
-                <button key={c.id} onClick={() => setP1(c.id)} disabled={!unlockedSet.has(c.id)}
-                  className={`flex flex-col items-center p-1 rounded border-2 ${p1 === c.id ? 'border-accent' : 'border-transparent'} ${!unlockedSet.has(c.id) ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                <button key={c.id} onClick={() => setP1(c.id)} disabled={isHumanSlot(1, 1) && !unlockedSet.has(c.id)}
+                  className={`flex flex-col items-center p-1 rounded border-2 ${p1 === c.id ? 'border-accent' : 'border-transparent'} ${isHumanSlot(1, 1) && !unlockedSet.has(c.id) ? 'opacity-30 cursor-not-allowed' : ''}`}>
                   <div className="w-5 h-5 rounded-full" style={{ backgroundColor: c.color }} />
                   <span className="text-[7px] font-heading">{c.name.slice(0,5)}</span>
                 </button>
@@ -148,8 +155,8 @@ export default function TeamMode({ onBack, onEnd, unlockedIds, favoriteId, music
             </div>
             <div className="grid grid-cols-4 gap-1 max-h-40 overflow-y-auto p-1 border-2 rounded" style={{ borderColor: TEAM_COLORS[1] + '44' }}>
               {ALL.map(c => (
-                <button key={c.id} onClick={() => setP1b(c.id)} disabled={!unlockedSet.has(c.id)}
-                  className={`flex flex-col items-center p-1 rounded border-2 ${p1b === c.id ? 'border-accent' : 'border-transparent'} ${!unlockedSet.has(c.id) ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                <button key={c.id} onClick={() => setP1b(c.id)} disabled={isHumanSlot(1, 2) && !unlockedSet.has(c.id)}
+                  className={`flex flex-col items-center p-1 rounded border-2 ${p1b === c.id ? 'border-accent' : 'border-transparent'} ${isHumanSlot(1, 2) && !unlockedSet.has(c.id) ? 'opacity-30 cursor-not-allowed' : ''}`}>
                   <div className="w-5 h-5 rounded-full" style={{ backgroundColor: c.color }} />
                   <span className="text-[7px] font-heading">{c.name.slice(0,5)}</span>
                 </button>
@@ -174,8 +181,8 @@ export default function TeamMode({ onBack, onEnd, unlockedIds, favoriteId, music
             </div>
             <div className="grid grid-cols-4 gap-1 max-h-40 overflow-y-auto p-1 border-2 rounded" style={{ borderColor: TEAM_COLORS[2] + '44' }}>
               {ALL.map(c => (
-                <button key={c.id} onClick={() => setP2(c.id)} disabled={!unlockedSet.has(c.id)}
-                  className={`flex flex-col items-center p-1 rounded border-2 ${p2 === c.id ? 'border-accent' : 'border-transparent'} ${!unlockedSet.has(c.id) ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                <button key={c.id} onClick={() => setP2(c.id)} disabled={isHumanSlot(2, 1) && !unlockedSet.has(c.id)}
+                  className={`flex flex-col items-center p-1 rounded border-2 ${p2 === c.id ? 'border-accent' : 'border-transparent'} ${isHumanSlot(2, 1) && !unlockedSet.has(c.id) ? 'opacity-30 cursor-not-allowed' : ''}`}>
                   <div className="w-5 h-5 rounded-full" style={{ backgroundColor: c.color }} />
                   <span className="text-[7px] font-heading">{c.name.slice(0,5)}</span>
                 </button>
@@ -193,8 +200,8 @@ export default function TeamMode({ onBack, onEnd, unlockedIds, favoriteId, music
             </div>
             <div className="grid grid-cols-4 gap-1 max-h-40 overflow-y-auto p-1 border-2 rounded" style={{ borderColor: TEAM_COLORS[2] + '44' }}>
               {ALL.map(c => (
-                <button key={c.id} onClick={() => setP2b(c.id)} disabled={!unlockedSet.has(c.id)}
-                  className={`flex flex-col items-center p-1 rounded border-2 ${p2b === c.id ? 'border-accent' : 'border-transparent'} ${!unlockedSet.has(c.id) ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                <button key={c.id} onClick={() => setP2b(c.id)} disabled={isHumanSlot(2, 2) && !unlockedSet.has(c.id)}
+                  className={`flex flex-col items-center p-1 rounded border-2 ${p2b === c.id ? 'border-accent' : 'border-transparent'} ${isHumanSlot(2, 2) && !unlockedSet.has(c.id) ? 'opacity-30 cursor-not-allowed' : ''}`}>
                   <div className="w-5 h-5 rounded-full" style={{ backgroundColor: c.color }} />
                   <span className="text-[7px] font-heading">{c.name.slice(0,5)}</span>
                 </button>

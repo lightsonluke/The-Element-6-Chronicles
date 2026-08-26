@@ -7,11 +7,18 @@ import { getKeybinds, readPlayerInput } from './keybinds.js';
 import { readGamepadInput } from './controllerProfiles.js';
 import { reportOnlineSportResult, leaveOnlineSport } from './sportsOnline.js';
 import { supabase } from './supabaseClient.js';
+import ActualSportsOnlineMatch from './ActualSportsOnlineMatch.jsx';
 
 const FRAME_MS = 1000 / 60;
 const EMPTY = { left:false, right:false, up:false, down:false, jump:false, sig:false, heavy:false, power:false };
 
 export default function SportsRollbackArena({ match, players, settings = {}, onEnd }) {
+  // 2v2 Volleyball uses the real offline VolleyballGame renderer/physics,
+  // not the generic sport-canvas fallback below. It remains host-authoritative
+  // and uses the rollback transport for its input/checkpoint channel.
+  if (match?.mode === 'volleyball_2v2_online') {
+    return <ActualSportsOnlineMatch match={match} players={players} settings={settings} onEnd={onEnd} />;
+  }
   const canvasRef = useRef(null); const sessionRef = useRef(null); const transportRef = useRef(null); const pausedForSync = useRef(false);
   const [status, setStatus] = useState('CONNECTING…'); const [result, setResult] = useState(null); const [me, setMe] = useState(null); const [syncing, setSyncing] = useState(false);
   useEffect(() => { supabase.auth.getUser().then(({ data }) => setMe(data.user || null)); }, []);

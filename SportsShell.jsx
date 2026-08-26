@@ -35,8 +35,10 @@ const teamColorName = (hex) => TEAM_COLOR_NAMES[hex] || 'Mixed';
 export default function SportsShell({ sport, unlockedIds, favoriteId, equippedAccessories = {}, equippedSkins = {}, settings = {}, charLevels = {}, equippedElements = {}, onEquipElement, sfxVolume = 70, musicVolume = 50, GameComponent, onAward, onEnd, onShop, onOnlinePlay, onExit, customCharsData = {}, customNumberMap = {}, charMastery = {} }) {
   const cfg = getSport(sport);
   const PLAYABLE = withCustomChars(BASE_PLAYABLE, customCharsData, customNumberMap);
-  const randomCharId = (_unlockedIds, exclude = []) => {
-    const pool = PLAYABLE.filter(c => (_unlockedIds || []).includes(c.id) && !exclude.includes(c.id));
+  const randomCharId = (_unlockedIds, exclude = [], bot = false) => {
+    // CPU opponents and CPU teammates are not player purchases. They may use
+    // the complete roster, including a character locked for the local player.
+    const pool = PLAYABLE.filter(c => (bot || (_unlockedIds || []).includes(c.id)) && !exclude.includes(c.id));
     return pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)].id : 'yellow';
   };
   const [vbMode, setVbMode] = useState('2v2'); // '2v2' or '1v1' (volleyball only)
@@ -50,7 +52,7 @@ export default function SportsShell({ sport, unlockedIds, favoriteId, equippedAc
     let exclude = excludeFirst ? [excludeFirst] : [];
     const line = [];
     for (let i = 0; i < teamSize; i++) {
-      const id = randomCharId(unlockedIds, exclude);
+      const id = randomCharId(unlockedIds, exclude, true);
       line.push(id); exclude = [...exclude, id];
     }
     return line;
@@ -61,7 +63,7 @@ export default function SportsShell({ sport, unlockedIds, favoriteId, equippedAc
     if (line.length === teamSize) return line;
     if (line.length > teamSize) return line.slice(0, teamSize);
     let ex = [first, ...line]; const out = [...line];
-    while (out.length < teamSize) { const id = randomCharId(unlockedIds, ex); out.push(id); ex = [...ex, id]; }
+    while (out.length < teamSize) { const id = randomCharId(unlockedIds, ex, true); out.push(id); ex = [...ex, id]; }
     return out;
   };
 
@@ -73,7 +75,7 @@ export default function SportsShell({ sport, unlockedIds, favoriteId, equippedAc
     // main char fills role[0]
     return mkLineup(firstId);
   });
-  const [p2, setP2] = useState(() => randomCharId(unlockedIds, [p1]));
+  const [p2, setP2] = useState(() => randomCharId(unlockedIds, [p1], true));
   const [p2Team, setP2Team] = useState(() => mkLineup());
   const [p1Els, setP1Els] = useState(() => p1Team.map(id => equippedElements?.[id] || 'basic'));
   const [p2Els, setP2Els] = useState(() => p2Team.map(id => equippedElements?.[id] || 'basic'));
@@ -98,7 +100,7 @@ export default function SportsShell({ sport, unlockedIds, favoriteId, equippedAc
     if (!hasRoles) return Array.from({ length: teamSize }, () => first);
     const rest = [];
     let ex = [first];
-    for (let i = 1; i < teamSize; i++) { const r = randomCharId(unlockedIds, ex); rest.push(r); ex = [...ex, r]; }
+    for (let i = 1; i < teamSize; i++) { const r = randomCharId(unlockedIds, ex, true); rest.push(r); ex = [...ex, r]; }
     return [first, ...rest];
   };
 
@@ -137,7 +139,7 @@ export default function SportsShell({ sport, unlockedIds, favoriteId, equippedAc
   const startTournamentWith = (chosenColorIdx) => {
     const chosenColor = TEAM_PALETTE[chosenColorIdx];
     const otherColors = TEAM_PALETTE.filter((c, i) => i !== chosenColorIdx).sort(() => Math.random() - 0.5);
-    const pool = PLAYABLE.filter(c => unlocked.has(c.id) && c.id !== p1);
+    const pool = PLAYABLE.filter(c => c.id !== p1);
     const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, 15);
     const slots = [p1, ...shuffled];
     const colorMap = {};

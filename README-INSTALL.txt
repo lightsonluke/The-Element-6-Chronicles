@@ -1,38 +1,38 @@
-ELEMENT 6 — SHOP, SOCIAL, AND ONLINE INPUT UPDATE
+ELEMENT 6 — PAID TAB + VOLLEYBALL 2v2 UPDATE
 
-Install this as ONE replacement package. It contains only files that replace
-matching files at the ROOT of your GitHub repository (plus rollback/).
+This package restores the normal shop. Every regular shop tab remains exactly
+as it was: accessories, characters, emotes, etc. still use Tokens.
 
-1. In Supabase, open SQL Editor -> New query.
-2. Open Supabase-username-everywhere.sql in this package.
-3. Copy its CONTENTS (not its filename) into Supabase and press Run.
-4. Unzip this package.
-5. Open your GitHub repository -> Add file -> Upload files.
-6. Upload EVERY .jsx/.js file from this package to the repository ROOT.
-   Upload the rollback folder itself so rollback/rollbackSession.js replaces
-   the matching file if GitHub asks.
-7. Let GitHub replace files with the same names, then commit.
-8. Wait for the GitHub Pages build to finish before testing.
+ONLY the existing PAID tab changes. It receives the new paid-pack list. No new
+shop navigation, category pages, or changes to Token purchasing are included.
 
-What this package changes:
-- A new eight-page shop: Featured, Accessories, Emotes, Shikigami, Profile,
-  Battle Pass, Tokens, Support Element 6. No skin products are shown.
-- Clear product prices, large RANDOM bundle cards, Battle Pass reward tracks,
-  token packs, supporter packs, and Custom Content slots.
-- Sports back navigation safety (prevents the Sports page back-button crash).
-- Soccer, 1v1 Volleyball, and Dodgeball online use the existing real sport
-  components. Each browser reads only its own keyboard/controller in online
-  matches; remote player input comes through the match transport.
-- Username updates synchronize to Supabase and the saved social/leaderboard
-  display-name copies. New names are used in online locations after refresh.
-- YouTube and Discord links in About the Game.
-- Community Hub public-server browser, Random/Public/Private creation, and a
-  visible current-server code. Private PRV servers never appear publicly.
+INSTALL
+1. Unzip this package.
+2. In GitHub, upload the .jsx and .js files to your repository ROOT.
+3. Upload the files inside rollback/ into your repository's rollback/ folder.
+4. Let GitHub replace matching files, commit, and wait for deployment.
 
-Important payment note:
-The storefront and checkout buttons are ready for product IDs, but taking
-real card payments still requires your Stripe Checkout function/webhook to be
-configured in Supabase. Until that is connected, the game correctly shows its
-existing checkout-not-ready notice and does not grant paid items for free.
+DO NOT upload BaseBallGame.jsx (it is not needed). No SQL query is needed for
+this update if your online-sports SQL was already run.
 
-Do not upload the README or the SQL file to GitHub; run the SQL in Supabase.
+VOLLEYBALL 2v2
+- Uses the actual offline VolleyballGame court, physics, player rendering,
+  scoring, ball, and rules instead of a generic online canvas.
+- Four queued players map to four individual players: slots 0/2 are Team 1;
+  slots 1/3 are Team 2.
+- Every browser sends input only for its own slot. Keyboard custom bindings,
+  WASD/arrow configurations, and controller slot 0 control only that one
+  selected character. Other players' input comes from the network.
+- Host checkpoints are exported to every player, so every screen is drawn from
+  the same confirmed state. The existing rollback transport files remain in
+  the package for the sports matchmaking/checksum layer.
+
+OFFLINE BOTS
+- Volleyball and Baseball already accept any valid roster character internally.
+- SportsShell now draws CPU opponents/teammates from the full roster.
+- Banger CPU teams and 2v2 Team Battle CPU slots can use locked characters;
+  this never affects the local player's own unlocks.
+
+PAYMENTS
+The Paid tab only lists the products. Real purchases still require your Stripe
+Checkout/webhook to be configured before money can be charged or items granted.

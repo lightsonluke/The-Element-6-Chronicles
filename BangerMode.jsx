@@ -20,7 +20,6 @@ export default function BangerMode({
   customCharsData = {}, customNumberMap = {}, charMastery = {},
 }) {
   const ALL = withCustomChars(PLAYABLE, customCharsData, customNumberMap);
-  const unlocked = new Set(unlockedIds || ['yellow']);
   const [phase, setPhase] = useState('select');
   const [team1, setTeam1] = useState([]);
   const [team2, setTeam2] = useState([]);
@@ -87,11 +86,12 @@ export default function BangerMode({
     );
   }
 
-  // Auto-fill team to 3 with randoms from unlocked pool
+  // Bots are allowed to use the complete roster. Player unlocks only limit
+  // the human's own selection; they never invalidate a bot match.
   const fillTeam = (main, exclude = []) => {
-    const pool = ALL.filter(c => unlocked.has(c.id) && c.id !== main && !exclude.includes(c.id));
-    const rest = [main];
-    const used = new Set([main]);
+    const pool = ALL.filter(c => c.id !== main && !exclude.includes(c.id));
+    const rest = main ? [main] : [];
+    const used = new Set(main ? [main] : []);
     while (rest.length < 3 && pool.length > 0) {
       const avail = pool.filter(c => !used.has(c.id));
       if (avail.length === 0) break;
@@ -124,9 +124,16 @@ export default function BangerMode({
         // Last item in extraPicks is the shikigamiOverride map — filter it out (only string IDs are characters)
         const charPicks = extraPicks.filter(p => typeof p === 'string');
         // Distribute picks to teams: P1,P3,P5 → Team 1; P2,P4,P6 → Team 2
-        const t1 = [c1]; const t2 = [c2];
+        let t1 = [c1]; let t2 = [c2];
         for (let i = 0; i < charPicks.length; i++) {
           if (i % 2 === 0) t1.push(charPicks[i]); else t2.push(charPicks[i]);
+        }
+        // In offline CPU matches, fill every CPU-controlled position from the
+        // full roster, including characters the local player has not unlocked.
+        if (p2cpu) {
+          const teamOne = fillTeam(c1, []);
+          const teamTwo = fillTeam('', teamOne.team);
+          t1 = teamOne.team; t2 = teamTwo.team;
         }
         setTeam1(t1); setTeam2(t2);
         const e1 = {}; const e2 = {};
@@ -143,7 +150,7 @@ export default function BangerMode({
         <div className="flex gap-3 flex-wrap items-center justify-center bg-card/60 border border-border rounded-lg p-2 text-[10px]">
           <span className="font-heading text-accent">MATCH SETTINGS</span>
           <Setting label="WEATHER" options={WEATHERS} value={ms.weather} onChange={v => setMs(m => ({ ...m, weather: v }))} />
-          <span className="text-muted-foreground">Teams auto-fill to 3 with random unlocked characters</span>
+          <span className="text-muted-foreground">CPU teammates use the full character roster</span>
         </div>
       }
     />
