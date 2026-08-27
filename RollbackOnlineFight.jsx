@@ -119,6 +119,7 @@ export default function RollbackOnlineFight({
     const keys = {};
     let animationFrame = 0;
     let pingTimer = null;
+    let snapshotTimer = null;
     let readyTimer = null;
     let stopped = false;
     let finished = false;
@@ -193,9 +194,21 @@ export default function RollbackOnlineFight({
       // browsers receive the same saved ID, never a player-made/custom stage.
       const sharedStage = state.stageId || stageId || 'splitcity';
       drawBackground(ctx, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT, state.frame, sharedStage);
+      // Match offline regular-battle framing: follow the fighter midpoint and
+      // zoom out when they separate. Camera inputs are derived only from the
+      // synchronized state, so both screens select the identical view.
+      const midpoint = (hostFighter.x + guestFighter.x) / 2;
+      const separation = Math.abs(hostFighter.x - guestFighter.x);
+      const camX = (midpoint - ONLINE_STAGE_WIDTH / 2) * (1 - camZoom) * 0.35;
+      const camZoom = Math.max(0.82, Math.min(1.12, 1.12 - Math.max(0, separation - 360) / 1800));
+      ctx.save();
+      ctx.translate(ONLINE_STAGE_WIDTH / 2, ONLINE_STAGE_HEIGHT / 2);
+      ctx.scale(camZoom, camZoom);
+      ctx.translate(-ONLINE_STAGE_WIDTH / 2 - camX, -ONLINE_STAGE_HEIGHT / 2);
       drawPlatforms(ctx, getOnlineStagePlatforms(sharedStage) || ONLINE_PLATFORMS, state.frame, sharedStage);
       drawFighter(hostFighter, hostCharacter, hostLoadout, isHost ? myUsername : oppUsername);
       drawFighter(guestFighter, guestCharacter, guestLoadout, isHost ? oppUsername : myUsername);
+      ctx.restore();
 
       ctx.fillStyle = 'rgba(0,0,0,0.72)';
       ctx.fillRect(0, ONLINE_STAGE_HEIGHT - 80, ONLINE_STAGE_WIDTH, 80);
@@ -285,10 +298,11 @@ export default function RollbackOnlineFight({
           } else if (packet.kind === 'ready-ack') markPeerReady();
           else if (packet.kind === 'resync-request' && isHost) {
             transport.sendControl('resync-state', { frame: session.getStats().currentFrame, state: session.getRenderableState() }).catch(() => {});
-          } else if (packet.kind === 'resync-state' && packet.state) {
+          } else if ((packet.kind === 'resync-state' || packet.kind === 'state-snapshot') && packet.state) {
+            resyncing = true;
+            setResyncing(true);
             session.replaceState(packet.state, Number(packet.frame) || packet.state.frame || 0);
-            resyncing = false;
-            setResyncing(false);
+            window.setTimeout(() => { resyncing = false; setResyncing(false); }, 140);
             setNetworkError(null);
             setConnectionText('CONNECTED · RESYNCED');
           } else if (packet.kind === 'disconnect') finishMatch(role);
@@ -304,6 +318,12 @@ export default function RollbackOnlineFight({
         setConnectionText('CONNECTED');
         try { db.entities.OnlineMatch.update(matchId, { status: 'active' }).catch(() => {}); } catch {}
         pingTimer = setInterval(() => transport.ping().catch(() => {}), 1000);
+        snapshotTimer = setInterval(() => {
+          if (isHost && !finished && !resyncing) transport.sendControl('state-snapshot', {
+            frame: session.getStats().currentFrame,
+            state: session.getRenderableState(),
+          }).catch(() => {});
+        }, 250);
 
         const keybinds = getKeybinds(settings);
         let lastTime = performance.now();
@@ -344,6 +364,7 @@ export default function RollbackOnlineFight({
       stopped = true;
       cancelAnimationFrame(animationFrame);
       clearInterval(pingTimer);
+      clearInterval(snapshotTimer);
       clearInterval(readyTimer);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
