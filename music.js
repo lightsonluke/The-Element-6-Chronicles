@@ -42,13 +42,6 @@ export const FIGHT_TRACK_LIBRARY = [
   { id: 'pixel-quest', name: 'Pixel Quest', url: A('pixel-quest.mp3') },
   { id: 'coin-op-reaper', name: 'Coin Op Reaper', url: A('coin-op-reaper.mp3') },
   { id: 'neon-glitch', name: 'Neon Glitch', url: A('neon-glitch.mp3') },
-  { id: 'super-pixel', name: 'Super Pixel', url: A('Super_Pixel.mp3') },
-  { id: 'pixel-jump', name: 'Pixel Jump', url: A('Pixel_Jump.mp3') },
-  { id: 'pixel-king', name: 'Pixel King', url: A('Pixel_King.mp3') },
-  { id: 'pixel-many', name: 'Pixel Many', url: A('Pixel_Many.mp3') },
-  { id: 'pixel-launch', name: 'Pixel Launch', url: A('Pixel_Launch.mp3') },
-  { id: 'pixel-create', name: 'Pixel Create', url: A('Pixel_Create.mp3') },
-  { id: 'element-6-track', name: 'Element 6 Track', url: A('Element_6_Track.mp3') },
 ];
 const FIGHT_TRACKS = FIGHT_TRACK_LIBRARY.map(t => t.url);
 
