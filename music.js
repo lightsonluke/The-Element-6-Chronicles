@@ -17,6 +17,13 @@ const ROCKCLIMB_TRACK = A('parkour.mp3');
 // Built-in fight/sports track library. New tracks are selectable presets
 // in Settings → Fight & Sports Music (and join the auto-rotation).
 export const FIGHT_TRACK_LIBRARY = [
+  { id: 'element-6-track', name: 'Element 6 Track', url: A('element-6-track.mp3') },
+  { id: 'pixel-launch', name: 'Pixel Launch', url: A('pixel-launch.mp3') },
+  { id: 'pixel-create', name: 'Pixel Create', url: A('pixel-create.mp3') },
+  { id: 'pixel-jump', name: 'Pixel Jump', url: A('pixel-jump.mp3') },
+  { id: 'pixel-king', name: 'Pixel King', url: A('pixel-king.mp3') },
+  { id: 'pixel-many', name: 'Pixel Many', url: A('pixel-many.mp3') },
+  { id: 'super-pixel', name: 'Super Pixel', url: A('super-pixel.mp3') },
   { id: 'blade-of-dawn-one', name: 'Blade of Dawn I', url: A('blade-of-dawn-one.mp3') },
   { id: 'blade-of-dawn', name: 'Blade of Dawn', url: A('blade-of-dawn.mp3') },
   { id: 'boss-fight-circuit', name: 'Boss Fight Circuit', url: A('boss-fight-circuit.mp3') },

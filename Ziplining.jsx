@@ -1,4 +1,5 @@
 import db from './localBackend';
+import { submitWorldScore } from './worldLeaderboards.js';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 
@@ -230,6 +231,10 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
         if (rank <= 0) rank = sorted.length;
       }
     } catch { saved = false; }
+    try {
+      const remote = await submitWorldScore('zipline', distance, { char_id: charId, time_ms: time });
+      saved = true; rank = remote.rank || rank;
+    } catch { /* Preserve local result when an account is offline. */ }
     setResult({ distance, time, best: s.best, newBest, rank, saved, globalBest });
     onAward?.({ sport: 'zipline', p1Won: false, stats: { distance, time }, p1CharId: charId, tournamentWon: false });
   }

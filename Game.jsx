@@ -227,14 +227,18 @@ export default function Game() {
 
   useEffect(() => {
     let cancelled = false;
-    loadCloudProgress().then(cloudProgress => {
+    const loadSignedInProgress = () => loadCloudProgress().then(cloudProgress => {
       if (!cancelled && cloudProgress) {
         const merged = { ...DEFAULT_PROGRESS, ...cloudProgress };
         localStorage.setItem('element6_progress', JSON.stringify(merged));
         setProgress(merged);
       }
     }).catch(() => {});
-    return () => { cancelled = true; };
+    loadSignedInProgress();
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) loadSignedInProgress();
+    });
+    return () => { cancelled = true; listener.subscription.unsubscribe(); };
   }, []);
   const [tokenFlash, setTokenFlash] = useState(null);
   const [storyRewardToast, setStoryRewardToast] = useState(null);
@@ -281,8 +285,15 @@ export default function Game() {
   // gamepad drives the fighter; pausing/finishing clears it so buttons are clickable.
   useGamepadMenuNav(progress?.settings?.controllerEnabled !== false);
 
-  // Fetch current user for online sports lobby
-  useEffect(() => { db.auth.me().then(u => setMe(u)).catch(() => {}); }, []);
+  // Online matchmaking must use the real Supabase session rather than the
+  // browser-only local adapter, otherwise a real signed-in account appears off.
+  useEffect(() => {
+    let alive = true;
+    const applyUser = user => { if (alive) setMe(user || null); };
+    supabase.auth.getUser().then(({ data }) => applyUser(data.user)).catch(() => applyUser(null));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => applyUser(session?.user));
+    return () => { alive = false; listener.subscription.unsubscribe(); };
+  }, []);
 
   // ── Navigation history — every Back button returns to the previous screen ──
   // Forward navigation (setScreen) auto-records where we came from; goBack() pops
@@ -2134,7 +2145,7 @@ export default function Game() {
         {screen === 'equip' && (
           <EquipScreen onBack={goBack} progress={progress}
             onEquipSkin={equipSkin} onEquipAccessory={equipAccessory} onEquipKillFX={equipKillFX}
-            onEquipCrossover={equipCrossover} onEquipShikigami={equipShikigami}
+            onEquipCrossover={equipCrossover} onEquipShikigami={equipShikigami} onEquipElement={equipElement}
             onEquipEmote={equipEmote} ownedEmotes={progress.ownedEmotes || []} equippedEmotes={progress.equippedEmotes || {}} />
         )}
 

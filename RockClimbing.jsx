@@ -1,4 +1,5 @@
 import db from './localBackend';
+import { submitWorldScore } from './worldLeaderboards.js';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 
@@ -582,6 +583,10 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
           if (rank <= 0) rank = sorted.length;
         }
       } catch { saved = false; }
+      try {
+        const remote = await submitWorldScore('rockclimb', Math.floor(time), { char_id: charId, checkpoints_used: s.cpUsed, no_checkpoint_run: !s.usedCheckpoint });
+        saved = true; rank = remote.rank || rank;
+      } catch { /* Local best is still retained if the player is offline. */ }
     }
     setResult({ finished: s.finished, time: Math.floor(time), best: s.bestMs, rank, isRecord, saved, cpUsed: s.cpUsed, noCP: !s.usedCheckpoint });
     onAward?.({ sport: 'rockclimb', p1Won: s.finished, p1CharId: charId, stats: { time_ms: Math.floor(time), finished: s.finished }, tournamentWon: s.finished });
@@ -706,7 +711,7 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
           </div>
         </div>
       )}
-      <canvas ref={canvasRef} width={W} height={H} className="rounded-lg shadow-2xl w-full"
+      <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#0e1a14' }} />
     </div>
   );

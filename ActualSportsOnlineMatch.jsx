@@ -33,6 +33,19 @@ export default function ActualSportsOnlineMatch({
   const lastStateSent = useRef(0);
   const submitted = useRef(false);
   const startedAt = useRef(Date.now());
+  const resyncTimer = useRef(null);
+  const resyncVisible = useRef(false);
+
+  const showResyncOnce = () => {
+    // State packets arrive continuously; they are normal transport, not a
+    // resync event.  Keep one short overlay per recovery instead of flashing
+    // RESYNCING on every packet.
+    if (resyncVisible.current) return;
+    resyncVisible.current = true;
+    setSyncing(true);
+    clearTimeout(resyncTimer.current);
+    resyncTimer.current = setTimeout(() => { resyncVisible.current = false; setSyncing(false); }, 180);
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMe(data.user || null));
@@ -65,9 +78,10 @@ export default function ActualSportsOnlineMatch({
       })
       .on('broadcast', { event: 'state' }, ({ payload }) => {
         if (active && !isHost && payload?.state) {
-          setSyncing(true);
           setRemoteState(payload.state);
-          window.setTimeout(() => active && setSyncing(false), 120);
+          // First authoritative snapshot is a normal join sync.  Later state
+          // packets silently keep the guest current; the sport engines may
+          // explicitly request the one-time recovery overlay when needed.
         }
       })
       .on('broadcast', { event: 'result' }, ({ payload }) => {
@@ -78,6 +92,7 @@ export default function ActualSportsOnlineMatch({
       });
     return () => {
       active = false;
+      clearTimeout(resyncTimer.current);
       channel.current = null;
       supabase.removeChannel(realtime);
     };
@@ -151,7 +166,7 @@ export default function ActualSportsOnlineMatch({
       remoteState={isHost ? null : remoteState}
       onStateExport={isHost ? onStateExport : undefined}
       isOnlineHost={isHost}
-      onSyncStateChange={setSyncing}
+      onSyncStateChange={showResyncOnce}
       round={1} totalRounds={1} onRematch={() => {}}
       onEnd={matchResult => { if (isHost) finish(matchResult?.p1Won ? 1 : 2); }}
     />}

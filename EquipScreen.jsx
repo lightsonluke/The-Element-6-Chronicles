@@ -20,6 +20,7 @@ import MasteryRewardsPanel from './MasteryRewardsPanel.jsx';
 import EraTabBar from './EraTabBar.jsx';
 import { getNameColor } from './charSelectHelpers.js';
 import GameIcon from "./GameIcon.jsx";
+import { ELEMENTS, getUnlockedElements, getCharLevelData } from './elements.js';
 
 const OLD_GEN_NORMALIZED = OLD_GEN_CHARS.map(c => ({ ...c, power: c.power || c.powerTitle, isGuardian: false, isOldGen: true, era: c.era }));
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS, ...OLD_GEN_NORMALIZED];
@@ -31,11 +32,11 @@ function getRosterForEra(eraId) {
   return OLD_GEN_NORMALIZED.filter(c => c.era === eraId);
 }
 
-export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAccessory, onEquipKillFX, onEquipCrossover, onEquipShikigami, onEquipEmote, ownedEmotes = [], equippedEmotes = {} }) {
+export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAccessory, onEquipKillFX, onEquipCrossover, onEquipShikigami, onEquipEmote, onEquipElement, ownedEmotes = [], equippedEmotes = {} }) {
   const [selectedChar, setSelectedChar] = useState(progress?.favoriteId || HEROES[0].id);
   const [subTab, setSubTab] = useState('gear');
   const [eraTab, setEraTab] = useState('g5');
-  const showCharSelector = ['gear', 'mastery', 'crossovers', 'shikigami'].includes(subTab);
+  const showCharSelector = ['gear', 'mastery', 'crossovers', 'shikigami', 'elements'].includes(subTab);
 
   useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
 
@@ -53,6 +54,9 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
   const _ownedEmotes = progress?.ownedEmotes || ownedEmotes;
   const _equippedEmotes = progress?.equippedEmotes || equippedEmotes;
   const equippedShikigamiId = equippedShikigami[selectedChar] || null;
+  const equippedElement = progress?.equippedElements?.[selectedChar] || 'basic';
+  const characterLevel = getCharLevelData(progress, selectedChar).level;
+  const unlockedElements = getUnlockedElements(characterLevel);
 
   const charOwnedCrossovers = CROSSOVERS.filter(cx => ownedCrossovers.includes(cx.id) && cx.charId === selectedChar);
   const equippedCrossoverId = equippedCrossovers[selectedChar] || null;
@@ -84,6 +88,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
         <button onClick={() => setSubTab('killfx')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'killfx' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>KILL FX</button>
         <button onClick={() => setSubTab('crossovers')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'crossovers' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>CROSSOVERS</button>
         <button onClick={() => setSubTab('shikigami')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'shikigami' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>🪶 SHIKIGAMI</button>
+        <button onClick={() => setSubTab('elements')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'elements' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>ELEMENTS</button>
         <button onClick={() => setSubTab('emotes')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'emotes' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>EMOTES</button>
         <button onClick={() => setSubTab('mastery')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'mastery' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>MASTERY</button>
         <button onClick={() => setSubTab('characters')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'characters' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>CHARACTERS</button>
@@ -100,6 +105,8 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
         <div className="flex-1">
           <p className="font-heading text-lg" style={{ color: getNameColor(char) }}>{char?.name}</p>
           <p className="text-[10px] text-muted-foreground font-body">{char?.title}</p>
+          <p className="text-[10px] font-heading text-primary mt-1">LEVEL {characterLevel}</p>
+          <p className="text-[9px] text-muted-foreground">ELEMENT: {(ELEMENTS.find(e => e.id === equippedElement)?.name || 'Basic').toUpperCase()}</p>
           {equippedSkins[selectedChar] && <p className="text-[9px] font-heading text-accent mt-1">Skin: {getSkin(equippedSkins[selectedChar])?.name}</p>}
           {equippedCrossover && <p className="text-[9px] font-heading text-accent mt-0.5">Crossover: {equippedCrossover.name}</p>}
           {equippedKillFX !== 'none' && <p className="text-[9px] font-heading text-accent">Kill FX: {getKillFX(equippedKillFX)?.name}</p>}
@@ -170,6 +177,19 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
             );
           })}
           {charOwnedAccessories.length === 0 && <p className="text-xs text-muted-foreground col-span-4 text-center py-8">No gear owned yet!</p>}
+        </div>
+      )}
+
+      {subTab === 'elements' && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-1">
+          {unlockedElements.map(element => {
+            const active = equippedElement === element.id;
+            return <button key={element.id} onClick={() => onEquipElement?.(selectedChar, element.id)} className={`rounded-lg p-3 text-left border-2 ${active ? 'border-accent bg-accent/10' : 'border-border bg-card hover:border-primary'}`}>
+              <p className="font-heading text-xs" style={{ color: element.color }}>{element.name}</p>
+              <p className="text-[9px] text-muted-foreground mt-1">{element.desc}</p>
+              <p className="text-[8px] font-heading mt-2">{active ? 'EQUIPPED' : 'EQUIP'}</p>
+            </button>;
+          })}
         </div>
       )}
 

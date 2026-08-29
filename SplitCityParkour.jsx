@@ -1,4 +1,5 @@
 import db from './localBackend';
+import { submitWorldScore } from './worldLeaderboards.js';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 
@@ -484,6 +485,10 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
         rank = (higher?.length || 1);
       }
     } catch { saved = false; }
+    try {
+      const remote = await submitWorldScore('parkour', dist, { char_id: charId, cause: s.cause || 'fall' });
+      saved = true; rank = remote.rank || rank;
+    } catch { /* Local score display remains available while offline. */ }
     setResult({ distance: dist, best: s.best, rank, isRecord, saved, cause: s.cause });
     onAward?.({ sport: 'parkour', p1Won: true, p1CharId: charId, stats: {}, tournamentWon: false });
   }
@@ -569,7 +574,7 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
         <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
         <span className="text-[10px] text-muted-foreground font-body">D/<GameIcon emoji="→" size={14} />: Run · SPACE: Jump/Wall-Jump · Walk into wall to climb · ESC: Quit</span>
       </div>
-      <canvas ref={canvasRef} width={W} height={H} className="rounded-lg shadow-2xl w-full"
+      <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#0a1228' }} />
     </div>
   );

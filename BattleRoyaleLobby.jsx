@@ -14,6 +14,7 @@ import ElementSelect from './ElementSelect.jsx';
 import BattleRoyaleEngine from './BattleRoyaleEngine.jsx';
 import GameIcon from './GameIcon.jsx';
 import { getEquippedAccessories } from './cosmetics.js';
+import { supabase } from './supabaseClient.js';
 
 const MAX_PLAYERS = 50;
 const MATCHMAKE_SECONDS = 60;
@@ -44,7 +45,9 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
 
   useEffect(() => {
     music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.play('menu');
-    db.auth.me().then(u => setMe(u)).catch(() => setMe(null));
+    // Battle Royale matchmaking must read the real Supabase session.  The
+    // old local adapter has no knowledge of an email/password login.
+    supabase.auth.getUser().then(({ data }) => setMe(data.user || null)).catch(() => setMe(null));
     return () => music.stop();
   }, [musicVolume, sfxVolume]);
 

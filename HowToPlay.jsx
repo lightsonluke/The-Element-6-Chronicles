@@ -53,6 +53,9 @@ const MODES = [
     rewards: 'Win against all HONORED bots for 50 tokens. Top placements in matches with 5+ human players earn tokens (100 for 1st, 75 for 2nd).',
     tournament: 'No tournament — free-for-all survival. Host configures max fighters (up to 30), bot difficulty, zone speed, and loot density.',
   },
+  { name: 'DODGEBALL', color: '#FF5555', controls: 'Move, jump, throw with Signature and use Power for a stronger throw. Catching an incoming ball eliminates the thrower.', objective: 'Hit the opposing team or catch their throw. The last team with active players wins.', rewards: 'XP for hits, catches, dodges, and wins.', tournament: 'Play locally, in LAN/custom rooms, or online when the queue is available.' },
+  { name: 'BANGER', color: '#55CCFF', controls: 'Move your oscillation target only when the ball is near your own player. Time the hit to launch it across the court.', objective: 'Keep the ball alive and eliminate the other team. Players who are out spectate until the round ends.', rewards: 'XP for returns and winning rounds.', tournament: 'Local and online 3v3 matches require every team slot to be filled.' },
+  { name: 'PARKOUR / ROCK CLIMB / ZIPLINE', color: '#66E0FF', controls: 'Use your movement controls to jump, wall-jump, grab holds, and change lanes.', objective: 'Finish quickly or survive for the highest distance.', rewards: 'Personal bests and completed runs are posted to the correct leaderboard after the run.', tournament: 'These are solo challenge sports.' },
 ];
 
 export default function HowToPlay({ onClose }) {

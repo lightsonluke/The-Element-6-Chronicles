@@ -119,12 +119,16 @@
   overflow: hidden;
 }
 .el6-match-canvas {
-  width: 100vw;
-  height: 100dvh;
-  max-width: none;
-  max-height: none;
-  border: 0;
-  border-radius: 0;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  aspect-ratio: auto !important;
   object-fit: contain;
   image-rendering: auto;
 }
