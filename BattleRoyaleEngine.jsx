@@ -212,9 +212,19 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
     const finish = (result) => {
       if (finished) return;
       finished = true;
-      setWinner(result);
+      // The end screen needs a complete, deterministic elimination board —
+      // winner first, then the exact order every fighter was eliminated.
+      const standings = fighters.map(fighter => ({
+        placement: fighter._eliminated ? (fighter._placement || players.length) : 1,
+        username: fighter._name,
+        characterId: fighter.char?.id || null,
+        isBot: !!fighter._isBot,
+        kills: eliminations[fighter.playerIndex] || 0,
+      })).sort((a, b) => a.placement - b.placement || b.kills - a.kills || a.username.localeCompare(b.username));
+      const finalResult = { ...result, standings };
+      setWinner(finalResult);
       // Both clients can finalize the match — host is a figurehead
-      try { db.entities.BattleRoyaleMatch.update(matchId, { status: 'finished', winner: result.name, match_state: { ...(latestMatch?.match_state || {}), result } }).catch(() => {}); } catch {}
+      try { db.entities.BattleRoyaleMatch.update(matchId, { status: 'finished', winner: finalResult.name, match_state: { ...(latestMatch?.match_state || {}), result: finalResult } }).catch(() => {}); } catch {}
     };
 
     const sendGuestInput = (input) => {
@@ -741,6 +751,10 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
             <p>Bots: <span className="font-heading">{winner.botCount ?? 0}</span></p>
             {myPlacement && <p className="text-primary">Your Placement: <span className="font-heading">#{myPlacement}</span></p>}
           </div>
+          <div className="w-full max-w-2xl max-h-[42vh] overflow-y-auto rounded-lg border border-border bg-card/90">
+            <div className="sticky top-0 grid grid-cols-[60px_1fr_90px] gap-2 bg-secondary px-3 py-2 text-[10px] font-heading z-10"><span>PLACE</span><span>FIGHTER</span><span className="text-right">KILLS</span></div>
+            {(winner.standings || []).map(row => <div key={`${row.placement}-${row.username}`} className="grid grid-cols-[60px_1fr_90px] gap-2 border-t border-border/60 px-3 py-1.5 text-xs font-body"><span className="font-heading text-accent">#{row.placement}</span><span className="truncate">{row.username}{row.isBot ? ' (BOT)' : ''}</span><span className="text-right font-heading">{row.kills}</span></div>)}
+          </div>
           <button onClick={() => onEnd?.({ won, placement: myPlacement, realCount: winner.realCount, botCount: winner.botCount, botDifficulty: winner.botDifficulty, eliminations: winner.eliminations, charId: myChar })} className="px-8 py-3 bg-primary text-primary-foreground font-heading rounded-lg hover:opacity-80 text-lg">CONTINUE</button>
         </div>
       </div>
@@ -763,7 +777,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
         </div>
       )}
       <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="absolute top-3 right-3 z-10 px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs">PAUSE (ESC)</button>
-      {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
+      {paused && !winner && <PauseMenu online onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
       {reconnecting && !winner && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <div className="flex flex-col items-center gap-2">

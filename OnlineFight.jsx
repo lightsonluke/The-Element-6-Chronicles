@@ -441,7 +441,7 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
       </div>
       <canvas ref={canvasRef} width={W} height={H}
-        className="border-2 border-border rounded-lg shadow-2xl w-full"
+        className="el6-match-canvas"
         style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
       />
       {countdown > 0 && (
@@ -449,7 +449,7 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
+      {paused && !winner && <PauseMenu online onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
       {reconnecting && !winner && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-3xl font-heading text-accent animate-pulse">RECONNECTING…</span>

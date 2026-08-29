@@ -434,7 +434,9 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
       const _gp2 = _gpEnabled ? readGamepadInput(1) : null;
       // Controller cannot pause — use mouse/trackpad or keyboard Esc/P to pause.
       prevGpStart = !!_gp1?.start;
-      if (pausedRef.current) { requestAnimationFrame(loop); return; }
+      // Online/LAN pauses are local input menus only; the shared simulation
+      // continues so the opponent never freezes with us.
+      if (pausedRef.current && !lanConnection) { requestAnimationFrame(loop); return; }
       if (lanConnection && lanConnection.stalledRef && lanConnection.stalledRef.current) { lastTime = now; requestAnimationFrame(loop); return; }
 
       const rawDt = Math.min((now - lastTime) / 1000, 0.05);
@@ -1341,7 +1343,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className={`px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80 ${tournamentMode ? 'ml-auto' : ''}`}>Pause (ESC)</button>
       </div>
       <canvas ref={canvasRef} width={W} height={H}
-        className="border-2 border-border rounded-lg shadow-2xl w-full"
+        className="el6-match-canvas"
         style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
       />
       {countdown > 0 && (
@@ -1349,7 +1351,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={finishQuit} tournamentMode={tournamentMode} onSimRest={simRest} onEndNow={endNow} />}
+      {paused && !winner && <PauseMenu online={!!lanConnection} onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={finishQuit} tournamentMode={tournamentMode} onSimRest={simRest} onEndNow={endNow} />}
       {winner && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/78 rounded-lg gap-5">
           <span className="text-5xl font-heading text-accent drop-shadow-lg">{winner === 'DRAW' ? 'DRAW!' : `${winner} WINS!`}</span>

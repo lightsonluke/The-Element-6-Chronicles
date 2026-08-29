@@ -412,13 +412,13 @@ export default function RollbackOnlineFight({
       {networkError && <p className="text-xs text-destructive font-body">{networkError}</p>}
       {resyncing && <div className="absolute inset-0 z-20 grid place-items-center bg-black/70 font-heading text-accent text-2xl">RESYNCING MATCH…</div>}
       <p className="text-[10px] text-muted-foreground font-body">Your device controls your selected fighter. Use Arrows, WASD, or your Settings custom control preset.</p>
-      <canvas ref={canvasRef} width={ONLINE_STAGE_WIDTH} height={ONLINE_STAGE_HEIGHT} className="border-2 border-border rounded-lg shadow-2xl w-full" style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />
+      <canvas ref={canvasRef} width={ONLINE_STAGE_WIDTH} height={ONLINE_STAGE_HEIGHT} className="el6-match-canvas" />
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
+      {paused && <PauseMenu online onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
     </div>
   );
 }

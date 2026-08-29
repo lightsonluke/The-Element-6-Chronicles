@@ -28,11 +28,12 @@ const CONTROLS = [
     ]},
 ];
 
-export default function PauseMenu({ onResume, onQuit, tournamentMode = false, onSimRest, onEndNow }) {
+export default function PauseMenu({ onResume, onQuit, tournamentMode = false, onSimRest, onEndNow, online = false }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-lg z-20 backdrop-blur-sm">
       <div className="bg-card border border-border rounded-2xl p-8 w-[520px] shadow-2xl">
         <h2 className="text-3xl font-heading text-center text-foreground mb-1 tracking-widest">PAUSED</h2>
+        {online && <p className="text-center text-[10px] font-body text-accent mb-3">ONLINE MATCH CONTINUES — ONLY YOUR INPUT IS PAUSED</p>}
         <div className="w-24 h-0.5 bg-primary mx-auto mb-6 rounded" />
 
         <div className="grid grid-cols-2 gap-6 mb-6">

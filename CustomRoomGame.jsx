@@ -655,7 +655,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
       </div>
       <canvas ref={canvasRef} width={W} height={H}
-        className="border-2 border-border rounded-lg shadow-2xl w-full"
+        className="el6-match-canvas"
         style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
       />
       {countdown > 0 && (
@@ -663,7 +663,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
+      {paused && !winner && <PauseMenu online={!!lanConnection} onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
       {lanConnection && lanConnection.stalled && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-lg z-50">
           <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mb-3" />
