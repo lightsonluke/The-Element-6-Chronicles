@@ -787,13 +787,19 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         if (f1.stocks <= 0 && f2.stocks <= 0) p1Won = null;
         else if (f1.stocks <= 0) p1Won = false;
         else if (f2.stocks <= 0) p1Won = true;
-        else p1Won = f1.stocks > f2.stocks ? true : f2.stocks > f1.stocks ? false : null;
+        else if (f1.stocks !== f2.stocks) p1Won = f1.stocks > f2.stocks;
+        // A timed fight is decided by stocks first, then the lower damage
+        // percentage.  Only an exact tie is a draw.
+        else if (gameRef.current.timer <= 0) {
+          p1Won = f1.damage < f2.damage ? true : f2.damage < f1.damage ? false : null;
+        } else p1Won = null;
         // Coin battle: winner is whoever has more coins
         if (gameMode === 'coin') {
           p1Won = coinsCollected1 > coinsCollected2 ? true : coinsCollected2 > coinsCollected1 ? false : null;
         }
-        // Tie → sudden death (no draws allowed)
+        // Stock KOs use sudden death. A genuine 0:00 tie is a draw.
         if (p1Won === null && !gameRef.current._suddenDeath) {
+          if (gameRef.current.timer <= 0) { finish(null); return; }
           gameRef.current._suddenDeath = true;
           f1.stocks = 1; f2.stocks = 1; f1.damage = 600; f2.damage = 600;
           if (gameMode === 'hp' || gameMode === 'brawl') { f1.hp = 450; f2.hp = 450; }
@@ -1614,25 +1620,17 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
   }, [winner]);
 
   return (
-    <div className="relative flex flex-col items-center gap-2 w-full">
-      <div className="flex justify-between w-full px-1 max-w-[1280px]">
-        <button onClick={() => gameMode !== 'challenge' && finishQuit()}
-          className={`px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs ${gameMode === 'challenge' ? 'opacity-30 cursor-not-allowed' : 'hover:opacity-80'}`}>
-          {gameMode === 'challenge' ? 'No Retreat' : <><GameIcon emoji="←" size={14} /> Menu</>}
-        </button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }}
-          className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">Pause (ESC)</button>
-      </div>
+    <div className="el6-match-viewport relative flex flex-col items-center w-full">
       <canvas
         ref={canvasRef} width={W} height={H}
-        className="border-2 border-border rounded-lg shadow-2xl w-full"
-        style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
+        className="el6-match-canvas"
       />
       {countdown > 0 && !settings.hideCountdown && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
+      <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="absolute top-3 right-3 z-10 px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs">PAUSE (ESC)</button>
       {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={gameMode === 'challenge' ? () => { pausedRef.current = false; setPaused(false); } : finishQuit} />}
       {winner && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/78 rounded-lg gap-5">

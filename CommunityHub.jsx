@@ -841,12 +841,6 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
         <button onClick={onBack} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
       </div>
 
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-heading">
-        <span className="text-muted-foreground">CURRENT SERVER</span>
-        <span className="select-all text-accent tracking-widest">{serverCode}</span>
-        <span className="text-[9px] text-muted-foreground">Share this code to invite players{String(serverCode).toUpperCase().startsWith('PRV-') ? ' privately' : ''}.</span>
-      </div>
-
       {/* Matchmaking quick queue — back returns to Hub */}
       <div className="flex gap-1.5 flex-wrap bg-card/60 border border-border rounded-xl px-2 py-1.5">
         <span className="text-[9px] font-heading text-muted-foreground self-center mr-1">QUICK QUEUE:</span>

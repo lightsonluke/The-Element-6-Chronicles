@@ -25,9 +25,7 @@ export default function HubServerSelect({ onBack, onJoin }) {
       try {
         const all = await db.entities.Presence.filter({}, '-last_active', 200);
         const cutoff = Date.now() - STALE_MS;
-        // Private servers are joinable only by an explicit code. Never reveal
-        // their code/name/player count in the public browser.
-        const active = (all || []).filter(p => p.hub_server && !String(p.hub_server).toUpperCase().startsWith('PRV-') && p.last_active && new Date(p.last_active).getTime() > cutoff);
+        const active = (all || []).filter(p => p.hub_server && p.last_active && new Date(p.last_active).getTime() > cutoff);
         // Group by hub_server code
         const map = {};
         active.forEach(p => {
@@ -86,7 +84,7 @@ export default function HubServerSelect({ onBack, onJoin }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        {servers.length === 0 && <p className="text-muted-foreground font-body text-sm p-4">No public servers right now. Create one, join a code, or choose Random!</p>}
+        {servers.length === 0 && <p className="text-muted-foreground font-body text-sm p-4">No active servers right now. Create one!</p>}
         {servers.map(s => {
           const full = s.count >= 20;
           return (

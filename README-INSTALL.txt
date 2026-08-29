@@ -1,20 +1,23 @@
-ELEMENT 6 ONLINE FINAL REPAIR
+ELEMENT 6 — GLOBAL MATCH + ONLINE FOUNDATION UPDATE
 
-1. Run Supabase-elo-leaderboard-fix.sql in Supabase SQL Editor (this fixes the
-   ambiguous user_id error in Top 100).
-2. Upload every .jsx file in this folder to the repository root and allow GitHub
-   to replace same-named files.
-3. Upload the rollback folder to the repository root, replacing rollback/rollbackSession.js.
-4. Upload the public/404.html file into the repository's public folder, then
-   commit and wait for the build to finish before opening the game.
+1. Run Supabase-battle-royale-custom-rooms-and-elo-search.sql, then Supabase-account-bound-save-codes.sql in Supabase SQL Editor.
+2. Upload every other file in this folder to the matching location in your GitHub game repository.
+   - Files in rollback/ go in your existing rollback/ folder.
+   - public/ files go in public/.
+3. Let GitHub replace same-named files, commit, then wait for the Pages deployment.
 
-The Banger online queue uses six player slots. Each browser only sends its own
-slot's key/action; when the ball reaches a player, only that player's slot can
-perform the Banger action.
+Included fixes
+- ELO username search supports partial names and shows a player outside the top 100.
+- Paid Shop ONLY: category browsing and new reduced prices. Token-shop tabs remain untouched.
+- Offline opponent volleyball bots use bump returns only.
+- A fight that reaches 0:00 resolves by stocks, then lower damage, then a true draw.
+- A power cooldown does not tick while the power is active.
+- Core fight, Battle Royale, and volleyball canvases use the full display.
+- Icon rendering is baseline-safe and no longer relies on a duplicate-key generated icon map.
+- The SQL and helper files provide Supabase room records plus Realtime transports for Battle Royale and custom rooms.
+- Silver's Hardened power is exactly 50% incoming-damage and knockback reduction.
+- Rollback fight recovery has a 2.5-second one-recovery guard, preventing repeated RESYNCING overlays.
+- Save codes are server-stored and account-bound. Call invalidate_my_element6_save_codes('purchase') from your verified payment webhook and invalidate_my_element6_save_codes('trade_or_gift') after a verified trade/gift.
 
-This package intentionally does not touch offline sport files.
-
-URL note: the game now changes browser paths such as /home, /shop, /fights,
-and /onlinesports while navigating. GitHub Pages needs a SPA fallback to make
-a direct reload of a deep path work; use the normal home address if GitHub
-Pages has not been configured with that fallback yet.
+Important
+The Battle Royale and Custom Room SQL/helpers are the secure multiplayer foundation. They must be connected to the existing BattleRoyaleLobby and CustomRoomLobby scene lifecycle in a follow-up replacement, because those current components still call localBackend. Do not mix browser-local rooms with these Supabase rooms: use the Supabase functions for cross-device play.

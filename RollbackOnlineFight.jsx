@@ -124,6 +124,7 @@ export default function RollbackOnlineFight({
     let stopped = false;
     let finished = false;
     let resyncing = false;
+    let lastResyncAt = 0;
     let lastPeerMessageAt = Date.now();
     let transport;
     let session;
@@ -269,8 +270,11 @@ export default function RollbackOnlineFight({
           onDesync: () => {
             // A checksum mismatch is recoverable: pause both simulations and
             // use the host's authoritative confirmed snapshot.
-            if (resyncing) return;
+            // One recovery at a time. A short cooldown prevents checksum noise
+            // from repeatedly flashing RESYNCING while the host snapshot fixes it.
+            if (resyncing || Date.now() - lastResyncAt < 2500) return;
             resyncing = true;
+            lastResyncAt = Date.now();
             setResyncing(true);
             setConnectionText('RESYNCING…');
             if (isHost) transport?.sendControl('resync-state', { frame: session?.getStats().currentFrame || 0, state: session?.getRenderableState() }).catch(() => {});
@@ -299,7 +303,9 @@ export default function RollbackOnlineFight({
           else if (packet.kind === 'resync-request' && isHost) {
             transport.sendControl('resync-state', { frame: session.getStats().currentFrame, state: session.getRenderableState() }).catch(() => {});
           } else if ((packet.kind === 'resync-state' || packet.kind === 'state-snapshot') && packet.state) {
+            if (resyncing && packet.kind === 'state-snapshot') return;
             resyncing = true;
+            lastResyncAt = Date.now();
             setResyncing(true);
             session.replaceState(packet.state, Number(packet.frame) || packet.state.frame || 0);
             window.setTimeout(() => { resyncing = false; setResyncing(false); }, 140);

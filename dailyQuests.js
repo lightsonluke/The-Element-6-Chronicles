@@ -21,9 +21,9 @@ const QUEST_POOL = [
 ];
 
 export const CHEST_TYPES = [
-  { id: 'bronze', name: 'Bronze Chest',  color: '#CD7F32', minCoins: 15, maxCoins: 40,  cosmeticChance: 0.10 },
-  { id: 'silver', name: 'Silver Chest',  color: '#C0C0C0', minCoins: 30, maxCoins: 80,  cosmeticChance: 0.25 },
-  { id: 'gold',   name: 'Gold Chest',    color: '#FFD700', minCoins: 60, maxCoins: 150, cosmeticChance: 0.45 },
+  { id: 'bronze', name: 'Bronze Quest', color: '#CD7F32', minCoins: 150, maxCoins: 150, cosmeticChance: 0 },
+  { id: 'silver', name: 'Silver Quest', color: '#C0C0C0', minCoins: 175, maxCoins: 175, cosmeticChance: 0.22 },
+  { id: 'gold', name: 'Gold Quest', color: '#FFD700', minCoins: 200, maxCoins: 200, cosmeticChance: 0.35 },
 ];
 
 // Generate 3 daily quests based on a seed (date string)
@@ -31,7 +31,8 @@ export function generateDailyQuests(seed) {
   const rng = mulberry(hashString(seed));
   const pool = [...QUEST_POOL].sort(() => rng() - 0.5);
   return pool.slice(0, 3).map((q, i) => {
-    const targetIdx = Math.floor(rng() * q.targets.length);
+    // Bronze, silver, and gold always step up in difficulty.
+    const targetIdx = Math.min(i, q.targets.length - 1);
     const target = q.targets[targetIdx];
     const reward = CHEST_TYPES[Math.min(i, CHEST_TYPES.length - 1)];
     return {
@@ -51,16 +52,15 @@ export function openChest(chestId, ownedItems = []) {
   const rng = Math.random();
   const coins = Math.floor(rng * (chest.maxCoins - chest.minCoins + 1)) + chest.minCoins;
 
-  // Try cosmetic
+  // Silver/gold bonus: the game picks the reward itself.  The player never
+  // chooses a cosmetic from the browser/client request.
   if (Math.random() < chest.cosmeticChance) {
-    // Pick from accessories, skins, or kill FX not already owned
+    // Pick from accessories or kill FX not already owned. Skins are excluded.
     const availableAccs = ACCESSORIES.filter(a => !a.id.startsWith('jersey_') && !ownedItems.includes(a.id));
-    const availableSkins = SKINS.filter(s => !ownedItems.includes(s.id));
     const availableKillFX = KILL_FX.filter(k => k.price > 0 && !ownedItems.includes(k.id));
 
     const allAvail = [
       ...availableAccs.map(a => ({ type: 'accessory', id: a.id, name: a.name })),
-      ...availableSkins.map(s => ({ type: 'skin', id: s.id, name: s.name })),
       ...availableKillFX.map(k => ({ type: 'killfx', id: k.id, name: k.name })),
     ];
 

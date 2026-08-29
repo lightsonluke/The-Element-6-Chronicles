@@ -998,7 +998,10 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
   if (fighter.heavyCooldown > 0) fighter.heavyCooldown--;
   if (fighter.recoveryCooldown > 0) fighter.recoveryCooldown--;
   if (fighter.groundPoundCooldown > 0) fighter.groundPoundCooldown--;
-  if (fighter.powerCooldown > 0) fighter.powerCooldown--;
+  // A power cannot recharge while its animation/effect is still running.
+  // This is shared by every mode that uses updateFighter (offline, LAN,
+  // battle royale, campaign, sandbox, and the rollback fight simulation).
+  if (fighter.powerCooldown > 0 && !fighter.powerActive && fighter.powerTimer <= 0) fighter.powerCooldown--;
   if (fighter.slowTimer > 0) fighter.slowTimer--;
   if (fighter.noBlastKill > 0) fighter.noBlastKill--;
   if (fighter.reverseControls > 0) fighter.reverseControls--;
@@ -1336,7 +1339,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     if (!inputs.sig) inputs._sigConsumed = false;
 
     // ── Power Activation (replaces light attack) ──
-    if (inputs.power && !inputs._powerConsumed && fighter.powerCooldown <= 0 && fighter.powerDisabled <= 0) {
+    if (inputs.power && !inputs._powerConsumed && !fighter.powerActive && fighter.powerTimer <= 0 && fighter.powerCooldown <= 0 && fighter.powerDisabled <= 0) {
       inputs._powerConsumed = true;
       fighter.moveStats.power++;
       activatePower(fighter, opponent);

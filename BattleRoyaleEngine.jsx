@@ -411,6 +411,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           brObjects: serializeObjects(brObjects),
         } : {}),
         alive: aliveList().length,
+        time: matchTime,
       };
       try { db.entities.BattleRoyaleMatch.update(matchId, { match_state: state }).catch(checkRate); } catch {}
     };
@@ -747,14 +748,9 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
   }
 
   return (
-    <div className="relative flex flex-col items-center gap-2 w-full">
-      <div className="flex justify-between w-full max-w-[1280px]">
-        <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Forfeit</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
-      </div>
+    <div className="el6-match-viewport relative flex flex-col items-center w-full">
       <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H}
-        className="border-2 border-border rounded-lg shadow-2xl w-full"
-        style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />
+        className="el6-match-canvas" />
       {countdown > 0 && !settings?.hideCountdown && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
@@ -766,6 +762,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           <p className="text-[10px] text-muted-foreground font-body">Use ← → or A / D to switch players</p>
         </div>
       )}
+      <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="absolute top-3 right-3 z-10 px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs">PAUSE (ESC)</button>
       {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
       {reconnecting && !winner && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">

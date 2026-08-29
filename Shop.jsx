@@ -10,7 +10,7 @@ import { drawStickman } from './renderer.js';
 import { music } from './music.js';
 import DonateTab from './DonateTab.jsx';
 import { formatNumber } from './formatNumber.js';
-import { PAID_PACKS, SUBSCRIPTIONS } from './shopPacks.js';
+import { PAID_PACKS } from './shopPacks.js';
 import { PROFILE_TITLES, getTitleColor, ownsTitle } from './profileTitles.js';
 import { charPrice, charCategory, charEra, CATEGORY_COLORS } from './charPrices.js';
 import { CROSSOVERS, crossoversForChar, getCrossoverColor } from './crossovers.js';
@@ -41,6 +41,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
   const [tryOn, setTryOn] = useState(null); // accessory id being previewed
   const [justBought, setJustBought] = useState(null); // post-buy "equip in shop" overlay
   const [shopTab, setShopTab] = useState('accessories');
+  const [paidCategory, setPaidCategory] = useState('Featured');
   const [eraFilter, setEraFilter] = useState('all');
   const coins = progress?.coins || 0;
   const owned = progress?.ownedAccessories || [];
@@ -397,43 +398,31 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
       {/* Paid Items tab */}
       {shopTab === 'paid' && (
       <div>
-        <p className="text-[10px] font-heading text-muted-foreground mb-2">PAID ITEMS — Real-money purchases via online checkout (coming soon). Includes 7 extra Custom Character Slots.</p>
+        <div className="rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/15 via-card to-accent/10 p-4 mb-3">
+          <p className="font-heading text-lg text-accent">PAID SHOP</p>
+          <p className="text-[11px] text-muted-foreground">Token-shop items above are unchanged. Browse paid rewards by category.</p>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {['Featured','Accessories','Emotes','Shikigami','Profile','Battle Pass','Tokens','Support','Custom Content'].map(category => <button key={category} onClick={() => setPaidCategory(category)} className={`px-3 py-1.5 rounded-full font-heading text-[10px] ${paidCategory === category ? 'bg-accent text-accent-foreground shadow-lg' : 'bg-secondary text-secondary-foreground'}`}>{category.toUpperCase()}</button>)}
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {PAID_PACKS.map(p => {
+          {PAID_PACKS.filter(p => paidCategory === 'Featured' ? ['Tokens','Battle Pass','Support'].includes(p.category) : p.category === paidCategory).map(p => {
             const isOwned = (progress?.ownedPacks || []).includes(p.id);
             return (
-              <div key={p.id} className="bg-card border-2 rounded-xl p-4 flex flex-col items-center text-center" style={{ borderColor: p.color + '66' }}>
+              <div key={p.id} className={`bg-card border-2 rounded-2xl p-4 flex flex-col items-center text-center shadow-xl transition-transform hover:-translate-y-1 ${p.category === 'Tokens' || p.category === 'Support' ? 'md:col-span-1' : ''}`} style={{ borderColor: p.color + '88' }}>
                 <span className="text-4xl mb-1">{p.emoji}</span>
                 <p className="font-heading text-sm text-foreground">{p.name}</p>
                 <p className="text-[9px] text-muted-foreground mb-2 flex-1">{p.desc}</p>
-                <p className="font-heading text-lg mb-2" style={{ color: p.color }}>${(p.price / 100).toFixed(2)}</p>
+                {p.grants?.amount && <p className="font-heading text-2xl mb-1" style={{ color: p.color }}>{p.grants.amount.toLocaleString()} TOKENS</p>}
+                {p.name.includes('RANDOM') && <span className="mb-2 px-2 py-0.5 rounded bg-primary/20 text-primary font-heading text-[9px]">RANDOM REWARDS</span>}
+                <p className="font-heading text-xl mb-2" style={{ color: p.color }}>${(p.price / 100).toFixed(2)}</p>
                 {isOwned ? (
                   <span className="px-3 py-1 bg-accent/20 text-accent rounded font-heading text-[10px] w-full"><GameIcon emoji="✓" size={14} /> OWNED</span>
                 ) : (
                   <button onClick={() => onBuyPack?.(p.id)} disabled
-                    className="px-3 py-1 bg-muted text-muted-foreground rounded font-heading text-[10px] w-full cursor-not-allowed">
+                    className="px-3 py-2 bg-muted text-muted-foreground rounded-lg font-heading text-[10px] w-full cursor-not-allowed">
                     COMING SOON
                   </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        {/* Subscriptions */}
-        <p className="text-[10px] font-heading text-muted-foreground mt-4 mb-2">SUBSCRIPTIONS</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {SUBSCRIPTIONS.map(s => {
-            const isActive = progress?.battlePassPlus === true;
-            return (
-              <div key={s.id} className="bg-card border-2 rounded-xl p-4 flex flex-col items-center text-center" style={{ borderColor: s.color + '66' }}>
-                <span className="text-4xl mb-1">{s.emoji}</span>
-                <p className="font-heading text-sm text-foreground">{s.name}</p>
-                <p className="text-[9px] text-muted-foreground mb-2 flex-1">{s.desc}</p>
-                <p className="font-heading text-lg mb-2" style={{ color: s.color }}>${(s.price / 100).toFixed(2)}/mo</p>
-                {isActive ? (
-                  <span className="px-3 py-1 bg-accent/20 text-accent rounded font-heading text-[10px] w-full"><GameIcon emoji="✓" size={14} /> ACTIVE</span>
-                ) : (
-                  <button disabled className="px-3 py-1 bg-muted text-muted-foreground rounded font-heading text-[10px] w-full cursor-not-allowed">COMING SOON</button>
                 )}
               </div>
             );
