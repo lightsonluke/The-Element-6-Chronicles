@@ -18,8 +18,10 @@ const GAME_COMPONENTS = {
 
 // Sports tab: pick a sport, then play. Soccer delegates to the existing
 // Soccer flow inside Game.jsx (onPlaySoccer); the 5 new sports use SportsShell.
-export default function SportsHub({ onBack, onPlaySoccer, onShop, onAward, onEnd, onCustomRoom, onOnlineSports, onOnlinePlay, unlockedIds, favoriteId, equippedAccessories = {}, equippedSkins = {}, settings = {}, charLevels = {}, equippedElements = {}, onEquipElement, sfxVolume, musicVolume, customCharsData = {}, customNumberMap = {}, charMastery = {}, equippedEmotes = {} }) {
-  const [sport, setSport] = useState(null);
+export default function SportsHub({ initialSport = null, onBack, onPlaySoccer, onShop, onAward, onEnd, onCustomRoom, onOnlineSports, onOnlinePlay, unlockedIds, favoriteId, equippedAccessories = {}, equippedSkins = {}, settings = {}, charLevels = {}, equippedElements = {}, onEquipElement, sfxVolume, musicVolume, customCharsData = {}, customNumberMap = {}, charMastery = {}, equippedEmotes = {} }) {
+  const [sport, setSport] = useState(initialSport);
+
+  useEffect(() => { if (initialSport) setSport(initialSport); }, [initialSport]);
 
   // Soccer is an existing offline screen owned by Game.jsx.  Do not call the
   // parent navigation setter while this component is rendering: React can

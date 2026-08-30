@@ -18,7 +18,6 @@ import { THEMES, applyUiTheme } from './uiThemes.js';
 import { setCustomBackdropUrl, clearCustomBackdrop } from './customBackdrop.js';
 import AccountPanel from './AccountPanel.jsx';
 import { syncCurrentUsername } from './usernameSync.js';
-import { MOBILE_CONTROL_DEFAULTS, normalizeMobileControls } from './mobileControls.js';
 
 const DIFFICULTIES = ['newcomer', 'beginner', 'easy', 'amateur', 'regular', 'pro', 'hard', 'insane', 'honored'];
 const MATCH_TIMES = [
@@ -42,7 +41,7 @@ function Toggle({ on, onClick }) {
   );
 }
 
-export default function Settings({ onBack, settings, onSave, onReset, onUsernameChange, onOpenController }) {
+export default function Settings({ onBack, settings, onSave, onReset, onUsernameChange, onOpenController, onOpenMobileControls }) {
   const [local, setLocal] = useState(settings || {});
   const { pads } = useGamepad();
   const [uploading, setUploading] = useState(null);
@@ -436,43 +435,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Show FPS counter:</span><Toggle on={local.showFPS === true} onClick={() => apply({ showFPS: !local.showFPS })} /></div>
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Mobile Mode (on-screen buttons, singleplayer only):</span><Toggle on={local.mobileMode === true} onClick={() => apply({ mobileMode: !local.mobileMode })} /></div>
           {local.mobileMode && <p className="text-[10px] text-accent font-body">Mobile Mode is ON — on-screen touch controls will appear during gameplay. Multiplayer is restricted to LAN Play only (different devices).</p>}
-          {local.mobileMode && (() => {
-            const mc = normalizeMobileControls(local.mobileControls);
-            const patchButton = (id, patch) => apply({ mobileControls: { ...mc, buttons: { ...mc.buttons, [id]: { ...mc.buttons[id], ...patch } } } });
-            const labels = { left: 'Left', right: 'Right', jump: 'Jump', down: 'Down', power: 'Power', sig: 'Signature', heavy: 'Heavy', superMove: 'Super' };
-            return (
-              <div className="mt-3 border border-border/60 rounded-xl p-4 bg-muted/20">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <div><p className="text-[10px] font-heading text-primary">MOBILE BUTTON LAYOUT</p><p className="text-[9px] text-muted-foreground">Customize the on-screen controls used during gameplay.</p></div>
-                  <button onClick={() => apply({ mobileControls: MOBILE_CONTROL_DEFAULTS })} className="px-2 py-1 rounded bg-secondary text-secondary-foreground text-[9px] font-heading">RESET</button>
-                </div>
-                <div className="flex gap-2 mb-3">
-                  <button onClick={() => apply({ mobileControls: { ...mc, mode: 'arrows' } })} className={`flex-1 px-3 py-2 rounded-lg text-[10px] font-heading border ${mc.mode === 'arrows' ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground border-border'}`}>ARROWS</button>
-                  <button onClick={() => apply({ mobileControls: { ...mc, mode: 'joystick' } })} className={`flex-1 px-3 py-2 rounded-lg text-[10px] font-heading border ${mc.mode === 'joystick' ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground border-border'}`}>JOYSTICK</button>
-                </div>
-                {mc.mode === 'joystick' && <div className="flex items-center justify-between mb-3"><span className="text-xs font-body text-muted-foreground">Dynamic joystick (starts where you touch):</span><Toggle on={mc.joystickDynamic} onClick={() => apply({ mobileControls: { ...mc, joystickDynamic: !mc.joystickDynamic } })} /></div>}
-                <div className="space-y-2">
-                  {(mc.mode === 'joystick' ? ['power','sig','heavy','superMove'] : Object.keys(labels)).map(id => {
-                    const v = mc.buttons[id];
-                    return <div key={id} className="grid grid-cols-[80px_1fr_44px] gap-2 items-center">
-                      <span className="text-[9px] font-heading text-foreground">{labels[id]}</span>
-                      <div className="grid grid-cols-4 gap-1">
-                        <label className="text-[8px] text-muted-foreground">X<input aria-label={`${labels[id]} X`} type="range" min="2" max="98" step="1" value={v.x} onChange={e => patchButton(id,{x:+e.target.value})} className="w-full accent-primary"/></label>
-                        <label className="text-[8px] text-muted-foreground">Y<input aria-label={`${labels[id]} Y`} type="range" min="2" max="98" step="1" value={v.y} onChange={e => patchButton(id,{y:+e.target.value})} className="w-full accent-primary"/></label>
-                        <label className="text-[8px] text-muted-foreground">SIZE<input aria-label={`${labels[id]} size`} type="range" min="36" max="120" step="2" value={v.size} onChange={e => patchButton(id,{size:+e.target.value})} className="w-full accent-primary"/></label>
-                        <label className="text-[8px] text-muted-foreground">OPACITY<input aria-label={`${labels[id]} opacity`} type="range" min="15" max="100" step="5" value={Math.round(v.opacity*100)} onChange={e => patchButton(id,{opacity:+e.target.value/100})} className="w-full accent-primary"/></label>
-                      </div>
-                      <span className="text-[8px] text-muted-foreground text-right">{Math.round(v.opacity*100)}%</span>
-                    </div>;
-                  })}
-                </div>
-                {mc.mode === 'joystick' && <div className="mt-3 text-[9px] text-muted-foreground">Joystick position/size/opacity are controlled by the joystick itself; use the fixed joystick location below when needed.</div>}
-                {mc.mode === 'joystick' && <div className="grid grid-cols-4 gap-2 mt-2">
-                  {['x','y','size','opacity'].map(k => <label key={k} className="text-[8px] text-muted-foreground">{k.toUpperCase()}<input type="range" min={k==='size'?'60':'0'} max={k==='size'?'160':k==='opacity'?'100':'100'} value={k==='opacity'?Math.round(mc.joystick[k]*100):mc.joystick[k]} onChange={e => apply({ mobileControls: { ...mc, joystick: { ...mc.joystick, [k]: k==='opacity' ? +e.target.value/100 : +e.target.value } } })} className="w-full accent-primary"/></label>)}
-                </div>}
-              </div>
-            );
-          })()}
+          <button onClick={onOpenMobileControls} className="w-full px-4 py-2 bg-accent/15 border border-accent/40 text-accent rounded-lg font-heading text-xs hover:bg-accent/25">OPEN MOBILE CONTROL LAYOUT TEST</button>
           <div className="border-t border-border/50 my-2 pt-2">
             <p className="text-[9px] font-heading text-primary mb-2">HUD HIDES (all non-online fight modes)</p>
             <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Hide stock boxes:</span><Toggle on={local.hideStockBoxes === true} onClick={() => apply({ hideStockBoxes: !local.hideStockBoxes })} /></div>

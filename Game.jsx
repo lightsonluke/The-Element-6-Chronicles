@@ -90,6 +90,7 @@ import { applyUiTheme } from './uiThemes.js';
 import { setCustomBackdropUrl, clearCustomBackdrop } from './customBackdrop.js';
 import { formatNumber } from './formatNumber.js';
 import TouchControls from './TouchControls.jsx';
+import MobileControlsTest from './MobileControlsTest.jsx';
 import { useGamepadMenuNav } from './useGamepadMenuNav.js';
 import { loadCloudProgress, saveCloudProgress } from './cloudSaves.js';
 import { supabase } from './supabaseClient.js';
@@ -167,7 +168,7 @@ function loadProgress() {
   return { ...DEFAULT_PROGRESS };
 }
 let _activeStorySlot = null;
-const STORY_FIELDS = ['defeatedVillains', 'playerX', 'playerY', 'inventory', 'hotbar', 'currentHeroId', 'blockMods'];
+const STORY_FIELDS = ['defeatedVillains', 'playerX', 'playerY', 'inventory', 'hotbar', 'currentHeroId', 'blockMods', 'worldSeed'];
 
 // Debounce cloud saves to avoid hammering the DB on rapid updates
 let _cloudSaveTimer = null;
@@ -205,22 +206,58 @@ const ALL = [...ALL_CHARS];
 const TOUCH_SCREENS = ['fighting', 'soccer', 'sports', 'training', 'tutorial', 'lan', 'team', 'customrooms', 'experimental', 'sportslobby'];
 
 export default function Game() {
-  const SCREEN_PATHS = { menu: '/home', shop: '/shop', modeSelect: '/fights', onlinelobby: '/online', onlinesports: '/onlinesports', sports: '/sports', elo: '/elo', hubserverselect: '/community', leaderboard: '/leaderboards', settings: '/settings' };
+  const SCREEN_PATHS = {
+    menu: '/home', shop: '/shop', modeSelect: '/fights', onlinelobby: '/online', onlinesports: '/onlinesports',
+    sports: '/sports', elo: '/elo', hubserverselect: '/community', leaderboard: '/leaderboards', settings: '/settings',
+    hub: '/community-hub', sandbox: '/sandbox-mode', stageeditor: '/stage-editor', mobilecontrols: '/mobile-controls', training: '/training', combos: '/combo-trainer',
+    tutorial: '/tutorial', storySaves: '/story-mode', soccer: '/soccer', friends: '/friends', chat: '/chat',
+    battleroyale: '/battle-royale', customrooms: '/custom-rooms', lan: '/lan-play', leaderboardhall: '/leaderboard',
+    about: '/about-the-game', battlepass: '/battle-pass', lore: '/lore-library', equip: '/equip', meet: '/meet-characters',
+    editchars: '/edit-characters', creator: '/create-character', codex: '/hero-codex', daily: '/daily-quests',
+    fightquests: '/fight-quests', grandcircuit: '/grand-circuit', tournament: '/tournament', savecodes: '/save',
+    onlinesettings: '/online-settings', sportslobby: '/online-sports', creatorMode: '/campaigns', creatormode: '/campaigns',
+    custombattle: '/custom-battle', team: '/2v2-teams', shapeshiftSelect: '/shapeshift', cutscene: '/story-intro',
+  };
+  const CHARACTER_MODE_PATHS = {
+    '/regular-battle': 'regular', '/time-battle': 'time', '/super-only': 'superonly', '/sudden-death': 'sudden',
+    '/bot-ranked': 'ranked', '/coin-battle': 'coin', '/split-city-brawl': 'brawl', '/the-challenge': 'challenge',
+    '/bot-battle': 'botbattle', '/low-gravity': 'lowgravity', '/2v2-teams': 'team', '/tournament-character-select': 'tournament',
+  };
+  const PATH_ALIASES = {
+    '/home': 'menu', '/fights': 'modeSelect', '/online': 'onlinelobby', '/ranked': 'onlinelobby', '/unranked': 'onlinelobby',
+    '/online-fights': 'onlinelobby', '/sports': 'sports', '/online-sports': 'sportslobby', '/onlinesports': 'sportslobby',
+    '/soccer': 'soccer', '/soccer-online': 'onlinesports', '/soccer-ranked': 'onlinesports', '/volleyball': 'sports',
+    '/volleyball-online': 'onlinesports', '/volleyball-ranked-1v1': 'onlinesports', '/baseball': 'sports', '/parkour': 'sports',
+    '/rock-climbing': 'sports', '/capture-the-flag': 'sports', '/dodgeball': 'sports', '/dodgeball-ranked': 'onlinesports',
+    '/dodgeball-online': 'onlinesports', '/ziplining': 'sports', '/banger': 'sports', '/banger-online': 'onlinesports',
+    '/battle-royale': 'battleroyale', '/custom-rooms': 'customrooms', '/lan-play': 'lan', '/friends': 'friends', '/chat': 'chat',
+    '/elo': 'elo', '/story': 'storySaves', '/story-mode': 'storySaves', '/community': 'hubserverselect', '/community-hub': 'hubserverselect',
+    '/settings': 'settings', '/online-settings': 'onlinesettings', '/battle-pass': 'events', '/lore': 'lore', '/lore-library': 'lore',
+    '/equip': 'equip', '/equip-tab': 'equip', '/meet-characters': 'meet', '/edit-characters': 'editchars', '/create-character': 'creator',
+    '/hero-codex': 'codex', '/daily-quests': 'daily', '/fight-quests': 'fightquests', '/leaderboard': 'leaderboard', '/leaderboards': 'leaderboard',
+    '/campaigns': 'creatormode', '/shop': 'shop', '/save': 'savecodes', '/about': 'about', '/about-the-game': 'about',
+    '/sandbox': 'sandbox', '/sandbox-mode': 'sandbox', '/stage-editor': 'stageeditor', '/mobile-controls': 'mobilecontrols',
+    '/training': 'training', '/combo-trainer': 'combos', '/tutorial': 'tutorial', '/custom-battle': 'custombattle', '/tournament': 'tournament',
+    '/grand-circuit': 'grandcircuit', '/shapeshift': 'shapeshiftSelect', '/2v2-teams': 'charSelect',
+    '/regular-battle': 'charSelect', '/time-battle': 'charSelect', '/super-only': 'charSelect', '/sudden-death': 'charSelect',
+    '/bot-ranked': 'charSelect', '/coin-battle': 'charSelect', '/split-city-brawl': 'charSelect', '/the-challenge': 'charSelect',
+    '/bot-battle': 'charSelect', '/low-gravity': 'charSelect',
+  };
   const PATH_SCREENS = Object.fromEntries(Object.entries(SCREEN_PATHS).map(([name, path]) => [path, name]));
   const githubPrefix = window.location.hostname.endsWith('.github.io')
-    ? `/${window.location.pathname.split('/').filter(Boolean)[0] || 'The-Element-6-Chronicles'}`
-    : '';
-  const [screen, setScreen] = useState(() => {
-    const recoveredPath = sessionStorage.getItem('element6_requested_path');
-    if (recoveredPath) sessionStorage.removeItem('element6_requested_path');
-    const rawPath = recoveredPath || window.location.pathname;
-    const finalSegment = `/${rawPath.split('/').filter(Boolean).pop() || 'home'}`;
-    return PATH_SCREENS[rawPath] || PATH_SCREENS[finalSegment] || 'menu';
-  });
+    ? `/${window.location.pathname.split('/').filter(Boolean)[0] || 'The-Element-6-Chronicles'}` : '';
+  const rawInitialPath = sessionStorage.getItem('element6_requested_path') || window.location.pathname;
+  sessionStorage.removeItem('element6_requested_path');
+  const initialModeFromPath = CHARACTER_MODE_PATHS[rawInitialPath] || null;
+  const initialScreenFromPath = initialModeFromPath ? 'charSelect' : (PATH_ALIASES[rawInitialPath] || PATH_SCREENS[rawInitialPath] || 'menu');
+  const initialSportFromPath = ({ '/volleyball':'volleyball','/baseball':'baseball','/parkour':'parkour','/rock-climbing':'rockclimb','/capture-the-flag':'ctf','/dodgeball':'dodgeball','/ziplining':'zipline','/banger':'banger' })[rawInitialPath] || null;
+  const routePathRef = useRef(rawInitialPath || '/home');
+  const [screen, setScreen] = useState(initialScreenFromPath);
   const [returnScreen, setReturnScreen] = useState('menu');
   const [hubServer, setHubServer] = useState(null);
   const [fighters, setFighters] = useState(null);
-  const [pending, setPending] = useState(null); // { mode, p1, p2, isCPU, difficulty }
+  const [pending, setPending] = useState(initialModeFromPath ? { mode: initialModeFromPath } : null); // { mode, p1, p2, isCPU, difficulty }
+  const initialSportRouteRef = useRef(initialSportFromPath);
   const [onlineMode, setOnlineMode] = useState('unranked'); // ranked | unranked | soccer
   const [showCutscene, setShowCutscene] = useState(!localStorage.getItem('element6_progress'));
   const [progress, setProgress] = useState(loadProgress);
@@ -271,14 +308,29 @@ export default function Game() {
   // Human-readable URLs work while browsing. GitHub Pages still needs its
   // normal SPA fallback for a direct refresh on a non-root URL.
   useEffect(() => {
-    const syncFromBrowser = () => setScreen(PATH_SCREENS[window.location.pathname] || 'menu');
+    const syncFromBrowser = () => {
+      const p = window.location.pathname;
+      const mode = CHARACTER_MODE_PATHS[p];
+      if (mode) { setPending({ mode }); setScreen('charSelect'); routePathRef.current = p; return; }
+      const next = PATH_ALIASES[p] || PATH_SCREENS[p] || 'menu';
+      const sportPath = ({ '/volleyball':'volleyball','/baseball':'baseball','/parkour':'parkour','/rock-climbing':'rockclimb','/capture-the-flag':'ctf','/dodgeball':'dodgeball','/ziplining':'zipline','/banger':'banger' })[p] || null;
+      if (sportPath) initialSportRouteRef.current = sportPath;
+      setScreen(next); routePathRef.current = p;
+    };
     window.addEventListener('popstate', syncFromBrowser);
     return () => window.removeEventListener('popstate', syncFromBrowser);
   }, []);
   useEffect(() => {
-    const path = SCREEN_PATHS[screen] ? `${githubPrefix}${SCREEN_PATHS[screen]}` : null;
-    if (path && window.location.pathname !== path) window.history.pushState({ screen }, '', path);
-  }, [screen]);
+    let target = null;
+    if (screen === 'charSelect' && pending?.mode) {
+      const found = Object.entries(CHARACTER_MODE_PATHS).find(([, mode]) => mode === pending.mode);
+      target = found?.[0] || '/fights';
+    } else if (screen === 'sports' && initialSportRouteRef.current) {
+      target = `/${initialSportRouteRef.current === 'rockclimb' ? 'rock-climbing' : initialSportRouteRef.current === 'ctf' ? 'capture-the-flag' : initialSportRouteRef.current}`;
+      initialSportRouteRef.current = null;
+    } else { target = SCREEN_PATHS[screen] || null; }
+    if (target) { routePathRef.current = target; const path = `${githubPrefix}${target}`; if (window.location.pathname !== path) window.history.pushState({ screen }, '', path); }
+  }, [screen, pending?.mode]);
 
   // Controller menu navigation — active everywhere. During active matches each
   // game component sets window.__el6GameplayActive to suppress menu-nav so the
@@ -791,7 +843,7 @@ export default function Game() {
       } else {
         // New story — keep global progress, reset only story-specific fields
         const fresh = { ...progressRef.current, defeatedVillains: [], inventory: {}, hotbar: [], worldSeed: (Math.floor(Math.random() * 2147483646) + 1), currentHeroId: (progressRef.current.unlockedIds || ['yellow'])[0] };
-        delete fresh.playerX; delete fresh.playerY;
+        delete fresh.playerX; delete fresh.playerY; delete fresh.blockMods;
         fresh._savedAt = Date.now();
         saveProgress(fresh);
         setProgress(fresh);
@@ -821,6 +873,7 @@ export default function Game() {
     else if (dest === 'story') { refreshStorySlots(); setScreen('storySaves'); }
     else if (dest === 'fight') setScreen('modeSelect');
     else if (dest === 'creator') setScreen('creator');
+    else if (dest === 'mobilecontrols') { setScreen('mobilecontrols'); sfx.click(); }
     else if (dest === 'friends') setScreen('friends');
     else if (dest === 'chat') setScreen('chat');
     else if (dest === 'leaderboard') setScreen('leaderboard');
@@ -1925,13 +1978,17 @@ export default function Game() {
         )}
 
         {screen === 'settings' && (
-          <Settings onBack={goBack} settings={progress.settings} onSave={(s) => update({ settings: s })} onUsernameChange={handleUsernameChange} onOpenController={() => setScreen('controller')} onReset={() => {
+          <Settings onBack={goBack} settings={progress.settings} onSave={(s) => update({ settings: s })} onUsernameChange={handleUsernameChange} onOpenController={() => setScreen('controller')} onOpenMobileControls={() => setScreen('mobilecontrols')} onReset={() => {
             try {
               localStorage.removeItem('element6_progress');
               for (let i = 0; i < 3; i++) localStorage.removeItem(`element6_story_slot_${i}`);
             } catch {}
             window.location.reload();
           }} />
+        )}
+
+        {screen === 'mobilecontrols' && (
+          <MobileControlsTest settings={progress.settings || {}} onSave={(s) => update({ settings: s })} onBack={goBack} />
         )}
 
         {screen === 'onlinesettings' && (
@@ -2052,6 +2109,7 @@ export default function Game() {
 
         {screen === 'sports' && (
           <SportsHub
+            initialSport={initialSportRouteRef.current}
             onBack={goBack}
             onPlaySoccer={() => setScreen('soccer')}
             onShop={() => setScreen('shop')}

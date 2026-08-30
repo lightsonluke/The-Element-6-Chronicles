@@ -1,46 +1,98 @@
-# Element 6 targeted replacement package
+# Element 6 — Routing + Mobile Layout Test + Story Recovery Replacement Package
 
-Built against the attached `The-Element-6-Chronicles-main-2_2.zip` source tree.
+Copy these files into the repository root and overwrite files with the same names.
 
-## Replace/add only these files
+## Included
 
-Copy the files in this folder into the repository root and overwrite files with the same names. `mobileControls.js` and `storyItems.js` are new files and should be added.
+### 1. Mobile Mode layout test
+- Adds `/mobile-controls`.
+- Settings now has **OPEN MOBILE CONTROL LAYOUT TEST**.
+- Shows a gameplay-style preview of the mobile controls.
+- Drag controls to preview placement.
+- Preview supports arrow mode and joystick mode.
+- Supports dynamic joystick preview.
+- Size and opacity controls are reflected in the preview.
+- Uses the existing `mobileControls` settings structure so the real gameplay controls use the same saved layout.
 
-## Included fixes
+### 2. URL paths
+Adds stable browser paths for the requested screens and game-mode entry points, including:
+- `/regular-battle`
+- `/time-battle`
+- `/super-only`
+- `/sudden-death`
+- `/bot-ranked`
+- `/coin-battle`
+- `/split-city-brawl`
+- `/the-challenge`
+- `/bot-battle`
+- `/low-gravity`
+- `/tournament`
+- `/grand-circuit`
+- `/2v2-teams`
+- `/shapeshift`
+- `/ranked`
+- `/unranked`
+- `/battle-royale`
+- `/custom-rooms`
+- `/lan-play`
+- `/friends`
+- `/chat`
+- `/elo`
+- `/story-mode`
+- `/soccer`
+- `/volleyball`
+- `/baseball`
+- `/parkour`
+- `/rock-climbing`
+- `/capture-the-flag`
+- `/dodgeball`
+- `/ziplining`
+- `/banger`
+- `/online-sports`
+- `/soccer-ranked`
+- `/soccer-online`
+- `/volleyball-online`
+- `/volleyball-ranked-1v1`
+- `/dodgeball-ranked`
+- `/dodgeball-online`
+- `/banger-online`
+- `/sandbox-mode`
+- `/stage-editor`
+- `/training`
+- `/combo-trainer`
+- `/tutorial`
+- `/about-the-game`
+- `/community-hub`
+- `/settings`
+- `/battle-pass`
+- `/lore-library`
+- `/equip`
+- `/meet-characters`
+- `/edit-characters`
+- `/create-character`
+- `/hero-codex`
+- `/daily-quests`
+- `/fight-quests`
+- `/leaderboard`
+- `/campaigns`
+- `/shop`
+- `/save`
 
-### Story Mode recovery
-- Restores seeded Story Mode worlds instead of forcing the fixed test seed.
-- New Story Mode saves receive their own `worldSeed`.
-- Story saves preserve the world seed.
-- Restores robust keyboard input, including `KeyboardEvent.code` aliases and canvas focus.
-- Restores bounded ambient wildlife/side-life spawning.
-- Restores the terrain/entity-aware minimap.
-- Restores Story Mode item drops through `storyItems.js`.
-- Uses the recovered Story Mode world generator so the world is not the empty/blank state from the broken version.
+The direct single-player fight mode URLs enter the existing character-select flow rather than an active match.
 
-### Bot character loading
-- CPU/bot slots are not blocked by the human account's unlock list.
-- Sport lineup normalization prevents an invalid/missing bot character ID from making an entire player disappear.
-- Soccer character resolution has a safe fallback.
-- Volleyball and Baseball character resolution have safe fallbacks.
-- Banger already had full-roster bot support and is left intact rather than unnecessarily rewritten.
+### 3. Story Mode recovery
+Uses the previously working Story Mode recovery implementation:
+- Per-save world seeds.
+- Saved world seed restoration.
+- Saved block modifications.
+- Keyboard `Space` handling.
+- Canvas focus on mouse interaction.
+- Ambient wildlife spawning.
+- Biome display support.
+- Story-specific save fields include `worldSeed`.
 
-### Offline pauses
-- Offline Volleyball 1v1 and 2v2 get a Pause (ESC) button and pause overlay.
-- Offline Baseball gets a Pause (ESC) button and pause overlay.
-- Escape pauses/resumes those offline modes instead of immediately quitting.
-- The game simulation stops while paused.
-- Dodgeball's existing pause now has a visible overlay with Resume and Quit.
+## Important
 
-### Mobile controls
-- Added Mobile Button Layout settings.
-- Arrow controls can be selected instead of the default touch layout.
-- Joystick mode can be selected.
-- Joystick can be fixed or dynamic.
-- Button X/Y location, size, and opacity can be customized.
-- Joystick X/Y location, size, and opacity can be customized.
-- Settings are persisted through the existing game settings system.
+This package is intentionally a replacement package, not a full repository replacement. Do not delete unrelated files.
 
-## Important limitation
-
-The repository's npm dependencies could not be reinstalled in the offline build environment, so a fresh `npm/pnpm build` could not be executed here. JavaScript-only files were syntax-checked. The package is therefore source-reviewed but not falsely labeled as a completed production build.
+A fresh production build could not be executed in this environment because the package manager/dependency registry was unavailable. Run your normal CI build after copying these files.
