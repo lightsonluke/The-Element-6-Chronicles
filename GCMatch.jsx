@@ -426,10 +426,10 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
   }, [gameStarted]);
 
   return (
-    <div className="relative flex flex-col items-center w-full">
+    <div className="el6-match-viewport relative flex flex-col items-center w-full">
       <div className="flex justify-between w-full max-w-[1280px] mb-1">
         <button onClick={() => onEnd?.(p2Char)} className="px-3 py-1 bg-destructive/80 text-destructive-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Forfeit</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
       </div>
       <canvas ref={canvasRef} width={W} height={H}
         className="border-2 border-border rounded-lg shadow-2xl w-full"

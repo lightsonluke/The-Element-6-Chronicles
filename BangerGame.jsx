@@ -566,7 +566,7 @@ export default function BangerGame({
   }
 
   return (
-    <div className="relative flex flex-col items-center gap-2 w-full">
+    <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
       <button onClick={onQuit} className="self-start px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
       <canvas ref={canvasRef} width={CW} height={CH} className="rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: CW + 'px', height: 'auto', aspectRatio: `${CW} / ${CH}`, background: '#080d1a' }} />

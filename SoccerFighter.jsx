@@ -1337,23 +1337,23 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
   }, [winner]);
 
   return (
-    <div className="el6-match-viewport relative flex flex-col items-center w-full">
+    <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
       <div className="flex justify-between w-full px-1 max-w-[1280px]">
         {!tournamentMode && <button onClick={finishQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Menu</button>}
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className={`px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80 ${tournamentMode ? 'ml-auto' : ''}`}>Pause (ESC)</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className={`el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80 ${tournamentMode ? 'ml-auto' : ''}`}>Pause (ESC)</button>
       </div>
       <canvas ref={canvasRef} width={W} height={H}
         className="el6-match-canvas"
         style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
       />
       {countdown > 0 && (
-        <div className="el6-match-overlay absolute inset-0 flex items-center justify-center bg-black/60">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
       {paused && !winner && <PauseMenu online={!!lanConnection} onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={finishQuit} tournamentMode={tournamentMode} onSimRest={simRest} onEndNow={endNow} />}
       {winner && (
-        <div className="el6-match-overlay absolute inset-0 flex flex-col items-center justify-center bg-black/78 gap-5">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/78 rounded-lg gap-5">
           <span className="text-5xl font-heading text-accent drop-shadow-lg">{winner === 'DRAW' ? 'DRAW!' : `${winner} WINS!`}</span>
           {teamMode && winner !== 'DRAW' && (
             <div className="flex flex-col items-center gap-1">

@@ -561,7 +561,7 @@ export default function DodgeballGame({
   }
 
   return (
-    <div className="flex flex-col items-center gap-2 w-full">
+    <div className="el6-match-viewport flex flex-col items-center gap-2 w-full">
       <div className="flex justify-between items-center w-full max-w-[1100px]">
         <div className="flex gap-2 items-center">
           <span className="font-heading text-xs px-2 py-1 rounded" style={{ background: p1TeamColor + '33', color: p1TeamColor }}>
@@ -572,7 +572,7 @@ export default function DodgeballGame({
           </span>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setPaused(p => !p)} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs">{paused ? '▶ RESUME' : '⏸ PAUSE'}</button>
+          <button onClick={() => setPaused(p => !p)} className="el6-match-pause-button px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs">{paused ? '▶ RESUME' : '⏸ PAUSE'}</button>
           <button onClick={onQuit} className="px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs">QUIT</button>
         </div>
       </div>

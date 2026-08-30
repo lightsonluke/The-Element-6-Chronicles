@@ -147,7 +147,7 @@ export default function ActualSportsOnlineMatch({
   if (!sport || orderedPlayers.length !== requiredPlayers || !p1 || !p2) {
     return <p className="text-center text-muted-foreground">Waiting until every required player has joined this online match.</p>;
   }
-  if (result) return <div className="text-center space-y-5"><h2 className="text-4xl font-heading text-accent">TEAM {result.winnerTeam} WINS!</h2><button onClick={() => onEnd?.()} className="px-6 py-3 rounded bg-primary text-primary-foreground font-heading">CONTINUE</button></div>;
+  if (result) return <div className="el6-match-viewport text-center space-y-5"><h2 className="text-4xl font-heading text-accent">TEAM {result.winnerTeam} WINS!</h2><button onClick={() => onEnd?.()} className="px-6 py-3 rounded bg-primary text-primary-foreground font-heading">CONTINUE</button></div>;
 
   const shared = {
     settings, sfxVolume, musicVolume, equippedSkins, equippedAccessories,
@@ -156,7 +156,7 @@ export default function ActualSportsOnlineMatch({
   };
   const elementFor = player => player.loadout?.element || equippedElements[player.character_id] || 'basic';
 
-  return <div className="w-full flex flex-col items-center gap-2 relative">
+  return <div className="el6-match-viewport w-full flex flex-col items-center gap-2 relative">
     <p className="font-heading text-accent text-sm">{sport.toUpperCase()} ONLINE · {status}</p>
     {sport === 'soccer' && <SoccerFighter
       {...shared}

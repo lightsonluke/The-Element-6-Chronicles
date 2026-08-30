@@ -553,7 +553,7 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
   if (winner) {
     const won = winner === 'me' || winner === 'me_disconnect';
     return (
-      <div className="relative flex flex-col items-center gap-2 w-full">
+      <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-lg gap-5">
           <span className="text-5xl font-heading drop-shadow-lg" style={{ color: won ? '#FFD700' : '#FF4444' }}>
             {winner === 'me_disconnect' || winner === 'disconnect' ? 'OTHER PLAYER DISCONNECTED' : won ? 'YOU WIN!' : 'YOU LOSE'}
@@ -566,10 +566,10 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
   }
 
   return (
-    <div className="relative flex flex-col items-center gap-2 w-full">
+    <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
       <div className="flex justify-between w-full px-1 max-w-[1280px]">
         <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">Forfeit</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">Pause (ESC)</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">Pause (ESC)</button>
       </div>
       <canvas ref={canvasRef} width={W} height={H}
         className="border-2 border-border rounded-lg shadow-2xl w-full"

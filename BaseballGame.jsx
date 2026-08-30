@@ -1081,7 +1081,7 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
   }, []);
 
   return (
-    <div className="relative flex flex-col items-center gap-2 w-full">
+    <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex items-center justify-between gap-2 flex-wrap">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] font-body text-white/80 px-2">
           <button onClick={onQuit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>

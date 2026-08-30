@@ -1265,6 +1265,10 @@ export default function Game() {
     setPending({ mode }); setScreen('charSelect');
   };
   const handleCharSelect = (p1, p2, isCPU, difficulty, p1Element, p2Element, shikigamiOverride) => {
+    // Unlock validation applies only to the human-controlled character. CPU/bot
+    // characters are allowed to come from the full roster.
+    const humanCharLocked = !progress?.unlockedIds?.includes(p1) && !ALL.find(c => c.id === p1)?.isCustom;
+    if (humanCharLocked) return;
     // Evil is banned from ranked and challenge modes
     const evilBanned = ['ranked', 'challenge'];
     const isEvilChar = (id) => id === 'evil' || ALL.find(c => c.id === id)?.baseCharId === 'evil';

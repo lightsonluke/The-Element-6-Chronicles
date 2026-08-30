@@ -1,29 +1,42 @@
-# Element 6 replacement package
+# Element 6 — match-screen + bot unlock replacement package
 
-Copy the files in this folder into the root of the Element 6 repository and replace the existing files with the same names.
+This package contains the actual modified source files from the attached Element 6 repository.
 
-## Included fixes
+## Replace only these files
 
-- Match views use a unified full-viewport match surface instead of behaving like a scaled card/overlay. Pause, reconnect, countdown, and match-end UI are kept above the actual gameplay canvas.
-- Offline/online fight and sports scenes use the same complete built-in match music library.
-- Soccer uses the same full match music library instead of a small hard-coded subset.
-- Settings exposes the complete match music library through the existing music selector.
-- Token/coin glyphs use IconScout Unicons through the existing `@iconscout/react-unicons` dependency, with a fixed inline icon box so icons stay aligned with text.
-- Match overlays receive a dedicated stacking class so ending and pause screens remain clickable and visible.
+Copy the files in this folder into the repository root, replacing files with the same names:
 
-## Files
+- `index.css`
+- `PlatformFighter.jsx`
+- `RollbackOnlineFight.jsx`
+- `OnlineSoccerFight.jsx`
+- `OnlineSportsMatch.jsx`
+- `ActualSportsOnlineMatch.jsx`
+- `SportsRollbackArena.jsx`
+- `BattleRoyaleEngine.jsx`
+- `CustomRoomGame.jsx`
+- `SoccerFighter.jsx`
+- `DodgeballGame.jsx`
+- `VolleyballGame.jsx`
+- `BaseballGame.jsx`
+- `BangerGame.jsx`
+- `GCMatch.jsx`
+- `UniversalCharacterSelect.jsx`
+- `Game.jsx`
 
-- GameIcon.jsx
-- music.js
-- Settings.jsx
-- index.css
-- PlatformFighter.jsx
-- SoccerFighter.jsx
-- OnlineFight.jsx
-- OnlineSportsMatch.jsx
+## Fixes implemented
 
-## Icon source
+### 1. Full-screen match surface
+The shared `.el6-match-viewport` is applied to the affected offline/online fight and sports surfaces so the gameplay canvas uses the actual viewport rather than a scaled card/overlay. This covers the offline fighter, rollback online fight, online soccer, online sports, offline soccer, volleyball, dodgeball, baseball, banger, Grand Circuit match, Battle Royale, Custom Room matches, and the online sports rollback surface.
 
-The token icon uses IconScout's Unicons React package already present in the repository. This avoids hotlinking a watermarked marketplace preview into production.
+### 2. Pause button placement
+Where a match already has a pause button, it is assigned `.el6-match-pause-button`, which places that existing button in the top-left corner. Modes without a pause button do not receive a new one.
 
-Before shipping, make sure the repository's existing IconScout/Unicons dependency and its applicable license terms remain valid for your distribution.
+### 3. Bot character unlock validation
+`UniversalCharacterSelect` explicitly treats a CPU slot as non-human for unlock validation. A bot may use a character the account has not unlocked. The human player's selected character remains subject to the normal unlock check.
+
+`Game.jsx` also guards the start callback so the player's own locked character cannot bypass the unlock requirement while the CPU character is not checked against the player's unlock inventory.
+
+## Important
+
+These are replacement source files, not a full repository. Do not delete unrelated files. Test on a branch first and run the normal project build before merging.

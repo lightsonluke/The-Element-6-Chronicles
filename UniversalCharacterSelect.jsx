@@ -412,8 +412,12 @@ export default function UniversalCharacterSelect({
   };
 
   // Validation: can't start if selected char is locked (training mode allows all)
-  const p1Locked = !allowLocked && !unlockedSet.has(p1) && !p1Char?.isCustom;
-  const p2Locked = !allowLocked && playerCount === 2 && !p2IsCPU && !unlockedSet.has(p2) && !p2Char?.isCustom;
+  // Only human-controlled slots are subject to the player's unlock inventory.
+  // CPU/bot slots may use the complete character roster and must never block
+  // match start merely because the human account has not unlocked that bot's character.
+  const isHumanSlot = (slotIndex) => !(slotIndex === 1 && playerCount === 2 && p2IsCPU);
+  const p1Locked = !allowLocked && isHumanSlot(0) && !unlockedSet.has(p1) && !p1Char?.isCustom;
+  const p2Locked = !allowLocked && playerCount === 2 && isHumanSlot(1) && !unlockedSet.has(p2) && !p2Char?.isCustom;
   const canStart = !p1Locked && !p2Locked;
 
   const handleStart = () => {
@@ -525,7 +529,7 @@ export default function UniversalCharacterSelect({
         </div>
         {/* Stat popup (replaces the old right panel — compact, only on hover) */}
         <div className="w-[170px] flex-shrink-0">
-          <StatPopup char={hoveredChar || (selecting === 1 ? p1Char : p2Char)} locked={hoveredChar ? (!allowLocked && !unlockedSet.has(hoveredChar.id) && !hoveredChar.isCustom) : false} charMastery={charMastery} />
+          <StatPopup char={hoveredChar || (selecting === 1 ? p1Char : p2Char)} locked={hoveredChar ? (!allowLocked && !((selecting === 2 && playerCount === 2 && p2IsCPU)) && !unlockedSet.has(hoveredChar.id) && !hoveredChar.isCustom) : false} charMastery={charMastery} />
         </div>
       </div>
 

@@ -633,7 +633,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
       finishedRef.current = false; setWinner(null); setCountdown(3); setGameStarted(false);
     };
     return (
-      <div className="relative flex flex-col items-center gap-2 w-full">
+      <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-lg gap-5">
           <span className="text-5xl font-heading drop-shadow-lg" style={{ color: won ? '#FFD700' : '#FF4444' }}>
             {won ? 'OTHER PLAYER DISCONNECTED' : `${winner} WINS!`}
@@ -649,10 +649,10 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
   }
 
   return (
-    <div className="relative flex flex-col items-center gap-2 w-full">
+    <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
       <div className="flex justify-between w-full px-1 max-w-[1280px]">
         <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Leave</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
       </div>
       <canvas ref={canvasRef} width={W} height={H}
         className="el6-match-canvas"
