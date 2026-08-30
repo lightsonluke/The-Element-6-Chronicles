@@ -10,6 +10,7 @@ import db from './localBackend';
 // eliminations, zone). Bots are driven by the same insane AI as normal play.
 
 import React, { useRef, useEffect, useState } from 'react';
+import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 
 import { ALL_CHARS } from './allCharacters.js';
 import { createFighter, updateFighter, updateProjectiles, updateAI, checkHit, applyHit, loseStock, drawProjectiles, platformNavigate } from './fighter.js';
@@ -776,8 +777,10 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           <p className="text-[10px] text-muted-foreground font-body">Use ← → or A / D to switch players</p>
         </div>
       )}
+      <MatchPauseButtonPortal>
       <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs">PAUSE (ESC)</button>
-      {paused && !winner && <div className="el6-pause-overlay-layer"><PauseMenu online onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} /></div>}
+      </MatchPauseButtonPortal>
+      {paused && !winner && <MatchPausePortal><div className="el6-pause-overlay-layer"><PauseMenu online onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} /></div></MatchPausePortal>}
       {reconnecting && !winner && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <div className="flex flex-col items-center gap-2">

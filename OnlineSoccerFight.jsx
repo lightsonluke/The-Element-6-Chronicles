@@ -1,6 +1,7 @@
 import db from './localBackend';
 
 import React, { useRef, useEffect, useState } from 'react';
+import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
@@ -569,7 +570,9 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
     <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
       <div className="flex justify-between w-full px-1 max-w-[1280px]">
         <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">Forfeit</button>
+        <MatchPauseButtonPortal>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">Pause (ESC)</button>
+        </MatchPauseButtonPortal>
       </div>
       <canvas ref={canvasRef} width={W} height={H}
         className="border-2 border-border rounded-lg shadow-2xl w-full"
@@ -580,7 +583,7 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && !winner && <div className="el6-pause-overlay-layer"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} /></div>}
+      {paused && !winner && <MatchPausePortal><div className="el6-pause-overlay-layer"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} /></div></MatchPausePortal>}
     </div>
   );
 }

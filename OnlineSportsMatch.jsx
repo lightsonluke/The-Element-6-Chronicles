@@ -23,6 +23,7 @@ import db from './localBackend';
 // ═══════════════════════════════════════════════════════════════════════════
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 
 import { SeqNum, SnapshotBuffer, ConnectionState, NetDiagnostics } from './netCore.js';
 import { getKeybinds, readPlayerInput } from './keybinds.js';
@@ -332,7 +333,9 @@ export default function OnlineSportsMatch({ matchId, role, sport, GameComponent,
     <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
       <div className="flex justify-between w-full px-1 max-w-[1280px]">
         <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Forfeit</button>
+        <MatchPauseButtonPortal>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
+        </MatchPauseButtonPortal>
       </div>
       <GameComponent
         {...gameProps}
@@ -357,7 +360,7 @@ export default function OnlineSportsMatch({ matchId, role, sport, GameComponent,
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && !winner && <div className="el6-pause-overlay-layer"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} /></div>}
+      {paused && !winner && <MatchPausePortal><div className="el6-pause-overlay-layer"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} /></div></MatchPausePortal>}
       {reconnecting && !winner && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-3xl font-heading text-accent animate-pulse">RECONNECTING…</span>

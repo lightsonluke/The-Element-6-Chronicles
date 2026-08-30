@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 import { ALL_CHARS, TEAM_COLOR_P1, TEAM_COLOR_P2 } from './sports.js';
 import { applyElement } from './elements.js';
 import { getKeybinds, readPlayerInput } from './keybinds.js';
@@ -572,7 +573,7 @@ export default function DodgeballGame({
           </span>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setPaused(p => !p)} className="el6-match-pause-button px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs">{paused ? '▶ RESUME' : '⏸ PAUSE'}</button>
+          <MatchPauseButtonPortal><button onClick={() => setPaused(p => !p)} className="el6-match-pause-button px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs">{paused ? '▶ RESUME' : '⏸ PAUSE'}</button></MatchPauseButtonPortal>
           <button onClick={onQuit} className="px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs">QUIT</button>
         </div>
       </div>

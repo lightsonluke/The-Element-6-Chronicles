@@ -1,31 +1,30 @@
-# Element 6 Story Mode replacement package
+# Element 6 — Global Pause Layer Fix
 
-These are real replacement source files from the attached Element 6 repository, modified for the Story Mode expansion.
+This package fixes a stacking-context problem where the gameplay/match layer can remain above the pause menu after clicking Pause (ESC).
 
-## Main changes
+## Architecture
 
-- Per-save procedural world seed; every newly created Story Mode slot gets a unique seed and existing saves retain their seed.
-- 20 distinct biome profiles with biome-specific terrain, materials, terrain shaping, vegetation, water/lava behavior, caves, ruins, and structures.
-- More varied procedural structures and environmental generation.
-- Major villain encounters are spaced much farther apart than before.
-- 120+ Story Mode item definitions, including food, animal/nature materials, minerals, elemental materials, collectibles, and utility items.
-- Block mining can also discover corresponding Story Mode material items.
-- Expanded crafting registry with 200+ recipes and searchable/categorized crafting UI.
-- Inventory UI supports both world blocks and non-block Story Mode items; only real placeable blocks can be put on the world hotbar.
-- Story Mode displays the current biome.
-- Existing Element 6 playable character rendering/definitions are not redesigned by this patch.
+Pause controls are rendered through React portals directly into `document.body`, outside the match viewport's stacking context. This makes the order unambiguous:
 
-## Files to replace
+1. Match/gameplay rendering
+2. Normal gameplay overlays
+3. Pause overlay/menu
+4. Pause button
 
-- Game.jsx
-- gameProgress.js
-- StoryMode.jsx
-- StoryCrafting.jsx
-- StoryInventory.jsx
-- crafting.js
-- storyItems.js
-- world.js
+The pause menu and pause button therefore cannot be trapped underneath a transformed/canvas/overlay match container with its own stacking context.
 
-## Build note
+## Affected components
 
-The environment used to prepare this package did not have node_modules installed, and dependency installation timed out, so a production Vite build could not be completed here. The JavaScript data/engine files pass `node --check`. Run the project's normal `npm install` and `npm run build` after applying the replacements.
+BattleRoyaleEngine.jsx
+CustomRoomGame.jsx
+DodgeballGame.jsx
+GCMatch.jsx
+OnlineSoccerFight.jsx
+OnlineSportsMatch.jsx
+PlatformFighter.jsx
+RollbackOnlineFight.jsx
+SoccerFighter.jsx
+PauseLayerPortal.jsx
+index.css
+
+Only replace these files from this package. No new pause button is added to modes that did not already have one.

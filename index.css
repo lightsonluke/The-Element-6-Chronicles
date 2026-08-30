@@ -241,3 +241,37 @@
 .el6-match-viewport .el6-match-pause-button {
   z-index: 300 !important;
 }
+
+/* Global pause portals intentionally render outside every match stacking context. */
+.el6-global-pause-layer {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483646 !important;
+  pointer-events: auto !important;
+  isolation: isolate !important;
+}
+.el6-global-pause-layer > * {
+  pointer-events: auto !important;
+}
+.el6-global-pause-layer .el6-pause-overlay-layer {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483646 !important;
+  pointer-events: auto !important;
+}
+.el6-global-pause-button-layer {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 0 !important;
+  z-index: 2147483647 !important;
+  pointer-events: none !important;
+}
+.el6-global-pause-button-layer .el6-match-pause-button {
+  position: fixed !important;
+  top: max(12px, env(safe-area-inset-top)) !important;
+  left: max(12px, env(safe-area-inset-left)) !important;
+  z-index: 2147483647 !important;
+  pointer-events: auto !important;
+}
