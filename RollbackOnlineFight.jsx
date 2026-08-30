@@ -418,7 +418,7 @@ export default function RollbackOnlineFight({
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && <PauseMenu online onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
+      {paused && <div className="el6-pause-overlay-layer"><PauseMenu online onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} /></div>}
     </div>
   );
 }

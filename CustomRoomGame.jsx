@@ -663,7 +663,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && !winner && <PauseMenu online={!!lanConnection} onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
+      {paused && !winner && <div className="el6-pause-overlay-layer"><PauseMenu online={!!lanConnection} onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} /></div>}
       {lanConnection && lanConnection.stalled && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-lg z-50">
           <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mb-3" />

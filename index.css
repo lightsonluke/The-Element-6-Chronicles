@@ -178,3 +178,66 @@
   inset: 0;
   z-index: 70;
 }
+
+
+/* ========================================================================
+   MATCH UI LAYERING — gameplay is always the bottom layer.
+   Pause controls and the pause menu must remain above the real match surface.
+   ======================================================================== */
+.el6-match-viewport {
+  isolation: isolate;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 40 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+/* Actual match rendering: bottom layer. */
+.el6-match-viewport > canvas,
+.el6-match-viewport > .el6-match-canvas,
+.el6-match-viewport canvas.el6-match-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* Non-pause match overlays can sit above gameplay, but below pause UI. */
+.el6-match-viewport > .el6-match-overlay,
+.el6-match-viewport > .absolute:not(.el6-pause-overlay-layer):not(.el6-match-pause-button),
+.el6-match-viewport > div > .absolute:not(.el6-pause-overlay-layer) {
+  z-index: 10;
+}
+
+/* Pause menu: guaranteed above the actual match and other match overlays. */
+.el6-pause-overlay-layer {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 200 !important;
+  pointer-events: auto !important;
+}
+.el6-pause-overlay-layer > * {
+  pointer-events: auto !important;
+}
+
+/* Pause button: highest match-control layer. */
+.el6-match-pause-button {
+  position: absolute !important;
+  top: max(12px, env(safe-area-inset-top)) !important;
+  left: max(12px, env(safe-area-inset-left)) !important;
+  z-index: 300 !important;
+  pointer-events: auto !important;
+}
+
+/* Keep the pause control above any generic absolute/fixed gameplay element. */
+.el6-match-viewport .el6-match-pause-button {
+  z-index: 300 !important;
+}
