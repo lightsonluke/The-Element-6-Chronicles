@@ -18,6 +18,7 @@ import { music } from './music.js';
 import { maybeSpawnNightVillain, updateNightVillains, renderNightVillain, storyAttack } from './storyNight.js';
 import { rollNightLevel } from './nightVillains.js';
 import GameIcon from "./GameIcon.jsx";
+import { BLOCK_DROP_ITEMS, STORY_ITEM_MAP } from './storyItems.js';
 
 const CANVAS_W = 960;
 const CANVAS_H = 560;
@@ -165,7 +166,8 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
     music.setVolume(progress?.settings?.musicVolume ?? 50);
     music.play('story');
 
-    const world = new WorldManager(42069); // fixed seed = Split City start
+    const world = new WorldManager(progress?.worldSeed || (Math.floor(Math.random()*2147483646)+1));
+    const generatedSeed = world.seed;
 
     // Find spawn on surface — world chunk 0 around x=20
     const spawnWorldX = 20;
@@ -210,6 +212,7 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
       running: true,
       npcs, villainSpawns,
       hotbar: Array(9).fill(null),
+      worldSeed: generatedSeed,
       hotbarSlot: 0,
       inventory: progress?.inventory || {},
       currentHeroId: progress?.currentHeroId || progress?.unlockedIds?.[0] || 'yellow',
@@ -442,6 +445,7 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
       if (s.autoSaveTimer >= 5) {
         s.autoSaveTimer = 0;
         onSaveProgress?.({
+          worldSeed: s.world.seed,
           playerX: s.player.wx,
           playerY: s.player.wy,
           defeatedVillains: s.villainSpawns.filter(v => v.defeated).map(v => v.villainId),
@@ -534,6 +538,8 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
       // Render
       ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
       renderWorld(ctx, s.world, s.camera.x, s.camera.y, CANVAS_W, CANVAS_H, s.dayProgress);
+      const currentBiome = s.world.getBiomeAt ? s.world.getBiomeAt(Math.floor(s.player.wx / BLOCK_SIZE)) : null;
+      if (currentBiome) { ctx.fillStyle='rgba(0,0,0,0.42)'; ctx.roundRect(12,12,150,24,6); ctx.fill(); ctx.fillStyle='#FFF'; ctx.font='bold 10px Orbitron'; ctx.textAlign='left'; ctx.fillText(currentBiome.name,22,28); }
       // Night lighting — torches, glowstone, lanterns light up the area
       if (s.dayProgress > 0.5) {
         const dark = Math.min((s.dayProgress - 0.5) * 2, 0.65);
@@ -1045,7 +1051,7 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
         if (world.getBlock(bx + 1, by) === BLOCKS.BED) world.setBlock(bx + 1, by, BLOCKS.AIR);
         if (world.getBlock(bx - 1, by) === BLOCKS.BED) world.setBlock(bx - 1, by, BLOCKS.AIR);
       }
-      setInventory(prev => ({ ...prev, [result]: (prev[result] || 0) + 1 }));
+      setInventory(prev => { const next={...prev,[result]:(prev[result]||0)+1}; const drop=BLOCK_DROP_ITEMS[result]; if(drop) next[drop]=(next[drop]||0)+1; return next; });
     }
   };
 
@@ -1661,7 +1667,7 @@ const NPC_DIALOGUES = [
 function buildNPCs(world, spawnX) {
   const npcs = [];
   for (let i = 0; i < 15; i++) {
-    const nx = spawnX + (i + 1) * 18 + Math.floor(Math.random() * 12);
+    const nx = spawnX + (i + 1) * 35 + Math.floor(Math.random() * 20);
     const ny = world.getTerrainHeight(nx);
     npcs.push({
       wx: nx * BLOCK_SIZE,
@@ -1680,7 +1686,7 @@ function buildNPCs(world, spawnX) {
 function buildVillainSpawns(world, spawnX) {
   const ordered = VILLAINS.filter(v => !v.isFinalBoss);
   return ordered.map((v, idx) => {
-    const vx = spawnX + (idx + 1) * 120 + Math.floor(Math.random() * 30);
+    const vx = spawnX + (idx + 1) * 900 + Math.floor(Math.random() * 120);
     const vy = world.getTerrainHeight(vx);
     return {
       villainId: v.id, wx: vx * BLOCK_SIZE, wy: vy * BLOCK_SIZE - BLOCK_SIZE * 2, defeated: false,

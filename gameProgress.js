@@ -4,6 +4,7 @@ import db from './localBackend';
 // the main page under the edit-size cap. Pure, self-contained, no React.
 
 export const DEFAULT_PROGRESS = {
+  worldSeed: null,
   unlockedIds: ['yellow'],
   defeatedVillains: [],
   favoriteId: null,
@@ -44,7 +45,7 @@ export const DEFAULT_PROGRESS = {
   charMastery: {},
 };
 
-export const STORY_FIELDS = ['defeatedVillains', 'playerX', 'playerY', 'inventory', 'hotbar', 'currentHeroId', 'blockMods'];
+export const STORY_FIELDS = ['defeatedVillains', 'playerX', 'playerY', 'inventory', 'hotbar', 'currentHeroId', 'blockMods', 'worldSeed'];
 
 let _activeStorySlot = null;
 let _cloudSaveTimer = null;

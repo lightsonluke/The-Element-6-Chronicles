@@ -1,42 +1,31 @@
-# Element 6 — match-screen + bot unlock replacement package
+# Element 6 Story Mode replacement package
 
-This package contains the actual modified source files from the attached Element 6 repository.
+These are real replacement source files from the attached Element 6 repository, modified for the Story Mode expansion.
 
-## Replace only these files
+## Main changes
 
-Copy the files in this folder into the repository root, replacing files with the same names:
+- Per-save procedural world seed; every newly created Story Mode slot gets a unique seed and existing saves retain their seed.
+- 20 distinct biome profiles with biome-specific terrain, materials, terrain shaping, vegetation, water/lava behavior, caves, ruins, and structures.
+- More varied procedural structures and environmental generation.
+- Major villain encounters are spaced much farther apart than before.
+- 120+ Story Mode item definitions, including food, animal/nature materials, minerals, elemental materials, collectibles, and utility items.
+- Block mining can also discover corresponding Story Mode material items.
+- Expanded crafting registry with 200+ recipes and searchable/categorized crafting UI.
+- Inventory UI supports both world blocks and non-block Story Mode items; only real placeable blocks can be put on the world hotbar.
+- Story Mode displays the current biome.
+- Existing Element 6 playable character rendering/definitions are not redesigned by this patch.
 
-- `index.css`
-- `PlatformFighter.jsx`
-- `RollbackOnlineFight.jsx`
-- `OnlineSoccerFight.jsx`
-- `OnlineSportsMatch.jsx`
-- `ActualSportsOnlineMatch.jsx`
-- `SportsRollbackArena.jsx`
-- `BattleRoyaleEngine.jsx`
-- `CustomRoomGame.jsx`
-- `SoccerFighter.jsx`
-- `DodgeballGame.jsx`
-- `VolleyballGame.jsx`
-- `BaseballGame.jsx`
-- `BangerGame.jsx`
-- `GCMatch.jsx`
-- `UniversalCharacterSelect.jsx`
-- `Game.jsx`
+## Files to replace
 
-## Fixes implemented
+- Game.jsx
+- gameProgress.js
+- StoryMode.jsx
+- StoryCrafting.jsx
+- StoryInventory.jsx
+- crafting.js
+- storyItems.js
+- world.js
 
-### 1. Full-screen match surface
-The shared `.el6-match-viewport` is applied to the affected offline/online fight and sports surfaces so the gameplay canvas uses the actual viewport rather than a scaled card/overlay. This covers the offline fighter, rollback online fight, online soccer, online sports, offline soccer, volleyball, dodgeball, baseball, banger, Grand Circuit match, Battle Royale, Custom Room matches, and the online sports rollback surface.
+## Build note
 
-### 2. Pause button placement
-Where a match already has a pause button, it is assigned `.el6-match-pause-button`, which places that existing button in the top-left corner. Modes without a pause button do not receive a new one.
-
-### 3. Bot character unlock validation
-`UniversalCharacterSelect` explicitly treats a CPU slot as non-human for unlock validation. A bot may use a character the account has not unlocked. The human player's selected character remains subject to the normal unlock check.
-
-`Game.jsx` also guards the start callback so the player's own locked character cannot bypass the unlock requirement while the CPU character is not checked against the player's unlock inventory.
-
-## Important
-
-These are replacement source files, not a full repository. Do not delete unrelated files. Test on a branch first and run the normal project build before merging.
+The environment used to prepare this package did not have node_modules installed, and dependency installation timed out, so a production Vite build could not be completed here. The JavaScript data/engine files pass `node --check`. Run the project's normal `npm install` and `npm run build` after applying the replacements.
