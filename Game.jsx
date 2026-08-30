@@ -167,7 +167,7 @@ function loadProgress() {
   return { ...DEFAULT_PROGRESS };
 }
 let _activeStorySlot = null;
-const STORY_FIELDS = ['defeatedVillains', 'playerX', 'playerY', 'inventory', 'hotbar', 'currentHeroId', 'blockMods'];
+const STORY_FIELDS = ['defeatedVillains', 'playerX', 'playerY', 'inventory', 'hotbar', 'currentHeroId', 'blockMods', 'worldSeed'];
 
 // Debounce cloud saves to avoid hammering the DB on rapid updates
 let _cloudSaveTimer = null;
@@ -790,8 +790,8 @@ export default function Game() {
         setScreen('story');
       } else {
         // New story — keep global progress, reset only story-specific fields
-        const fresh = { ...progressRef.current, defeatedVillains: [], inventory: [], hotbar: [], currentHeroId: (progressRef.current.unlockedIds || ['yellow'])[0] };
-        delete fresh.playerX; delete fresh.playerY;
+        const fresh = { ...progressRef.current, defeatedVillains: [], inventory: {}, hotbar: [], worldSeed: (Math.floor(Math.random()*2147483646)+1), currentHeroId: (progressRef.current.unlockedIds || ['yellow'])[0] };
+        delete fresh.playerX; delete fresh.playerY; delete fresh.blockMods;
         fresh._savedAt = Date.now();
         saveProgress(fresh);
         setProgress(fresh);
@@ -1265,10 +1265,6 @@ export default function Game() {
     setPending({ mode }); setScreen('charSelect');
   };
   const handleCharSelect = (p1, p2, isCPU, difficulty, p1Element, p2Element, shikigamiOverride) => {
-    // Unlock validation applies only to the human-controlled character. CPU/bot
-    // characters are allowed to come from the full roster.
-    const humanCharLocked = !progress?.unlockedIds?.includes(p1) && !ALL.find(c => c.id === p1)?.isCustom;
-    if (humanCharLocked) return;
     // Evil is banned from ranked and challenge modes
     const evilBanned = ['ranked', 'challenge'];
     const isEvilChar = (id) => id === 'evil' || ALL.find(c => c.id === id)?.baseCharId === 'evil';

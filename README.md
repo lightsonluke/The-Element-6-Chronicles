@@ -1,30 +1,15 @@
-# Element 6 — Global Pause Layer Fix
+# Element 6 Story Mode - Runtime Recovery Replacement
 
-This package fixes a stacking-context problem where the gameplay/match layer can remain above the pause menu after clicking Pause (ESC).
+Replace only the files in this package; do not replace unrelated game files.
 
-## Architecture
+## Fixes included
+- Removes the malformed player X-collision expression that could break the Story Mode build.
+- Makes keyboard input more robust by tracking `KeyboardEvent.code` aliases and focusing the match canvas when interacted with.
+- Preserves normal Element 6 playable character rendering.
+- Adds bounded ambient wildlife spawning near the player so a new save is not visually empty.
+- Adds lightweight wildlife movement and rendering without changing the main character art.
+- Rebuilds the minimap around the authoritative procedural terrain height, then overlays terrain, water/lava samples, villains, wildlife, and the player marker.
+- Keeps entity counts bounded and removes distant ambient entities to avoid runaway performance costs.
 
-Pause controls are rendered through React portals directly into `document.body`, outside the match viewport's stacking context. This makes the order unambiguous:
-
-1. Match/gameplay rendering
-2. Normal gameplay overlays
-3. Pause overlay/menu
-4. Pause button
-
-The pause menu and pause button therefore cannot be trapped underneath a transformed/canvas/overlay match container with its own stacking context.
-
-## Affected components
-
-BattleRoyaleEngine.jsx
-CustomRoomGame.jsx
-DodgeballGame.jsx
-GCMatch.jsx
-OnlineSoccerFight.jsx
-OnlineSportsMatch.jsx
-PlatformFighter.jsx
-RollbackOnlineFight.jsx
-SoccerFighter.jsx
-PauseLayerPortal.jsx
-index.css
-
-Only replace these files from this package. No new pause button is added to modes that did not already have one.
+## Important
+This package is a targeted Story Mode replacement. It does not intentionally replace authentication, shop, multiplayer, matchmaking, or unrelated game modes.
