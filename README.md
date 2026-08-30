@@ -1,98 +1,13 @@
-# Element 6 — Routing + Mobile Layout Test + Story Recovery Replacement Package
+# Element 6 — Hardening + Story Mode Recovery Patch
 
-Copy these files into the repository root and overwrite files with the same names.
+Replace only the files in this package.
 
-## Included
+## Silver — Hardening
 
-### 1. Mobile Mode layout test
-- Adds `/mobile-controls`.
-- Settings now has **OPEN MOBILE CONTROL LAYOUT TEST**.
-- Shows a gameplay-style preview of the mobile controls.
-- Drag controls to preview placement.
-- Preview supports arrow mode and joystick mode.
-- Supports dynamic joystick preview.
-- Size and opacity controls are reflected in the preview.
-- Uses the existing `mobileControls` settings structure so the real gameplay controls use the same saved layout.
+Silver's Hardened power now reduces incoming damage by exactly 30% and incoming knockback by exactly 30% while active. It does not make Silver invincible or immune to attacks. The reduction uses the central `fighter.js` combat pipeline, so it applies to the fight modes that use the shared fighter engine, including offline fights, Custom Battle, Ranked/Unranked fight matches, Battle Royale, Custom Rooms/LAN fight matches, Story Mode battles, Sandbox, learning/training fight modes, and Campaign/Story battles that use `fighter.js`.
 
-### 2. URL paths
-Adds stable browser paths for the requested screens and game-mode entry points, including:
-- `/regular-battle`
-- `/time-battle`
-- `/super-only`
-- `/sudden-death`
-- `/bot-ranked`
-- `/coin-battle`
-- `/split-city-brawl`
-- `/the-challenge`
-- `/bot-battle`
-- `/low-gravity`
-- `/tournament`
-- `/grand-circuit`
-- `/2v2-teams`
-- `/shapeshift`
-- `/ranked`
-- `/unranked`
-- `/battle-royale`
-- `/custom-rooms`
-- `/lan-play`
-- `/friends`
-- `/chat`
-- `/elo`
-- `/story-mode`
-- `/soccer`
-- `/volleyball`
-- `/baseball`
-- `/parkour`
-- `/rock-climbing`
-- `/capture-the-flag`
-- `/dodgeball`
-- `/ziplining`
-- `/banger`
-- `/online-sports`
-- `/soccer-ranked`
-- `/soccer-online`
-- `/volleyball-online`
-- `/volleyball-ranked-1v1`
-- `/dodgeball-ranked`
-- `/dodgeball-online`
-- `/banger-online`
-- `/sandbox-mode`
-- `/stage-editor`
-- `/training`
-- `/combo-trainer`
-- `/tutorial`
-- `/about-the-game`
-- `/community-hub`
-- `/settings`
-- `/battle-pass`
-- `/lore-library`
-- `/equip`
-- `/meet-characters`
-- `/edit-characters`
-- `/create-character`
-- `/hero-codex`
-- `/daily-quests`
-- `/fight-quests`
-- `/leaderboard`
-- `/campaigns`
-- `/shop`
-- `/save`
+## Story Mode recovery
 
-The direct single-player fight mode URLs enter the existing character-select flow rather than an active match.
+The current Story Mode/world-generator changes were causing the Story Mode runtime to fail in the affected build. This patch restores the known-good StoryMode.jsx and world.js from the original repository version so Story Mode can mount and run again instead of showing a blank screen. Existing Game.jsx save-slot handling remains untouched.
 
-### 3. Story Mode recovery
-Uses the previously working Story Mode recovery implementation:
-- Per-save world seeds.
-- Saved world seed restoration.
-- Saved block modifications.
-- Keyboard `Space` handling.
-- Canvas focus on mouse interaction.
-- Ambient wildlife spawning.
-- Biome display support.
-- Story-specific save fields include `worldSeed`.
-
-## Important
-
-This package is intentionally a replacement package, not a full repository replacement. Do not delete unrelated files.
-
-A fresh production build could not be executed in this environment because the package manager/dependency registry was unavailable. Run your normal CI build after copying these files.
+This is intentionally a recovery patch: it does not reapply the experimental expanded procedural Story Mode layer that was causing the load failure. Once Story Mode is confirmed working again, the expansion can be reintroduced incrementally without replacing the known-good runtime all at once.

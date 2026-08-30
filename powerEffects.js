@@ -49,8 +49,8 @@ export const POWER_EFFECTS = {
   crimson:  { type: 'beam', name: 'Element 6', duration: 0, cooldown: 16, damage: 22, knockback: 14, color: '#DC143C' },
   scarlet:  { type: 'demon_strike', name: 'Necromancy', duration: 0, cooldown: 16, damage: 18, knockback: 1.2 },
   white:    { type: 'infinite_jumps', name: 'Flight', duration: 10, cooldown: 16 },
-  // Silver's power halves incoming damage and knockback in every fight mode.
-  silver:   { type: 'shield', name: 'Hardened', duration: 7, cooldown: 18, damageReduction: 0.5, knockbackReduction: 0.5, noAttackImmune: true },
+  // Silver's power reduces incoming damage and knockback by 30% in every fight mode.
+  silver:   { type: 'shield', name: 'Hardened', duration: 7, cooldown: 18, damageReduction: 0.30, knockbackReduction: 0.30, noAttackImmune: true },
 
   // ── VILLAINS ──
   corpent:  { type: 'hammer_throw', name: 'Hammer Throw', duration: 0, cooldown: 14, damage: 22, knockback: 1.4 },

@@ -18,7 +18,6 @@ import { music } from './music.js';
 import { maybeSpawnNightVillain, updateNightVillains, renderNightVillain, storyAttack } from './storyNight.js';
 import { rollNightLevel } from './nightVillains.js';
 import GameIcon from "./GameIcon.jsx";
-import { BLOCK_DROP_ITEMS, STORY_ITEM_MAP } from './storyItems.js';
 
 const CANVAS_W = 960;
 const CANVAS_H = 560;
@@ -166,8 +165,7 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
     music.setVolume(progress?.settings?.musicVolume ?? 50);
     music.play('story');
 
-    const world = new WorldManager(progress?.worldSeed || (Math.floor(Math.random()*2147483646)+1));
-    const generatedSeed = world.seed;
+    const world = new WorldManager(42069); // fixed seed = Split City start
 
     // Find spawn on surface — world chunk 0 around x=20
     const spawnWorldX = 20;
@@ -212,7 +210,6 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
       running: true,
       npcs, villainSpawns,
       hotbar: Array(9).fill(null),
-      worldSeed: generatedSeed,
       hotbarSlot: 0,
       inventory: progress?.inventory || {},
       currentHeroId: progress?.currentHeroId || progress?.unlockedIds?.[0] || 'yellow',
@@ -222,13 +219,11 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
       nightVillains: [], nightSpawnTimer: 0, nightScore: 0,
       attackCd: 0, playerHp: 100, playerInvuln: 0, screenDarken: 0,
       saplings: [], chests: {},
-      ambientMobs: [], ambientMobSpawnTimer: 0,
     };
 
     const handleKey = (e, down) => {
       keysRef.current[e.key] = down;
       keysRef.current[e.key.toLowerCase()] = down;
-      if (e.code) keysRef.current[e.code] = down;
       if (down) {
         // Tab = combined inventory + crafting (side by side)
         if (e.key === 'Tab') { setShowInventory(v => !v); setShowCrafting(v => !v); }
@@ -272,7 +267,6 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
     };
     const handleMouseDown = (e) => {
       if (!isOnCanvas(e)) return;
-      canvasRef.current?.focus?.();
       if (e.button === 0) mouseRef.current.held = true;
       if (e.button === 2) { doPlacing(); e.preventDefault(); }
     };
@@ -448,7 +442,6 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
       if (s.autoSaveTimer >= 5) {
         s.autoSaveTimer = 0;
         onSaveProgress?.({
-          worldSeed: s.world.seed,
           playerX: s.player.wx,
           playerY: s.player.wy,
           defeatedVillains: s.villainSpawns.filter(v => v.defeated).map(v => v.villainId),
@@ -480,17 +473,6 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
           s.nearbyNpc = npc;
         }
       });
-
-      // Ambient wildlife/side-life spawner. Keep entities near the player so a
-      // freshly generated save never looks empty, while avoiding an unbounded
-      // entity list. Spawns are based on the save's world seed + nearby chunk so
-      // the same save remains stable enough to feel like a real world.
-      s.ambientMobSpawnTimer = (s.ambientMobSpawnTimer || 0) + dt;
-      if (s.ambientMobSpawnTimer >= 0.75) {
-        s.ambientMobSpawnTimer = 0;
-        spawnAmbientMobs(s);
-      }
-      updateAmbientMobs(s, dt);
 
       // Update NPCs — gravity + collision + roaming (skip distant for performance)
       s.npcs.forEach(npc => {
@@ -552,8 +534,6 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
       // Render
       ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
       renderWorld(ctx, s.world, s.camera.x, s.camera.y, CANVAS_W, CANVAS_H, s.dayProgress);
-      const currentBiome = s.world.getBiomeAt ? s.world.getBiomeAt(Math.floor(s.player.wx / BLOCK_SIZE)) : null;
-      if (currentBiome) { ctx.fillStyle='rgba(0,0,0,0.42)'; ctx.roundRect(12,12,150,24,6); ctx.fill(); ctx.fillStyle='#FFF'; ctx.font='bold 10px Orbitron'; ctx.textAlign='left'; ctx.fillText(currentBiome.name,22,28); }
       // Night lighting — torches, glowstone, lanterns light up the area
       if (s.dayProgress > 0.5) {
         const dark = Math.min((s.dayProgress - 0.5) * 2, 0.65);
@@ -580,15 +560,6 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
         }
         ctx.globalCompositeOperation = 'source-over';
       }
-
-      // Ambient wildlife. These are intentionally simple, readable silhouettes
-      // so they do not replace or alter the normal Element 6 character designs.
-      s.ambientMobs.forEach(mob => {
-        const msx = mob.wx - s.camera.x + CANVAS_W / 2;
-        const msy = mob.wy - s.camera.y + CANVAS_H / 2;
-        if (msx < -60 || msx > CANVAS_W + 60) return;
-        renderAmbientMob(ctx, mob, msx, msy);
-      });
 
       // NPCs
       s.npcs.forEach(npc => {
@@ -882,7 +853,7 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
     }
 
     // Jump
-    if ((k['ArrowUp'] || k['w'] || k[' '] || k['Space']) && !k['_jumpHeld']) {
+    if ((k['ArrowUp'] || k['w'] || k[' ']) && !k['_jumpHeld']) {
       if (p.grounded) {
         p.vy = JUMP_VEL;
         p.grounded = false;
@@ -925,7 +896,7 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
         }
       }
     }
-    if (!k['ArrowUp'] && !k['w'] && !k[' '] && !k['Space']) k['_jumpHeld'] = false;
+    if (!k['ArrowUp'] && !k['w'] && !k[' ']) k['_jumpHeld'] = false;
 
     // Gravity
     if (!p.grounded) {
@@ -1074,7 +1045,7 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
         if (world.getBlock(bx + 1, by) === BLOCKS.BED) world.setBlock(bx + 1, by, BLOCKS.AIR);
         if (world.getBlock(bx - 1, by) === BLOCKS.BED) world.setBlock(bx - 1, by, BLOCKS.AIR);
       }
-      setInventory(prev => { const next={...prev,[result]:(prev[result]||0)+1}; const drop=BLOCK_DROP_ITEMS[result]; if(drop) next[drop]=(next[drop]||0)+1; return next; });
+      setInventory(prev => ({ ...prev, [result]: (prev[result] || 0) + 1 }));
     }
   };
 
@@ -1281,8 +1252,7 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
           ref={canvasRef}
           width={CANVAS_W}
           height={CANVAS_H}
-          className="border-2 border-border rounded-lg shadow-2xl cursor-crosshair outline-none"
-          tabIndex={0}
+          className="border-2 border-border rounded-lg shadow-2xl cursor-crosshair"
           style={{ maxWidth: '100%' }}
         />
 
@@ -1624,199 +1594,55 @@ function drawHUD(ctx, s, hero, health, hotbar, hotbarSlot) {
 
 // ── Minimap ───────────────────────────────────────────────────────────────────
 function drawMinimap(ctx, s, canvasW, canvasH) {
-  const mmW = 150, mmH = 82;
-  const mmX = canvasW - mmW - 10, mmY = 42;
-
-  ctx.save();
-  ctx.fillStyle = 'rgba(7,12,25,0.88)';
-  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-  ctx.lineWidth = 1;
+  const mmW = 100, mmH = 60;
+  const mmX = canvasW - mmW - 8, mmY = 40;
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
   ctx.beginPath();
-  ctx.roundRect(mmX, mmY, mmW, mmH, 7);
-  ctx.fill(); ctx.stroke();
-
-  const centerBX = Math.floor(s.player.wx / BLOCK_SIZE);
-  const centerBY = Math.floor(s.player.wy / BLOCK_SIZE);
-  const radiusX = 37;
-  const top = centerBY - 16;
-  const bottom = centerBY + 20;
-  const px = mmX + mmW / 2;
-  const py = mmY + mmH / 2;
-
-  // Draw a terrain silhouette from the authoritative procedural terrain height.
-  // This remains visible even when a chunk has not yet been fully painted.
-  ctx.beginPath();
-  for (let i = -radiusX; i <= radiusX; i++) {
-    const wx = centerBX + i;
-    const terrain = s.world.getTerrainHeight(wx);
-    const sx = px + i * 1.9;
-    const sy = mmY + 8 + Math.max(0, Math.min(mmH - 16, (terrain - top) * 1.9));
-    if (i === -radiusX) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
-  }
-  for (let i = radiusX; i >= -radiusX; i--) {
-    const wx = centerBX + i;
-    const terrain = s.world.getTerrainHeight(wx);
-    const sx = px + i * 1.9;
-    ctx.lineTo(sx, mmY + mmH - 6);
-  }
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(83,130,78,0.72)';
+  ctx.roundRect(mmX - 2, mmY - 2, mmW + 4, mmH + 4, 5);
   ctx.fill();
 
-  // Sample a coarse block map over the same region for caves, water, lava and
-  // structures. Coarse sampling avoids 1500 getBlock calls every frame.
-  for (let i = -radiusX; i <= radiusX; i += 2) {
-    const wx = centerBX + i;
-    const terrain = s.world.getTerrainHeight(wx);
-    const sx = px + i * 1.9;
-    const surfaceY = mmY + 8 + Math.max(0, Math.min(mmH - 16, (terrain - top) * 1.9));
-    const sample = s.world.getBlock(wx, terrain);
-    ctx.fillStyle = sample === BLOCKS.SAND || sample === BLOCKS.SANDSTONE ? '#d6b86a'
-      : sample === BLOCKS.SNOWBLOCK || sample === BLOCKS.ICEBLOCK ? '#d9edf2'
-      : sample === BLOCKS.TERRACOTTA || sample === BLOCKS.GRANITE ? '#a66a52'
-      : '#4b8f45';
-    ctx.fillRect(sx - 1.5, surfaceY - 2, 3, 5);
+  const scale = 2;
+  const pWorldX = Math.floor(s.player.wx / BLOCK_SIZE);
+  const pWorldY = Math.floor(s.player.wy / BLOCK_SIZE);
 
-    // Water/lava pockets directly under the surface.
-    for (let d = 1; d <= 7; d += 3) {
-      const b = s.world.getBlock(wx, terrain + d);
-      if (b === BLOCKS.WATER) { ctx.fillStyle = '#3b9fe8'; ctx.fillRect(sx - 1, surfaceY + d * 1.9, 2, 3); }
-      if (b === BLOCKS.LAVA) { ctx.fillStyle = '#ff5a2a'; ctx.fillRect(sx - 1, surfaceY + d * 1.9, 2, 3); }
+  for (let bx = pWorldX - mmW / scale / 2; bx < pWorldX + mmW / scale / 2; bx++) {
+    for (let by = pWorldY - mmH / scale / 2; by < pWorldY + mmH / scale / 2; by++) {
+      const block = s.world.getBlock(bx, by);
+      if (block === BLOCKS.AIR) continue;
+      const col = BLOCK_COLORS[block];
+      if (!col) continue;
+      const sx = mmX + (bx - (pWorldX - mmW / scale / 2)) * scale;
+      const sy = mmY + (by - (pWorldY - mmH / scale / 2)) * scale;
+      ctx.fillStyle = col;
+      ctx.fillRect(sx, sy, scale, scale);
     }
   }
 
-  // Major villains.
-  s.villainSpawns.forEach(vs => {
-    const vx = Math.floor(vs.wx / BLOCK_SIZE);
-    const vy = Math.floor(vs.wy / BLOCK_SIZE);
-    const sx = px + (vx - centerBX) * 1.9;
-    const sy = py + (vy - centerBY) * 1.9;
-    if (sx < mmX || sx > mmX + mmW || sy < mmY || sy > mmY + mmH) return;
-    ctx.fillStyle = vs.defeated ? '#777' : '#ff4545';
-    ctx.beginPath(); ctx.arc(sx, sy, vs.defeated ? 2 : 3, 0, Math.PI * 2); ctx.fill();
-  });
-
-  // Ambient mobs and NPCs.
-  (s.ambientMobs || []).forEach(m => {
-    const sx = px + (Math.floor(m.wx / BLOCK_SIZE) - centerBX) * 1.9;
-    const sy = py + (Math.floor(m.wy / BLOCK_SIZE) - centerBY) * 1.9;
-    if (sx >= mmX && sx <= mmX + mmW && sy >= mmY && sy <= mmY + mmH) {
-      ctx.fillStyle = '#d8d8d8'; ctx.fillRect(sx - 1, sy - 1, 2, 2);
-    }
-  });
-
-  // Player marker last so it is always visible.
+  // Player dot
   ctx.fillStyle = '#FFD700';
-  ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 6;
-  ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.fill();
-  ctx.shadowBlur = 0;
+  ctx.beginPath();
+  ctx.arc(mmX + mmW / 2, mmY + mmH / 2, 3, 0, Math.PI * 2);
+  ctx.fill();
 
-  ctx.fillStyle = 'rgba(255,255,255,0.65)';
-  ctx.font = '8px Rajdhani, sans-serif';
-  ctx.textAlign = 'left';
-  const biome = s.world.getBiomeAt(centerBX);
-  ctx.fillText(biome?.name || 'Unknown', mmX + 7, mmY + mmH - 6);
-  ctx.restore();
+  // Villain dots — defeated shown grey
+  s.villainSpawns.forEach(vs => {
+    const vWorldX = Math.floor(vs.wx / BLOCK_SIZE);
+    const vWorldY = Math.floor(vs.wy / BLOCK_SIZE);
+    let sx = mmX + (vWorldX - (pWorldX - mmW / scale / 2)) * scale;
+    let sy = mmY + (vWorldY - (pWorldY - mmH / scale / 2)) * scale;
+    sx = Math.max(mmX, Math.min(mmX + mmW, sx));
+    sy = Math.max(mmY, Math.min(mmY + mmH, sy));
+    ctx.fillStyle = vs.defeated ? '#666666' : '#FF4444';
+    ctx.beginPath();
+    ctx.arc(sx, sy, vs.defeated ? 1.5 : 2, 0, Math.PI * 2);
+    ctx.fill();
+  });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function isSolid(world, bx, by) {
   const b = world.getBlock(bx, by);
   return b !== BLOCKS.AIR && b !== BLOCKS.WATER && b !== BLOCKS.LAVA && b !== BLOCKS.LADDER;
-}
-
-const AMBIENT_MOB_TYPES = [
-  { type:'cow', color:'#5a4032', accent:'#ead9bd' },
-  { type:'chicken', color:'#f2f2e8', accent:'#d85c48' },
-  { type:'pig', color:'#e9a0ad', accent:'#c87888' },
-  { type:'sheep', color:'#eeeeee', accent:'#777777' },
-  { type:'rabbit', color:'#bda68f', accent:'#f3d8c8' },
-  { type:'deer', color:'#9b6b45', accent:'#ead0a7' },
-];
-
-function spawnAmbientMobs(s) {
-  if (!s.ambientMobs) s.ambientMobs = [];
-  const pBX = Math.floor(s.player.wx / BLOCK_SIZE);
-  // Remove distant/dead entities first.
-  s.ambientMobs = s.ambientMobs.filter(m => !m.dead && Math.abs(m.wx - s.player.wx) < BLOCK_SIZE * 55);
-  if (s.ambientMobs.length >= 12) return;
-
-  const seed = (s.world.seed || 1) + Math.floor(pBX / 12) * 92821 + s.ambientMobs.length * 1013;
-  const rand = seededStoryRandom(seed);
-  const count = 1 + Math.floor(rand() * 2);
-  for (let i = 0; i < count && s.ambientMobs.length < 12; i++) {
-    const side = rand() > 0.5 ? 1 : -1;
-    const bx = pBX + side * (8 + Math.floor(rand() * 22));
-    const terrain = s.world.getTerrainHeight(bx);
-    if (terrain < 5 || terrain >= WORLD_HEIGHT - 3) continue;
-    const feet = terrain * BLOCK_SIZE;
-    if (!isSolid(s.world, bx, terrain)) continue;
-    const kind = AMBIENT_MOB_TYPES[Math.floor(rand() * AMBIENT_MOB_TYPES.length)];
-    s.ambientMobs.push({
-      id:`${kind.type}_${seed}_${i}`,
-      type:kind.type, color:kind.color, accent:kind.accent,
-      wx:bx * BLOCK_SIZE + BLOCK_SIZE / 2,
-      wy:feet - BLOCK_SIZE * 0.9,
-      homeX:bx * BLOCK_SIZE,
-      dir:rand() > 0.5 ? 1 : -1,
-      timer:30 + Math.floor(rand() * 100),
-      frame:Math.floor(rand() * 30),
-    });
-  }
-}
-
-function updateAmbientMobs(s, dt) {
-  (s.ambientMobs || []).forEach(m => {
-    m.frame += 1;
-    m.timer -= 1;
-    if (m.timer <= 0) {
-      m.dir *= -1;
-      m.timer = 50 + Math.floor(seededStoryRandom(m.frame + Math.floor(m.wx))() * 100);
-    }
-    const speed = m.type === 'rabbit' ? 0.9 : 0.45;
-    const nextX = m.wx + m.dir * speed;
-    const col = Math.floor((nextX + m.dir * 7) / BLOCK_SIZE);
-    const foot = Math.floor((m.wy + 4) / BLOCK_SIZE);
-    if (isSolid(s.world, col, foot) && !isSolid(s.world, col, foot - 1)) m.wx = nextX;
-    else m.dir *= -1;
-    if (Math.abs(m.wx - m.homeX) > BLOCK_SIZE * 10) m.dir *= -1;
-  });
-}
-
-function renderAmbientMob(ctx, mob, x, y) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.globalAlpha = 0.98;
-  ctx.fillStyle = mob.color;
-  ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-  ctx.lineWidth = 1.5;
-  if (mob.type === 'chicken') {
-    ctx.beginPath(); ctx.ellipse(0, 0, 8, 7, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = mob.accent; ctx.beginPath(); ctx.arc(7,-5,4,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#222'; ctx.fillRect(8,-6,1.5,1.5);
-  } else if (mob.type === 'rabbit') {
-    ctx.beginPath(); ctx.ellipse(0, 0, 7, 6, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = mob.accent; ctx.fillRect(3,-12,2.5,7); ctx.fillRect(7,-12,2.5,7);
-  } else if (mob.type === 'deer') {
-    ctx.beginPath(); ctx.ellipse(0,0,11,7,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle=mob.accent; ctx.fillRect(8,-8,7,5); ctx.fillRect(12,-13,2,6); ctx.fillRect(16,-13,2,6);
-  } else {
-    ctx.beginPath(); ctx.ellipse(0,0,12,8,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle=mob.accent; ctx.beginPath(); ctx.arc(9,-5,5,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#222'; ctx.fillRect(11,-6,1.5,1.5);
-  }
-  ctx.fillStyle=mob.color;
-  ctx.fillRect(-7,5,3,7); ctx.fillRect(4,5,3,7);
-  ctx.restore();
-}
-
-function seededStoryRandom(seed) {
-  let n = Math.abs(Math.floor(seed)) % 2147483647;
-  if (n === 0) n = 1;
-  return () => {
-    n = (n * 48271) % 2147483647;
-    return n / 2147483647;
-  };
 }
 
 const NPC_NAMES = ['Alex', 'Sam', 'Jordan', 'Morgan', 'Riley', 'Casey', 'Avery', 'Drew', 'Blake', 'Quinn', 'Sage', 'River'];
@@ -1835,7 +1661,7 @@ const NPC_DIALOGUES = [
 function buildNPCs(world, spawnX) {
   const npcs = [];
   for (let i = 0; i < 15; i++) {
-    const nx = spawnX + (i + 1) * 35 + Math.floor(Math.random() * 20);
+    const nx = spawnX + (i + 1) * 18 + Math.floor(Math.random() * 12);
     const ny = world.getTerrainHeight(nx);
     npcs.push({
       wx: nx * BLOCK_SIZE,
@@ -1854,7 +1680,7 @@ function buildNPCs(world, spawnX) {
 function buildVillainSpawns(world, spawnX) {
   const ordered = VILLAINS.filter(v => !v.isFinalBoss);
   return ordered.map((v, idx) => {
-    const vx = spawnX + (idx + 1) * 900 + Math.floor(Math.random() * 120);
+    const vx = spawnX + (idx + 1) * 120 + Math.floor(Math.random() * 30);
     const vy = world.getTerrainHeight(vx);
     return {
       villainId: v.id, wx: vx * BLOCK_SIZE, wy: vy * BLOCK_SIZE - BLOCK_SIZE * 2, defeated: false,

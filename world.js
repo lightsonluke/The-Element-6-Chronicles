@@ -280,107 +280,234 @@ function caveNoise(worldX, worldY, seed) {
   return (n1 + n2 + n3) / 3;
 }
 
-export const BIOMES = [
-  { id:'forest', name:'Forest', top:BLOCKS.GRASS, sub:BLOCKS.DIRT, stone:BLOCKS.STONE, tree:0.10, water:0.015, color:'#4b8f45' },
-  { id:'deep_forest', name:'Deep Forest', top:BLOCKS.GRASS, sub:BLOCKS.DIRT, stone:BLOCKS.MOSSSTONE, tree:0.18, water:0.01, color:'#245c35' },
-  { id:'snowy_mountains', name:'Snowy Mountains', top:BLOCKS.SNOWBLOCK, sub:BLOCKS.ICEBLOCK, stone:BLOCKS.STONE, tree:0.025, water:0.01, mountain:18, color:'#b9d7e8' },
-  { id:'frozen_tundra', name:'Frozen Tundra', top:BLOCKS.SNOWBLOCK, sub:BLOCKS.SNOWBLOCK, stone:BLOCKS.ICEBLOCK, tree:0.008, water:0.018, mountain:5, color:'#d9edf2' },
-  { id:'desert', name:'Desert', top:BLOCKS.SAND, sub:BLOCKS.SAND, stone:BLOCKS.SANDSTONE, tree:0, water:0.004, cactus:0.06, color:'#d9bd67' },
-  { id:'rocky_canyon', name:'Rocky Canyon', top:BLOCKS.TERRACOTTA, sub:BLOCKS.SANDSTONE, stone:BLOCKS.GRANITE, tree:0.008, water:0.006, canyon:15, color:'#a9654c' },
-  { id:'swamp', name:'Swamp', top:BLOCKS.MOSSSTONE, sub:BLOCKS.DIRT, stone:BLOCKS.MOSSSTONE, tree:0.09, water:0.05, color:'#536b48' },
-  { id:'jungle', name:'Jungle', top:BLOCKS.GRASS, sub:BLOCKS.DIRT, stone:BLOCKS.STONE, tree:0.22, water:0.025, color:'#2d7543' },
-  { id:'volcanic_lands', name:'Volcanic Lands', top:BLOCKS.OBSIDIAN, sub:BLOCKS.NETHERBRICK, stone:BLOCKS.DEEPSTONE, tree:0, water:0.002, lava:0.06, mountain:12, color:'#6b2921' },
-  { id:'crystal_caverns', name:'Crystal Caverns', top:BLOCKS.CRYSTAL, sub:BLOCKS.STONE, stone:BLOCKS.DEEPSTONE, tree:0, water:0.01, crystals:0.10, color:'#554e91' },
-  { id:'underground_caverns', name:'Underground Caverns', top:BLOCKS.STONE, sub:BLOCKS.STONE, stone:BLOCKS.DEEPSTONE, tree:0, water:0.015, crystals:0.035, color:'#333746' },
-  { id:'mushroom_forest', name:'Mushroom Forest', top:BLOCKS.MOSSSTONE, sub:BLOCKS.DIRT, stone:BLOCKS.MOSSSTONE, tree:0.04, water:0.02, mushrooms:0.12, color:'#6e4d68' },
-  { id:'ancient_ruins', name:'Ancient Ruins', top:BLOCKS.STONEBRICK, sub:BLOCKS.MOSSSTONE, stone:BLOCKS.DEEPSTONE, tree:0.025, water:0.008, ruins:0.13, color:'#77726a' },
-  { id:'coastal_beach', name:'Coastal Beach', top:BLOCKS.SAND, sub:BLOCKS.SAND, stone:BLOCKS.STONE, tree:0.025, water:0.09, color:'#7fc7cf' },
-  { id:'grasslands', name:'Grasslands', top:BLOCKS.GRASS, sub:BLOCKS.DIRT, stone:BLOCKS.STONE, tree:0.025, water:0.012, color:'#7cae52' },
-  { id:'highlands', name:'Highlands', top:BLOCKS.GRASS, sub:BLOCKS.DIRT, stone:BLOCKS.GRANITE, tree:0.025, water:0.008, mountain:10, color:'#667d59' },
-  { id:'dark_forest', name:'Dark Forest', top:BLOCKS.DARKBRICK, sub:BLOCKS.MOSSSTONE, stone:BLOCKS.DEEPSTONE, tree:0.15, water:0.008, color:'#272b38' },
-  { id:'elemental_ruins', name:'Elemental Ruins', top:BLOCKS.RUNESTONE, sub:BLOCKS.STONEBRICK, stone:BLOCKS.OBSIDIAN, tree:0.01, water:0.008, ruins:0.18, color:'#4d8c82' },
-  { id:'lava_fields', name:'Lava Fields', top:BLOCKS.NETHERBRICK, sub:BLOCKS.OBSIDIAN, stone:BLOCKS.DEEPSTONE, tree:0, water:0.001, lava:0.11, mountain:8, color:'#7b3025' },
-  { id:'sky_islands', name:'Sky Islands', top:BLOCKS.CLOUD, sub:BLOCKS.CLOUD, stone:BLOCKS.CLOUD, tree:0.03, water:0.02, color:'#a9c8ef' },
-];
-
-export function getBiomeIndex(worldX, seed) {
-  const region = Math.floor(worldX / 320);
-  const n = Math.abs(Math.floor(noiseAt(region, seed + 99173) * BIOMES.length));
-  return (region + n) % BIOMES.length;
-}
-export function getBiome(worldX, seed) { return BIOMES[getBiomeIndex(worldX, seed)]; }
-
-function biomeTerrainHeight(worldX, seed, biome) {
-  const base = biome.id === 'sky_islands' ? 18 : 38;
-  let h = base + smoothNoise(worldX * 0.018, seed) * 12 + smoothNoise(worldX * 0.05, seed + 1000) * 6;
-  if (biome.mountain) h += smoothNoise(worldX * 0.008, seed + 5000) * biome.mountain;
-  if (biome.canyon) h += Math.sin(worldX * 0.025) * biome.canyon * 0.45;
-  return Math.max(7, Math.min(WORLD_HEIGHT - 15, Math.floor(h)));
-}
-
-function placeTree(blocks, x, surface, height, trunk=BLOCKS.WOOD, leaves=BLOCKS.LEAVES) {
-  for (let ty=1; ty<=height; ty++) if (surface-ty>=0) blocks[x][surface-ty]=trunk;
-  for (let dx=-2; dx<=2; dx++) for (let dy=0; dy<=3; dy++) {
-    const px=x+dx, py=surface-height+dy;
-    if (px>=0 && px<CHUNK_WIDTH && py>=0 && py<WORLD_HEIGHT && blocks[px][py]===BLOCKS.AIR) blocks[px][py]=leaves;
-  }
-}
-
-function placeStructure(blocks, startX, groundY, type, seed) {
-  const rng=seededRandom(seed + startX*31337);
-  const w=8+Math.floor(rng()*8), h=4+Math.floor(rng()*4);
-  const wall=type==='elemental'?BLOCKS.RUNESTONE:type==='ruin'?BLOCKS.STONEBRICK:BLOCKS.WOOD;
-  for(let x=0;x<w;x++) for(let y=1;y<=h;y++) {
-    const px=startX+x, py=groundY-y;
-    if(px>=0&&px<CHUNK_WIDTH&&py>=0&&py<WORLD_HEIGHT) blocks[px][py]=(x===0||x===w-1||y===h)?wall:BLOCKS.AIR;
-  }
-  const door=startX+Math.floor(w/2);
-  if(door>=0&&door<CHUNK_WIDTH){ if(groundY-1>=0)blocks[door][groundY-1]=BLOCKS.AIR; if(groundY-2>=0)blocks[door][groundY-2]=BLOCKS.AIR; }
-  for(let x=2;x<w-1;x+=3){ const py=groundY-h-1; if(py>=0)blocks[startX+x][py]=type==='elemental'?BLOCKS.PILLAR:BLOCKS.PLANK; }
-  if(type==='ruin') for(let x=1;x<w-1;x++) if(rng()<0.16) blocks[startX+x][groundY-1]=BLOCKS.MOSSSTONE;
-  if(type==='elemental') for(let x=1;x<w-1;x++) if(rng()<0.12) blocks[startX+x][groundY-2]=BLOCKS.ELEMENT6;
-}
-
 export function generateChunk(chunkIndex, seed) {
-  const blocks=[];
-  const biome=getBiome(chunkIndex*CHUNK_WIDTH + CHUNK_WIDTH/2, seed);
-  for(let x=0;x<CHUNK_WIDTH;x++){
-    blocks[x]=new Array(WORLD_HEIGHT).fill(BLOCKS.AIR);
-    const worldX=chunkIndex*CHUNK_WIDTH+x;
-    const height=biomeTerrainHeight(worldX,seed,biome);
-    const rng=seededRandom((worldX+1)*92821+seed);
-    const surface=height;
-    for(let y=0;y<WORLD_HEIGHT;y++){
-      if(y<surface) blocks[x][y]=BLOCKS.AIR;
-      else if(y===surface) blocks[x][y]=biome.top;
-      else if(y<=surface+4) blocks[x][y]=biome.sub;
-      else {
-        const depth=y-surface;
-        const cave=caveNoise(worldX,y,seed+(biome.id.length*911));
-        if(depth>10 && cave>(depth>45?0.49:0.58)) {
-          blocks[x][y]=(biome.lava && depth>70 && rng()<biome.lava)?BLOCKS.LAVA:BLOCKS.AIR;
-        } else if(biome.crystals && rng()<biome.crystals*(depth/100)) blocks[x][y]=BLOCKS.CRYSTAL;
-        else if(biome.id==='desert' && rng()<0.018) blocks[x][y]=BLOCKS.CLAY;
-        else if(rng()<0.018) blocks[x][y]=BLOCKS.IRON;
-        else if(rng()<0.012 && depth>18) blocks[x][y]=BLOCKS.GOLD;
-        else if(rng()<0.006 && depth>25) blocks[x][y]=BLOCKS.DIAMOND;
-        else if(rng()<0.004 && depth>35) blocks[x][y]=BLOCKS.ELEMENT6;
-        else blocks[x][y]=biome.stone;
+  const blocks = [];
+  for (let x = 0; x < CHUNK_WIDTH; x++) {
+    blocks[x] = new Array(WORLD_HEIGHT).fill(BLOCKS.AIR);
+    const worldX = chunkIndex * CHUNK_WIDTH + x;
+    const height = terrainHeight(worldX, seed);
+    const rng = seededRandom(worldX * 37 + seed);
+
+    for (let y = 0; y < WORLD_HEIGHT; y++) {
+      if (y < height) {
+        blocks[x][y] = BLOCKS.AIR;
+      } else if (y === height) {
+        blocks[x][y] = BLOCKS.GRASS;
+      } else if (y <= height + 4) {
+        blocks[x][y] = BLOCKS.DIRT;
+      } else if (y <= height + 20) {
+        // Upper stone — some iron
+        const cv = caveNoise(worldX, y, seed);
+        if (cv > 0.62) {
+          blocks[x][y] = BLOCKS.AIR; // cave
+        } else if (rng() < 0.025) {
+          blocks[x][y] = BLOCKS.IRON;
+        } else {
+          blocks[x][y] = BLOCKS.STONE;
+        }
+      } else if (y <= height + 55) {
+        // Mid layer — larger caves, gold
+        const cv = caveNoise(worldX, y, seed);
+        if (cv > 0.52) {
+          blocks[x][y] = BLOCKS.AIR; // larger caves
+        } else if (rng() < 0.035) {
+          blocks[x][y] = BLOCKS.GOLD;
+        } else if (rng() < 0.005) {
+          blocks[x][y] = BLOCKS.ELEMENT6;
+        } else if (rng() < 0.002) {
+          blocks[x][y] = BLOCKS.ELEMENT6_ORB;
+        } else if (rng() < 0.02) {
+          blocks[x][y] = BLOCKS.IRON;
+        } else {
+          blocks[x][y] = BLOCKS.STONE;
+        }
+      } else if (y <= WORLD_HEIGHT - 8) {
+        // Deep layer — deepstone, crystal, lava pools
+        const cv = caveNoise(worldX, y, seed + 9999);
+        if (cv > 0.52) {
+          // Lava pools in deep sections
+          if (y > height + 80 && rng() < 0.15) {
+            blocks[x][y] = BLOCKS.LAVA;
+          } else {
+            blocks[x][y] = BLOCKS.AIR;
+          }
+        } else if (rng() < 0.018) {
+          blocks[x][y] = BLOCKS.CRYSTAL;
+        } else if (rng() < 0.016) {
+          blocks[x][y] = BLOCKS.ELEMENT6;
+        } else if (rng() < 0.010) {
+          blocks[x][y] = BLOCKS.DIAMOND;
+        } else if (rng() < 0.004) {
+          blocks[x][y] = BLOCKS.ELEMENT6_ORB;
+        } else if (rng() < 0.005) {
+          blocks[x][y] = BLOCKS.GOLD;
+        } else if (rng() < 0.01) {
+          blocks[x][y] = BLOCKS.OBSIDIAN;
+        } else {
+          blocks[x][y] = BLOCKS.DEEPSTONE;
+        }
+      } else {
+        // Bedrock layer
+        blocks[x][y] = BLOCKS.OBSIDIAN;
       }
     }
-    if(biome.water>0 && rng()<biome.water && surface<55){
-      for(let wx=-2;wx<=2;wx++) for(let wy=1;wy<=2;wy++){const px=x+wx,py=surface-wy;if(px>=0&&px<CHUNK_WIDTH&&py>=0&&blocks[px][py]===BLOCKS.AIR)blocks[px][py]=BLOCKS.WATER;}
+
+    // Trees — grow upward (decreasing Y) from grass surface
+    if (rng() < 0.06 && blocks[x][height] === BLOCKS.GRASS) {
+      const treeH = 4 + Math.floor(rng() * 3);
+      for (let ty = 1; ty <= treeH - 2; ty++) {
+        const treeY = height - ty;
+        if (treeY >= 0) blocks[x][treeY] = BLOCKS.WOOD;
+      }
+      for (let lx = -2; lx <= 2; lx++) {
+        for (let ly = 0; ly <= 2; ly++) {
+          const leafX = x + lx;
+          const leafY = height - treeH + ly;
+          if (leafX >= 0 && leafX < CHUNK_WIDTH && leafY >= 0 && leafY < WORLD_HEIGHT) {
+            if (blocks[leafX] && blocks[leafX][leafY] === BLOCKS.AIR) {
+              blocks[leafX][leafY] = BLOCKS.LEAVES;
+            }
+          }
+        }
+      }
     }
-    if(biome.tree>0 && rng()<biome.tree && surface>8) placeTree(blocks,x,surface,4+Math.floor(rng()*4),biome.id==='dark_forest'?BLOCKS.DARKBRICK:BLOCKS.WOOD);
-    if(biome.cactus && rng()<biome.cactus && surface>5){ const hh=1+Math.floor(rng()*3); for(let j=1;j<=hh;j++) if(surface-j>=0) blocks[x][surface-j]=BLOCKS.CACTUS; }
-    if(biome.mushrooms && rng()<biome.mushrooms){ if(surface-1>=0) blocks[x][surface-1]=BLOCKS.PUMPKIN; }
   }
-  const sr=seededRandom(seed*17+chunkIndex*7919);
-  if(biome.ruins && sr()<biome.ruins) placeStructure(blocks,2+Math.floor(sr()*(CHUNK_WIDTH-12)),biomeTerrainHeight(chunkIndex*CHUNK_WIDTH+8,seed),'ruin',seed+chunkIndex);
-  if(biome.id==='elemental_ruins' && sr()<0.7) placeStructure(blocks,4+Math.floor(sr()*18),biomeTerrainHeight(chunkIndex*CHUNK_WIDTH+12,seed),'elemental',seed+chunkIndex*3);
-  if(['forest','deep_forest','grasslands','highlands','coastal_beach'].includes(biome.id) && sr()<0.25) placeStructure(blocks,3+Math.floor(sr()*18),biomeTerrainHeight(chunkIndex*CHUNK_WIDTH+10,seed),'house',seed+chunkIndex*5);
-  if(biome.id==='ancient_ruins' && sr()<0.8){ const x=8+Math.floor(sr()*10); const y=biomeTerrainHeight(chunkIndex*CHUNK_WIDTH+x,seed); for(let i=0;i<5;i++){if(x+i<CHUNK_WIDTH)blocks[x+i][Math.max(0,y-5)]=BLOCKS.PILLAR;} }
+
+  // Underground structures — mushroom caves, ruins
+  const structRng = seededRandom(chunkIndex * 999 + seed);
+  if (structRng() < 0.12) {
+    generateStructure(blocks, chunkIndex, seed);
+  }
+  if (structRng() < 0.07) {
+    generateUndergroundRuin(blocks, chunkIndex, seed);
+  }
+  if (structRng() < 0.25) {
+    generateWoodenHouse(blocks, chunkIndex, seed);
+  }
+
   return blocks;
+}
+
+function generateStructure(blocks, chunkIndex, seed) {
+  const rng = seededRandom(chunkIndex * 7777 + seed);
+  const startX = Math.floor(rng() * (CHUNK_WIDTH - 10)) + 2;
+  const worldX = chunkIndex * CHUNK_WIDTH + startX;
+  const groundY = terrainHeight(worldX, seed);
+
+  const houseW = 6 + Math.floor(rng() * 4);
+  const houseH = 4 + Math.floor(rng() * 3);
+
+  for (let bx = 0; bx < houseW; bx++) {
+    for (let by = 1; by <= houseH; by++) {
+      const px = startX + bx;
+      const py = groundY - by;
+      if (px >= 0 && px < CHUNK_WIDTH && py >= 0 && py < WORLD_HEIGHT) {
+        if (bx === 0 || bx === houseW - 1 || by === 1 || by === houseH) {
+          blocks[px][py] = BLOCKS.BRICK;
+        } else {
+          blocks[px][py] = BLOCKS.AIR;
+        }
+      }
+    }
+    const roofY = groundY - houseH - 1;
+    const px = startX + bx;
+    if (px >= 0 && px < CHUNK_WIDTH && roofY >= 0) {
+      blocks[px][roofY] = BLOCKS.PLANK;
+    }
+  }
+
+  const doorX = startX + Math.floor(houseW / 2);
+  if (doorX >= 0 && doorX < CHUNK_WIDTH) {
+    if (groundY - 1 >= 0) blocks[doorX][groundY - 1] = BLOCKS.AIR;
+    if (groundY - 2 >= 0) blocks[doorX][groundY - 2] = BLOCKS.AIR;
+  }
+
+  const winX = startX + 2;
+  const winY = groundY - 3;
+  if (winX >= 0 && winX < CHUNK_WIDTH && winY >= 0) {
+    blocks[winX][winY] = BLOCKS.GLASS;
+  }
+}
+
+function generateWoodenHouse(blocks, chunkIndex, seed) {
+  const rng = seededRandom(chunkIndex * 5555 + seed + 222);
+  const startX = Math.floor(rng() * (CHUNK_WIDTH - 12)) + 2;
+  const worldX = chunkIndex * CHUNK_WIDTH + startX;
+  const groundY = terrainHeight(worldX, seed);
+
+  const houseW = 7 + Math.floor(rng() * 5);
+  const houseH = 5 + Math.floor(rng() * 3);
+
+  // Walls — wood
+  for (let bx = 0; bx < houseW; bx++) {
+    for (let by = 1; by <= houseH; by++) {
+      const px = startX + bx;
+      const py = groundY - by;
+      if (px >= 0 && px < CHUNK_WIDTH && py >= 0 && py < WORLD_HEIGHT) {
+        if (bx === 0 || bx === houseW - 1 || by === 1 || by === houseH) {
+          blocks[px][py] = BLOCKS.WOOD;
+        } else {
+          blocks[px][py] = BLOCKS.AIR;
+        }
+      }
+    }
+  }
+  // Roof — planks
+  for (let bx = -1; bx <= houseW; bx++) {
+    const px = startX + bx;
+    const roofY = groundY - houseH - 1;
+    if (px >= 0 && px < CHUNK_WIDTH && roofY >= 0) {
+      blocks[px][roofY] = BLOCKS.PLANK;
+    }
+  }
+  // Door
+  const doorX = startX + Math.floor(houseW / 2);
+  if (doorX >= 0 && doorX < CHUNK_WIDTH) {
+    if (groundY - 1 >= 0) blocks[doorX][groundY - 1] = BLOCKS.AIR;
+    if (groundY - 2 >= 0) blocks[doorX][groundY - 2] = BLOCKS.AIR;
+  }
+  // Windows
+  const winX1 = startX + 2, winX2 = startX + houseW - 3;
+  const winY = groundY - 3;
+  if (winX1 >= 0 && winX1 < CHUNK_WIDTH && winY >= 0) blocks[winX1][winY] = BLOCKS.GLASS;
+  if (winX2 >= 0 && winX2 < CHUNK_WIDTH && winY >= 0) blocks[winX2][winY] = BLOCKS.GLASS;
+  // Torch inside
+  const torchX = startX + 1, torchY = groundY - 2;
+  if (torchX >= 0 && torchX < CHUNK_WIDTH && torchY >= 0) blocks[torchX][torchY] = BLOCKS.TORCH;
+}
+
+function generateUndergroundRuin(blocks, chunkIndex, seed) {
+  const rng = seededRandom(chunkIndex * 3333 + seed + 1111);
+  const startX = Math.floor(rng() * (CHUNK_WIDTH - 8)) + 2;
+  const worldX = chunkIndex * CHUNK_WIDTH + startX;
+  const surfaceY = terrainHeight(worldX, seed);
+  // Place ruin deep underground
+  const ruinY = surfaceY + 35 + Math.floor(rng() * 20);
+  if (ruinY >= WORLD_HEIGHT - 10) return;
+
+  const w = 5 + Math.floor(rng() * 5);
+  const h = 3 + Math.floor(rng() * 3);
+
+  for (let bx = 0; bx < w; bx++) {
+    for (let by = 0; by < h; by++) {
+      const px = startX + bx;
+      const py = ruinY - by;
+      if (px >= 0 && px < CHUNK_WIDTH && py >= 0 && py < WORLD_HEIGHT) {
+        if (bx === 0 || bx === w - 1 || by === 0 || by === h - 1) {
+          if (rng() > 0.3) blocks[px][py] = BLOCKS.BRICK; // crumbling
+        } else {
+          blocks[px][py] = BLOCKS.AIR;
+        }
+        // Scatter torches and gold inside
+        if (bx > 0 && bx < w - 1 && by > 0 && by < h - 1 && rng() < 0.04) {
+          blocks[px][py] = BLOCKS.TORCH;
+        }
+        if (bx > 0 && bx < w - 1 && by > 0 && by < h - 1 && rng() < 0.03) {
+          blocks[px][py] = BLOCKS.GOLD;
+        }
+      }
+    }
+  }
 }
 
 export class WorldManager {
@@ -444,9 +571,9 @@ export class WorldManager {
     return this.breakProgress[key]?.progress || 0;
   }
 
-  getTerrainHeight(worldX) { return biomeTerrainHeight(worldX, this.seed, getBiome(worldX, this.seed)); }
-
-  getBiomeAt(worldX) { return getBiome(worldX, this.seed); }
+  getTerrainHeight(worldX) {
+    return terrainHeight(worldX, this.seed);
+  }
 
   serializeModifications() {
     return { ...this.modifications };
