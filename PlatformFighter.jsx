@@ -1626,14 +1626,14 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         className="el6-match-canvas"
       />
       {countdown > 0 && !settings.hideCountdown && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
+        <div className="el6-match-overlay absolute inset-0 flex items-center justify-center bg-black/60">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
       <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="absolute top-3 right-3 z-10 px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs">PAUSE (ESC)</button>
       {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={gameMode === 'challenge' ? () => { pausedRef.current = false; setPaused(false); } : finishQuit} />}
       {winner && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/78 rounded-lg gap-5">
+        <div className="el6-match-overlay absolute inset-0 flex flex-col items-center justify-center bg-black/78 gap-5">
           <span className="text-5xl font-heading text-accent drop-shadow-lg">{winner === 'Draw' ? 'DRAW!' : `${winner} WINS!`}</span>
           <div className="flex gap-3">
             <button onClick={() => { if (gameRef.current?.result && !lastResultAwardedRef.current) { onAward?.(gameRef.current.result); lastResultAwardedRef.current = true; } setWinner(null); setCountdown(3); setGameStarted(false); }} className="px-6 py-3 bg-secondary text-secondary-foreground font-heading rounded-lg hover:opacity-80 transition text-lg">REMATCH</button>

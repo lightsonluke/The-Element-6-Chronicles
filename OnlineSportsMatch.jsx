@@ -314,8 +314,8 @@ export default function OnlineSportsMatch({ matchId, role, sport, GameComponent,
   if (winner) {
     const won = winner === 'me' || winner === 'me_disconnect';
     return (
-      <div className="relative flex flex-col items-center gap-2 w-full">
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-lg gap-5">
+      <div className="el6-match-viewport relative flex flex-col items-center w-full">
+        <div className="el6-match-overlay absolute inset-0 flex flex-col items-center justify-center bg-black/80 gap-5">
           <span className="text-5xl font-heading drop-shadow-lg" style={{ color: won ? '#FFD700' : '#FF4444' }}>
             {winner === 'me_disconnect' || winner === 'disconnect' ? 'OTHER PLAYER DISCONNECTED' : won ? 'YOU WIN!' : 'YOU LOSE'}
           </span>
@@ -329,7 +329,7 @@ export default function OnlineSportsMatch({ matchId, role, sport, GameComponent,
   const guestRemoteState = !isHost ? (snapBuffer.getInterpolated(SNAPSHOT_DELAY) || remoteStateRef.current) : null;
 
   return (
-    <div className="relative flex flex-col items-center gap-2 w-full">
+    <div className="el6-match-viewport relative flex flex-col items-center w-full">
       <div className="flex justify-between w-full px-1 max-w-[1280px]">
         <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Forfeit</button>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
@@ -353,13 +353,13 @@ export default function OnlineSportsMatch({ matchId, role, sport, GameComponent,
         isOnlineHost={isHost}
       />
       {countdown > 0 && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
+        <div className="el6-match-overlay absolute inset-0 flex items-center justify-center bg-black/60">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
       {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
       {reconnecting && !winner && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
+        <div className="el6-match-overlay absolute inset-0 flex items-center justify-center bg-black/60">
           <span className="text-3xl font-heading text-accent animate-pulse">RECONNECTING…</span>
         </div>
       )}

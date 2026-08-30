@@ -322,10 +322,10 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
         )}
       </div>
 
-      {/* FIGHT & SPORTS MUSIC */}
+      {/* ALL MATCH MUSIC */}
       <div className="bg-card border border-border rounded-xl p-5">
-        <h3 className="font-heading text-sm text-primary mb-2">FIGHT & SPORTS MUSIC</h3>
-        <p className="text-[10px] text-muted-foreground mb-3">Pick a built-in track for fights, sports & battle royale. "Auto" rotates through all tracks. This overrides uploads above for fight/soccer scenes.</p>
+        <h3 className="font-heading text-sm text-primary mb-2">ALL MATCH MUSIC</h3>
+        <p className="text-[10px] text-muted-foreground mb-3">Every built-in match track is available here for offline fights, online fights, soccer, volleyball, dodgeball, baseball, Banger, and battle royale. "Auto Rotate" cycles through the full match library. Your selected track applies consistently to fight and soccer scenes.</p>
         <div className="flex flex-wrap gap-1.5">
           <button onClick={() => { const cm = { ...(local.customMusic || {}) }; delete cm.fight; delete cm.soccer; apply({ customMusic: cm }); sfx.click(); }}
             className={`px-3 py-1.5 rounded-lg font-heading text-[10px] border ${!local.customMusic?.fight && !local.customMusic?.soccer ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground border-border'}`}>AUTO ROTATE</button>
