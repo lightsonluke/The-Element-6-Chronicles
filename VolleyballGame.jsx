@@ -5,9 +5,10 @@ import { applyElement } from './elements.js';
 import { readGamepadInput } from './controllerProfiles.js';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
+import GameIcon from './GameIcon.jsx';
 import { mergeBotCosmetics } from './botCosmetics.js';
 
-const charFor = (id, element) => { const c = ALL_CHARS.find(c => c.id === id); if (!c) return null; if (element && element !== 'basic') return { ...c, stats: applyElement(c.stats || {}, element) }; return c; };
+const charFor = (id, element) => { const c = ALL_CHARS.find(c => c.id === id) || ALL_CHARS[0]; if (!c) return null; if (element && element !== 'basic') return { ...c, stats: applyElement(c.stats || {}, element) }; return c; };
 
 const W = 1100, H = 660;
 const FLOOR = 540;
@@ -38,6 +39,9 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
   const canvasRef = useRef(null);
   const [countdown, setCountdown] = useState(3);
   const [started, setStarted] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
   const keysRef = useRef({});
   const gpRef = useRef({ 0: {}, 1: {} }); // gamepad state per slot
   const gpPrevRef = useRef({ 0: {}, 1: {} }); // previous gamepad state for edge detection
@@ -232,7 +236,8 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
       const rk = resolveKey(e.key);
       const k = rk.toLowerCase(); keysRef.current[k] = true;
       if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: true });
-      if (e.key === 'Escape') { onQuit?.(); return; }
+      if (e.key === 'Escape') { if (started && !lanConnection && !remoteState && !onStateExport) setPaused(v => !v); else if (started) onQuit?.(); e.preventDefault(); return; }
+      if (pausedRef.current) { e.preventDefault(); return; }
       if (['F5','F12'].includes(e.key)) return;
       // Switch works in ANY phase (serve or rally) — handle FIRST so it's never blocked
       if (k === '/' && !is1v1) { tryHit(1, 'switch'); e.preventDefault(); return; }
@@ -322,7 +327,13 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
         raf = requestAnimationFrame(loop);
         return;
       }
-      const s = st.current; s.frame++;
+      const s = st.current;
+      if (pausedRef.current) {
+        draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories);
+        raf = requestAnimationFrame(loop);
+        return;
+      }
+      s.frame++;
 
       if (s.phase === 'countdown') {
         s.phaseTimer--;
@@ -508,7 +519,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [started, p1Chars, p2Chars, p2IsCPU, difficulty, p1Jersey, p2Jersey, onResult, is1v1, equippedSkins, equippedAccessories]);
+  }, [started, p1Chars, p2Chars, p2IsCPU, difficulty, p1Jersey, p2Jersey, onResult, is1v1, equippedSkins, equippedAccessories, paused, lanConnection, remoteState, onStateExport]);
 
   function movePlayer(p, left, right, up, sp, leftSide) {
     if (left) p.vx = Math.max(p.vx - sp * 0.5, -sp);
@@ -1157,12 +1168,19 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
 
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
+      {started && !lanConnection && !remoteState && !onStateExport && <button onClick={() => setPaused(v => !v)} className="absolute top-2 left-2 z-10 px-3 py-1 bg-secondary/90 text-secondary-foreground rounded font-heading text-xs shadow-lg">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>}
       <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas" />
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
+      {paused && !lanConnection && !remoteState && !onStateExport && <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/75 rounded-lg">
+        <div className="bg-card border border-border rounded-2xl p-7 w-[360px] text-center shadow-2xl">
+          <h2 className="text-3xl font-heading text-accent mb-5">PAUSED</h2>
+          <div className="flex justify-center gap-3"><button onClick={() => setPaused(false)} className="px-7 py-3 bg-primary text-primary-foreground rounded-lg font-heading">RESUME</button><button onClick={onQuit} className="px-7 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading">QUIT</button></div>
+        </div>
+      </div>}
     </div>
   );
 }

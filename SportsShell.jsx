@@ -197,7 +197,14 @@ export default function SportsShell({ sport, unlockedIds, favoriteId, equippedAc
 
   const continueFromBracket = () => setPhase('prematch');
   const replayNonce = () => setNonce(n => n + 1);
-  const allPicksOrdered = (first, rest) => [first, ...rest].slice(0, teamSize);
+  const allPicksOrdered = (first, rest) => {
+    const raw = [first, ...rest].slice(0, teamSize);
+    const fallbackPool = PLAYABLE.length ? PLAYABLE : BASE_PLAYABLE;
+    return raw.map((id, i) => {
+      if (fallbackPool.some(c => c.id === id)) return id;
+      return fallbackPool[i % fallbackPool.length]?.id || 'yellow';
+    });
+  };
 
   if (phase === 'prematch') {
     const p1Line = allPicksOrdered(p1, p1Team.slice(1));

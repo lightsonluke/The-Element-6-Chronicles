@@ -1,5 +1,4 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 import { ALL_CHARS, TEAM_COLOR_P1, TEAM_COLOR_P2 } from './sports.js';
 import { applyElement } from './elements.js';
 import { getKeybinds, readPlayerInput } from './keybinds.js';
@@ -562,7 +561,7 @@ export default function DodgeballGame({
   }
 
   return (
-    <div className="el6-match-viewport flex flex-col items-center gap-2 w-full">
+    <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="flex justify-between items-center w-full max-w-[1100px]">
         <div className="flex gap-2 items-center">
           <span className="font-heading text-xs px-2 py-1 rounded" style={{ background: p1TeamColor + '33', color: p1TeamColor }}>
@@ -573,12 +572,18 @@ export default function DodgeballGame({
           </span>
         </div>
         <div className="flex gap-2">
-          <MatchPauseButtonPortal><button onClick={() => setPaused(p => !p)} className="el6-match-pause-button px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs">{paused ? '▶ RESUME' : '⏸ PAUSE'}</button></MatchPauseButtonPortal>
+          <button onClick={() => setPaused(p => !p)} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs">{paused ? '▶ RESUME' : '⏸ PAUSE'}</button>
           <button onClick={onQuit} className="px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs">QUIT</button>
         </div>
       </div>
       <canvas ref={canvasRef} width={W} height={H} className="rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: W + 'px', aspectRatio: `${W} / ${H}`, height: 'auto', background: '#15102a' }} />
+      {paused && <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/80 rounded-lg">
+        <div className="bg-card border border-border rounded-2xl p-7 w-[360px] text-center shadow-2xl">
+          <h2 className="text-3xl font-heading text-accent mb-5">PAUSED</h2>
+          <div className="flex justify-center gap-3"><button onClick={() => setPaused(false)} className="px-7 py-3 bg-primary text-primary-foreground rounded-lg font-heading">RESUME</button><button onClick={onQuit} className="px-7 py-3 bg-destructive text-destructive-foreground rounded-lg font-heading">QUIT</button></div>
+        </div>
+      </div>}
       <p className="text-[10px] text-muted-foreground font-body text-center">
         P1: <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} /> move · <GameIcon emoji="↑" size={14} /> jump · <GameIcon emoji="↓" size={14} /> fast-fall · <b>(.) power</b> pickup · <b>(,) sig</b> throw (<GameIcon emoji="↑" size={14} />/<GameIcon emoji="↓" size={14} />/neutral = high/low/straight) · <b>(/) super</b> · P2: WASD+v+c+x
       </p>

@@ -1,5 +1,4 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
@@ -134,7 +133,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
     return () => { if (lanConnection.stopStream) lanConnection.stopStream(); };
   }, [enableStream, lanConnection]);
 
-  const getCharData = (id) => customCharsData[id] || HEROES.find(h => h.id === id) || VILLAINS.find(v => v.id === id) || GUARDIANS.find(g => g.id === id);
+  const getCharData = (id) => customCharsData[id] || HEROES.find(h => h.id === id) || VILLAINS.find(v => v.id === id) || GUARDIANS.find(g => g.id === id) || HEROES[0];
 
   useEffect(() => {
     music.setVolume(musicVolume);
@@ -1338,12 +1337,10 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
   }, [winner]);
 
   return (
-    <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
+    <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="flex justify-between w-full px-1 max-w-[1280px]">
         {!tournamentMode && <button onClick={finishQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Menu</button>}
-        <MatchPauseButtonPortal>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className={`el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80 ${tournamentMode ? 'ml-auto' : ''}`}>Pause (ESC)</button>
-        </MatchPauseButtonPortal>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className={`px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80 ${tournamentMode ? 'ml-auto' : ''}`}>Pause (ESC)</button>
       </div>
       <canvas ref={canvasRef} width={W} height={H}
         className="el6-match-canvas"
@@ -1354,7 +1351,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && !winner && <MatchPausePortal><div className="el6-pause-overlay-layer"><PauseMenu online={!!lanConnection} onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={finishQuit} tournamentMode={tournamentMode} onSimRest={simRest} onEndNow={endNow} /></div></MatchPausePortal>}
+      {paused && !winner && <PauseMenu online={!!lanConnection} onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={finishQuit} tournamentMode={tournamentMode} onSimRest={simRest} onEndNow={endNow} />}
       {winner && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/78 rounded-lg gap-5">
           <span className="text-5xl font-heading text-accent drop-shadow-lg">{winner === 'DRAW' ? 'DRAW!' : `${winner} WINS!`}</span>

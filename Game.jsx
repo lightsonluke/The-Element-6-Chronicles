@@ -131,7 +131,7 @@ const DEFAULT_PROGRESS = {
   eventProgress: {},
   dailyQuests: null,
   settings: { theme: 'default', displayMode: 'dark', defaultCPUDifficulty: 'regular', autoSelectFavorite: true, showDamageNumbers: true, screenShake: true, musicVolume: 50, sfxVolume: 70, killFXEnabled: true, disableEventBackground: false,
-    matchTime: 240, cameraZoom: 'normal', showBlastZones: true, showNametags: true, reducedMotion: false, bgParticleDensity: 30, autoPauseFocus: true, aiAggression: 50, defaultGameMode: 'regular', comboCounter: true, showFPS: false, customMusic: {}, penaltiesInsteadOfSuddenDeath: false, mobileMode: false, uiEra: 'dynamic', hideStockBoxes: false, hideStageAndMode: false, hideCountdown: false, hideTopUsername: false },
+    matchTime: 240, cameraZoom: 'normal', showBlastZones: true, showNametags: true, reducedMotion: false, bgParticleDensity: 30, autoPauseFocus: true, aiAggression: 50, defaultGameMode: 'regular', comboCounter: true, showFPS: false, customMusic: {}, penaltiesInsteadOfSuddenDeath: false, mobileMode: false, uiEra: 'dynamic', hideStockBoxes: false, hideStageAndMode: false, hideCountdown: false, hideTopUsername: false, mobileControls: { mode: 'arrows', joystickDynamic: false } },
   ownedPacks: [],
   ownedTitles: [],
   equippedTitle: null,
@@ -167,7 +167,7 @@ function loadProgress() {
   return { ...DEFAULT_PROGRESS };
 }
 let _activeStorySlot = null;
-const STORY_FIELDS = ['defeatedVillains', 'playerX', 'playerY', 'inventory', 'hotbar', 'currentHeroId', 'blockMods', 'worldSeed'];
+const STORY_FIELDS = ['defeatedVillains', 'playerX', 'playerY', 'inventory', 'hotbar', 'currentHeroId', 'blockMods'];
 
 // Debounce cloud saves to avoid hammering the DB on rapid updates
 let _cloudSaveTimer = null;
@@ -790,8 +790,8 @@ export default function Game() {
         setScreen('story');
       } else {
         // New story — keep global progress, reset only story-specific fields
-        const fresh = { ...progressRef.current, defeatedVillains: [], inventory: {}, hotbar: [], worldSeed: (Math.floor(Math.random()*2147483646)+1), currentHeroId: (progressRef.current.unlockedIds || ['yellow'])[0] };
-        delete fresh.playerX; delete fresh.playerY; delete fresh.blockMods;
+        const fresh = { ...progressRef.current, defeatedVillains: [], inventory: {}, hotbar: [], worldSeed: (Math.floor(Math.random() * 2147483646) + 1), currentHeroId: (progressRef.current.unlockedIds || ['yellow'])[0] };
+        delete fresh.playerX; delete fresh.playerY;
         fresh._savedAt = Date.now();
         saveProgress(fresh);
         setProgress(fresh);
@@ -2411,7 +2411,7 @@ export default function Game() {
       </div>
 
       {progress?.settings?.mobileMode === true && TOUCH_SCREENS.includes(screen) && (
-        <TouchControls keybinds={getKeybinds(progress.settings).p1} />
+        <TouchControls keybinds={getKeybinds(progress.settings).p1} settings={progress.settings || {}} />
       )}
       <VirtualKeyboard />
 
