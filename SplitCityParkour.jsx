@@ -12,7 +12,6 @@ import ParkourLeaderboard from './ParkourLeaderboard.jsx';
 import { applyElement, getCharLevelData } from './elements.js';
 import ElementSelect from './ElementSelect.jsx';
 import GameIcon from "./GameIcon.jsx";
-import PauseMenu from "./PauseMenu.jsx";
 
 // ── Canvas / physics constants ──
 const W = 1100, H = 620;
@@ -183,8 +182,6 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
   const canvasRef = useRef(null);
   const [phase, setPhase] = useState('select'); // select | play | over | lb
   const [charId, setCharId] = useState(unlockedIds[0] || 'yellow');
-  const [paused, setPaused] = useState(false);
-  const pausedRef = useRef(false);
   const [selElement, setSelElement] = useState('basic');
   const [result, setResult] = useState(null);
   const stRef = useRef(null);
@@ -233,7 +230,7 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
     const isDown = k => k === 'arrowdown' || k === 's';
     const kd = e => {
       const k = e.key.toLowerCase();
-      if (k === 'escape' || k === 'p') { e.preventDefault(); pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
+      if (k === 'escape') { onExit?.(); return; }
       if (['F5', 'F12'].includes(e.key)) return;
       if (isJump(k) && !keysRef.current[k]) jumpEdgeRef.current = true;
       keysRef.current[k] = true;
@@ -252,7 +249,6 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
     let raf;
     const loop = () => {
       const s = stRef.current; if (!s) { raf = requestAnimationFrame(loop); return; }
-      if (pausedRef.current) { draw(ctx, s, charId, customCharsData, equippedSkins, equippedAccessories); raf = requestAnimationFrame(loop); return; }
       // gamepad
       const gp = settings.controllerEnabled !== false ? readGamepadInput(0) : null;
       if (gp) {
@@ -576,10 +572,8 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
         <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>
-        <span className="text-[10px] text-muted-foreground font-body">D/<GameIcon emoji="→" size={14} />: Run · SPACE: Jump/Wall-Jump · Walk into wall to climb · ESC/P: Pause</span>
+        <span className="text-[10px] text-muted-foreground font-body">D/<GameIcon emoji="→" size={14} />: Run · SPACE: Jump/Wall-Jump · Walk into wall to climb · ESC: Quit</span>
       </div>
-      {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onExit} /></div>}
       <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#0a1228' }} />
     </div>

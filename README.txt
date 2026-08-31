@@ -1,21 +1,32 @@
-ELEMENT 6 — SOCCER BOT + CLIPS FIX
+ELEMENT 6 — WORLD LEADERBOARD SAVE FIX
 
-Replace only the files in this package in the repository.
+This patch fixes the Parkour, Ziplining and Rock Climbing server-backed
+leaderboard save path.
 
-SOCCER:
-- Offline CPU characters are no longer limited by the player's unlocked-character list.
-- SoccerFighter resolves characters from the complete sports roster, including old-generation characters such as Masaru Hai.
-- A bot can use a locked character without being replaced by Yellow.
-- Human character unlock validation remains unchanged.
-- The existing Soccer pause menu/quit callback is preserved; bot character validation no longer interferes with the match state.
+ROOT CAUSE:
+The existing submit_element6_world_score() function referenced
+"auth.users.username". Supabase auth.users does not have that column, so the
+RPC could fail before inserting the score. The React game caught that error,
+which made the run look like it saved locally while element6_world_scores was
+never updated.
 
-CLIPS:
-- Adds /clips and a CLIPS button above Community Hub on desktop and mobile home menus.
-- Press SPACE during a match to save the rolling clip.
-- Clips are stored in IndexedDB rather than localStorage.
-- Maximum 30 clips; oldest clips are automatically removed.
-- The Clips screen loads saved video blobs and supports playback, saving, and deletion.
-- Global fallback recording covers canvas-based game screens that do not already mount useClipRecorder.
-- Existing game-specific clip recorder mounts continue to work without duplicate saves.
+INSTALL:
+1. Replace the four JS/JSX files in this package in the repository.
+2. Open Supabase SQL Editor.
+3. Run Supabase-world-scores-fix.sql once.
+4. Sign into an Element 6 account.
+5. Complete a Parkour, Ziplining, and Rock Climbing run.
+6. Verify rows appear in public.element6_world_scores.
 
-No database or Supabase migration is required for local clips.
+MODES WRITTEN:
+- parkour
+- zipline
+- rockclimb
+
+SCORING:
+- Parkour: higher distance replaces the player's previous best.
+- Ziplining: higher distance replaces the player's previous best.
+- Rock Climbing: lower completion time replaces the player's previous best.
+
+The existing game code already calls submitWorldScore(). This patch keeps that
+architecture and fixes the server function rather than bypassing Supabase RLS.
