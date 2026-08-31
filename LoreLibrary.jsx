@@ -21,9 +21,16 @@ const BOOK_MARKERS = [
 // Arc markers — lines that start with "ARC" or "PROLOGUE" or "EPILOGUE" indicate a new arc
 function isArcHeader(line) {
   const t = line.trim();
-  // Only explicit ARC titles divide the lore into arcs.
-  // Other story titles/headings are normal lore text.
-  return /^ARC\s+[IVX]+\b/i.test(t) && t.length < 120;
+
+  // These are the ONLY lore section titles that should create
+  // separate navigation entries/headings:
+  //   PROLOGUE
+  //   ARC I / ARC II / ARC III / ...
+  //   EPILOGUE
+  //
+  // Do NOT treat ordinary story titles such as "The Shattering",
+  // "The First Argument", "The Great ...", or CHAPTER titles as arcs.
+  return /^(PROLOGUE|ARC\s+[IVX]+\b|EPILOGUE)\b/i.test(t) && t.length < 120;
 }
 
 function splitIntoArcs(text) {
