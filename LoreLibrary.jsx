@@ -21,7 +21,9 @@ const BOOK_MARKERS = [
 // Arc markers — lines that start with "ARC" or "PROLOGUE" or "EPILOGUE" indicate a new arc
 function isArcHeader(line) {
   const t = line.trim();
-  return /^(PROLOGUE|ARC\s+[IVX]+|EPILOGUE|CHAPTER|THE FIRST|THE SHATTERING|THE GREAT)/i.test(t) && t.length < 80;
+  // Only explicit ARC titles divide the lore into arcs.
+  // Other story titles/headings are normal lore text.
+  return /^ARC\s+[IVX]+\b/i.test(t) && t.length < 120;
 }
 
 function splitIntoArcs(text) {
@@ -218,9 +220,12 @@ export default function LoreLibrary({ onBack }) {
 
           {/* ── LORE TEXT READER ── */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 max-w-3xl">
-            <div className="mb-4">
-              <p className="text-[10px] font-heading" style={{ color: currentBook.era.accent }}>
-                {currentBook.era.name} — {currentBook.era.subtitle}
+            <div className="mb-5">
+              <h1 className="font-heading text-xl text-foreground">
+                BOOK {['I','II','III','IV','V'][ERAS.indexOf(currentBook.era)]} — {currentBook.era.name}
+              </h1>
+              <p className="text-[10px] font-heading mt-1" style={{ color: currentBook.era.accent }}>
+                {currentBook.era.subtitle}
               </p>
               <p className="text-[8px] text-muted-foreground">{currentBook.era.aesthetic}</p>
             </div>
