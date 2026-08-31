@@ -10,6 +10,7 @@ import { readGamepadInput } from './controllerProfiles.js';
 import { getKeybinds, readPlayerInput, readSinglePlayerInput } from './keybinds.js';
 import ElementSelect from './ElementSelect.jsx';
 import GameIcon from "./GameIcon.jsx";
+import PauseMenu from "./PauseMenu.jsx";
 
 const VIEW_W = 1280, VIEW_H = 720;
 const WORLD_W = 2800, WORLD_H = 840;
@@ -94,6 +95,7 @@ export default function CaptureTheFlag({
   const gameRef = useRef(null);
   const keysRef = useRef({});
   const [phase, setPhase] = useState('setup');
+  const [paused, setPaused] = useState(false);
   const [combo, setCombo] = useState('pp_cc');
   const [slots, setSlots] = useState({ p1: unlockedIds[0] || 'yellow', p2: 'red', p3: 'blue', p4: 'green' });
   const [elements, setElements] = useState({ p1: 'basic', p2: 'basic', p3: 'basic', p4: 'basic' });
@@ -111,6 +113,7 @@ export default function CaptureTheFlag({
   };
 
   const startMatch = () => {
+    setPaused(false);
     setPhase('play'); sfx.click();
   };
 
@@ -327,7 +330,7 @@ export default function CaptureTheFlag({
     const kd = e => {
       const k = e.key; const kl = k.toLowerCase();
       keysRef.current[k] = true; keysRef.current[kl] = true;
-      if (k === 'Escape' || kl === 'p') { gameRef.current.running = !gameRef.current.running; }
+      if (k === 'Escape' || kl === 'p') { e.preventDefault(); setPaused(p => { const next = !p; if (gameRef.current) gameRef.current.running = !next; return next; }); return; }
       if (!['F5', 'F12'].includes(k)) e.preventDefault();
     };
     const ku = e => { keysRef.current[e.key] = false; keysRef.current[e.key.toLowerCase()] = false; };
@@ -629,8 +632,10 @@ export default function CaptureTheFlag({
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2 max-w-[1280px]">
         <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
+        <button onClick={() => { setPaused(p => { const next = !p; if (gameRef.current) gameRef.current.running = !next; return next; }); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>
         <span className="text-[10px] text-muted-foreground font-body">Move: <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} />/AD · Jump: <GameIcon emoji="↑" size={14} />/W · Sig: J/K/L · Heavy: I · ESC: Pause · Sigs, Heavies &amp; Supers — no powers</span>
       </div>
+      {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { setPaused(false); if (gameRef.current) gameRef.current.running = true; }} onQuit={onExit} /></div>}
       <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H} className="rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: VIEW_W + 'px', aspectRatio: '16 / 9', height: 'auto' }} />
     </div>

@@ -150,8 +150,7 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
             {username && <span className="inline-flex items-center gap-1 text-foreground"><GameIcon emoji="👤" size={12} /> {username}</span>}
             {favoriteName && <span className="inline-flex items-center gap-1 text-muted-foreground"><GameIcon emoji="★" size={12} /> {favoriteName}{favoriteLevel > 1 && <span className="text-primary"> Lv.{favoriteLevel}</span>}</span>}
             <span className="inline-flex items-center gap-1 text-muted-foreground"><GameIcon emoji="◆" size={12} /> <span className="text-accent">{coins || 0}</span></span>
-            <span className="text-muted-foreground">Bot: <span className="text-accent">{rankedRating}</span></span>
-            <span className="text-muted-foreground">Online: <span className="text-primary">{onlineRankedRating}</span></span>
+            <span className="text-muted-foreground">Ranked ELO: <span className="text-primary">{onlineRankedRating}</span></span>
           </div>
           <div className="flex items-center gap-1.5">
             <button onClick={() => handleNav('settings')} className="inline-flex items-center gap-1 px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[10px] hover:opacity-80"><GameIcon emoji="⚙" size={12} /> SETTINGS</button>
@@ -224,8 +223,7 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
         <div className="bg-card/80 border border-border rounded-lg px-2.5 py-1.5 text-[9px] font-heading flex flex-wrap gap-2 justify-center max-w-sm">
           {username && <span className="inline-flex items-center gap-1 text-foreground"><GameIcon emoji="👤" size={12} /> {username}</span>}
           <span className="inline-flex items-center gap-1 text-muted-foreground"><GameIcon emoji="◆" size={12} /> {coins || 0}</span>
-          <span className="text-muted-foreground">Bot: <span className="text-accent">{rankedRating}</span></span>
-          <span className="text-muted-foreground">Online: <span className="text-primary">{onlineRankedRating}</span></span>
+          <span className="text-muted-foreground">Ranked ELO: <span className="text-primary">{onlineRankedRating}</span></span>
         </div>
         <TitleArt />
         <div className="flex gap-2">

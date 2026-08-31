@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { HEROES } from './heroes.js';
-import { VILLAINS } from './villains.js';
+import { PLAYABLE as SPORTS_PLAYABLE } from './sports.js';
 import { getCharNumber } from './characterNumber.js';
 import { withCustomChars } from './characterNumber.js';
 import SoccerFighter from './SoccerFighter.jsx';
@@ -11,8 +10,7 @@ import GroupTournament from './GroupTournament.jsx';
 import UniversalCharacterSelect from './UniversalCharacterSelect.jsx';
 import GameIcon from "./GameIcon.jsx";
 
-const BASE_ALL = [...HEROES, ...VILLAINS];
-const ALL = [...HEROES, ...VILLAINS];
+const BASE_ALL = SPORTS_PLAYABLE;
 
 export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePlay, unlockedIds, favoriteId, sfxVolume = 70, musicVolume = 50, equippedAccessories = {}, equippedSkins = {}, settings = {}, charLevels = {}, equippedElements = {}, onEquipElement, customCharsData = {}, customNumberMap = {}, equippedCrossovers = {}, equippedShikigami = {}, ownedAccessories = [], onEquipAccessory, equippedEmotes = {} }) {
   const ALL = withCustomChars(BASE_ALL, customCharsData, customNumberMap);

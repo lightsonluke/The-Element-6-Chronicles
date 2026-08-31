@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
+import { PLAYABLE as SPORTS_PLAYABLE } from './sports.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, CPU_DIFFICULTY } from './fighter.js';
 import { drawStickman, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles } from './renderer.js';
 import { drawSoccerKit, getAccessory, getEquippedAccessories, drawAccessory, isBehindAccessory, resolveAccColor } from './cosmetics.js';
@@ -133,7 +134,10 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
     return () => { if (lanConnection.stopStream) lanConnection.stopStream(); };
   }, [enableStream, lanConnection]);
 
-  const getCharData = (id) => customCharsData[id] || HEROES.find(h => h.id === id) || VILLAINS.find(v => v.id === id) || GUARDIANS.find(g => g.id === id) || HEROES[0];
+  // Sports can use the complete playable roster, including older-generation
+  // characters such as Masaru Hai. Resolve from the shared sports roster
+  // before falling back to the legacy hero/villain/guardian lists.
+  const getCharData = (id) => customCharsData[id] || SPORTS_PLAYABLE.find(c => c.id === id) || HEROES.find(h => h.id === id) || VILLAINS.find(v => v.id === id) || GUARDIANS.find(g => g.id === id);
 
   useEffect(() => {
     music.setVolume(musicVolume);

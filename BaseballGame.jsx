@@ -8,9 +8,10 @@ import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
 import { drawMinimap, drawOnDeck } from './baseballOverlay.jsx';
 import GameIcon from "./GameIcon.jsx";
+import PauseMenu from "./PauseMenu.jsx";
 
 const charFor = (id, element) => {
-  const c = ALL_CHARS.find(c => c.id === id) || ALL_CHARS[0];
+  const c = ALL_CHARS.find(c => c.id === id);
   if (!c) return null;
   if (element && element !== 'basic') return { ...c, stats: applyElement(c.stats || {}, element) };
   return c;
@@ -59,7 +60,6 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
   const [started, setStarted] = useState(false);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
-  useEffect(() => { pausedRef.current = paused; }, [paused]);
   const keysRef = useRef({});
   const gpRef = useRef({ 0: {}, 1: {} });
   const gpPrevRef = useRef({ 0: {}, 1: {} });
@@ -272,8 +272,7 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
       const rk = resolveKey(e.key);
       const k = rk.toLowerCase(); keysRef.current[k] = true;
       if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: true });
-      if (e.key === 'Escape') { if (started && !lanConnection && !remoteState && !onStateExport) setPaused(v => !v); else if (started) onQuit?.(); e.preventDefault(); return; }
-      if (pausedRef.current) { e.preventDefault(); return; }
+      if (e.key === 'Escape' || e.key.toLowerCase() === 'p') { e.preventDefault(); pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
       if (['F5', 'F12'].includes(e.key)) return;
       const s = st.current;
       const humanBatting = s.batting === 1;  // P1 bats when batting===1
@@ -410,18 +409,19 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
         return;
       }
       const s = st.current;
-      if (pausedRef.current) { draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p1Elements, p2Elements, equippedSkins, mergedAccessories); raf = requestAnimationFrame(loop); return; }
-      s.frame++;
-      const dt = 1/60;
-      const mult = DIFF_MUL[difficulty] || 1;
-      update(s, dt, mult);
-      if (onStateExportRef.current) onStateExportRef.current(s);
+      if (!pausedRef.current) {
+        s.frame++;
+        const dt = 1/60;
+        const mult = DIFF_MUL[difficulty] || 1;
+        update(s, dt, mult);
+        if (onStateExportRef.current) onStateExportRef.current(s);
+      }
       draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p1Elements, p2Elements, equippedSkins, mergedAccessories);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [started, p1Chars, p2Chars, p1Jersey, p2Jersey, p1Elements, p2Elements, difficulty, equippedSkins, equippedAccessories, paused, lanConnection, remoteState, onStateExport]);
+  }, [started, p1Chars, p2Chars, p1Jersey, p2Jersey, p1Elements, p2Elements, difficulty, equippedSkins, equippedAccessories]);
 
   // ── Update ──
   function update(s, dt, mult) {
@@ -1091,7 +1091,7 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
       <div className="w-full flex items-center justify-between gap-2 flex-wrap">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] font-body text-white/80 px-2">
           <button onClick={onQuit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-          {started && !lanConnection && !remoteState && !onStateExport && <button onClick={() => setPaused(v => !v)} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>}
+          <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>
           <span className="font-heading text-accent ml-1">P1:</span>
           <span><span className="text-accent font-bold">,</span> Pitch/Swing/Throw</span>
           <span><span className="text-accent font-bold">/</span> Switch</span>
@@ -1108,6 +1108,7 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
           </div>
         )}
       </div>
+      {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></div>}
       <canvas ref={canvasRef} width={W} height={H} className="rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#1a3a2a' }} />
       {countdown > 0 && (
@@ -1115,12 +1116,6 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && !lanConnection && !remoteState && !onStateExport && <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/75 rounded-lg">
-        <div className="bg-card border border-border rounded-2xl p-7 w-[360px] text-center shadow-2xl">
-          <h2 className="text-3xl font-heading text-accent mb-5">PAUSED</h2>
-          <div className="flex justify-center gap-3"><button onClick={() => setPaused(false)} className="px-7 py-3 bg-primary text-primary-foreground rounded-lg font-heading">RESUME</button><button onClick={onQuit} className="px-7 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading">QUIT</button></div>
-        </div>
-      </div>}
     </div>
   );
 }
