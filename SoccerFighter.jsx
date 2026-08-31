@@ -1,4 +1,3 @@
-import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
@@ -1100,7 +1099,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
 
         ctx.save(); ctx.font = 'bold 12px Orbitron, sans-serif'; ctx.textAlign = 'center';
         ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.beginPath(); ctx.roundRect(f.x - 40, f.y - 84, 80, 18, 4); ctx.fill();
-        ctx.fillStyle = f.char.color; drawOfflineNameTag(ctx, f.x, f.y - 70, f.char);
+        ctx.fillStyle = f.char.color; ctx.fillText(f.char.name, f.x, f.y - 70);
         ctx.restore();
       };
 
@@ -1338,8 +1337,8 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
   }, [winner]);
 
   return (
-    <div className="relative flex flex-col items-center gap-2 w-full">
-      <div className="flex justify-between w-full px-1 max-w-[1280px]">
+    <div className="el6-match-viewport">
+      <div className="fixed top-4 left-4 z-[100] flex items-center gap-2">
         {!tournamentMode && <button onClick={finishQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Menu</button>}
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className={`px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80 ${tournamentMode ? 'ml-auto' : ''}`}>Pause (ESC)</button>
       </div>
@@ -1348,13 +1347,13 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
       />
       {countdown > 0 && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && !winner && <PauseMenu online={!!lanConnection} onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={finishQuit} tournamentMode={tournamentMode} onSimRest={simRest} onEndNow={endNow} />}
+      {paused && !winner && <div className="fixed inset-0 z-[110]"><PauseMenu online={!!lanConnection} onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={finishQuit} tournamentMode={tournamentMode} onSimRest={simRest} onEndNow={endNow} /></div>}
       {winner && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/78 rounded-lg gap-5">
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/78 gap-5">
           <span className="text-5xl font-heading text-accent drop-shadow-lg">{winner === 'DRAW' ? 'DRAW!' : `${winner} WINS!`}</span>
           {teamMode && winner !== 'DRAW' && (
             <div className="flex flex-col items-center gap-1">
@@ -1370,7 +1369,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         </div>
       )}
       {lanConnection && lanConnection.stalled && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-lg z-50">
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-black/80 z-[120]">
           <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mb-3" />
           <span className="text-2xl font-heading text-accent">RECONNECTING…</span>
           <span className="text-xs text-muted-foreground font-body mt-1">Paused for both players while resyncing</span>
