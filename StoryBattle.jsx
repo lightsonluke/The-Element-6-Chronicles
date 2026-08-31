@@ -1,3 +1,4 @@
+import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';

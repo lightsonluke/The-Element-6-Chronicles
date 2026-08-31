@@ -1,7 +1,7 @@
+import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import db from './localBackend';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
@@ -536,7 +536,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         ctx.save();
         ctx.font = 'bold 10px Orbitron'; ctx.textAlign = 'center';
         ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.beginPath(); ctx.roundRect(f.x - 35, f.y - 78, 70, 14, 3); ctx.fill();
-        ctx.fillStyle = renderColor; ctx.fillText(f.playerName || charData.name, f.x, f.y - 67);
+        drawOnlineNameTag(ctx, f.x, f.y - 84, charData, f.playerName);
         ctx.restore();
       });
 
@@ -634,7 +634,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
       finishedRef.current = false; setWinner(null); setCountdown(3); setGameStarted(false);
     };
     return (
-      <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
+      <div className="relative flex flex-col items-center gap-2 w-full">
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-lg gap-5">
           <span className="text-5xl font-heading drop-shadow-lg" style={{ color: won ? '#FFD700' : '#FF4444' }}>
             {won ? 'OTHER PLAYER DISCONNECTED' : `${winner} WINS!`}
@@ -650,12 +650,10 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
   }
 
   return (
-    <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
+    <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="flex justify-between w-full px-1 max-w-[1280px]">
         <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Leave</button>
-        <MatchPauseButtonPortal>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
-        </MatchPauseButtonPortal>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
       </div>
       <canvas ref={canvasRef} width={W} height={H}
         className="el6-match-canvas"
@@ -666,7 +664,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && !winner && <MatchPausePortal><div className="el6-pause-overlay-layer"><PauseMenu online={!!lanConnection} onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} /></div></MatchPausePortal>}
+      {paused && !winner && <PauseMenu online={!!lanConnection} onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
       {lanConnection && lanConnection.stalled && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-lg z-50">
           <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mb-3" />

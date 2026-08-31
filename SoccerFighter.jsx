@@ -1,8 +1,8 @@
+import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
-import { PLAYABLE as SPORTS_PLAYABLE } from './sports.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, CPU_DIFFICULTY } from './fighter.js';
 import { drawStickman, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles } from './renderer.js';
 import { drawSoccerKit, getAccessory, getEquippedAccessories, drawAccessory, isBehindAccessory, resolveAccColor } from './cosmetics.js';
@@ -134,10 +134,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
     return () => { if (lanConnection.stopStream) lanConnection.stopStream(); };
   }, [enableStream, lanConnection]);
 
-  // Sports can use the complete playable roster, including older-generation
-  // characters such as Masaru Hai. Resolve from the shared sports roster
-  // before falling back to the legacy hero/villain/guardian lists.
-  const getCharData = (id) => customCharsData[id] || SPORTS_PLAYABLE.find(c => c.id === id) || HEROES.find(h => h.id === id) || VILLAINS.find(v => v.id === id) || GUARDIANS.find(g => g.id === id);
+  const getCharData = (id) => customCharsData[id] || HEROES.find(h => h.id === id) || VILLAINS.find(v => v.id === id) || GUARDIANS.find(g => g.id === id);
 
   useEffect(() => {
     music.setVolume(musicVolume);
@@ -1103,7 +1100,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
 
         ctx.save(); ctx.font = 'bold 12px Orbitron, sans-serif'; ctx.textAlign = 'center';
         ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.beginPath(); ctx.roundRect(f.x - 40, f.y - 84, 80, 18, 4); ctx.fill();
-        ctx.fillStyle = f.char.color; ctx.fillText(f.char.name, f.x, f.y - 70);
+        ctx.fillStyle = f.char.color; drawOfflineNameTag(ctx, f.x, f.y - 70, f.char);
         ctx.restore();
       };
 

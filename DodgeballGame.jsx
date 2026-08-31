@@ -1,3 +1,4 @@
+import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { ALL_CHARS, TEAM_COLOR_P1, TEAM_COLOR_P2 } from './sports.js';
 import { applyElement } from './elements.js';
@@ -527,7 +528,7 @@ export default function DodgeballGame({
     // nametag + super cd bar
     ctx.textAlign = 'center'; ctx.font = 'bold 11px Orbitron';
     ctx.fillStyle = side === 1 ? p1TeamColor : p2TeamColor;
-    ctx.fillText(char.name, p.x, p.y - P_H - 16);
+    drawOfflineNameTag(ctx, p.x, p.y - P_H - 16, char);
     const barW = 44, bx = p.x - barW / 2, by = p.y - P_H - 12;
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(bx - 1, by - 1, barW + 2, 5);
     const ready = p.ds.superCd * 60;
@@ -561,7 +562,7 @@ export default function DodgeballGame({
   }
 
   return (
-    <div className="relative flex flex-col items-center gap-2 w-full">
+    <div className="flex flex-col items-center gap-2 w-full">
       <div className="flex justify-between items-center w-full max-w-[1100px]">
         <div className="flex gap-2 items-center">
           <span className="font-heading text-xs px-2 py-1 rounded" style={{ background: p1TeamColor + '33', color: p1TeamColor }}>
@@ -578,12 +579,6 @@ export default function DodgeballGame({
       </div>
       <canvas ref={canvasRef} width={W} height={H} className="rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: W + 'px', aspectRatio: `${W} / ${H}`, height: 'auto', background: '#15102a' }} />
-      {paused && <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/80 rounded-lg">
-        <div className="bg-card border border-border rounded-2xl p-7 w-[360px] text-center shadow-2xl">
-          <h2 className="text-3xl font-heading text-accent mb-5">PAUSED</h2>
-          <div className="flex justify-center gap-3"><button onClick={() => setPaused(false)} className="px-7 py-3 bg-primary text-primary-foreground rounded-lg font-heading">RESUME</button><button onClick={onQuit} className="px-7 py-3 bg-destructive text-destructive-foreground rounded-lg font-heading">QUIT</button></div>
-        </div>
-      </div>}
       <p className="text-[10px] text-muted-foreground font-body text-center">
         P1: <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} /> move · <GameIcon emoji="↑" size={14} /> jump · <GameIcon emoji="↓" size={14} /> fast-fall · <b>(.) power</b> pickup · <b>(,) sig</b> throw (<GameIcon emoji="↑" size={14} />/<GameIcon emoji="↓" size={14} />/neutral = high/low/straight) · <b>(/) super</b> · P2: WASD+v+c+x
       </p>

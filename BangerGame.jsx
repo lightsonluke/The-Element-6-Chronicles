@@ -1,3 +1,4 @@
+import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { drawCourt } from './VolleyballGame.jsx';
 import { drawSportChar } from './sportDraw.jsx';
@@ -9,7 +10,6 @@ import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
 import GameIcon from "./GameIcon.jsx";
-import PauseMenu from "./PauseMenu.jsx";
 
 // ── Banger — Element 6 Original ──
 // 3v3 elimination sport on the volleyball court (camera widened so all six stay
@@ -64,8 +64,6 @@ export default function BangerGame({
   const canvasRef = useRef(null);
   const [countdown, setCountdown] = useState(3);
   const [started, setStarted] = useState(false);
-  const [paused, setPaused] = useState(false);
-  const pausedRef = useRef(false);
   const stRef = useRef(null);
   const keysRef = useRef({});
   const gpPrev = useRef({});
@@ -156,7 +154,7 @@ export default function BangerGame({
     const kd = (e) => {
       const k = e.key.toLowerCase();
       keysRef.current[k] = true;
-      if (k === 'escape' || k === 'p') { e.preventDefault(); pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
+      if (k === 'escape') { onQuit?.(); return; }
       if (e.key === 'F5' || e.key === 'F12') return;
       if (lanConnection && !remoteKeysProc.current) {
         const rk = resolveKey(e.key);
@@ -238,11 +236,9 @@ export default function BangerGame({
         draw(ctx, stRef.current);
       } else {
         const s = stRef.current;
-        if (!pausedRef.current) {
-          s.frame++;
-          if (!s.done) step(s);
-          if (onStateExportRef.current) onStateExportRef.current(s);
-        }
+        s.frame++;
+        if (!s.done) step(s);
+        if (onStateExportRef.current) onStateExportRef.current(s);
         draw(ctx, s);
       }
     };
@@ -514,7 +510,7 @@ export default function BangerGame({
       drawSportChar(ctx, p.x, p.y, ch, { facing: side === 1 ? 1 : -1, frame: p.frame, scale: 1.0, jersey: true, sport: 'volleyball', teamColor: color, state: pose, equippedSkins, equippedAccessories: mergedAccessories });
       ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(p.x - 40, p.y - 96, 80, 14);
       ctx.fillStyle = (s.phase === 'aim' && s.aimSide === side && p.slot === active) ? '#FFD700' : ch.color;
-      ctx.font = 'bold 9px Orbitron'; ctx.textAlign = 'center'; ctx.fillText(ch.name.toUpperCase().slice(0, 10), p.x, p.y - 86);
+      ctx.font = 'bold 9px Orbitron'; ctx.textAlign = 'center'; drawOfflineNameTag(ctx, p.x, p.y - 86, ch);
     });
   }
 
@@ -572,11 +568,7 @@ export default function BangerGame({
 
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
-      <div className="w-full flex justify-between items-center">
-        <button onClick={onQuit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>
-      </div>
-      {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></div>}
+      <button onClick={onQuit} className="self-start px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
       <canvas ref={canvasRef} width={CW} height={CH} className="rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: CW + 'px', height: 'auto', aspectRatio: `${CW} / ${CH}`, background: '#080d1a' }} />
     </div>

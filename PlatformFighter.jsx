@@ -1,5 +1,5 @@
+import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
-import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
@@ -1317,7 +1317,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           ctx.save(); ctx.globalAlpha = 0.5;
           drawStickman(ctx, f._clone.x, f._clone.y, renderColor, f._clone.facing || f.facing, f._clone.frame, fScale, renderChar.isSpirit, 'idle', renderChar, null);
           ctx.globalAlpha = 0.6; ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 10px Orbitron'; ctx.textAlign = 'center';
-          ctx.fillText(f.char.name, f._clone.x, f._clone.y - 72 * fScale);
+          drawOfflineNameTag(ctx, f._clone.x, f._clone.y - 72 * fScale, f.char);
           ctx.restore();
         }
         if (!flashing) {
@@ -1631,10 +1631,8 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      <MatchPauseButtonPortal>
-      <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs">PAUSE (ESC)</button>
-      </MatchPauseButtonPortal>
-      {paused && !winner && <MatchPausePortal><div className="el6-pause-overlay-layer"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={gameMode === 'challenge' ? () => { pausedRef.current = false; setPaused(false); } : finishQuit} /></div></MatchPausePortal>}
+      <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="absolute top-3 right-3 z-10 px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs">PAUSE (ESC)</button>
+      {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={gameMode === 'challenge' ? () => { pausedRef.current = false; setPaused(false); } : finishQuit} />}
       {winner && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/78 rounded-lg gap-5">
           <span className="text-5xl font-heading text-accent drop-shadow-lg">{winner === 'Draw' ? 'DRAW!' : `${winner} WINS!`}</span>

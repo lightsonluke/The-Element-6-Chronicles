@@ -1,3 +1,4 @@
+import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import db from './localBackend';
 
 // Battle Royale engine — host-authoritative online mode reusing the existing
@@ -10,7 +11,6 @@ import db from './localBackend';
 // eliminations, zone). Bots are driven by the same insane AI as normal play.
 
 import React, { useRef, useEffect, useState } from 'react';
-import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 
 import { ALL_CHARS } from './allCharacters.js';
 import { createFighter, updateFighter, updateProjectiles, updateAI, checkHit, applyHit, loseStock, drawProjectiles, platformNavigate } from './fighter.js';
@@ -739,7 +739,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
   if (winner) {
     const won = !winner.disconnected && winner.name === (players.find(p => p.user_id === myUserId)?.username);
     return (
-      <div className="el6-match-viewport relative flex flex-col items-center w-full">
+      <div className="relative flex flex-col items-center w-full">
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 rounded-lg gap-4 py-10">
           <span className="text-6xl font-heading drop-shadow-lg" style={{ color: won ? '#FFD700' : '#FF4444' }}>
             {winner.disconnected ? 'CONNECTION LOST' : won ? 'VICTORY!' : 'MATCH OVER'}
@@ -777,10 +777,8 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           <p className="text-[10px] text-muted-foreground font-body">Use ← → or A / D to switch players</p>
         </div>
       )}
-      <MatchPauseButtonPortal>
-      <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs">PAUSE (ESC)</button>
-      </MatchPauseButtonPortal>
-      {paused && !winner && <MatchPausePortal><div className="el6-pause-overlay-layer"><PauseMenu online onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} /></div></MatchPausePortal>}
+      <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="absolute top-3 right-3 z-10 px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs">PAUSE (ESC)</button>
+      {paused && !winner && <PauseMenu online onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
       {reconnecting && !winner && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <div className="flex flex-col items-center gap-2">

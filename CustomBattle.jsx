@@ -1,3 +1,4 @@
+import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useState, useEffect, useRef } from 'react';
 import { ALL_CHARS } from './allCharacters.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, updateProjectiles, drawProjectiles, loseStock } from './fighter.js';
@@ -586,7 +587,7 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
         ctx.beginPath(); ctx.moveTo(tx, ty - 8); ctx.lineTo(tx - 6, ty + 4); ctx.lineTo(tx + 6, ty + 4); ctx.closePath(); ctx.fill();
         ctx.shadowBlur = 0; ctx.restore();
         drawDoubleJumpParticles(ctx, f.doubleJumpParticles || []);
-        if (f._clone) { ctx.save(); ctx.globalAlpha = 0.5; drawStickman(ctx, f._clone.x, f._clone.y, getCharRenderColor(f.char.id, equippedSkins) || f.char.color, f._clone.facing || f.facing, f._clone.frame, 1, f.char.isSpirit, 'idle', f.char, null); ctx.globalAlpha = 0.6; ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 10px Orbitron'; ctx.textAlign = 'center'; ctx.fillText(f.char.name, f._clone.x, f._clone.y - 72); ctx.restore(); }
+        if (f._clone) { ctx.save(); ctx.globalAlpha = 0.5; drawStickman(ctx, f._clone.x, f._clone.y, getCharRenderColor(f.char.id, equippedSkins) || f.char.color, f._clone.facing || f.facing, f._clone.frame, 1, f.char.isSpirit, 'idle', f.char, null); ctx.globalAlpha = 0.6; ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 10px Orbitron'; ctx.textAlign = 'center'; drawOfflineNameTag(ctx, f._clone.x, f._clone.y - 72, f.char); ctx.restore(); }
         const renderColor = getCharRenderColor(f.char.id, equippedSkins) || f.char.color;
         const skinParts = getSkinParts(f.char.id, equippedSkins);
         const acc = getAccessory(equippedAccessoriesRef.current[f.char.id]);

@@ -1,5 +1,5 @@
+import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
-import PauseMenu from './PauseMenu.jsx';
 import { drawSportChar } from './sportDraw.jsx';
 import { ALL_CHARS, TEAM_COLOR_P1, TEAM_COLOR_P2 } from './sports.js';
 import { applyElement } from './elements.js';
@@ -39,8 +39,6 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
   const canvasRef = useRef(null);
   const [countdown, setCountdown] = useState(3);
   const [started, setStarted] = useState(false);
-  const [paused, setPaused] = useState(false);
-  const pausedRef = useRef(false);
   const keysRef = useRef({});
   const gpRef = useRef({ 0: {}, 1: {} }); // gamepad state per slot
   const gpPrevRef = useRef({ 0: {}, 1: {} }); // previous gamepad state for edge detection
@@ -235,7 +233,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
       const rk = resolveKey(e.key);
       const k = rk.toLowerCase(); keysRef.current[k] = true;
       if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: true });
-      if (e.key === 'Escape' || e.key.toLowerCase() === 'p') { e.preventDefault(); pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
+      if (e.key === 'Escape') { onQuit?.(); return; }
       if (['F5','F12'].includes(e.key)) return;
       // Switch works in ANY phase (serve or rally) — handle FIRST so it's never blocked
       if (k === '/' && !is1v1) { tryHit(1, 'switch'); e.preventDefault(); return; }
@@ -325,13 +323,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
         raf = requestAnimationFrame(loop);
         return;
       }
-      const s = st.current;
-      if (pausedRef.current) {
-        draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories);
-        raf = requestAnimationFrame(loop);
-        return;
-      }
-      s.frame++;
+      const s = st.current; s.frame++;
 
       if (s.phase === 'countdown') {
         s.phaseTimer--;
@@ -1166,11 +1158,6 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
 
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
-      <div className="w-full flex justify-between items-center px-2 py-1">
-        <button onClick={onQuit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> QUIT</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>
-      </div>
-      {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></div>}
       <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas" />
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">

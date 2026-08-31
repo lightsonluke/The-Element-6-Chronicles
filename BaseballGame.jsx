@@ -1,3 +1,4 @@
+import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { drawSportChar } from './sportDraw.jsx';
 import { ALL_CHARS, TEAM_COLOR_P1, TEAM_COLOR_P2 } from './sports.js';
@@ -8,7 +9,6 @@ import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
 import { drawMinimap, drawOnDeck } from './baseballOverlay.jsx';
 import GameIcon from "./GameIcon.jsx";
-import PauseMenu from "./PauseMenu.jsx";
 
 const charFor = (id, element) => {
   const c = ALL_CHARS.find(c => c.id === id);
@@ -58,8 +58,6 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
   const { equippedAccessories: mergedAccessories } = mergeBotCosmetics(equippedAccessories, {}, _botIds);
   const [countdown, setCountdown] = useState(3);
   const [started, setStarted] = useState(false);
-  const [paused, setPaused] = useState(false);
-  const pausedRef = useRef(false);
   const keysRef = useRef({});
   const gpRef = useRef({ 0: {}, 1: {} });
   const gpPrevRef = useRef({ 0: {}, 1: {} });
@@ -272,7 +270,7 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
       const rk = resolveKey(e.key);
       const k = rk.toLowerCase(); keysRef.current[k] = true;
       if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: true });
-      if (e.key === 'Escape' || e.key.toLowerCase() === 'p') { e.preventDefault(); pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
+      if (e.key === 'Escape') { onQuit?.(); return; }
       if (['F5', 'F12'].includes(e.key)) return;
       const s = st.current;
       const humanBatting = s.batting === 1;  // P1 bats when batting===1
@@ -408,14 +406,11 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
         raf = requestAnimationFrame(loop);
         return;
       }
-      const s = st.current;
-      if (!pausedRef.current) {
-        s.frame++;
-        const dt = 1/60;
-        const mult = DIFF_MUL[difficulty] || 1;
-        update(s, dt, mult);
-        if (onStateExportRef.current) onStateExportRef.current(s);
-      }
+      const s = st.current; s.frame++;
+      const dt = 1/60;
+      const mult = DIFF_MUL[difficulty] || 1;
+      update(s, dt, mult);
+      if (onStateExportRef.current) onStateExportRef.current(s);
       draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p1Elements, p2Elements, equippedSkins, mergedAccessories);
       raf = requestAnimationFrame(loop);
     };
@@ -1091,7 +1086,6 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
       <div className="w-full flex items-center justify-between gap-2 flex-wrap">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] font-body text-white/80 px-2">
           <button onClick={onQuit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-          <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>
           <span className="font-heading text-accent ml-1">P1:</span>
           <span><span className="text-accent font-bold">,</span> Pitch/Swing/Throw</span>
           <span><span className="text-accent font-bold">/</span> Switch</span>
@@ -1108,7 +1102,6 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
           </div>
         )}
       </div>
-      {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></div>}
       <canvas ref={canvasRef} width={W} height={H} className="rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#1a3a2a' }} />
       {countdown > 0 && (
@@ -1494,7 +1487,7 @@ function drawFieldView(ctx, s, c1, c2, j1, j2, p1Els, p2Els, skins, accs) {
     ctx.fillStyle = isControlled ? '#FFD700' : 'rgba(255,255,255,0.6)';
     ctx.font = 'bold 7px Orbitron'; ctx.textAlign = 'center';
     ctx.shadowColor = '#000'; ctx.shadowBlur = 3;
-    ctx.fillText(fc.name.toUpperCase().slice(0, 8), f.x, f.y - 52); ctx.shadowBlur = 0;
+    drawOfflineNameTag(ctx, f.x, f.y - 52, fc); ctx.shadowBlur = 0;
     ctx.fillStyle = isControlled ? '#FFD700' : 'rgba(255,255,255,0.4)';
     ctx.font = '6px Orbitron';
     ctx.fillText(['PITCHER', 'INFIELD', 'OUTFIELD'][i], f.x, f.y - 44);

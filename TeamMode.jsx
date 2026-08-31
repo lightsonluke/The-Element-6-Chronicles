@@ -1,3 +1,4 @@
+import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useState, useEffect, useRef } from 'react';
 import { ALL_CHARS } from './allCharacters.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, updateProjectiles, drawProjectiles, loseStock } from './fighter.js';
