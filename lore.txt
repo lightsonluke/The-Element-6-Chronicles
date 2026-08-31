@@ -270,29 +270,6 @@ Elsewhere, in the shrine records that would one day be entrusted to a keeper nam
 It read only: The north never sent word. Whatever the storm ends there did not end quietly.
 Nobody thought either loose thread would matter again.
 Generations have a way of proving that assumption wrong.
-HERO STAT INDEX
-1️⃣ ⚡ Thunder Hero — Lightning Power: 100 | Speed: 90 | Defense: 85 | Utility: 70 | Control: 100
-* The strongest mortal Elementor in recorded history — undefeated across three hundred years and every war he chose to enter.
-* Manifested closest to Element 6 at full concentration; no hero before or since has matched his raw output.
-* Defined by restraint rather than spectacle — his legend was built on effortlessness, not destruction.
-* Leader of the original five by unspoken consensus, never by title.
-2️⃣ 🔥 Fire Hero — Flame Power: 70 | Speed: 65 | Defense: 60 | Utility: 68 | Control: 62
-* The only one of the five who actively sought his power through years of devotion before Element 6 answered.
-* Emotionally driven, quick to anger in the face of injustice, but fiercely protective of civilian life.
-* Later trained the first generation of students, indirectly shaping doctrine that would outlive him by centuries.
-3️⃣ 🌊 Water Hero — Tide Power: 68 | Speed: 60 | Defense: 70 | Utility: 80 | Control: 75
-* The most life-saving of the five; credited with preventing more natural disasters than any other hero of the era.
-* Extremely precise control, favoring subtlety over force.
-* Settled near the coast in later life, quietly protecting it for decades without recognition.
-4️⃣ 🌿 Grass Hero — Growth Power: 65 | Speed: 55 | Defense: 75 | Utility: 78 | Control: 80
-* The gentlest of the five, and paradoxically one of the most feared negotiators of the era due to his unshakable patience.
-* Reshaped an entire mountain range into forest still standing centuries later.
-* Rarely fought to kill, favoring restraint and containment over destruction.
-5️⃣ ❄️ Ice Hero — Frost Power: 64 | Speed: 58 | Defense: 78 | Utility: 60 | Control: 70
-* The most reclusive of the five, speaking rarely and vanishing for long stretches even during active wars.
-* Immune to cold in any form since his awakening; capable of freezing large-scale battlefields near-instantly.
-* Disappeared into the northern wilderness at the end of his life; his fate was never confirmed — and the last entry in the shrine archive suggests whatever finally caught up with him did not do so quietly.
-* 
 
 Kingdoms at War - G2
 ELEMENT 6 | Kingdoms at War
@@ -596,34 +573,6 @@ The merchant didn't understand it either.
 He simply kept it, the way people keep things they can't explain, tucked away and mostly forgotten — until, decades later, it would surface again in the hands of someone patient enough, and curious enough, to finally ask it the right question.
 It would be a long, long time before Japan needed to wake for anything half as large as Utsuro again.
 But something had already, quietly, woken up smaller instead.
-HERO STAT INDEX
-1️⃣ 🩶 Renji Kurogane — Iron Power: 62 | Speed: 55 | Defense: 68 | Utility: 60 | Control: 65
-* Corps leader by unspoken consensus. Hardens and reshapes metal, including armor grown from his own skin.
-* Most balanced fighter of the eight; wins through patience and precision rather than raw output.
-* Carries the weight of comparison to Generation I more visibly than anyone else in the Corps.
-2️⃣ 🔥 Kaito Ren — Ember Power: 60 | Speed: 58 | Defense: 45 | Utility: 40 | Control: 42
-* Fire without the original Fire Hero's patience — fights first, apologizes later.
-* Highest raw offensive instinct in the Corps, but the least disciplined early on.
-* Growth arc defined by learning restraint without losing his edge.
-3️⃣ 🌊 Hana Mizushima — Tide Power: 50 | Speed: 48 | Defense: 55 | Utility: 62 | Control: 58
-* Precise and merciless when needed; the Corps' closest analog to the original Water Hero's subtlety.
-* Strongest at disaster prevention and civilian protection over direct combat.
-4️⃣ 🪨 Daigo Ishikawa — Stone Power: 55 | Speed: 30 | Defense: 70 | Utility: 58 | Control: 52
-* Blacksmith's son; gentlest member of the Corps and easily the most underestimated.
-* Best sustained defensive output in the group — held the line alone against hollowed soldiers at Amayo Fields.
-5️⃣ 🌬️ Suzu Kaze — Gale Power: 42 | Speed: 72 | Defense: 35 | Utility: 55 | Control: 40
-* Fastest hero in Generation II by a wide margin; scouting and flanking specialist.
-* Youngest of the eight — power still growing faster than her control.
-6️⃣ 🌑 Mai Yoru — Dusk Power: 58 | Speed: 60 | Defense: 42 | Utility: 50 | Control: 66
-* Shadow-manipulation; most feared by ordinary people, most trusted within the Corps.
-* The only member to survive a direct one-on-one exchange with Utsuro and walk away with useful insight from it.
-7️⃣ 🔔 Osamu Tsuchida — Echo Power: 45 | Speed: 35 | Defense: 50 | Utility: 68 | Control: 60
-* Oldest member; former foot soldier before his awakening, brings tactical experience none of the others have.
-* Retired from active combat after the final battle beneath the temple, having held the chamber entrance alone.
-8️⃣ ⭐ Yui Hoshikawa — Starlight Power: 30 | Speed: 32 | Defense: 38 | Utility: 70 | Control: 72
-* The Corps' healer and emotional anchor; never raises her voice, even in battle.
-* Lowest raw offensive power in the group, but her restoration work — including the act that finally unmade Utsuro — made her decisive in the war's outcome.
-* 
 
 The Fallen Age - G3
 ELEMENT 6 — The Fallen Age
@@ -803,72 +752,6 @@ The Fallen Age had spent a generation arguing about what Element 6 users owed th
 It had never once had to answer the harder question: what happens when the power itself stops requiring a person to be born worthy of it at all.
 That question belonged to whoever came next.
 TO BE CONTINUED
-________________
-
-
-HERO STAT INDEX
-Character
-	Speed
-	Power
-	Defense
-	Utility
-	Control
-	Takeshi Sando — Sand
-	6
-	7
-	6
-	8
-	8
-	Aiko Hone — Bone
-	5
-	7
-	7
-	6
-	7
-	Haru Garasu — Glass
-	5
-	6
-	8
-	8
-	9
-	Chiyo Doku — Venom
-	6
-	8
-	5
-	6
-	7
-	Emi Chi — Blood-sensing / medical
-	5
-	4
-	5
-	9
-	7
-	Nozomi Toge — Thorned vines
-	5
-	6
-	6
-	7
-	6
-	Masaru Hai — Ash (grief-fueled, reckless)
-	6
-	8
-	5
-	4
-	4
-	Ryo Kiri — Mist / infiltration
-	8
-	4
-	4
-	9
-	7
-	Souta — Ash (young, still developing)
-	4
-	5
-	4
-	4
-	5
-	Renji Kurogane, veteran of Generation II, appears in this era only as a retired advisor — hardened forearms slower to answer than they once were, but present at every Assembly council that mattered.
-
 
 The Hero Corps - G4
 ELEMENT 6 — The Hero Corps
@@ -1063,85 +946,6 @@ He'd watched the other one too. The quiet one. The boy under the council table w
 He didn't move to follow either of them. Not yet.
 Patience, after all, was the one thing three hundred years — and counting — had taught him better than anything else.
 He turned from the ledge, prosthetic arm catching a flicker of lightning from the storm still rolling overhead, and stepped back into shadow long before either Silver or Black could have ever known to look for him.
-THE END
-________________
-
-
-HERO CORPS STAT INDEX
-Hero Name
-	Civilian Name
-	Power
-	Speed
-	Power
-	Defense
-	Utility
-	Control
-	Cobalt
-	Kenji Aoyama
-	Barrier constructs
-	6
-	6
-	8
-	7
-	7
-	Cyan
-	Reiji Fuma
-	Wind
-	8
-	6
-	5
-	6
-	6
-	Onyx
-	Ayaka Kurosawa
-	Shadow
-	7
-	6
-	5
-	9
-	8
-	Gold
-	Sora Kanade
-	Restoration / light
-	4
-	6
-	3
-	10
-	9
-	Vermilion
-	Haruto Ban
-	Fire
-	6
-	8
-	5
-	5
-	6
-	Umber
-	Yumi Sato
-	Tremor-sense / martial arts
-	6
-	6
-	6
-	6
-	7
-	Graphite
-	Chika Enomoto
-	Resonance analysis
-	4
-	3
-	4
-	8
-	6
-	—
-	Daichi Ishii
-	Unpowered — resonance-tech engineer
-	3
-	—
-	6
-	9
-	7
-	Gold — Sora Kanade — gave everything she had stabilizing the Hollow Draught's source core, restoring every stolen fragment of Element 6 the Harvest Guild had taken across the crisis's full span. She did not survive it. Her name was added to the memorial wall beside Emerald, Amber, Crimson, and Magenta.
-
 
 Heroes of Color - G5
 THE ELEMENT 6 | Heroes of Color
@@ -2322,91 +2126,37 @@ No fractures.
 No Anti-All.
 Just balance.
 The End.
-HERO CORPS STAT INDEX
-1️⃣ 🟡 Yellow – Enhance Power: 8 | Speed: 10 | Defense: 7 | Utility: 8 | Control: 9
-* Fastest hero alive.
-* Late-war adrenaline mode made him nearly unstoppable.
-* Strong team booster.
-2️⃣ 🔵 Blue – H2O Power: 7 | Speed: 6 | Defense: 8 | Utility: 9 | Control: 8
-* Not crazy destructive, but extremely versatile.
-* Controls floods, ice, shields.
-* Great battlefield stabilizer.
-3️⃣ 🟣 Purple – Ninja Power: 7 | Speed: 9 | Defense: 6 | Utility: 8 | Control: 8
-* Elite assassin-level speed.
-* Great in one-on-one situations.
-* Very disciplined.
-4️⃣ 🟠 Orange – Portal Maker Power: 6 | Speed: 7 | Defense: 6 | Utility: 10 | Control: 9
-* Highest mobility utility in the Corps.
-* Can reposition entire fights instantly.
-* Not built for raw damage.
-5️⃣ 🟢 Green – Earth Power: 7 | Speed: 6 | Defense: 9 | Utility: 9 | Control: 8
-* Incredible defense and terrain control.
-* Makes entire battlefields his advantage.
-6️⃣ 🌸 Pink – Telekinesis Power: 9 | Speed: 9 | Defense: 6 | Utility: 8 | Control: 8
-* Top-tier offensive pressure.
-* Nearly broke the Corps when manipulated.
-* Extremely dangerous at full focus.
-7️⃣ ⚪ Grey – Wall Creation Power: 6 | Speed: 5 | Defense: 10 | Utility: 9 | Control: 8
-* Best defensive specialist.
-* Saved the team multiple times in wars.
-8️⃣ 🌊 Turquoise – Shapeshifting Power: 7 | Speed: 8 | Defense: 7 | Utility: 8 | Control: 7
-* Adaptable in any situation.
-* Strong but not overwhelming.
-9️⃣ 🫒 Olive – Size Mending Power: 6 | Speed: 6 | Defense: 6 | Utility: 10 | Control: 9
-* Can change scale of fights instantly.
-* Extremely smart tactician.
-🔟 🟤 Copper – Time Freeze Power: 7 | Speed: 7 | Defense: 6 | Utility: 9 | Control: 9
-* Micro time freezes = insane precision.
-* Very technical hero.
-1️⃣1️⃣ 💎 Emerald – Phasing (Fallen) Power: 6 | Speed: 9 | Defense: 5 | Utility: 8 | Control: 7
-* Hard to hit.
-* Great scout.
-* Died early in the tournament tragedy.
-1️⃣2️⃣ 🤍 Pearl – Echo Location Power: 5 | Speed: 6 | Defense: 6 | Utility: 9 | Control: 9
-* Sees everything through sound.
-* Elite awareness support.
-1️⃣3️⃣ 🔴 Red – Element 6 → Fire Power: 8 | Speed: 8 | Defense: 7 | Utility: 7 | Control: 8
-* Strong balanced fighter.
-* Fire form made him more controlled and focused.
-1️⃣4️⃣ 💜 Lavender – Air Solidifying Power: 7 | Speed: 7 | Defense: 8 | Utility: 9 | Control: 8
-* Creates platforms, cages, shields.
-* Massive battlefield utility.
-1️⃣5️⃣ 🧡 Amber – Cloning (Fallen) Power: 7 | Speed: 7 | Defense: 6 | Utility: 8 | Control: 7
-* Multi-angle combat.
-* Died in the tournament disaster.
-1️⃣6️⃣ ⚫ Black – Thunder Power: 10 | Speed: 7 | Defense: 9 | Utility: 7 | Control: 8
-* Highest raw destructive output.
-* Only hero who accepted eternal life.
-1️⃣7️⃣ 💗 Magenta – Glue (Fallen) Power: 6 | Speed: 6 | Defense: 7 | Utility: 10 | Control: 9
-* Held reality together in wars.
-* Died stopping the Controller's final blast.
-1️⃣8️⃣ 🟣 Indigo – Gravity Switch Power: 9 | Speed: 7 | Defense: 8 | Utility: 9 | Control: 10
-* Best battlefield commander.
-* Took leadership after Silver.
-1️⃣9️⃣ 🔥 Maroon – Energy Power: 9 | Speed: 7 | Defense: 8 | Utility: 8 | Control: 8
-* Absorbs and redirects insane amounts of energy.
-* Carried multiple large-scale battles.
-1️⃣9️⃣ 🔥 Crimson – Element 6 Beams Power: 9 | Speed: 8 | Defense: 8 | Utility: 7 | Control: 6
-* Weaponizes his own life-energy into solid constructs (blades, spears, armor).
-* Extremely dangerous in close combat — built for duels and warfront pushes.
-* Power increases the longer a fight goes… but drains him physically.
-* Low control early on — fights emotionally.
-* Died in the Evil War after overextending to protect Magenta and Maroon.
-2️⃣0️⃣ 🩸 Scarlet – Necromancy Power: 8 | Speed: 6 | Defense: 7 | Utility: 8 | Control: 8
-* Manipulates death-energy.
-* Extremely valuable in the Evil war.
-2️⃣1️⃣ 🤍 White – Flight Power: 6 | Speed: 9 | Defense: 6 | Utility: 8 | Control: 7
-* Elite aerial mobility.
-* Crucial for rescue operations.
-2️⃣2️⃣ 🪙 Silver – Hardening Power: 9 | Speed: 6 | Defense: 10 | Utility: 8 | Control: 9
-* Former Corps leader.
-* The most stable fighter mentally.
-* The only hero who could tank Evil's frontline assaults repeatedly.
-* Died protecting the team from Evil's final attack — not because he was weak, but because he chose to take the hit.
-
-
-
-
-
 
 Element 6 Hall of Fame
+
+Dawn of Heroes (G1)
+
+Thunder Hero — Split a mountain in a single strike to open an escape route for 12,000 starving civilians, with zero fanfare. Undefeated for 300 years, but the legend was built on restraint, not destruction — his refusal to end the Hundred Blade War "in an afternoon" became the doctrine every later generation inherited without knowing where it came from.
+
+Ice Hero — Vanished into the north alone at the end of the Long Peace and was never seen again. The shrine archive's final note — "whatever the storm ends there did not end quietly" — makes him the story's first quiet, unclaimed sacrifice.
+
+Kingdoms at War (G2)
+
+Yui Hoshikawa — Instead of destroying Utsuro at the climax, she chose to restore the centuries of stolen fragments back into him. That single act of mercy is what actually ends the war — not a bigger hit.
+
+Mai Yoru — The only one who survived a direct one-on-one with Utsuro and came back with the truth (loneliness, not malice) that made Yui's plan possible. Without her intel, the ending doesn't happen.
+
+Osamu Tsuchida — Held the collapsing chamber entrance alone against a full wave of hollowed soldiers so the others could reach the basin, ending his own fighting career permanently to buy that time.
+
+Renji Kurogane — Not a flashy power, but he's the throughline that turns "eight people with power" into an actual Corps, carrying Thunder Hero's restraint-over-force philosophy through an entire war without breaking under it.
+
+The Fallen Age (G3)
+
+Aiko Hone — Took a public censure and lost her field rank over a mercy-kill she made years before any oversight existed, and testified about it honestly instead of hiding — then showed up to fight the capital Blight anyway despite the restriction.
+
+The Hero Corps (G4)
+
+Gold (Sora Kanade) — Gave her entire life force back to reverse a year's worth of citywide stolen Element 6 in one act, restoring every victim the Harvest Guild ever touched. Died doing it. Arguably the single most selfless act in the whole saga.
+
+Heroes of Color (G5)
+
+Silver — Hardened past his own limits to physically block Evil's extinction-level strike aimed at Indigo, Pink, Yellow, and Maroon. "Not them." Died so the next generation could exist.
+
+Magenta — Threw herself into the Controller's final blast to shield the whole team, binding the explosion with her own body.
+
+Crimson — After his recklessness got two teammates killed earlier in the story, he redeemed it by collapsing an apocalyptic amplification node from the inside, sacrificing himself to save half a continent.
