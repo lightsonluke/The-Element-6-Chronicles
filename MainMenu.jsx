@@ -180,6 +180,11 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
 
           {/* Center: World button + TitleArt (battle pass design) + Battle Pass button */}
           <div className="flex-1 flex flex-col items-center gap-4 pt-4">
+            <button onClick={() => handleNav('clips')}
+              className="inline-flex items-center gap-1.5 px-8 py-2.5 rounded-xl font-heading text-sm text-white tracking-wider hover:scale-105 transition"
+              style={{ background: 'linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)))', border: `2px solid ${rim}` }}>
+              <GameIcon emoji="🎬" size={14} /> CLIPS
+            </button>
             <button onClick={() => handleNav('hub')}
               className="inline-flex items-center gap-1.5 px-8 py-2.5 rounded-xl font-heading text-sm text-white tracking-wider hover:scale-105 transition"
               style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))', border: `2px solid ${rim}` }}>
@@ -226,7 +231,8 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
           <span className="text-muted-foreground">Ranked ELO: <span className="text-primary">{onlineRankedRating}</span></span>
         </div>
         <TitleArt />
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-center">
+          <button onClick={() => handleNav('clips')} className="px-6 py-2 rounded-xl font-heading text-xs text-white" style={{ background: 'linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)))' }}>🎬 CLIPS</button>
           <button onClick={() => handleNav('hub')} className="px-6 py-2 rounded-xl font-heading text-xs text-white"
             style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))' }}>HUB</button>
           <button onClick={() => handleNav('events')} className="px-6 py-2 rounded-xl font-heading text-xs text-white"

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { initClipRecorder, saveClip, stopClipRecorder } from './clipRecorder.js';
-import { saveClipBlob } from './clipStorage.js';
+import { saveClipBlob, trimClips } from './clipStorage.js';
 
 // Shows a small "You saved a clip!" toast in the top-right corner.
 function showClipToast() {
@@ -22,9 +22,10 @@ export function useClipRecorder(canvasRef) {
   useEffect(() => {
     if (canvasRef.current && !initialized.current) {
       initClipRecorder(canvasRef.current);
+      window.__e6ClipRecorderActive = true;
       initialized.current = true;
     }
-    return () => { stopClipRecorder(); initialized.current = false; };
+    return () => { stopClipRecorder(); initialized.current = false; window.__e6ClipRecorderActive = false; };
   }, [canvasRef]);
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export function useClipRecorder(canvasRef) {
         if (!blob || blob.size === 0) return;
         const id = `clip_${Date.now()}`;
         await saveClipBlob(id, blob);
+        await trimClips(30);
         window.dispatchEvent(new CustomEvent('clipSaved', { detail: { id, created: Date.now(), mime: blob.type || 'video/webm' } }));
         showClipToast();
       } catch {}

@@ -1,15 +1,21 @@
-ELEMENT 6 — REMOVE PIXEL JUMP
+ELEMENT 6 — SOCCER BOT + CLIPS FIX
 
-Replacement package for removing the "Pixel Jump" music track from the game's selectable/built-in fight and sports music library.
+Replace only the files in this package in the repository.
 
-REPLACE:
-  music.js
+SOCCER:
+- Offline CPU characters are no longer limited by the player's unlocked-character list.
+- SoccerFighter resolves characters from the complete sports roster, including old-generation characters such as Masaru Hai.
+- A bot can use a locked character without being replaced by Yellow.
+- Human character unlock validation remains unchanged.
+- The existing Soccer pause menu/quit callback is preserved; bot character validation no longer interferes with the match state.
 
-WHAT THIS FIX DOES:
-- Removes the Pixel Jump entry from FIGHT_TRACK_LIBRARY.
-- Pixel Jump will no longer be selected by the built-in fight/sports music rotation.
-- Pixel Jump will no longer appear as a built-in selectable track wherever FIGHT_TRACK_LIBRARY is used.
-- No other music tracks are changed.
+CLIPS:
+- Adds /clips and a CLIPS button above Community Hub on desktop and mobile home menus.
+- Press SPACE during a match to save the rolling clip.
+- Clips are stored in IndexedDB rather than localStorage.
+- Maximum 30 clips; oldest clips are automatically removed.
+- The Clips screen loads saved video blobs and supports playback, saving, and deletion.
+- Global fallback recording covers canvas-based game screens that do not already mount useClipRecorder.
+- Existing game-specific clip recorder mounts continue to work without duplicate saves.
 
-IMPORTANT:
-The repository currently contains both "public/audio/pixel-jump.mp3" and a duplicate-looking "public/audio/Pixel Jump.mp3" file. The game code only references the lowercase file through music.js, so replacing music.js is sufficient to remove Pixel Jump from the game library. If you also want the unused audio files physically removed from the repository, delete both audio files manually.
+No database or Supabase migration is required for local clips.

@@ -55,7 +55,7 @@ export default function ClipsScreen({ clips, onDeleteClip, onBack }) {
         <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
       </div>
       <p className="text-xs text-muted-foreground font-body">
-        Press <span className="text-accent font-bold">SPACE</span> during any battle to save the last ~10 seconds. Max 10 clips — oldest are removed automatically.
+        Press <span className="text-accent font-bold">SPACE</span> during any battle to save the last ~10 seconds. Max 30 clips — oldest are removed automatically.
       </p>
       {clips.length === 0 ? (
         <div className="text-center text-muted-foreground py-20 font-body">
@@ -74,7 +74,7 @@ export default function ClipsScreen({ clips, onDeleteClip, onBack }) {
               <div className="flex justify-between items-center mt-2">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-muted-foreground font-body">{new Date(clip.created).toLocaleString()}</span>
-                  <button onClick={() => handleDownload(clip.id)} className="px-2 py-1 bg-primary/30 text-primary rounded text-[10px] font-heading hover:opacity-80"><GameIcon emoji="⬇" size={14} /> MP4</button>
+                  <button onClick={() => handleDownload(clip.id)} className="px-2 py-1 bg-primary/30 text-primary rounded text-[10px] font-heading hover:opacity-80"><GameIcon emoji="⬇" size={14} /> SAVE</button>
                   <button onClick={() => handleDelete(clip.id)} className="px-2 py-1 bg-destructive/20 text-destructive rounded text-[10px] font-heading hover:opacity-80">DELETE</button>
                 </div>
               </div>

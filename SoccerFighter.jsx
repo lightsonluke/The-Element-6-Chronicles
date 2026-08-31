@@ -133,7 +133,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
     return () => { if (lanConnection.stopStream) lanConnection.stopStream(); };
   }, [enableStream, lanConnection]);
 
-  const getCharData = (id) => customCharsData[id] || HEROES.find(h => h.id === id) || VILLAINS.find(v => v.id === id) || GUARDIANS.find(g => g.id === id);
+  const getCharData = (id) => customCharsData[id] || ALL_CHARS.find(c => c.id === id) || HEROES.find(h => h.id === id) || VILLAINS.find(v => v.id === id) || GUARDIANS.find(g => g.id === id);
 
   useEffect(() => {
     music.setVolume(musicVolume);

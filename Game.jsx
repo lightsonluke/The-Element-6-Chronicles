@@ -100,6 +100,9 @@ const DEFAULT_SPLIT_CITY_BACKDROP = `${import.meta.env.BASE_URL}assets/split-cit
 import { getKeybinds } from './keybinds.js';
 import UsernamePrompt from './UsernamePrompt.jsx';
 import GameIcon from "./GameIcon.jsx";
+import ClipsScreen from "./ClipsScreen.jsx";
+import GlobalClipRecorder from "./GlobalClipRecorder.jsx";
+import { listClipMetadata } from "./clipStorage.js";
 
 // Screens where a canvas game is actively running and the gamepad is used
 // for gameplay. Menu navigation is disabled ONLY on these screens so the
@@ -207,7 +210,7 @@ const TOUCH_SCREENS = ['fighting', 'soccer', 'sports', 'training', 'tutorial', '
 
 export default function Game() {
   const SCREEN_PATHS = {
-    menu: '/home', shop: '/shop', modeSelect: '/fights', onlinelobby: '/online', onlinesports: '/onlinesports',
+    menu: '/home', clips: '/clips', shop: '/shop', modeSelect: '/fights', onlinelobby: '/online', onlinesports: '/onlinesports',
     sports: '/sports', elo: '/elo', hubserverselect: '/community', leaderboard: '/leaderboards', settings: '/settings',
     hub: '/community-hub', sandbox: '/sandbox-mode', stageeditor: '/stage-editor', mobilecontrols: '/mobile-controls', training: '/training', combos: '/combo-trainer',
     tutorial: '/tutorial', storySaves: '/story-mode', soccer: '/soccer', friends: '/friends', chat: '/chat',
@@ -224,7 +227,7 @@ export default function Game() {
     '/bot-battle': 'botbattle', '/low-gravity': 'lowgravity', '/2v2-teams': 'team', '/tournament-character-select': 'tournament',
   };
   const PATH_ALIASES = {
-    '/home': 'menu', '/fights': 'modeSelect', '/online': 'onlinelobby', '/ranked': 'onlinelobby', '/unranked': 'onlinelobby',
+    '/home': 'menu', '/clips': 'clips', '/fights': 'modeSelect', '/online': 'onlinelobby', '/ranked': 'onlinelobby', '/unranked': 'onlinelobby',
     '/online-fights': 'onlinelobby', '/sports': 'sports', '/online-sports': 'sportslobby', '/onlinesports': 'sportslobby',
     '/soccer': 'soccer', '/soccer-online': 'onlinesports', '/soccer-ranked': 'onlinesports', '/volleyball': 'sports',
     '/volleyball-online': 'onlinesports', '/volleyball-ranked-1v1': 'onlinesports', '/baseball': 'sports', '/parkour': 'sports',
@@ -261,6 +264,7 @@ export default function Game() {
   const [onlineMode, setOnlineMode] = useState('unranked'); // ranked | unranked | soccer
   const [showCutscene, setShowCutscene] = useState(!localStorage.getItem('element6_progress'));
   const [progress, setProgress] = useState(loadProgress);
+  const [clips, setClips] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -436,6 +440,13 @@ export default function Game() {
     if (url) setCustomBackdropUrl(url); else clearCustomBackdrop();
   }, [progress?.settings?.customBackdrop]);
   progressRef.current = progress;
+  const refreshClips = async () => { try { setClips(await listClipMetadata()); } catch { setClips([]); } };
+  useEffect(() => {
+    refreshClips();
+    const onClipSaved = () => refreshClips();
+    window.addEventListener('clipSaved', onClipSaved);
+    return () => window.removeEventListener('clipSaved', onClipSaved);
+  }, []);
   const activeEvent = getActiveEvent();
   const eventColor = activeEvent?.color || '#7744FF';
   const disableEventBg = progress?.settings?.disableEventBackground === true;
@@ -874,6 +885,7 @@ export default function Game() {
     else if (dest === 'fight') setScreen('modeSelect');
     else if (dest === 'creator') setScreen('creator');
     else if (dest === 'mobilecontrols') { setScreen('mobilecontrols'); sfx.click(); }
+    else if (dest === 'clips') { refreshClips(); setScreen('clips'); sfx.click(); }
     else if (dest === 'friends') setScreen('friends');
     else if (dest === 'chat') setScreen('chat');
     else if (dest === 'leaderboard') setScreen('leaderboard');
@@ -1729,6 +1741,12 @@ export default function Game() {
             <p className="text-xs font-body text-foreground"><span className="text-accent font-heading">{tradeGiftToast.name}</span> {tradeGiftToast.text}</p>
           </div>
         )}
+        <GlobalClipRecorder />
+
+        {screen === 'clips' && (
+          <ClipsScreen clips={clips} onDeleteClip={(id) => setClips(prev => prev.filter(c => c.id !== id))} onBack={goBack} />
+        )}
+
         {screen === 'menu' && (
           <MainMenu onNavigate={handleNavigate} coins={progress.coins}
             favoriteName={ALL.find(c => c.id === progress.favoriteId)?.name}
