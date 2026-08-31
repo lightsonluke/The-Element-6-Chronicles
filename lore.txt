@@ -1,6 +1,6 @@
+Book I — Dawn of Heroes
+Dawn of Heroes
 Dawn of Heroes - G1
-THE ELEMENT 6 | Dawn of Heroes 
-PROLOGUE — WHEN BALANCE STILL BREATHED
 Before the universe expanded, before atoms argued with gravity, before time decided to move forward—
 There were Four.
 Not rulers.
@@ -28,8 +28,6 @@ Mercy softened transitions.
 Evil balanced expansion by limiting it.
 But balance is fragile when awareness grows.
 And Evil began to think.
-________________
-
 
 The First Argument
 There is no sky yet.
@@ -75,8 +73,6 @@ Life steps forward.
 Evil replies:
 “Stillness is perfection.”
 That is when equilibrium fractures.
-________________
-
 
 The Shattering
 Evil does not attack violently.
@@ -106,7 +102,6 @@ Because the fragments do not die.
 They become something unstable.
 Something imperfect.
 Something mortal.
-THE BIRTH OF ELEMENT 6
 When the fragments of Life, Mercy, and Death settle into material reality, they condense into a new force.
 Not pure divinity.
 Not simple physics.
@@ -123,8 +118,7 @@ He cannot erase what has scattered.
 But he can influence what rises.
 And when humanity grows intelligent enough—
 The awakenings begin.
-
-ARC I — THE FIVE AWAKENINGS
+## ARC I — THE FIVE AWAKENINGS
 Japan, in the age of warring clans, was loud in every way Element 6 was drawn to. War. Grief. Belief that the sky was still listening. So when the fragments went looking for their first true vessels, they rooted here first.
 A farmer's third son stood in a rice paddy during a storm that refused to end.
 Lightning struck the field seven times that night. Six bolts scorched the earth and vanished. The seventh curled around his wrist like it had been waiting for permission.
@@ -142,7 +136,7 @@ A hunter in the far north froze solid in a storm that should have killed him. He
 Five awakenings. Five provinces. Zero coordination.
 Element 6 was not spreading thin in this era.
 It was arriving at full strength, all at once, like a single wave breaking across five separate shores.
-ARC II — THE MOUNTAIN PASS
+## ARC II — THE MOUNTAIN PASS
 They didn't find each other through wisdom. They found each other because a warlord named Kessho had heard the rumors — a boy who commands lightning, a monk whose fire needs no fuel — and decided, correctly, that whoever controlled these five would control the age.
 He was wrong about one thing.
 Nobody controls the Thunder Hero.
@@ -164,7 +158,7 @@ That evening, around a fire the Fire Hero didn't need to light but lit anyway ou
 The Thunder Hero looked at the flames for a long moment.
 "Same as you. I just got here first."
 He didn't mean the mountain pass. He meant the storm — the one still circling, faint, patient, thirty feet above his head, the one that never fully left him again for the rest of his life.
-ARC III — FIVE STRANGERS, ONE FIRE
+## ARC III — FIVE STRANGERS, ONE FIRE
 They didn't part ways after the pass. None of them said it out loud, but none of them wanted to.
 The Grass Hero's arrow wound took two days to close, even with the vines helping. He spent those two days watching the Thunder Hero — not with suspicion, but with the quiet study of someone trying to understand a language he'd never heard before.
 "You didn't even flinch," he said, on the second night. "When you called it down.
@@ -182,7 +176,7 @@ And the Thunder Hero, without ever asking for it, became the reason the other fo
 The lord asked what that made him loyal to.
 He looked at the four people sitting around his fire.
 "Them. That's the whole answer."
-ARC IV — THE HUNDRED BLADE WAR BEGINS
+## ARC IV — THE HUNDRED BLADE WAR BEGINS
 The war that made them legend was never fought over land. It was fought over an idea — that a fractured continent needed unifying, and whoever unified it first would decide what came next.
 Nineteen provinces. Six warlords. A war that, without the five, would have lasted forty years instead of four.
 They did not fight every battle. That decision, more than any single strike, was what made the difference.
@@ -192,7 +186,7 @@ The Fire Hero disagreed loudly and often. He wanted every battle over in an afte
 The Thunder Hero didn't argue back.
 "I could end this in an afternoon," he said quietly. "That's exactly why I won't."
 It was the closest thing to a philosophy any of them ever heard him state outright — and it would, centuries later, become the founding principle an entire organization built its doctrine on, though by then nobody would remember where it came from.
-ARC V — FIVE REPUTATIONS
+## ARC V — FIVE REPUTATIONS
 By the war's midpoint, each of the five had built a legend distinct from the others.
 The Fire Hero was known for arriving loud and leaving nothing standing that deserved to fall — soldiers spoke of seeing him silhouetted against burning castle gates from three villages away.
 The Water Hero was known for saving more lives than she ever took — coastal towns credited her with turning back disasters that had nothing to do with the war at all, simply because she happened to be near the shore when they came.
@@ -201,7 +195,7 @@ Men who don't lose their temper don't make mistakes.
 The Ice Hero was known for silence. He rarely explained himself, rarely stayed long enough to be thanked. He simply appeared wherever the fighting was about to turn into a massacre, froze it solid, and left.
 And the Thunder Hero was known, simply, as the reason no warlord ever tested a peace treaty twice.
 "He never lost a duel," soldiers told their children decades later. "Not because he was undefeated. Because nobody who understood what they were looking at ever challenged him a second time."
-ARC VI — THE MOUNTAIN
+## ARC VI — THE MOUNTAIN
 A landslide sealed the only mountain pass between the five and a besieged capital. Twelve thousand civilians were trapped on the far side, three days from starvation, with no route around.
 The Grass Hero studied the rubble. "I can clear a path. It'll take two days."
 The Water Hero shook her head. "There's no river through here. I can't erode it fast enough."
@@ -219,7 +213,7 @@ The Thunder Hero didn't answer. He was already walking toward the gap, checking 
 He never once, in three hundred years, acted like the mountain had been difficult.
 That, more than the lightning, more than the war, was what made the legend permanent. Not the power.
 The ease.
-ARC VII — THE WAR'S END
+## ARC VII — THE WAR'S END
 The Hundred Blade War closed not with a final grand battle, but with a surrender that arrived quietly, by messenger, from the last standing warlord — a woman named Orin, who had watched four of her rivals fall and understood the fifth would follow whether she resisted or not.
 She didn't surrender to an army. She surrendered to five names.
 "I've seen what happens to the ones who keep fighting after the Thunder Hero's already decided the outcome," her letter read. "I'd rather be remembered as the one who understood sooner than the rest."
@@ -228,7 +222,7 @@ What survived instead was a smaller moment — the four of them sitting around a
 "What happens now?" the Water Hero asked.
 The Thunder Hero looked at the fire.
 "Now we find out what we're for, when nobody's burning."
-ARC VIII — THE LONG PEACE
+## ARC VIII — THE LONG PEACE
 The five did not age like the people around them. Element 6, this close to its source, had settled into their bodies the way roots settle into old soil —
 permanently, and with interest. Decades passed, then a century, then more.
 Kingdoms rose and fractured and rose again under new names. The five watched most of it from a distance, occasionally intervening, mostly simply existing as the fixed point everyone else's history quietly revolved around.
@@ -237,7 +231,7 @@ The Water Hero settled near the coast that had once nearly killed her, spending 
 The Grass Hero turned an entire mountain range into forest that would still be standing centuries later — protected, unlogged, unexplained, known only as an old grove nobody could say why they'd never touched.
 The Ice Hero vanished into the north during the final stretch of the peace and was never seen again by the other four. Nobody ever confirmed whether he died there or simply chose to stop being found.
 And the Thunder Hero remained where he'd always remained — close enough to be reached, distant enough that reaching him felt like an event.
-ARC IX — THE QUESTION
+## ARC IX — THE QUESTION
 Only once, near the end of the Long Peace, did anyone ask the Thunder Hero the question that mattered most.
 A young scholar, granted an audience purely out of curiosity about the aging legend, finally worked up the nerve.
 "Are you afraid of what happens after you? When people like you stop being born?"
@@ -248,7 +242,7 @@ The Thunder Hero considered this for longer than the scholar expected.
 A pause.
 "It should probably scare them, though."
 He was right. It did.
-ARC X — THE SUCCESSION
+## ARC X — THE SUCCESSION
 The Thunder Hero was the last of the five to show his age, and even then, only barely — a slowness in the storm that circled him, a lightning that took a half-second longer to answer than it used to.
 He gathered students near the very end, the way the Fire Hero once had. Not to make more Thunder Heroes. He was clear about that from the first lesson.
 "Nobody after me carries what I carry," he told them plainly, the only day he ever addressed all of them together. "Element 6 isn't a technique. It's not something you inherit like a sword. Whatever comes after us will be real. It'll matter. It just won't be this."
@@ -260,7 +254,6 @@ Its final page read simply:
 He died the way he'd lived — without ceremony, without an audience, in a field, in the rain, the storm above him finally, quietly, going still.
 
 Far beyond the storm, something ancient listened—and for the first time in an age, it wondered what would happen when the Thunder was gone.
-EPILOGUE — THE ONES WHO DIDN'T KNEEL
 Not every province wept for him.
 Word of the Thunder Hero's death reached the old Kessho bloodline last of all, carried by a merchant who hadn't realized what he was delivering until he saw the look on the listener's face.
 Kessho's great-grandson was an old man himself by then, keeper of a family shrine nobody visited anymore, tending a grudge that had outlived every person who remembered its original shape.
@@ -272,9 +265,10 @@ It read only: The north never sent word. Whatever the storm ends there did not e
 Nobody thought either loose thread would matter again.
 Generations have a way of proving that assumption wrong.
 
+Book II — Kingdoms at War
+Kingdoms at War
 Kingdoms at War - G2
 ELEMENT 6 | Kingdoms at War
-THE BIRTH OF ELEMENT 6
 When the fragments of Life, Mercy, and Death settle into material reality, they condense into a new force.
 Not pure divinity.
 Not simple physics.
@@ -291,7 +285,7 @@ He cannot erase what has scattered.
 But he can influence what rises.
 And when humanity grows intelligent enough—
 The awakenings begin.
-ARC I — THE NEW LEGENDS
+## ARC I — THE NEW LEGENDS
 The temple bells of the Ashen Monastery rang the same way they had for eighty years, and Renji Kurogane still flinched at the sound of them, because eighty years ago they'd rung to mourn the death of the last living member of the original five.
 He was twenty-three. He had never seen the Thunder Hero. Neither had his parents. And still, standing in the courtyard where a bronze statue of the man towered three times human height, lightning frozen mid-strike in bronze forever, Renji felt the old, familiar weight settle onto his shoulders the way it did every single morning.
 "You're up early," said Master Genko, shuffling into the courtyard with a lantern he didn't need — dawn had already broken.
@@ -321,7 +315,7 @@ The courtyard went quiet.
 "First real one since the last five died," Osamu corrected, and nobody argued with him.
 Renji looked at the statue one more time — the bronze Thunder Hero, arm raised, storm frozen at his fingertips, three hundred years of legend cast in metal that would never age the way the man himself hadn't, for most of his life.
 "Then we'd better be worth the comparison," he said. "Pack light. We leave by noon."
-ARC II — THE BROKEN CLAN
+## ARC II — THE BROKEN CLAN
 The Kurenai and Shirasagi clans had shared a border for six generations without a single drawn sword between them. It took Lord Kurenai Tetsuo exactly one winter to end that.
 The official story — the one his messengers spread through every village between the two territories — was that the Shirasagi had poisoned a Kurenai well. The truth, which the Corps uncovered within three days of arriving, was considerably uglier.
 "There's no poison," Hana said, kneeling beside the well in question, water cupped in her palm and studied like a physician studying blood. "There's nothing wrong with this water at all."
@@ -346,7 +340,7 @@ The war ended not with Ittō's defeat — he escaped, wounded, into the eastern 
 Kurenai didn't deny it. He simply looked at the eight young Elementors standing behind Sachi and understood, the way Kessho's soldiers had understood three centuries earlier, that the arithmetic of the situation had changed the moment they arrived.
 He surrendered his claim. The clans did not reconcile — old wounds like that don't close in a season — but the war ended, and Priestess Nao of the Kurenai shrine, watching the Corps clean up the wreckage of a battle that hadn't needed to happen, made a note in her temple records that would matter far more than she knew at the time.
 "Eight Elementors," she wrote. "Not the Thunder Hero. Not any of the five. And still enough."
-ARC III — ECHOES OF THUNDER
+## ARC III — ECHOES OF THUNDER
 Nao's shrine held something the Corps hadn't known existed — a fragment of Generation I's original ruins, buried beneath the temple floor since before her grandmother's grandmother tended the same altar.
 "We don't disturb it," she told them, when Renji asked. "It's not ours to disturb. It belonged to them."
 "It might help us," Hana said gently. "There's a threat growing east of here we don't understand yet. Rogue Elementors stronger than anything documented since the war ended. If there's knowledge down there—"
@@ -365,7 +359,7 @@ Yui, who had been quietly studying the scorched armor rather than the page, spok
 It was a thread the Corps couldn't fully pull on — not yet, not with a war still simmering along their eastern border and rogue Elementors already gathering strength in the same direction. But the discovery changed something quiet and permanent in how they carried themselves. Not confidence, exactly. Something closer to grounding — proof that the five who came before them had been people, not just statues, capable of the same doubt, the same restraint, the same choice to hold back power instead of using all of it.
 "We're not trying to be him," Renji said, as they resealed the chamber. "We're just trying to be worth what he started."
 Nao, watching from the temple steps, allowed herself, for the first time since the Corps arrived, something close to a smile.
-ARC IV — THE ROGUE ELEMENTORS
+## ARC IV — THE ROGUE ELEMENTORS
 They came one at a time, at first, and the Corps made the mistake of treating each as an isolated incident before understanding the pattern.
 The Hollow Monk, once a healer at a mountain temple not unlike the Ashen Monastery, had turned his gift for restoration into something closer to its inverse — draining life-energy from the dying to prolong it in others, believing mercy without cost was the flaw that had let Generation III's kind of corruption take root before it ever had the chance to. Yui, confronting him for the first time in a village hollowed out by his "cures," was visibly shaken.
 "You're twisting Element 6 into something it was never meant to be," she said.
@@ -385,7 +379,7 @@ By the arc's end, the Corps understood what they hadn't at the start: these were
 "Somebody's herding these people," Osamu said, laying out the pattern on a war map back at the monastery. "Every rogue Elementor we've faced so far has profited someone else. We haven't found who yet."
 Renji looked at the map for a long time.
 "Then we start looking."
-ARC V — THE SIEGE OF THE EASTERN CASTLE
+## ARC V — THE SIEGE OF THE EASTERN CASTLE
 Ittō, the swordsman who'd escaped Arc II wounded, resurfaced in service to a new patron — a warlord named Hidetaka who had consolidated three fractured provinces under a single banner through fear, bribery, and Ittō's blade doing whatever diplomacy couldn't.
 His fortress, the Eastern Castle, sat atop a cliff that had never once fallen to siege in four hundred years of recorded history.
 The Corps arrived not as an army, but as eight people standing against Hidetaka's three thousand.
@@ -406,7 +400,7 @@ The duel that followed was the arc's emotional and physical centerpiece — brut
 "Because Hidetaka's the one who hired you into this. Not the villages you've been burning through since. Kill you, and someone else just takes the blade."
 Ittō didn't answer, but he also didn't fight again that night — and when Hidetaka's forces finally broke under the combined pressure of the Corps' assault, Ittō was among those who quietly slipped away rather than dying for a lord who'd never once fought beside him.
 The Eastern Castle fell without ever needing a mountain split in half. It fell to eight people who had learned, arc by arc, that legends weren't a ceiling — they were a starting point.
-ARC VI — THE FORGOTTEN TEMPLE
+## ARC VI — THE FORGOTTEN TEMPLE
 The pattern Osamu had identified — someone benefiting from every rogue Elementor's chaos — led the Corps to a mountain monastery abandoned so long ago that even Genko's records had no name for it.
 What they found beneath it changed the shape of the entire war.
 A chamber, older than Generation I itself, carved with symbols that predated any written language Genko recognized — and at its center, a cracked stone basin that hummed faintly with residual Element 6 energy unlike anything the fragments should naturally produce.
@@ -427,7 +421,7 @@ Older than us. Maybe older than Generation I."
 Osamu looked back at the mountain, unreadable. "Then we're not fighting a war anymore."
 "What are we fighting?"
 "Whatever comes after a war ends and somebody's still hungry."
-ARC VII — FRACTURES WITHIN
+## ARC VII — FRACTURES WITHIN
 The discovery beneath the temple should have united the Corps. Instead, it cracked something that had been holding steady since Arc I.
 Kaito wanted to hunt the source aggressively — track every rogue Elementor incident back to whoever was orchestrating them, force answers by whatever means necessary. Renji, cautious after the near-catastrophe with the Twin Foxes, wanted to slow down, gather intelligence, avoid the same manipulation that had turned allies against each other once already.
 "We don't have time to be careful," Kaito argued, during a war council that had gone on far longer than any of them wanted. "Every week we wait, more villages get hollowed out or thread-bound or drained. You saw that basin. Somebody's been doing this for centuries. Careful hasn't worked."
@@ -449,7 +443,7 @@ Nobody spoke for a long moment.
 "So what do we do?" Suzu finally asked.
 "We do both," Yui said. "Carefully, and quickly. Together. Because that's the only version of this that doesn't end with one of us alone."
 They didn't fully agree that night. The tension lingered for weeks afterward, showing up in small ways — clipped conversations, deliberate distance during training. But no one left. No one turned against the others. And when the next crisis came — sooner than any of them expected — the fracture, tested under real pressure, held.
-ARC VIII — THE GREAT YOKAI HUNT
+## ARC VIII — THE GREAT YOKAI HUNT
 The temple basin's disturbance had consequences none of them anticipated:
 creatures born from destabilized Element 6, the kind old village stories called yokai, began surfacing across three provinces within the same month.
 A nine-tailed shape moving through burning forest that left no footprints. A spider-woman the size of a house, spinning webs laced with paralytic Element 6 residue. An oni twice Daigo's height, skin like cracked stone, immune to everything but the most concentrated strikes.
@@ -467,7 +461,7 @@ The oni proved the hardest fight of the arc — nearly killing Daigo, whose eart
 Mai almost smiled. Almost.
 By the arc's end, all three major yokai had been defeated or driven off, and the Corps understood, with growing dread, exactly what they were truly fighting against: not scattered chaos, but the visible symptoms of something deliberately unbalancing Element 6 itself, on a scale no rogue Elementor or corrupt daimyo could achieve alone.
 "Whoever's behind that basin," Osamu said, surveying the wreckage of the spider-yokai's lair, "isn't just making rogue Elementors anymore. They're breaking the world's balance to do it. That's not ambition. That's something else."
-ARC IX — RISE OF THE FIRST GREAT ENEMY
+## ARC IX — RISE OF THE FIRST GREAT ENEMY
 The threads finally converged in a border town called Amayo, where Minister Owari — the corrupt court official the Corps had suspected but never confirmed — was discovered funding the very experiments that had produced the harvesting basin's modern successors.
 But Owari, cornered, wasn't the mastermind. He was terrified, and it was that terror that finally gave the Corps their answer.
 "I didn't create anything," he confessed, hands shaking, surrounded by the eight Elementors he'd spent years secretly funding weapons against. "I found something already old. It offered me power. Told me what to fund, who to manipulate. I thought I was controlling it."
@@ -491,7 +485,7 @@ Nobody had an answer for that. It was, in its own quiet way, worse than any batt
 It was gone before Renji could strike.
 The Corps stood in the wreckage of Owari's estate, the man himself unconscious and hollowed on the floor beside them, and understood — all eight of them, at once, without needing to say it aloud — that everything before this moment had been the smaller war.
 The real one was only just beginning.
-ARC X — THE WAR FOR JAPAN
+## ARC X — THE WAR FOR JAPAN
 Word of Utsuro spread faster than the Corps could control it, and faster than they wanted — daimyos who had spent the entire novel treating the Corps with cautious tolerance suddenly found themselves facing something no army, no matter how large, could meaningfully fight alone.
 For the first time since Generation I's Hundred Blade War, Japan's fractured provinces began, however reluctantly, to unify.
 Lady Sachi, now a full daimyo in her own right after her father's quiet retirement, was the first to formally commit her forces to the Corps' cause. "You saved our border once for nothing but the asking," she told Renji. "I'm not going to make you ask twice."
@@ -516,7 +510,7 @@ choose to stand together. I've spent centuries counting on people staying divide
 That was supposed to be the one constant."
 It dissolved fully, and for the first time, didn't promise a next appearance.
 Amayo Fields did not end the war. But it proved, decisively, that it could be ended.
-ARC XI — THE LAST STAND
+## ARC XI — THE LAST STAND
 Mai's silence after Amayo Fields worried the others more than any wound could have. It was Hana who finally coaxed the truth out of her, the night before what all eight of them understood, without saying it, would be the war's final confrontation.
 "I saw what it really is," Mai said quietly, staring at nothing. "When I was inside its shadow. It's not one thing. It's pieces — hundreds of hollowed fragments, stitched together into something that remembers being separate people. It's lonely in a way I don't have a word for. That's what it's been running from for three hundred years. Not weakness. Loneliness, curdled into hunger."
 "Does that change anything?" Renji asked.
@@ -545,7 +539,7 @@ The chamber went silent.
 "Is it over?" Suzu asked, voice small.
 Renji, exhausted, blood and ash streaked across armor that had held through everything the war demanded of it, looked around at the seven people standing with him — Kaito favoring a wounded side, Hana catching her breath against the basin's edge, Daigo barely upright, Mai quieter than ever but present, Yui pale from the effort of the restoration, Suzu waiting for an answer, and Osamu's absence a fresh, aching gap none of them would stop noticing for a long time.
 "Yeah," he said finally. "It's over."
-ARC XII — A NEW ERA
+## ARC XII — A NEW ERA
 Japan did not become a single unified nation overnight — old rivalries, old borders, old grudges between clans like Kurenai and Shirasagi didn't dissolve just because a three-hundred-year threat finally had. But something had shifted permanently in how the provinces understood themselves, and how they understood Element 6.
 Osamu retired from the field but not from the Corps, taking up a permanent post at the Ashen Monastery training the next generation of scouts and soldiers who wanted to fight smart instead of just fight hard. Suzu visited him every week without fail, whether he asked her to or not.
 Daigo and Old Tetsu partnered formally, blacksmith and earth-shaper together, forging weapons and rebuilding walls across a dozen villages the war had left in ruins — and Daigo, gentle as ever, finally stopped being underestimated by anyone who watched him work.
@@ -564,7 +558,6 @@ Master Genko added a new page to the temple's Generation I archive before he pas
 The bronze statue's storm remained frozen, as it always had, lightning caught mid-strike above an outstretched hand.
 But in the courtyard below, where children now played at being Kaito instead of only ever pretending to be the Thunder Hero, a new kind of story had quietly begun taking root — smaller than the first, the way Genko had always promised it would be, and no less real for it.
 Japan slept easier that year than it had in three hundred years.
-EPILOGUE — WHAT SLIPPED THROUGH
 Not every fragment of Utsuro's unmaking found its way home.
 In the wreckage of the forgotten temple, weeks after the Corps had moved on to rebuilding rather than ruins, a scavenger picked through the collapsed chamber looking for anything worth selling — old metalwork, temple silver, whatever hadn't burned.
 What he found instead was smaller than a coin, warm in a way that had nothing to do with the sun, humming faintly with something that felt, when he closed his fist around it, almost like being noticed.
@@ -575,9 +568,10 @@ He simply kept it, the way people keep things they can't explain, tucked away an
 It would be a long, long time before Japan needed to wake for anything half as large as Utsuro again.
 But something had already, quietly, woken up smaller instead.
 
+Book III — The Fallen Age
+The Fallen Age
 The Fallen Age - G3
 ELEMENT 6 — The Fallen Age
-THE BIRTH OF ELEMENT 6
 When the fragments of Life, Mercy, and Death settle into material reality, they condense into a new force.
 Not pure divinity.
 Not simple physics.
@@ -594,7 +588,7 @@ He cannot erase what has scattered.
 But he can influence what rises.
 And when humanity grows intelligent enough—
 The awakenings begin.
-ARC I — THE WORLD THAT NEEDS THEM
+## ARC I — THE WORLD THAT NEEDS THEM
 Sixty years had passed since Amayo Fields, and Japan had changed in ways neither Generation I nor Generation II would have entirely recognized.
 There was no more pretending Element 6 users were a passing wonder. Roads were rebuilt around what heroes could reach quickly. Granaries were positioned near known Elementor households. Entire coastal towns had stopped maintaining their own flood defenses decades ago, trusting instead that someone with Hana Mizushima's bloodline, or something close to it, would simply handle the problem when it came.
 "That's the part that worries me," Renji Kurogane said. He was old now, silver threading through hair that had once been simply black, his hardened forearms slower to answer than they used to be, though they still answered. "Not that they need us. That they've stopped preparing for a world where we're not there fast enough."
@@ -612,7 +606,7 @@ Renji was quiet for a long moment, watching the fire.
 He looked at Takeshi — really looked, the way an old soldier looks at a younger one he's worried is about to inherit something too heavy too fast.
 "You're about to find out what happens when it does."
 He was right about that too.
-ARC II — THE TOURNAMENT CIRCUIT
+## ARC II — THE TOURNAMENT CIRCUIT
 The first Grand Tournament of the Fallen Age was held in the capital, sponsored — officially — by three regional daimyos pooling resources to fund a training exercise for the Assembly's younger members.
 Unofficially, it was a gambling event, and everyone involved knew it.
 "This is beneath us," said Aiko Hone, arms crossed, watching bookmakers openly take wagers on which hero would land the first blow in the opening match.
@@ -632,7 +626,7 @@ Takeshi didn't have a good answer for her. He gave her the honest one instead.
 "That's not a good enough reason."
 "No," Takeshi agreed quietly. "It isn't. I don't have a better one yet."
 It was the first, but far from the last, time the Assembly would trade something it shouldn't have to keep something it needed.
-ARC III — WHAT UTSURO LEFT BEHIND
+## ARC III — WHAT UTSURO LEFT BEHIND
 Sixty years should have been long enough for the world to forget what a Hollow Blight looked like. It wasn't.
 The zones had never fully closed — patches of land scattered across three provinces where Utsuro's final dispersal had thinned too unevenly, leaving pockets of destabilized Element 6 that still, decades later, occasionally curdled into something with teeth.
 Nozomi Toge found the newest one first, thorned vines she'd meant to use for a simple containment barrier twisting instead into something with too many joints and too much hunger, feeding directly off the ambient corruption in the soil.
@@ -645,7 +639,7 @@ The Blight zones became a recurring, low-grade crisis threading through the enti
 "It killed my parents before I could even walk. Forgive me for not being calm about it."
 "I'm not asking you to be calm. I'm asking you to still be alive next time."
 The Blight was never solved during the Fallen Age. It simply became something the world learned to live alongside — a scar from Generation II's war that refused to fully heal, quietly shaping how every Assembly member after Renji's generation understood that some victories don't stay finished.
-ARC IV — THE MARKET BENEATH THE MARKET
+## ARC IV — THE MARKET BENEATH THE MARKET
 The first rumors were dismissed as exactly the kind of desperate folk superstition that always followed a world too dependent on heroes: someone, somewhere, claimed to be selling a tincture that let ordinary people briefly wield Element 6.
 Ryo Kiri, whose mist-based infiltration made him the Assembly's natural choice for investigating rumors nobody else could get close to, found the first real evidence in a back-alley apothecary in the capital's lower district.
 "It doesn't work," he reported. "Not the way they're selling it. But something in the process is doing something. I watched a man drink it and grow a rash made of what looked like fractured glass across his whole arm before it killed him in about four minutes."
@@ -658,7 +652,7 @@ The revelation reframed everything. This wasn't superstition — it was an activ
 "Whoever's buying the corpses afterward to keep refining the formula," Ryo said grimly. "Which means this isn't one apothecary. It's a network. And it's patient."
 The market beneath the market went deeper than any of them expected — a loose collection of black-market alchemists, disgraced physicians, and desperate investors, each convinced they'd be the one to finally succeed where a hundred failed experiments hadn't. The Assembly shut down eleven known operations across the arc's span.
 They never found the twelfth.
-ARC V — THE DAIMYO'S BARGAIN
+## ARC V — THE DAIMYO'S BARGAIN
 Lord Kanenobu, one of the tournament circuit's three founding sponsors, approached Takeshi privately midway through the Fallen Age with a request that made the era's moral grayness undeniable for the first time.
 "There's a rival merchant house destabilizing my province's trade routes,"
 Kanenobu said, over tea neither of them was actually drinking. "I'd like it handled.
@@ -674,7 +668,7 @@ It worked. The merchant house collapsed under its own corruption within the seas
 Takeshi didn't have an answer that satisfied either of them.
 "I don't know," he admitted. "I know it kept the western villages protected. I know it didn't require a body. I don't know if that's a victory or just a slower version of the same compromise."
 It became, quietly, the defining question of his leadership — one he'd never fully resolve.
-ARC VI — THE WIDENING DIVIDE
+## ARC VI — THE WIDENING DIVIDE
 By the era's midpoint, the capital's ruling council had grown tired of an Assembly they funded but didn't formally control.
 "You answer to no one," Minister Yoshida told Takeshi, during a council session that had grown considerably tenser than any previous meeting. "Thirty Element 6 users, spread across every province, coordinating through — what, exactly?
 Loyalty? Habit? That's not governance. That's convenience the council extends you until it isn't convenient anymore."
@@ -690,7 +684,7 @@ The only choice we actually have is whether we're in the room when it happens."
 Takeshi didn't accept the council's proposal outright. But he didn't reject it either — instead, he opened a slow, deliberately incomplete negotiation, formalizing just enough structure to keep the council satisfied without surrendering full autonomy, a compromise that pleased almost no one and functioned, barely, well enough to hold.
 It was not a resolution. It was a fracture, carefully managed rather than healed —
 and the pressure it created would not fully resolve within the Fallen Age at all. It would take another generation, working from a foundation the council and the Assembly were only beginning to lay now, before that pressure finally became something with an actual name.
-ARC VII — THE EXTRACTION RING
+## ARC VII — THE EXTRACTION RING
 The twelfth operation Ryo had failed to find in Arc IV finally surfaced on its own terms, in the worst possible way — a mass casualty event in a lower-district tenement where nearly forty people had been recruited, under promise of guaranteed Element 6 awakening, into a single coordinated dosing.
 Emi arrived to find most of them already dead. The survivors weren't recognizably human anymore, not entirely — flesh fused with fractured, glass-like growths not unlike what Haru's own Element 6 produced deliberately and safely, except uncontrolled, spreading, agonized.
 "This is different from the street tinctures," she said, voice tight, working to stabilize what survivors she could. "This is refined. Whoever's behind this has been getting better. Systematically. This wasn't an accident. This was a test."
@@ -705,7 +699,7 @@ The extraction ring's known network was dismantled. Its funding sources, several
 But the notes recovered from Ogata's laboratory were incomplete. Something —
 some final refinement, some last piece of the process — was missing from every page they found.
 Nobody in the Assembly noticed, in the chaos of the tenement's aftermath, that one page had been cut cleanly from the notebook's spine before they ever arrived.
-ARC VIII — THE BONE DEBT
+## ARC VIII — THE BONE DEBT
 Aiko's past finally caught up to her publicly during the era's most difficult season — a formal council inquiry into a mission from years earlier, before the Assembly had any real oversight at all, when she had killed a rogue Elementor in the field rather than attempt capture.
 "He'd already killed six people that week," she told the inquiry panel, flat, unapologetic. "He wasn't going to stop for a trial."
 "That was not your decision to make," Minister Yoshida said. "Not under the new charter. Not under any charter."
@@ -717,7 +711,7 @@ Takeshi testified on Aiko's behalf, and in doing so, found himself defending not
 The inquiry did not fully exonerate Aiko. It censured her formally, restricted her field authority for a year, and — more damaging than either penalty — publicly established, for the first time in Element 6 history, that heroes could be investigated, judged, and constrained by civilian institutions rather than simply trusted by them.
 "Is this what the divide was supposed to look like?" Aiko asked Takeshi afterward, stripped of field rank for the first time since her awakening.
 "I don't know," he admitted. "I think we just found out the price of being in the room when it happened."
-ARC IX — THE RECKONING AT THE CAPITAL
+## ARC IX — THE RECKONING AT THE CAPITAL
 Everything the Fallen Age had been quietly accumulating — the tournament circuit's corruption, the Blight's persistent scars, the extraction ring's unfinished notes, the council's hunger for control, Aiko's public censure — converged during a single, catastrophic week in the capital.
 A Blight zone, larger and more aggressive than any recorded since the original war, erupted beneath the very tenement district where Ogata's operation had been dismantled — as though the extraction attempts, incomplete and abandoned, had destabilized the ground in ways nobody had thought to check for.
 "It's feeding off the leftover corruption from the tenement," Nozomi reported, thorned constructs straining against something far larger than anything she'd faced in containment work before. "Ogata's failed experiments left residue all through this district. The Blight's using it like fuel."
@@ -731,7 +725,7 @@ The Blight was contained — not destroyed, the way Blight zones never fully wer
 It was, by every measure the Assembly could offer, a victory.
 But in the days following, as council and Assembly alike worked to formalize the emergency cooperation into something more permanent — the first true seed of the structure Generation IV would eventually inherit — Ryo, still quietly investigating the extraction ring's loose threads, finally tracked down the missing page cut from Ogata's notebook.
 It led him to a modest house on the capital's eastern edge, and a man who answered the door with a prosthetic arm of dark, unfamiliar metal where his left forearm should have been.
-ARC X — THE MAN WITH THE FAKE ARM
+## ARC X — THE MAN WITH THE FAKE ARM
 "You're one of theirs," the man said, before Ryo had spoken a single word. Mist still curled faintly at Ryo's shoulders, not fully dismissed. "The Assembly. I did wonder how long it would take someone to knock."
 "Ogata's notebook is missing a page," Ryo said. "I think you have it."
 The man smiled, thin and unbothered, and did not deny it.
@@ -754,9 +748,10 @@ It had never once had to answer the harder question: what happens when the power
 That question belonged to whoever came next.
 TO BE CONTINUED
 
+Book IV — The Hero Corps
+The Hero Corps
 The Hero Corps - G4
 ELEMENT 6 — The Hero Corps
-THE BIRTH OF ELEMENT 6
 When the fragments of Life, Mercy, and Death settle into material reality, they condense into a new force.
 Not pure divinity. Not simple physics. A broken echo. The sixth element of existence.
 Element 6.
@@ -765,7 +760,7 @@ Evil watches from beyond the veil of matter. He cannot erase what has scattered.
 But he can influence what rises.
 And when humanity grows intelligent enough—
 The awakenings begin.
-ARC I — THE COLORS THEY CHOSE
+## ARC I — THE COLORS THEY CHOSE
 The charter signing wasn't dramatic. That was, everyone agreed afterward, exactly the point.
 A single room. A long table. Representatives from the capital's council, and a handful of Element 6 users who had spent the better part of a decade being called the Assembly, the Coalition, the Gathering — everything except the one word that finally stuck.
 "The Hero Corps," Kenji Aoyama read aloud, tracing the freshly inked title at the top of the charter. "Feels strange, saying it out loud."
@@ -793,7 +788,7 @@ He was five as well, small and quick, drawn immediately and inexplicably to the 
 "He does that every storm," she told a passing engineer, apologetic. "Not scared of lightning at all. Never has been."
 Nobody in the room that week thought either detail was worth remembering.
 They would.
-ARC II — THE RING RETURNS
+## ARC II — THE RING RETURNS
 The syndicate that had quietly rebuilt what remained of a disgraced physician's decades-old research called itself the Harvest Guild, though the name the capital's police actually used for it was simpler: the Kurenai Ring, run by a woman named Renko Kurenai, whose family had lost its noble standing generations earlier and had spent every generation since trying, patiently, to buy it back.
 "You've heard of my family," she told Cobalt, the first time the Corps confronted her directly, inside a warehouse the Ring had converted into something between a laboratory and a shrine. "Lord Kurenai Tetsuo. Fell from grace generations ago, thanks to your predecessors and a very inconvenient shrine daughter. I've spent my whole life listening to relatives explain how close we came to real power before the Corps' ancestors took it from us."
 "That's not what happened," Cobalt said.
@@ -810,7 +805,7 @@ Renko's smile went thin, and genuinely uncertain for the first time in the conve
 "Honestly? I don't fully know. A man reached out years ago with a formula more advanced than anything my own chemists could produce, in exchange for a modest percentage and my discretion. I've never once seen his face without shadow across it. I assumed that was simply his preference."
 The Corps left the warehouse with Renko in custody and three intact vials of the draught.
 They left without knowing that four of their own field agents, sweeping a Ring safehouse network across the capital that same night, would return before morning with no powers left at all.
-ARC III — WHAT'S LEFT WHEN THE POWER GOES
+## ARC III — WHAT'S LEFT WHEN THE POWER GOES
 Vermilion was the first to lose it — ambushed mid-sweep, a single needle finding the gap in his collar before he'd even registered the attacker.
 He woke in the Corps infirmary three hours later, reaching instinctively for the fire that had lived under his skin for a decade, and finding nothing there at all.
 "It's not blocked," Graphite told him gently, running diagnostics that all came back the same unbearable way. "It's gone. Extracted clean. There's nothing to unblock."
@@ -827,7 +822,7 @@ Daichi answered before Cobalt could.
 It became the Corps' first true technological era — reinforced gauntlets tuned to old resonance formulas, portable barrier plating built to mimic what Cobalt did naturally, communication relays faster than anything the Corps had used before.
 It wasn't the same as having the power back.
 But it kept people alive, and for two heroes still learning what "powerless" even meant for them, it was enough to keep fighting.
-ARC IV — THE MAN IN THE DARK
+## ARC IV — THE MAN IN THE DARK
 He appeared first to Onyx — of all of them, the one whose own shadow-craft made her, in theory, the hardest to ambush unseen.
 She found him waiting in an alley she'd used a hundred times, entirely unbothered by her presence, entirely unbothered by the fact that shadow was, technically, her domain.
 "You're better at this than Renko's people," he said, before she'd fully registered another shape sharing the dark with her. "I wondered when one of you would finally get close enough to see me properly."
@@ -840,7 +835,7 @@ He considered the question with what might have been genuine interest.
 Onyx struck without warning. It passed through him like he wasn't fully there at all — not intangible, exactly, just already three steps to the side, unbothered.
 "Not yet," he said, almost kindly, fading back into ordinary darkness. "You're not ready for that conversation. None of you are."
 He was gone before her second strike landed.
-ARC V — THE NAME THEY GAVE HIM
+## ARC V — THE NAME THEY GAVE HIM
 The Corps searched every known Ring facility, every shipment route, every financial trail Renko's captured associates could offer.
 They found nothing. No name. No face beyond shadow and a prosthetic arm.
 "He wanted to be seen," Cobalt said finally, staring at Onyx's report until the words blurred. "That's what worries me. Not that we can't find him. That he let us almost catch him, and left anyway, just to prove he could."
@@ -859,7 +854,7 @@ It wasn't the Controller. None of them had a word for what they were sensing und
 "Something's underneath all of this," Gold said, later, to Cobalt. "Not causing it.
 Just — watching it happen. Waiting for something."
 Cobalt didn't have an answer. Neither, in the end, did anyone else.
-ARC VI — THE SIEGE OF THE TOWER
+## ARC VI — THE SIEGE OF THE TOWER
 The Ring's retaliation for Renko's capture came months later, in the form of a coordinated assault on the Corps' half-finished headquarters tower — still under construction, still dangerously undermanned that night.
 Vermilion and Umber, still powerless, were among the first to reach the lower floors when the attack began, and it was there, armed with nothing but Daichi's resonance-calibrated gauntlets and years of muscle memory, that the fight was actually won.
 "You don't have to be out here," Cobalt told them over the comms, voice tight even mid-battle.
@@ -871,7 +866,7 @@ She didn't chase him. There wasn't time, and some instinct told her he wouldn't 
 The Corps held the tower. Barely. Gold spent the battle's final hour moving between every wounded body she could reach, light flowing steady and exhausting through hands that never once stopped to rest.
 "You're pushing too hard," Cobalt told her afterward, finding her pale, swaying on her feet.
 "Everyone else is pushing hard too," she said. "I'm not going to be the one who stops first."
-ARC VII — THE CHILD IN THE RUBBLE
+## ARC VII — THE CHILD IN THE RUBBLE
 The siege left three blocks around the tower in ruins, and it was in the wreckage of a collapsed apartment building, two streets over, that Gold found a boy — six years old, small and quick, trapped beneath debris his mother hadn't survived, screaming for help that arrived, finally, in the form of a woman whose hands glowed faint and gold even through her own exhaustion.
 "Hey," she said, gentle despite everything, easing the last beam off him with light-steadied strength. "You're okay. I've got you."
 He clung to her the entire walk back to the Corps' emergency shelter, refusing to let go even once they'd reached safety.
@@ -883,7 +878,7 @@ He clung to her the entire walk back to the Corps' emergency shelter, refusing t
 He fell asleep against her shoulder before she could say anything else, and something about the weight of him there — small, trusting, utterly unaware of everything the Corps was still fighting to hold together — settled into her chest and stayed.
 She checked on him personally, in the weeks that followed, whenever the crisis allowed it. He talked about her, the shelter workers reported, more than any of the other heroes who passed through — the woman with gold hands who found him under the rubble and never let go until he was safe.
 None of them knew they were watching two threads of the same story quietly, briefly touch.
-ARC VIII — THE SOURCE
+## ARC VIII — THE SOURCE
 It took the better part of a year, but the Corps finally traced the draught's true production source — not another Ring safehouse, but the sealed, scarred ground beneath the old capital that Daichi's records had warned them about, a reinforced facility built directly atop the wound.
 "They've been feeding the refinement process with residue straight from the scar,"
 Graphite confirmed, running the last of the analysis. "That's why it's so much more effective than anything before it. It's not just extracting Element 6 cleanly anymore. It's using genuinely corrupted energy to do it. This isn't sustainable. That facility's sitting on something that's going to destabilize eventually, whether we intervene or not."
@@ -898,7 +893,7 @@ The Controller appeared once more during the assault's chaos — not fighting, s
 "I know a great many things," he agreed, unbothered. "That's not the same as being responsible for what other people do with the knowledge."
 He was gone before Cobalt could press further — leaving behind the same unanswered questions the Corps had been chasing for over a year, and, for just a moment as he faded, something that made even his own composure flicker: a glance upward, toward nothing visible at all, like a man checking that something far older hadn't been listening.
 Nobody but Onyx noticed it. She never fully explained, afterward, why it was the detail that frightened her most.
-ARC IX — WHAT GOLD GAVE
+## ARC IX — WHAT GOLD GAVE
 The facility's core, fully destabilized, threatened to release every fragment of stolen Element 6 it had ever processed in a single catastrophic surge — not just the Corps' missing members' worth, but years of the Ring's accumulated theft, all of it about to detonate into something large enough to consume the entire old capital district.
 "There's no controlled way to shut this down," Graphite said, voice breaking as the readings climbed. "Not from outside. Somebody has to stabilize it directly, from inside the core, and I don't know what that does to a person."
 Gold was already moving.
@@ -915,7 +910,7 @@ Gold did not.
 "Somebody had to keep it," she said, voice barely more than breath now. "Figured it might as well be me. I've had enough practice giving things away by now."
 She didn't survive the walk out of the facility.
 The Corps carried her out anyway, together, refusing to let the city's rebuilt streets see her arrive any other way than surrounded by everyone she'd spent a year refusing to let fall.
-ARC X — THE ONE WHO STAYS
+## ARC X — THE ONE WHO STAYS
 The crisis ended with Gold's name added to a memorial wall that already carried names from generations most of the current Corps had only ever read about in old archive records. Renko Kurenai stood trial. The Controller was never captured, never named beyond the word Graphite had given him, though Onyx — more than once, in the years that followed — reported the same faint, unmistakable feeling of being watched from just beyond the edge of her shadow-sense, gone the instant she turned to look.
 "He's still out there," she told Cobalt once, years later. "I don't know what he's waiting for. I don't think we're going to like finding out."
 Years passed the way they always did after a crisis this large — quieter, slower, the Corps rebuilding trust one ordinary rescue at a time.
@@ -939,7 +934,6 @@ And coiled.
 And waited for instruction.
 The rest of it — the crib, the pier, the warehouse, the cemetery at dusk, the runner's collapse, the girl in the warehouse crates — belonged to a story that was only just beginning to tell itself.
 It was happening already.
-EPILOGUE — SOMEONE WAS ALWAYS GOING TO BE WATCHING
 High above the city, on a rooftop overlooking the same storm that had just found Sota Yamamoto, a shape stood at the ledge, unbothered by the rain, watching the lightning coil and settle with open, patient interest.
 He'd watched the boy for twelve years, on and off, the way he watched most interesting things — from a distance, never quite intervening, never quite explaining why.
 He'd watched the other one too. The quiet one. The boy under the council table with a toy hammer, who grew into a young man who understood structure better than anyone handing him instructions ever had.
@@ -947,10 +941,11 @@ He'd watched the other one too. The quiet one. The boy under the council table w
 He didn't move to follow either of them. Not yet.
 Patience, after all, was the one thing three hundred years — and counting — had taught him better than anything else.
 He turned from the ledge, prosthetic arm catching a flicker of lightning from the storm still rolling overhead, and stepped back into shadow long before either Silver or Black could have ever known to look for him.
+THE END
 
+Book V — Heroes of Color
+Heroes of Color
 Heroes of Color - G5
-THE ELEMENT 6 | Heroes of Color
-PROLOGUE — WHEN BALANCE STILL BREATHED
 Before the universe expanded, before atoms argued with gravity, before time decided to move forward—
 There were Four.
 Not rulers.
@@ -978,8 +973,7 @@ Mercy softened transitions.
 Evil balanced expansion by limiting it.
 But balance is fragile when awareness grows.
 And Evil began to think.
-The First Argument.
-There is no sky yet.
+The First Argument There is no sky yet.
 No stars.
 Only endless white abstraction.
 Life radiates warmth.
@@ -1022,8 +1016,7 @@ Life steps forward.
 Evil replies:
 “Stillness is perfection.”
 That is when equilibrium fractures.
-The Shattering.
-Evil does not attack violently.
+The Shattering Evil does not attack violently.
 He compresses.
 He condenses.
 He pulls inward.
@@ -1050,7 +1043,6 @@ Because the fragments do not die.
 They become something unstable.
 Something imperfect.
 Something mortal.
-THE BIRTH OF ELEMENT 6
 When the fragments of Life, Mercy, and Death settle into material reality, they condense into a new force.
 Not pure divinity.
 Not simple physics.
@@ -1067,7 +1059,7 @@ He cannot erase what has scattered.
 But he can influence what rises.
 And when humanity grows intelligent enough—
 The awakenings begin.
-ARC I — THE CREATION ARC
+## ARC I — THE CREATION ARC
 It begins quietly.
 A child in a hospital room lifts her crib with invisible force.
 The nurses scream.
@@ -1173,7 +1165,7 @@ Because they understand something worse is coming.
 And far beyond mortal sight—
 Evil watches.
 The universe is still too loud.
-ARC II — THE CRIMSON ARC
+## ARC II — THE CRIMSON ARC
 The Hero Corps didn’t become heroes overnight.
 They trained.
 They failed.
@@ -1298,7 +1290,7 @@ Yellow muttered to Maroon one evening, “He’s going to blow up something wors
 Maroon absorbed a stray energy pulse drifting from Crimson’s distant practice.
 “He already did.”
 This tension leads directly into—
-ARC III — THE TOURNAMENT ARC
+## ARC III — THE TOURNAMENT ARC
 The tournament wasn’t about entertainment.
 It was about control.
 Silver organized it deliberately.
@@ -1390,7 +1382,7 @@ Not from ambition.
 From grief.
 Crimson was gone.
 Two funerals stood where one tournament had been meant to unite them.
-ARC IV — THE HAMMER AND THE PULL
+## ARC IV — THE HAMMER AND THE PULL
 Grief doesn't pause a city's crime rate.
 Three weeks after Emerald's funeral, before anyone had the chance to properly grieve Amber too, the first attack came from outside the Corps entirely.
 A cargo district. Steel containers stacked six stories high.
@@ -1423,7 +1415,7 @@ Black's thunder took the rest.
 Both villains were captured before nightfall. Neither one talked.
 "First time outside threats since we formed," Silver said, later, watching medics work on Yellow's venom wound. "Won't be the last."
 He was right.
-ARC V — ROOTS AND RUIN
+## ARC V — ROOTS AND RUIN
 The forest arrived before anyone knew to expect it — a city park, six blocks of manicured green, swallowed overnight by something that hadn't been there the evening before.
 Vines the width of a man's leg. Thorns long as knives. Bark that pulsed, faintly, like it was breathing.
 "Willow," Scarlet said, standing at the tree line, death-energy sense prickling at something wrong buried under all that green. "Ruler of the Forest. This isn't corrupted the way the reports said. It's hungry."
@@ -1452,7 +1444,7 @@ Both villains were contained by evening. The park took eleven days to fully clea
 "Two in one week,"​ Silver said, staring at the growing file of unaffiliated threats crossing his desk. "After years of nothing like this."
 Black didn't look up from sharpening a blade he didn't strictly need. "Feels like something's stirring things up."
 Nobody had an answer for that yet.
-ARC VI — WHERE FIRE MEETS FROST
+## ARC VI — WHERE FIRE MEETS FROST
 The exhibition tournament was supposed to be a small thing — a public demonstration, goodwill after a difficult month, nothing like the scale of the tournament that had cost Amber her life.
 Silver had almost cancelled it twice.
 "People need to see us do something that isn't burying someone,"​ Magenta told him, and he let it go ahead.
@@ -1479,7 +1471,7 @@ Kirsten and Snodvor, finally isolated from their own amplification, fought on st
 "We're aware," Silver said flatly.
 Four villains, one afternoon, an exhibition meant to lift the city's spirits instead leaving half a stadium in frost-cracked ruin.
 The Corps won. Nobody felt much like celebrating.
-ARC VII — THE POISON GARDEN AND THE WAKING NIGHTMARE
+## ARC VII — THE POISON GARDEN AND THE WAKING NIGHTMARE
 By the time the greenhouse district went quiet, three separate residential blocks had already stopped answering their emergency lines.
 Grey's scouting drone found the source first — an entire block of community gardens transformed overnight into something lush, beautiful, and absolutely lethal, every flowering vine dripping something that shimmered faintly wrong in the streetlight.
 "Hazel," Scarlet said, reading the residual signature. "Poison. And I'm reading a second signature layered right on top of it. Alchemical. Not natural at all."
@@ -1513,7 +1505,7 @@ It felt like something patient was testing exactly how much pressure they could 
 The Corps was fractured.
 And somewhere—
 The Controller took notice.
-ARC VIII — THE PINK BETRAYAL ARC
+## ARC VIII — THE PINK BETRAYAL ARC
 (Manipulated by the Controller) Emerald’s grave was still fresh.
 Amber’s memorial flowers hadn’t wilted.
 The Hero Corps kept training — but there was a tension that hadn’t existed before.
@@ -1547,8 +1539,7 @@ Magenta reached out — not physically, just emotionally.
 “You don’t have to fight him.”
 “I’m not fighting him.”
 But she was.
-The First Whisper.
-Later that night, Pink stood alone above the city.
+The First Whisper Later that night, Pink stood alone above the city.
 The air shimmered behind her.
 “Do they trust you?” the voice asked.
 She didn’t turn.
@@ -1645,7 +1636,7 @@ Pink ripped open the facility ceiling and vanished into the night.
 The world saw it live.
 Hero attacks hero.
 Trust shattered.
-ARC IX — THE SAVING PINK ARC
+## ARC IX — THE SAVING PINK ARC
 The Corps did not call her a villain.
 They called her lost.
 Silver did not rage.
@@ -1778,7 +1769,7 @@ Maroon nodded.
 Silver stepped back.
 Not defeated.
 Just… finished leading.
-ARC X — THE CONTROLLER WAR
+## ARC X — THE CONTROLLER WAR
 Pink’s rescue did not end the threat.
 It exposed it.
 The Controller stopped hiding.
@@ -1799,8 +1790,7 @@ Pink stared at the map.
 Red’s fire flickered faintly.
 “No. He’s baiting us.”
 And he was.
-The First Major Clash
-The Controller chose a coastal megacity. 
+The First Major Clash — The Split City The Controller chose a coastal megacity.
 Why?
 Water access for Blue.
 Skyscrapers for Indigo.
@@ -1960,7 +1950,7 @@ But they had lost two more.
 Crimson.
 Magenta.
 The Corps stood at twenty.
-ARC XI — THE ELEMENTOR PURGE
+## ARC XI — THE ELEMENTOR PURGE
 Peace didn’t follow.
 Fear did.
 Civilian groups began targeting Elementors quietly.
@@ -1988,7 +1978,7 @@ And they did.
 Public trust slowly returned.
 Not through dominance.
 Through restraint.
-ARC XII — DISCOVERING EVIL
+## ARC XII — DISCOVERING EVIL
 Years passed.
 The Controller was gone.
 But Silver’s foresight began failing entirely.
@@ -2025,7 +2015,7 @@ Indigo stepped forward.
 “No. You were balance.”
 Evil responded coldly, “I am correction.”
 The final war had begun.
-ARC XIII — THE EVIL WAR
+## ARC XIII — THE EVIL WAR
 This was not city-level.
 Not continental.
 This was cosmic.
@@ -2082,7 +2072,6 @@ Evil fell.
 Not erased.
 Contained.
 Balance restored.
-EPILOGUE — HAPPILY EVER AFTER
 Life appeared before them.
 Radiant.
 Gentle.
