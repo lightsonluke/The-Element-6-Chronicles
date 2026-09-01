@@ -10,6 +10,7 @@ const A = (name) => `${import.meta.env.BASE_URL}audio/${name}`;
 const MENU_TRACKS = [
   A('home.mp3'),
   A('home-2.mp3'),
+  A('pixelated-skyline.mp3'),
 ];
 const HOME_ROTATION_MS = 2 * 60 * 60 * 1000;
 const PARKOUR_TRACK = A('parkour.mp3');
