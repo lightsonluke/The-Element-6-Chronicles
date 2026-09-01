@@ -12,6 +12,7 @@ const OBJECT_TYPES = {
   bouncing: { mass: 1.0, friction: 0.96, bounce: 0.7,  damage: 10, knockback: 10, size: 26, color: '#FF88CC', breakThreshold: 999 },
   breakable:{ mass: 1.2, friction: 0.90, bounce: 0.2,  damage: 12, knockback: 9,  size: 28, color: '#FFDD88', breakThreshold: 3 },
   boomerang:{ mass: 0.5, friction: 1.0,  bounce: 0,    damage: 12, knockback: 10, size: 24, color: '#FFAA00', breakThreshold: 999 },
+  ball:     { mass: 0.9, friction: 0.985, bounce: 0.82, damage: 0, knockback: 0, size: 64, color: '#E53935', breakThreshold: 999 },
 };
 
 // Build hazards placed on the stage's platforms.
@@ -281,6 +282,31 @@ export function updateSandboxObjects(objects, fighters, platforms, dt, W, H, haz
         break;
       }
     }
+    // Ball hazard interactions: the ball is a physics prop, not a fighter target.
+    if (obj.type === 'ball') {
+      for (const hz of (hazards?.fire || [])) {
+        if (obj.x + obj.w/2 > hz.x && obj.x - obj.w/2 < hz.x + hz.w && obj.y + obj.h/2 > hz.y && obj.y - obj.h/2 < hz.y + hz.h) {
+          obj.vy = -Math.abs(obj.vy) * 0.75; obj.vx *= 0.92;
+        }
+      }
+      for (const hz of (hazards?.electric || [])) {
+        if (obj.x + obj.w/2 > hz.x && obj.x - obj.w/2 < hz.x + hz.w && obj.y + obj.h/2 > hz.y && obj.y - obj.h/2 < hz.y + hz.h) {
+          obj.vx *= 0.92; obj.vy *= -0.55;
+        }
+      }
+      for (const hz of (hazards?.water || [])) {
+        if (obj.x + obj.w/2 > hz.x && obj.x - obj.w/2 < hz.x + hz.w && obj.y + obj.h/2 > hz.y && obj.y - obj.h/2 < hz.y + hz.h) {
+          obj.vx *= 0.78; obj.vy *= 0.72;
+        }
+      }
+      for (const hz of (hazards?.catapults || [])) {
+        if (obj.x + obj.w/2 > hz.x && obj.x - obj.w/2 < hz.x + hz.w && obj.y + obj.h/2 > hz.y && obj.y - obj.h/2 < hz.y + hz.h && (hz.cooldown||0)<=0) {
+          if (hz.dir === 'up') obj.vy = -28; else if (hz.dir === 'left') obj.vx = -30; else obj.vx = 30;
+          hz.cooldown = 30;
+        }
+      }
+    }
+
     // Wind hazard — push objects inside the zone
     for (const w of (hazards?.wind || [])) {
       if (obj.x > w.x && obj.x < w.x + w.w && obj.y > w.y && obj.y < w.y + w.h) {
@@ -363,7 +389,7 @@ export function updateSandboxObjects(objects, fighters, platforms, dt, W, H, haz
     }
 
     // Fighter collision
-    if (Math.abs(obj.vx) > 1.5 || Math.abs(obj.vy) > 2 || (obj.type === 'boomerang' && obj._phase !== 'idle')) {
+    if (obj.type !== 'ball' && (Math.abs(obj.vx) > 1.5 || Math.abs(obj.vy) > 2 || (obj.type === 'boomerang' && obj._phase !== 'idle'))) {
       for (const f of fighters) {
         if (!f || f.stocks <= 0 || f.invincible > 0) continue;
         const fid = f === fighters[0] ? 0 : 1;

@@ -1,23 +1,24 @@
-ELEMENT 6 — WORLD SCORES + ADVANCED PLATFORM MOTION PATCH
+ELEMENT 6 — STAGE EDITOR SELECT/BALL + WORLD SCORE PATCH
 
-Replace only the files in this package in the repository.
+Replace only the files in this package. Run the included SQL once in Supabase.
 
-WORLD LEADERBOARDS
-- Parkour, Ziplining, and Rock Climbing all submit their completed personal bests through submit_element6_world_score().
-- The included SQL guarantees public.element6_world_scores exists with the three supported modes and installs the authoritative RPC.
-- Parkour and Ziplining keep higher scores; Rock Climbing keeps lower completion times.
-- Scores are tied to the authenticated Supabase user, so the browser does not choose another user's account.
+STAGE EDITOR
+- Adds SELECT next to ADD (drag).
+- Drag a marquee around platforms, hazards and items to multi-select them.
+- Drag any selected member to move the entire selection together.
+- COPY/PASTE buttons and Cmd/Ctrl+C / Cmd/Ctrl+V are supported.
+- Cmd/Ctrl+A selects every platform, hazard and item while SELECT mode is active.
+- Pasted entities receive an offset so they do not exactly overlap the originals.
+- Platform motion editor supports the existing motion plus ONE-WAY and a second independent motion channel.
+- Motion distance remains compatible with the existing editor/runtime data.
 
-IMPORTANT:
-Run element6-world-scores-persistence.sql in the Supabase SQL Editor once. The React files alone cannot create the database RPC/table.
+BALL
+- Adds a Ball item to the Stage Editor.
+- Red, character-sized physics ball (64px).
+- Gravity, bounce, friction, platform/material collision, object collision and hazard interaction are supported.
+- Attacks can push the ball through the existing object-hit system.
+- Ball does NOT collide with characters or damage them.
 
-STAGE EDITOR PLATFORM MOTION
-- Maximum platform motion distance increased from 500 to 1500 (3x).
-- Added ONE-WAY motion.
-- One-way motion supports 8 directions: left, right, up, down, and the four diagonals.
-- A one-way platform travels to its destination and stays there instead of returning.
-- Added optional SECOND MOTION to a platform.
-- A platform can now combine two independent movement directions, such as horizontal + vertical, producing diagonal/compound movement.
-- The second motion has its own type, direction, distance, and speed.
-- Existing horizontal/vertical/static motion remains supported.
-- Runtime movement and stage previews understand the new motion data.
+WORLD SCORES
+- Parkour, Zipline and Rock Climbing already call submitWorldScore in the supplied source; the included SQL makes the shared element6_world_scores table/RPC authoritative for those three modes.
+- Parkour and Zipline keep the highest score; Rock Climbing keeps the lowest completion time.

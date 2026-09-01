@@ -26,6 +26,7 @@ export const OBJECT_TYPES = [
   { id: 'bouncing',  name: 'Bouncing',  color: '#FF88CC', icon: '🩷', size: 26 },
   { id: 'breakable', name: 'Breakable', color: '#FFDD88', icon: '🟡', size: 28 },
   { id: 'boomerang', name: 'Boomerang', color: '#FFAA00', icon: '🪃', size: 24 },
+  { id: 'ball', name: 'Ball', color: '#E53935', icon: '🔴', size: 64 },
 ];
 
 // Full object property table (mirrors sandboxHazards OBJECT_TYPES)
@@ -35,6 +36,7 @@ const OBJ_PROPS = {
   bouncing:  { mass: 1.0, friction: 0.96, bounce: 0.7,  damage: 10, knockback: 10, size: 26, color: '#FF88CC', breakThreshold: 999 },
   breakable: { mass: 1.2, friction: 0.90, bounce: 0.2,  damage: 12, knockback: 9,  size: 28, color: '#FFDD88', breakThreshold: 3 },
   boomerang: { mass: 0.5, friction: 1.0,  bounce: 0,    damage: 12, knockback: 10, size: 24, color: '#FFAA00', breakThreshold: 999 },
+  ball:      { mass: 0.9, friction: 0.985, bounce: 0.82, damage: 0, knockback: 0, size: 64, color: '#E53935', breakThreshold: 999 },
 };
 
 // Build a hazard object for the editor (full gameplay-ready shape).

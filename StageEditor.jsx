@@ -53,6 +53,9 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     { x: 480, y: 300, w: 320, h: 18, material: 'normal' },
   ]);
   const [mode, setMode] = useState('add');
+  const [selectedEntities, setSelectedEntities] = useState([]);
+  const [selectionDrag, setSelectionDrag] = useState(null);
+  const [clipboardEntities, setClipboardEntities] = useState([]);
   const [material, setMaterial] = useState('normal');
   const [drag, setDrag] = useState(null);
   const [mousePos, setMousePos] = useState(null);
@@ -71,15 +74,12 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   ]);
   const [spawnSelect, setSpawnSelect] = useState(0);
   // Moving-platform editor
-  const [motionType, setMotionType] = useState('horizontal'); // horizontal | vertical | oneway | static
-  const [motionDirection, setMotionDirection] = useState('right');
-  const [motionSecondEnabled, setMotionSecondEnabled] = useState(false);
-  const [motionSecondType, setMotionSecondType] = useState('vertical');
-  const [motionSecondDirection, setMotionSecondDirection] = useState('down');
-  const [motionSecondDistance, setMotionSecondDistance] = useState(160);
-  const [motionSecondSpeed, setMotionSecondSpeed] = useState(0.5);
+  const [motionType, setMotionType] = useState('horizontal'); // horizontal | vertical | static
   const [motionSpeed, setMotionSpeed] = useState(0.5);
   const [motionDistance, setMotionDistance] = useState(160);
+  const [motion2Type, setMotion2Type] = useState('none');
+  const [motion2Speed, setMotion2Speed] = useState(0.5);
+  const [motion2Distance, setMotion2Distance] = useState(160);
   const [motionPaused, setMotionPaused] = useState(false);
   const [selectedMotionId, setSelectedMotionId] = useState(null);
   const [showWorldStages, setShowWorldStages] = useState(false);
@@ -108,6 +108,17 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   const [hazardMotion, setHazardMotion] = useState(false);
 
   useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
+  useEffect(() => {
+    const key = (e) => {
+      if (tab !== 'editor') return;
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const k=e.key.toLowerCase();
+      if(k==='c'){e.preventDefault();copySelection();}
+      if(k==='v'){e.preventDefault();pasteSelection();}
+      if(k==='a' && mode==='select'){e.preventDefault();setSelectedEntities([...platforms.map((_,i)=>({kind:'platform',index:i})),...hazards.map((_,i)=>({kind:'hazard',index:i})),...objects.map((_,i)=>({kind:'object',index:i}))]);}
+    };
+    window.addEventListener('keydown',key); return()=>window.removeEventListener('keydown',key);
+  }, [tab,mode,platforms,hazards,objects,selectedEntities,clipboardEntities]);
   useEffect(() => { db.auth.me().then(u => { setUserId(u.id); setUsername(u.username || (u.full_name || (u.email || 'Player')).split('@')[0]); }).catch(() => {}); }, []);
 
   useEffect(() => {
@@ -176,6 +187,24 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           ctx.strokeStyle = '#FF6600'; ctx.lineWidth = 3; ctx.strokeRect(p.x - 2, p.y - 2, p.w + 4, p.h + 4);
         }
       });
+      // Multi-selection highlight. Selection works across platforms, hazards, and items.
+      if (selectedEntities.length) {
+        for (const sel of selectedEntities) {
+          let box = null;
+          if (sel.kind === 'platform' && platforms[sel.index]) { const q = platforms[sel.index]; box = { x:q.x, y:q.y, w:q.w, h:q.h }; }
+          if (sel.kind === 'hazard' && hazards[sel.index]) { const q = hazards[sel.index]; box = { x:q.x, y:q.y, w:q.w, h:q.h }; }
+          if (sel.kind === 'object' && objects[sel.index]) { const q = objects[sel.index]; box = { x:q.x-q.w/2, y:q.y-q.h/2, w:q.w, h:q.h }; }
+          if (!box) continue;
+          ctx.save(); ctx.strokeStyle='#00E5FF'; ctx.lineWidth=3; ctx.setLineDash([7,4]); ctx.strokeRect(box.x-4,box.y-4,box.w+8,box.h+8); ctx.setLineDash([]);
+          ctx.fillStyle='rgba(0,229,255,0.08)'; ctx.fillRect(box.x,box.y,box.w,box.h); ctx.restore();
+        }
+      }
+      // Selection marquee.
+      if (mode === 'select' && selectionDrag && mousePos) {
+        const sx=Math.min(selectionDrag.x,mousePos.x), sy=Math.min(selectionDrag.y,mousePos.y);
+        const sw=Math.abs(mousePos.x-selectionDrag.x), sh=Math.abs(mousePos.y-selectionDrag.y);
+        ctx.save(); ctx.strokeStyle='#00E5FF'; ctx.fillStyle='rgba(0,229,255,0.10)'; ctx.lineWidth=2; ctx.setLineDash([6,4]); ctx.strokeRect(sx,sy,sw,sh); ctx.setLineDash([]); ctx.fillRect(sx,sy,sw,sh); ctx.restore();
+      }
       // Spawn points
       spawnPoints.forEach((sp, i) => {
         ctx.fillStyle = sp.color;
@@ -292,6 +321,37 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   };
 
   const findPlatformAt = (x, y) => platforms.findIndex(p => x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h);
+  const entityBox = (kind, index) => {
+    if (kind === 'platform') { const q=platforms[index]; return q ? {x:q.x,y:q.y,w:q.w,h:q.h} : null; }
+    if (kind === 'hazard') { const q=hazards[index]; return q ? {x:q.x,y:q.y,w:q.w,h:q.h} : null; }
+    if (kind === 'object') { const q=objects[index]; return q ? {x:q.x-q.w/2,y:q.y-q.h/2,w:q.w,h:q.h} : null; }
+    return null;
+  };
+  const boxesIntersect = (a,b) => a && b && a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+  const entitiesInRect = (rect) => {
+    const out=[];
+    platforms.forEach((q,i)=>{if(boxesIntersect(rect,{x:q.x,y:q.y,w:q.w,h:q.h})) out.push({kind:'platform',index:i});});
+    hazards.forEach((q,i)=>{if(boxesIntersect(rect,{x:q.x,y:q.y,w:q.w,h:q.h})) out.push({kind:'hazard',index:i});});
+    objects.forEach((q,i)=>{if(boxesIntersect(rect,{x:q.x-q.w/2,y:q.y-q.h/2,w:q.w,h:q.h})) out.push({kind:'object',index:i});});
+    return out;
+  };
+  const copySelection = async () => {
+    if (!selectedEntities.length) return;
+    const payload = selectedEntities.map(sel => ({ kind:sel.kind, data: JSON.parse(JSON.stringify(sel.kind==='platform'?platforms[sel.index]:sel.kind==='hazard'?hazards[sel.index]:objects[sel.index])) }));
+    setClipboardEntities(payload);
+    try { await navigator.clipboard?.writeText(JSON.stringify(payload)); } catch {}
+  };
+  const pasteSelection = () => {
+    if (!clipboardEntities.length) return;
+    const off=40; const newSel=[]; const nextP=[...platforms], nextH=[...hazards], nextO=[...objects];
+    clipboardEntities.forEach(item=>{
+      const d={...item.data};
+      if(item.kind==='platform'){d.x+=off;d.y+=off;nextSel.push({kind:'platform',index:nextP.length});nextP.push(d);}
+      else if(item.kind==='hazard'){d.x+=off;d.y+=off;if(d.move){d.move={...d.move,startX:(d.move.startX??item.data.x)+off,startY:(d.move.startY??item.data.y)+off};}nextSel.push({kind:'hazard',index:nextH.length});nextH.push(d);}
+      else {d.x+=off;d.y+=off;d._originX=d.x;d._originY=d.y;nextSel.push({kind:'object',index:nextO.length});nextO.push(d);}
+    });
+    setPlatforms(nextP);setHazards(nextH);setObjects(nextO);setSelectedEntities(newSel);
+  };
 
   const onDown = (e) => {
     const { x, y } = pos(e);
@@ -300,6 +360,17 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       const defW = 160, defH = 20;
       const snap = (v) => gridLock ? Math.round(v / 40) * 40 : Math.round(v);
       setPlatforms([...platforms, { x: snap(x - defW / 2), y: snap(y - defH / 2), w: defW, h: defH, material, ...(material === 'conveyor' ? { conveyorDir } : {}) }]);
+      return;
+    }
+    if (mode === 'select') {
+      // Clicking a selected entity starts a group drag; otherwise start a marquee.
+      const hit = [...selectedEntities].reverse().find(sel => { const b=entityBox(sel.kind,sel.index); return b && x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h; });
+      if (hit) {
+        setDrag({ x, y, group: true, startX:x, startY:y, lastX:x, lastY:y, selected:[...selectedEntities] });
+      } else {
+        setSelectionDrag({ x, y }); setMousePos({x,y});
+        if (!e.shiftKey) setSelectedEntities([]);
+      }
       return;
     }
     if (mode === 'spawn') {
@@ -389,16 +460,10 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         setSelectedMotionId(i);
         const next = [...platforms];
         const cur = next[i].move || {};
-        const directionVector = (dir) => ({
-          right: [1, 0], left: [-1, 0], down: [0, 1], up: [0, -1],
-          downRight: [1, 1], downLeft: [-1, 1], upRight: [1, -1], upLeft: [-1, -1],
-        }[dir] || [1, 0]);
-        const [dirX, dirY] = directionVector(motionDirection);
-        const [dir2X, dir2Y] = directionVector(motionSecondDirection);
         next[i] = { ...next[i], move: {
           type: motionType, speed: motionSpeed, distance: motionDistance, pause: motionPaused ? 1 : 0, phase: cur.phase || 0,
-          dirX, dirY, offsetX: cur.offsetX || 0, offsetY: cur.offsetY || 0,
-          ...(motionSecondEnabled ? { second: { type: motionSecondType, speed: motionSecondSpeed, distance: motionSecondDistance, dirX: dir2X, dirY: dir2Y } } : { second: undefined }),
+          motion2: motion2Type !== 'none' ? { type: motion2Type, speed: motion2Speed, distance: motion2Distance } : null,
+          offsetX: cur.offsetX || 0, offsetY: cur.offsetY || 0,
         } };
         setPlatforms(next);
       } else {
@@ -418,10 +483,23 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     setMousePos({ x, y });
   };
   const onMove = (e) => {
-    if (!drag) return;
     const mp = pos(e);
     setMousePos(mp);
+    if (mode === 'select' && selectionDrag && !drag) return;
+    if (!drag) return;
     const snap = (v) => gridLock ? Math.round(v / 40) * 40 : Math.round(v);
+    if (drag.group) {
+      const dx=mp.x-(drag.lastX??mp.x), dy=mp.y-(drag.lastY??mp.y);
+      const snapDelta=(v)=>gridLock ? Math.round(v/40)*40 : v;
+      const sx=snapDelta(dx), sy=snapDelta(dy);
+      if(sx||sy){
+        setPlatforms(prev=>prev.map((q,i)=>drag.selected.some(z=>z.kind==='platform'&&z.index===i)?{...q,x:q.x+sx,y:q.y+sy}:q));
+        setHazards(prev=>prev.map((q,i)=>drag.selected.some(z=>z.kind==='hazard'&&z.index===i)?{...q,x:q.x+sx,y:q.y+sy,move:q.move?{...q.move,startX:(q.move.startX??q.x)+sx,startY:(q.move.startY??q.y)+sy}:q.move}:q));
+        setObjects(prev=>prev.map((q,i)=>drag.selected.some(z=>z.kind==='object'&&z.index===i)?{...q,x:q.x+sx,y:q.y+sy,_originX:(q._originX??q.x)+sx,_originY:(q._originY??q.y)+sy}:q));
+        drag.lastX=mp.x; drag.lastY=mp.y;
+      }
+      return;
+    }
     if (drag.platformIdx >= 0) {
       const next = [...platforms];
       next[drag.platformIdx] = { ...next[drag.platformIdx], x: snap(mp.x - drag.offsetX), y: snap(mp.y - drag.offsetY) };
@@ -445,6 +523,12 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     }
   };
   const onUp = (e) => {
+    if (mode === 'select' && selectionDrag && !drag) {
+      const mp=pos(e); const rect={x:Math.min(selectionDrag.x,mp.x),y:Math.min(selectionDrag.y,mp.y),w:Math.abs(mp.x-selectionDrag.x),h:Math.abs(mp.y-selectionDrag.y)};
+      const found=entitiesInRect(rect);
+      setSelectedEntities(prev => selectionDrag && (e.shiftKey ? [...prev,...found.filter(a=>!prev.some(b=>b.kind===a.kind&&b.index===a.index))] : found));
+      setSelectionDrag(null);setMousePos(null);return;
+    }
     if (!drag) return;
     if (drag.platformIdx < 0) {
       const { x, y } = pos(e);
@@ -461,6 +545,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
 
   // Load a saved stage into the editor for editing (tracks which slot is being edited)
   const loadStage = (stage, idx) => {
+    setSelectedEntities([]); setSelectionDrag(null); setClipboardEntities([]);
     const platforms = stage.platforms || stage;
     setPlatforms(platforms);
     setStageName(stage.name || 'Custom Stage');
@@ -590,6 +675,8 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         <>
         <div className="flex gap-2 flex-wrap">
           <button onClick={() => setMode('add')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'add' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>ADD (drag)</button>
+          <button onClick={() => setMode('select')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'select' ? 'bg-cyan-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>SELECT</button>
+          {mode === 'select' && <><button onClick={copySelection} disabled={!selectedEntities.length} className="px-3 py-1 rounded font-heading text-xs bg-secondary text-secondary-foreground disabled:opacity-40">COPY</button><button onClick={pasteSelection} disabled={!clipboardEntities.length} className="px-3 py-1 rounded font-heading text-xs bg-secondary text-secondary-foreground disabled:opacity-40">PASTE</button><span className="text-[9px] text-muted-foreground">{selectedEntities.length} selected · Shift+drag adds</span></>}
           <button onClick={() => setMode('remove')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'remove' ? 'bg-destructive text-destructive-foreground' : 'bg-secondary text-secondary-foreground'}`}>REMOVE</button>
           <button onClick={() => setMode('spawn')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'spawn' ? 'bg-green-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>SPAWN</button>
           <button onClick={() => setMode('motion')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'motion' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>MOTION</button>
@@ -695,39 +782,17 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
             <div className="flex items-center gap-2 flex-wrap border border-border rounded-lg px-2 py-1">
               <span className="text-[10px] font-heading text-muted-foreground">MOVE:</span>
               {['static','horizontal','vertical','oneway'].map(t => (
-                <button key={t} onClick={() => setMotionType(t)} className={`px-2 py-1 rounded font-heading text-[10px] border-2 ${motionType === t ? 'border-accent' : 'border-border'}`} style={{ background: motionType === t ? 'rgba(255,215,0,0.2)' : 'transparent' }}>
-                  {t === 'horizontal' ? '← →' : t === 'vertical' ? '↑ ↓' : t === 'oneway' ? 'ONE-WAY' : 'STATIC'}
-                </button>
+                <button key={t} onClick={() => setMotionType(t)} className={`px-2 py-1 rounded font-heading text-[10px] border-2 ${motionType === t ? 'border-accent' : 'border-border'}`} style={{ background: motionType === t ? 'rgba(255,215,0,0.2)' : 'transparent' }}>{t === 'horizontal' ? '← →' : t === 'vertical' ? '↑ ↓' : t === 'oneway' ? 'ONE-WAY' : 'STATIC'}</button>
               ))}
-              {motionType === 'oneway' && <>
-                <span className="text-[10px] font-heading text-muted-foreground">DIR:</span>
-                {['left','right','up','down','upLeft','upRight','downLeft','downRight'].map(d => (
-                  <button key={d} onClick={() => setMotionDirection(d)} className={`px-1.5 py-1 rounded font-heading text-[10px] border ${motionDirection === d ? 'border-accent bg-accent/20' : 'border-border'}`}>
-                    {{left:'←',right:'→',up:'↑',down:'↓',upLeft:'↖',upRight:'↗',downLeft:'↙',downRight:'↘'}[d]}
-                  </button>
-                ))}
-              </>}
               <span className="text-[10px] font-heading text-muted-foreground">SPEED:</span>
               <input type="range" min="0.1" max="3" step="0.1" value={motionSpeed} onChange={e => setMotionSpeed(parseFloat(e.target.value))} className="w-20" />
               <span className="text-[9px] w-6">{motionSpeed}</span>
               <span className="text-[10px] font-heading text-muted-foreground">DIST:</span>
               <input type="range" min="0" max="1500" step="10" value={motionDistance} onChange={e => setMotionDistance(parseInt(e.target.value))} className="w-20" />
               <span className="text-[9px] w-8">{motionDistance}</span>
-              <button onClick={() => setMotionSecondEnabled(v => !v)} className={`px-2 py-1 rounded font-heading text-[10px] border-2 ${motionSecondEnabled ? 'border-accent bg-accent/20' : 'border-border'}`} disabled={selectedMotionId == null}>2ND MOTION {motionSecondEnabled ? 'ON' : 'OFF'}</button>
-              {motionSecondEnabled && <>
-                <select value={motionSecondType} onChange={e => setMotionSecondType(e.target.value)} className="bg-secondary text-secondary-foreground rounded px-1 py-1 text-[10px]">
-                  <option value="horizontal">HORIZONTAL</option><option value="vertical">VERTICAL</option><option value="oneway">ONE-WAY</option>
-                </select>
-                <select value={motionSecondDirection} onChange={e => setMotionSecondDirection(e.target.value)} className="bg-secondary text-secondary-foreground rounded px-1 py-1 text-[10px]">
-                  <option value="left">←</option><option value="right">→</option><option value="up">↑</option><option value="down">↓</option><option value="upLeft">↖</option><option value="upRight">↗</option><option value="downLeft">↙</option><option value="downRight">↘</option>
-                </select>
-                <span className="text-[10px] font-heading text-muted-foreground">D2:</span>
-                <input type="range" min="0" max="1500" step="10" value={motionSecondDistance} onChange={e => setMotionSecondDistance(parseInt(e.target.value))} className="w-20" />
-                <span className="text-[9px] w-8">{motionSecondDistance}</span>
-                <span className="text-[10px] font-heading text-muted-foreground">S2:</span>
-                <input type="range" min="0.1" max="3" step="0.1" value={motionSecondSpeed} onChange={e => setMotionSecondSpeed(parseFloat(e.target.value))} className="w-16" />
-                <span className="text-[9px] w-6">{motionSecondSpeed}</span>
-              </>}
+              <span className="text-[10px] font-heading text-muted-foreground ml-2">MOTION 2:</span>
+              {['none','horizontal','vertical','oneway'].map(t => <button key={t} onClick={() => setMotion2Type(t)} className={`px-2 py-1 rounded font-heading text-[10px] border-2 ${motion2Type===t?'border-accent':'border-border'}`}>{t==='none'?'NONE':t==='horizontal'?'← →':t==='vertical'?'↑ ↓':'ONE-WAY'}</button>)}
+              {motion2Type !== 'none' && <><span className="text-[10px] font-heading text-muted-foreground">S:</span><input type="range" min="0.1" max="3" step="0.1" value={motion2Speed} onChange={e=>setMotion2Speed(parseFloat(e.target.value))} className="w-16"/><span className="text-[10px] font-heading text-muted-foreground">D:</span><input type="range" min="0" max="1500" step="10" value={motion2Distance} onChange={e=>setMotion2Distance(parseInt(e.target.value))} className="w-16"/></>}
               <button onClick={() => setPlatforms(platforms.map((p, idx) => idx === selectedMotionId ? { ...p, move: undefined } : p))} className="px-2 py-1 rounded font-heading text-[10px] bg-destructive text-destructive-foreground" disabled={selectedMotionId == null}>CLEAR</button>
               <span className="text-[10px] font-heading text-muted-foreground ml-2">DESTROY:</span>
               <button onClick={() => setPlatforms(platforms.map((p, idx) => idx === selectedMotionId ? { ...p, destroyable: !p.destroyable } : p))} className={`px-2 py-1 rounded font-heading text-[10px] border-2 ${selectedMotionId != null && platforms[selectedMotionId]?.destroyable ? 'border-orange-500 bg-orange-600/30 text-orange-300' : 'border-border'}`} disabled={selectedMotionId == null}>{selectedMotionId != null && platforms[selectedMotionId]?.destroyable ? 'ON 💥' : 'OFF'}</button>
