@@ -5,32 +5,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MATERIALS, drawMaterialOverlay } from './materials.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
+import { STAGE_BACKDROPS } from './stageBackdrops.js';
+import { drawStageBackground } from './stageBackgrounds.js';
 import WorldStages from './WorldStages.jsx';
 import GameIcon from "./GameIcon.jsx";
 import { HAZARD_TYPES, OBJECT_TYPES, makeHazard, makeObject } from './stageHazards.js';
 
-const BACKDROPS = [
-  { id: 'city', name: 'Split City', colors: ['#0a0820', '#1a1250'] },
-  { id: 'forest', name: 'Forest', colors: ['#0a2010', '#1a4020'] },
-  { id: 'void', name: 'Void', colors: ['#05010a', '#150030'] },
-  { id: 'sunset', name: 'Sunset', colors: ['#1a0a30', '#FF6644'] },
-  { id: 'ocean', name: 'Ocean', colors: ['#001030', '#004488'] },
-  { id: 'volcano', name: 'Volcano', colors: ['#1a0500', '#FF3300'] },
-  { id: 'space', name: 'Deep Space', colors: ['#000005', '#100020'] },
-  { id: 'arctic', name: 'Arctic', colors: ['#0a0a30', '#4488CC'] },
-  { id: 'desert', name: 'Desert', colors: ['#2a1a00', '#CCAA44'] },
-  { id: 'jungle', name: 'Jungle', colors: ['#0a2000', '#226622'] },
-  { id: 'sky', name: 'Sky Temple', colors: ['#001122', '#4488FF'] },
-  { id: 'underworld', name: 'Underworld', colors: ['#0a0005', '#440022'] },
-  { id: 'neon', name: 'Neon City', colors: ['#0a0020', '#FF00AA'] },
-  { id: 'ruins', name: 'Ancient Ruins', colors: ['#1a1000', '#443322'] },
-  { id: 'crystal', name: 'Crystal Cave', colors: ['#0a0a20', '#AA44FF'] },
-  { id: 'storm', name: 'Storm', colors: ['#050510', '#334466'] },
-  { id: 'dawn', name: 'Dawn', colors: ['#1a1040', '#FFAA88'] },
-  { id: 'midnight', name: 'Midnight', colors: ['#000010', '#000033'] },
-  { id: 'aurora', name: 'Aurora', colors: ['#000510', '#44FF88'] },
-  { id: 'ember', name: 'Ember', colors: ['#100000', '#FF6600'] },
-];
+const BACKDROPS = STAGE_BACKDROPS;
 
 // Editor canvas covers the full KO perimeter of an actual match.
 // A normal (non-large) stage's blast zone extends 500px left/right and
@@ -61,7 +42,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   const [mousePos, setMousePos] = useState(null);
   const [stageName, setStageName] = useState('');
   const [stageEmoji, setStageEmoji] = useState('🎨');
-  const [backdrop, setBackdrop] = useState('city');
+  const [backdrop, setBackdrop] = useState('splitcity');
   const [showGrid, setShowGrid] = useState(true);
   const [gridLock, setGridLock] = useState(false);
   const [conveyorDir, setConveyorDir] = useState(1);
@@ -97,6 +78,9 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   const [hazardSpeed, setHazardSpeed] = useState(2.5);
   const [hazardRange, setHazardRange] = useState(200);
   const [selectedHazardIdx, setSelectedHazardIdx] = useState(null);
+  const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
+  const [perimeter, setPerimeter] = useState({ enabled: true, left: -500, right: 1780, top: -600, bottom: 1170 });
+  const [perimeterDrag, setPerimeterDrag] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [originalOwnerId, setOriginalOwnerId] = useState(null);
@@ -128,13 +112,24 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     const loop = () => {
       if (!r) return; f++;
       ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-      const bd = BACKDROPS.find(b => b.id === backdrop) || BACKDROPS[0];
-      const g = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
-      g.addColorStop(0, bd.colors[0]); g.addColorStop(1, bd.colors[1]);
-      ctx.fillStyle = g; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-      // KO perimeter — canvas rim = blast zone boundary in an actual match
-      ctx.strokeStyle = 'rgba(255,80,80,0.55)'; ctx.lineWidth = 4; ctx.setLineDash([16, 10]);
-      ctx.strokeRect(2, 2, CANVAS_W - 4, CANVAS_H - 4); ctx.setLineDash([]);
+      // Render the same procedural backdrop used by real stages.
+      drawStageBackground(ctx, CANVAS_W, CANVAS_H, f, backdrop, null, null);
+      // Re-enter game-coordinate space for editor objects. Camera affects only the editor viewport.
+      ctx.save();
+      ctx.translate(ORIGIN_X + camera.x, ORIGIN_Y + camera.y);
+      ctx.scale(camera.zoom, camera.zoom);
+      if (perimeter.enabled) {
+        ctx.strokeStyle = 'rgba(255,80,80,0.7)'; ctx.lineWidth = 4 / camera.zoom; ctx.setLineDash([16 / camera.zoom, 10 / camera.zoom]);
+        ctx.strokeRect(perimeter.left, perimeter.top, perimeter.right - perimeter.left, perimeter.bottom - perimeter.top);
+        ctx.setLineDash([]);
+        if (mode === 'perimeter') {
+          ctx.fillStyle='rgba(255,80,80,0.85)';
+          ctx.fillRect(perimeter.left-5/camera.zoom, perimeter.top, 10/camera.zoom, perimeter.bottom-perimeter.top);
+          ctx.fillRect(perimeter.right-5/camera.zoom, perimeter.top, 10/camera.zoom, perimeter.bottom-perimeter.top);
+          ctx.fillRect(perimeter.left, perimeter.top-5/camera.zoom, perimeter.right-perimeter.left, 10/camera.zoom);
+          ctx.fillRect(perimeter.left, perimeter.bottom-5/camera.zoom, perimeter.right-perimeter.left, 10/camera.zoom);
+        }
+      }
       // grid (toggleable) — covers the full build area
       if (showGrid) {
         ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
@@ -142,7 +137,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         for (let y = 0; y < CANVAS_H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CANVAS_W, y); ctx.stroke(); }
       }
       // Shift to game-coordinate space: editor (ORIGIN_X, ORIGIN_Y) = game (0,0)
-      ctx.save(); ctx.translate(ORIGIN_X, ORIGIN_Y);
+      // already translated into game coordinates above
       // The whole canvas is one build section — no inner play-area box.
       // platforms
       platforms.forEach((p, i) => {
@@ -308,15 +303,15 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     };
     loop();
     return () => { r = false; };
-  }, [platforms, drag, mousePos, mode, backdrop, spawnPoints, spawnSelect, hazards, objects, hazardType, objectType, selectedHazardIdx]);
+  }, [platforms, drag, mousePos, mode, backdrop, spawnPoints, spawnSelect, hazards, objects, hazardType, objectType, selectedHazardIdx, camera, perimeter]);
 
   const pos = (e) => {
     const c = canvasRef.current; const rect = c.getBoundingClientRect();
-    const scaleX = CANVAS_W / rect.width;
-    const scaleY = CANVAS_H / rect.height;
+    const sx = (e.clientX - rect.left) * (CANVAS_W / rect.width);
+    const sy = (e.clientY - rect.top) * (CANVAS_H / rect.height);
     return {
-      x: (e.clientX - rect.left) * scaleX - ORIGIN_X,
-      y: (e.clientY - rect.top) * scaleY - ORIGIN_Y,
+      x: (sx - ORIGIN_X - camera.x) / camera.zoom,
+      y: (sy - ORIGIN_Y - camera.y) / camera.zoom,
     };
   };
 
@@ -373,6 +368,17 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       }
       return;
     }
+    if (mode === 'cursor') {
+      setDrag({ x: e.clientX, y: e.clientY, cameraPan: true, lastScreenX: e.clientX, lastScreenY: e.clientY });
+      return;
+    }
+    if (mode === 'perimeter' && perimeter.enabled) {
+      const eps = 14 / camera.zoom;
+      const hit = Math.abs(x-perimeter.left) <= eps ? 'left' : Math.abs(x-perimeter.right) <= eps ? 'right' : Math.abs(y-perimeter.top) <= eps ? 'top' : Math.abs(y-perimeter.bottom) <= eps ? 'bottom' : null;
+      if (hit) { setPerimeterDrag(hit); setDrag({ perimeter: true }); return; }
+      return;
+    }
+
     if (mode === 'spawn') {
       const newSpawns = [...spawnPoints];
       newSpawns[spawnSelect] = { ...newSpawns[spawnSelect], x, y };
@@ -486,6 +492,23 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     const mp = pos(e);
     setMousePos(mp);
     if (mode === 'select' && selectionDrag && !drag) return;
+    if (drag?.cameraPan) {
+      const dx = e.clientX - drag.lastScreenX, dy = e.clientY - drag.lastScreenY;
+      setCamera(c => ({ ...c, x: c.x + dx, y: c.y + dy }));
+      setDrag(d => ({ ...d, lastScreenX: e.clientX, lastScreenY: e.clientY }));
+      return;
+    }
+    if (drag?.perimeter && perimeterDrag) {
+      setPerimeter(prev => {
+        const n={...prev};
+        if(perimeterDrag==='left') n.left=Math.min(x,n.right-40);
+        if(perimeterDrag==='right') n.right=Math.max(x,n.left+40);
+        if(perimeterDrag==='top') n.top=Math.min(y,n.bottom-40);
+        if(perimeterDrag==='bottom') n.bottom=Math.max(y,n.top+40);
+        return n;
+      });
+      return;
+    }
     if (!drag) return;
     const snap = (v) => gridLock ? Math.round(v / 40) * 40 : Math.round(v);
     if (drag.group) {
@@ -539,7 +562,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         setPlatforms([...platforms, { x: snap(px), y: snap(py), w: snap(pw), h: Math.max(10, snap(ph)), material, ...(material === 'conveyor' ? { conveyorDir } : {}) }]);
       }
     }
-    setDrag(null);
+    setDrag(null); setPerimeterDrag(null);
     setMousePos(null);
   };
 
@@ -550,7 +573,8 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     setPlatforms(platforms);
     setStageName(stage.name || 'Custom Stage');
     setStageEmoji(stage.emoji || '🎨');
-    setBackdrop(stage.backdrop || 'city');
+    setBackdrop(stage.backdrop || 'splitcity');
+    setPerimeter(stage.killPerimeter || { enabled: true, left: -500, right: 1780, top: -600, bottom: 1170 });
     if (stage.spawnPoints) setSpawnPoints(stage.spawnPoints);
     setHazards(stage.hazards || []);
     setObjects(stage.objects || []);
@@ -677,9 +701,11 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           <button onClick={() => setMode('add')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'add' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>ADD (drag)</button>
           <button onClick={() => setMode('select')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'select' ? 'bg-cyan-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>SELECT</button>
           {mode === 'select' && <><button onClick={copySelection} disabled={!selectedEntities.length} className="px-3 py-1 rounded font-heading text-xs bg-secondary text-secondary-foreground disabled:opacity-40">COPY</button><button onClick={pasteSelection} disabled={!clipboardEntities.length} className="px-3 py-1 rounded font-heading text-xs bg-secondary text-secondary-foreground disabled:opacity-40">PASTE</button><span className="text-[9px] text-muted-foreground">{selectedEntities.length} selected · Shift+drag adds</span></>}
+          <button onClick={() => setMode('cursor')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'cursor' ? 'bg-cyan-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>CURSOR</button>
           <button onClick={() => setMode('remove')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'remove' ? 'bg-destructive text-destructive-foreground' : 'bg-secondary text-secondary-foreground'}`}>REMOVE</button>
           <button onClick={() => setMode('spawn')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'spawn' ? 'bg-green-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>SPAWN</button>
           <button onClick={() => setMode('motion')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'motion' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>MOTION</button>
+          <button onClick={() => setMode('perimeter')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'perimeter' ? 'bg-red-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>KO PERIMETER</button>
           <button onClick={() => setMode('hazard')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'hazard' ? 'bg-orange-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>HAZARD</button>
           <button onClick={() => setMode('item')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'item' ? 'bg-purple-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>ITEM</button>
           <button onClick={() => setMode('move')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'move' ? 'bg-cyan-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>MOVE</button>
@@ -810,7 +836,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           <button onClick={async () => {
             // Platforms/hazards/objects/spawns are stored in game coords (1280×720),
             // so no scaling is needed — they map 1:1 to the match canvas.
-            const stageData = { platforms, name: stageName || 'Custom Stage', emoji: stageEmoji, backdrop, spawnPoints, hazards, objects, _editingIndex: editingIndex, downloaded: isDownloaded, originalOwnerId };
+            const stageData = { platforms, name: stageName || 'Custom Stage', emoji: stageEmoji, backdrop, killPerimeter: perimeter, spawnPoints, hazards, objects, _editingIndex: editingIndex, downloaded: isDownloaded, originalOwnerId };
             onSave(stageData);
             // Auto-publish to world — only for stages you created (downloaded stages stay local)
             if (userId && !isDownloaded) {
@@ -839,6 +865,22 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
             }
           }} className="px-4 py-1 bg-primary text-primary-foreground rounded font-heading text-sm">SAVE STAGE</button>
         </div>
+
+      <div className="flex gap-3 flex-wrap items-center bg-card border border-border rounded-xl p-3">
+        <span className="text-[10px] font-heading text-muted-foreground">VIEW:</span>
+        <button onClick={() => setCamera(c => ({...c, zoom: Math.min(3, c.zoom + 0.1)}))} className="px-2 py-1 bg-secondary rounded text-xs">ZOOM +</button>
+        <button onClick={() => setCamera(c => ({...c, zoom: Math.max(0.35, c.zoom - 0.1)}))} className="px-2 py-1 bg-secondary rounded text-xs">ZOOM −</button>
+        <span className="text-[10px] font-heading">{Math.round(camera.zoom*100)}%</span>
+        <button onClick={() => setCamera({x:0,y:0,zoom:1})} className="px-2 py-1 bg-secondary rounded text-xs">RESET VIEW</button>
+        {mode === 'perimeter' && <div className="flex gap-2 flex-wrap items-center">
+          <button onClick={() => setPerimeter(p=>({...p,enabled:!p.enabled}))} className="px-2 py-1 rounded text-xs bg-secondary">{perimeter.enabled?'PERIMETER ON':'PERIMETER OFF'}</button>
+          <label className="text-[9px]">L <input type="number" value={perimeter.left} onChange={e=>setPerimeter(p=>({...p,left:Number(e.target.value)}))} className="w-16 bg-secondary px-1"/></label>
+          <label className="text-[9px]">R <input type="number" value={perimeter.right} onChange={e=>setPerimeter(p=>({...p,right:Number(e.target.value)}))} className="w-16 bg-secondary px-1"/></label>
+          <label className="text-[9px]">T <input type="number" value={perimeter.top} onChange={e=>setPerimeter(p=>({...p,top:Number(e.target.value)}))} className="w-16 bg-secondary px-1"/></label>
+          <label className="text-[9px]">B <input type="number" value={perimeter.bottom} onChange={e=>setPerimeter(p=>({...p,bottom:Number(e.target.value)}))} className="w-16 bg-secondary px-1"/></label>
+          <button onClick={()=>setPerimeter({enabled:false,left:-500,right:1780,top:-600,bottom:1170})} className="px-2 py-1 bg-destructive text-destructive-foreground rounded text-xs">REMOVE</button>
+        </div>}
+      </div>
 
       <div className="flex gap-4 flex-wrap items-center bg-card border border-border rounded-xl p-3">
         <div className="flex items-center gap-2">
@@ -880,7 +922,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         onMouseDown={onDown} onMouseUp={onUp} onMouseMove={onMove}
         onContextMenu={e => e.preventDefault()}
         className="border-2 border-border rounded-lg shadow-2xl w-full"
-        style={{ cursor: mode === 'remove' ? 'not-allowed' : 'crosshair' }}
+        style={{ cursor: mode === 'cursor' ? 'grab' : mode === 'remove' ? 'not-allowed' : mode === 'perimeter' ? 'ew-resize' : 'crosshair' }}
       />
       <div className="bg-card border border-border rounded-xl p-3 text-[10px] text-muted-foreground font-body">
         <p className="font-heading text-accent text-xs mb-1">HOW TO USE</p>
@@ -893,7 +935,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         <p>• <b>SEE STAGES tab:</b> View, edit, or delete your saved stages.</p>
         <p>• <b>Materials:</b> Ice = near-zero friction. Lava = fall through slowly, take damage, swim up. Water = fall through slowly, swim up. Bounce = launches you upward. Cloud = pass-through, no effect. Spike = damage + knockback. Conveyor = pushes you sideways (direction settable). Acid = damages + disables powers temporarily. Sand = slow to walk on. Quicksand = slowly sinks you. Snow = slowly sinks you, weak jumps. Tar = traps you until hit by an attack. Metal/Glass/Wood/Grass/Rubber/Crystal = normal solid.</p>
         <p>• <b>Name & Icon:</b> Give your stage a name and pick an emoji icon — it shows in the map select screen.</p>
-        <p>• <b>Backdrop:</b> Choose from 20 different background themes.</p>
+        <p>• <b>Backdrop:</b> Choose from every real stage backdrop already built into Element 6.</p>
         <p>• You can save up to 10 custom stages (this includes stages you download from World Stages — downloads count toward the 10-slot limit).</p>
         <p>• <b>SPAWN mode:</b> Click on the canvas to place a spawn point for P1-P4. Use the P1/P2/P3/P4 buttons to select which player's spawn to move. Spawn points are saved with the stage.</p>
         <p>• <b>MOTION mode:</b> Click any platform to make it move. Set the motion type (<GameIcon emoji="←" size={14} /> <GameIcon emoji="→" size={14} /> horizontal, <GameIcon emoji="↑" size={14} /> <GameIcon emoji="↓" size={14} /> vertical, or STATIC), then adjust SPEED and DISTANCE. A dashed gold line shows the platform's travel range. Click CLEAR to remove motion from the currently selected (orange box) platform. Moving platforms carry any fighter standing on them during a match. Use the DESTROY toggle to mark a platform as destructible — it shows a 💥 icon and crack overlay. Destructible platforms break when hit by attacks during matches and regenerate after 10 seconds.</p>
