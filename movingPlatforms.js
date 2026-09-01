@@ -12,30 +12,32 @@ export function applyMovingPlatforms(platforms, timeMs, fighters) {
     const mv = p.move;
     if (!mv || mv.type === 'static' || !mv.type) continue;
     if (p._deleted > 0) continue;
-    // Record base position once so we oscillate around it, not the moving value
+
     if (p._moveBaseX === undefined) p._moveBaseX = p.x;
     if (p._moveBaseY === undefined) p._moveBaseY = p.y;
+    if (p._moveStartMs === undefined) p._moveStartMs = timeMs;
+
     const baseX = p._moveBaseX + (mv.offsetX || 0);
     const baseY = p._moveBaseY + (mv.offsetY || 0);
-
-    // Triangle wave 0..1..0 gives a smooth back-and-forth with pause at edges.
-    const speed = Math.max(0.05, mv.speed || 1);
-    const amp = Math.max(0, mv.distance || 0);
-    const t = (timeMs / 1000) * speed * 2 + (mv.phase || 0);
-    const wave = triangleWave(t); // -1..1
-    const off = wave * amp / 2; // half-amplitude either side of base
-
     const prevX = p.x, prevY = p.y;
-    if (mv.type === 'horizontal') {
-      p.x = baseX + off;
-      p.y = baseY;
-    } else if (mv.type === 'vertical') {
-      p.x = baseX;
-      p.y = baseY + off;
+
+    const primary = movementOffset(mv, timeMs, p._moveStartMs);
+    let offX = primary.x;
+    let offY = primary.y;
+
+    // Optional second direction. This lets one platform combine two different
+    // movement axes/vectors (for example horizontal + vertical = diagonal).
+    if (mv.second && mv.second.type && mv.second.type !== 'static') {
+      const secondary = movementOffset(mv.second, timeMs, p._moveStartMs);
+      offX += secondary.x;
+      offY += secondary.y;
     }
+
+    p.x = baseX + offX;
+    p.y = baseY + offY;
+
     const dx = p.x - prevX, dy = p.y - prevY;
     if (!fighters || (!dx && !dy)) continue;
-    // Carry grounded fighters who are standing on this platform
     for (const f of fighters) {
       if (!f || !f.grounded) continue;
       const onThis = Math.abs(f.y - prevY) < 4 &&
@@ -43,6 +45,34 @@ export function applyMovingPlatforms(platforms, timeMs, fighters) {
       if (onThis) { f.x += dx; f.y += dy; }
     }
   }
+}
+
+function movementOffset(mv, timeMs, startMs) {
+  const distance = Math.max(0, Number(mv.distance) || 0);
+  const speed = Math.max(0.05, Number(mv.speed) || 1);
+
+  if (mv.type === 'oneway') {
+    // One-way movement travels once and stays at its destination.
+    const elapsed = Math.max(0, (timeMs - startMs) / 1000);
+    const duration = Math.max(0.1, distance / Math.max(30, speed * 100));
+    const progress = Math.min(1, elapsed / duration);
+    const vector = normalizeVector(mv.dirX, mv.dirY);
+    return { x: vector.x * distance * progress, y: vector.y * distance * progress };
+  }
+
+  const t = (timeMs / 1000) * speed * 2 + (mv.phase || 0);
+  const off = triangleWave(t) * distance / 2;
+  if (mv.type === 'horizontal') return { x: off, y: 0 };
+  if (mv.type === 'vertical') return { x: 0, y: off };
+  return { x: 0, y: 0 };
+}
+
+function normalizeVector(x, y) {
+  const vx = Number(x) || 0;
+  const vy = Number(y) || 0;
+  const len = Math.hypot(vx, vy);
+  if (!len) return { x: 1, y: 0 };
+  return { x: vx / len, y: vy / len };
 }
 
 // Smooth -1..1 triangle wave with eased pause near the peaks

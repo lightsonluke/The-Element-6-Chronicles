@@ -71,7 +71,13 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   ]);
   const [spawnSelect, setSpawnSelect] = useState(0);
   // Moving-platform editor
-  const [motionType, setMotionType] = useState('horizontal'); // horizontal | vertical | static
+  const [motionType, setMotionType] = useState('horizontal'); // horizontal | vertical | oneway | static
+  const [motionDirection, setMotionDirection] = useState('right');
+  const [motionSecondEnabled, setMotionSecondEnabled] = useState(false);
+  const [motionSecondType, setMotionSecondType] = useState('vertical');
+  const [motionSecondDirection, setMotionSecondDirection] = useState('down');
+  const [motionSecondDistance, setMotionSecondDistance] = useState(160);
+  const [motionSecondSpeed, setMotionSecondSpeed] = useState(0.5);
   const [motionSpeed, setMotionSpeed] = useState(0.5);
   const [motionDistance, setMotionDistance] = useState(160);
   const [motionPaused, setMotionPaused] = useState(false);
@@ -383,9 +389,16 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         setSelectedMotionId(i);
         const next = [...platforms];
         const cur = next[i].move || {};
+        const directionVector = (dir) => ({
+          right: [1, 0], left: [-1, 0], down: [0, 1], up: [0, -1],
+          downRight: [1, 1], downLeft: [-1, 1], upRight: [1, -1], upLeft: [-1, -1],
+        }[dir] || [1, 0]);
+        const [dirX, dirY] = directionVector(motionDirection);
+        const [dir2X, dir2Y] = directionVector(motionSecondDirection);
         next[i] = { ...next[i], move: {
           type: motionType, speed: motionSpeed, distance: motionDistance, pause: motionPaused ? 1 : 0, phase: cur.phase || 0,
-          offsetX: cur.offsetX || 0, offsetY: cur.offsetY || 0,
+          dirX, dirY, offsetX: cur.offsetX || 0, offsetY: cur.offsetY || 0,
+          ...(motionSecondEnabled ? { second: { type: motionSecondType, speed: motionSecondSpeed, distance: motionSecondDistance, dirX: dir2X, dirY: dir2Y } } : { second: undefined }),
         } };
         setPlatforms(next);
       } else {
@@ -681,15 +694,40 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           {mode === 'motion' && (
             <div className="flex items-center gap-2 flex-wrap border border-border rounded-lg px-2 py-1">
               <span className="text-[10px] font-heading text-muted-foreground">MOVE:</span>
-              {['static','horizontal','vertical'].map(t => (
-                <button key={t} onClick={() => setMotionType(t)} className={`px-2 py-1 rounded font-heading text-[10px] border-2 ${motionType === t ? 'border-accent' : 'border-border'}`} style={{ background: motionType === t ? 'rgba(255,215,0,0.2)' : 'transparent' }}>{t === 'horizontal' ? '← →' : t === 'vertical' ? '↑ ↓' : 'STATIC'}</button>
+              {['static','horizontal','vertical','oneway'].map(t => (
+                <button key={t} onClick={() => setMotionType(t)} className={`px-2 py-1 rounded font-heading text-[10px] border-2 ${motionType === t ? 'border-accent' : 'border-border'}`} style={{ background: motionType === t ? 'rgba(255,215,0,0.2)' : 'transparent' }}>
+                  {t === 'horizontal' ? '← →' : t === 'vertical' ? '↑ ↓' : t === 'oneway' ? 'ONE-WAY' : 'STATIC'}
+                </button>
               ))}
+              {motionType === 'oneway' && <>
+                <span className="text-[10px] font-heading text-muted-foreground">DIR:</span>
+                {['left','right','up','down','upLeft','upRight','downLeft','downRight'].map(d => (
+                  <button key={d} onClick={() => setMotionDirection(d)} className={`px-1.5 py-1 rounded font-heading text-[10px] border ${motionDirection === d ? 'border-accent bg-accent/20' : 'border-border'}`}>
+                    {{left:'←',right:'→',up:'↑',down:'↓',upLeft:'↖',upRight:'↗',downLeft:'↙',downRight:'↘'}[d]}
+                  </button>
+                ))}
+              </>}
               <span className="text-[10px] font-heading text-muted-foreground">SPEED:</span>
               <input type="range" min="0.1" max="3" step="0.1" value={motionSpeed} onChange={e => setMotionSpeed(parseFloat(e.target.value))} className="w-20" />
               <span className="text-[9px] w-6">{motionSpeed}</span>
               <span className="text-[10px] font-heading text-muted-foreground">DIST:</span>
-              <input type="range" min="0" max="500" step="10" value={motionDistance} onChange={e => setMotionDistance(parseInt(e.target.value))} className="w-20" />
+              <input type="range" min="0" max="1500" step="10" value={motionDistance} onChange={e => setMotionDistance(parseInt(e.target.value))} className="w-20" />
               <span className="text-[9px] w-8">{motionDistance}</span>
+              <button onClick={() => setMotionSecondEnabled(v => !v)} className={`px-2 py-1 rounded font-heading text-[10px] border-2 ${motionSecondEnabled ? 'border-accent bg-accent/20' : 'border-border'}`} disabled={selectedMotionId == null}>2ND MOTION {motionSecondEnabled ? 'ON' : 'OFF'}</button>
+              {motionSecondEnabled && <>
+                <select value={motionSecondType} onChange={e => setMotionSecondType(e.target.value)} className="bg-secondary text-secondary-foreground rounded px-1 py-1 text-[10px]">
+                  <option value="horizontal">HORIZONTAL</option><option value="vertical">VERTICAL</option><option value="oneway">ONE-WAY</option>
+                </select>
+                <select value={motionSecondDirection} onChange={e => setMotionSecondDirection(e.target.value)} className="bg-secondary text-secondary-foreground rounded px-1 py-1 text-[10px]">
+                  <option value="left">←</option><option value="right">→</option><option value="up">↑</option><option value="down">↓</option><option value="upLeft">↖</option><option value="upRight">↗</option><option value="downLeft">↙</option><option value="downRight">↘</option>
+                </select>
+                <span className="text-[10px] font-heading text-muted-foreground">D2:</span>
+                <input type="range" min="0" max="1500" step="10" value={motionSecondDistance} onChange={e => setMotionSecondDistance(parseInt(e.target.value))} className="w-20" />
+                <span className="text-[9px] w-8">{motionSecondDistance}</span>
+                <span className="text-[10px] font-heading text-muted-foreground">S2:</span>
+                <input type="range" min="0.1" max="3" step="0.1" value={motionSecondSpeed} onChange={e => setMotionSecondSpeed(parseFloat(e.target.value))} className="w-16" />
+                <span className="text-[9px] w-6">{motionSecondSpeed}</span>
+              </>}
               <button onClick={() => setPlatforms(platforms.map((p, idx) => idx === selectedMotionId ? { ...p, move: undefined } : p))} className="px-2 py-1 rounded font-heading text-[10px] bg-destructive text-destructive-foreground" disabled={selectedMotionId == null}>CLEAR</button>
               <span className="text-[10px] font-heading text-muted-foreground ml-2">DESTROY:</span>
               <button onClick={() => setPlatforms(platforms.map((p, idx) => idx === selectedMotionId ? { ...p, destroyable: !p.destroyable } : p))} className={`px-2 py-1 rounded font-heading text-[10px] border-2 ${selectedMotionId != null && platforms[selectedMotionId]?.destroyable ? 'border-orange-500 bg-orange-600/30 text-orange-300' : 'border-border'}`} disabled={selectedMotionId == null}>{selectedMotionId != null && platforms[selectedMotionId]?.destroyable ? 'ON 💥' : 'OFF'}</button>

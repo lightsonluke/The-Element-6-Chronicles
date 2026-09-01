@@ -30,12 +30,17 @@ export function renderThumbnail(ctx, stage, w, h) {
     drawMaterialOverlay(ctx, { ...p, x: p.x * sx, y: p.y * sy, w: p.w * sx, h: Math.max(2, p.h * sy) }, 0);
     // moving-platform path hint
     if (p.move && p.move.type !== 'static' && p.move.distance) {
-      const d = (p.move.distance / 2) * sx;
+      const d = p.move.distance * sx;
       ctx.strokeStyle = 'rgba(255,215,0,0.7)'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
       ctx.beginPath();
-      if (p.move.type === 'horizontal') { ctx.moveTo((p.x - d) * 1, (p.y + p.h / 2) * sy); ctx.lineTo((p.x + p.w + d), (p.y + p.h / 2) * sy); }
-      else { ctx.moveTo((p.x + p.w / 2) * sx, (p.y - d)); ctx.lineTo((p.x + p.w / 2) * sx, (p.y + p.h + d)); }
+      if (p.move.type === 'horizontal') { ctx.moveTo((p.x - d / 2) * sx, (p.y + p.h / 2) * sy); ctx.lineTo((p.x + p.w + d / 2) * sx, (p.y + p.h / 2) * sy); }
+      else if (p.move.type === 'vertical') { ctx.moveTo((p.x + p.w / 2) * sx, (p.y - d / 2) * sy); ctx.lineTo((p.x + p.w / 2) * sx, (p.y + p.h + d / 2) * sy); }
+      else if (p.move.type === 'oneway') { const vx = p.move.dirX || 1, vy = p.move.dirY || 0; ctx.moveTo((p.x + p.w / 2) * sx, (p.y + p.h / 2) * sy); ctx.lineTo((p.x + p.w / 2 + vx * p.move.distance) * sx, (p.y + p.h / 2 + vy * p.move.distance) * sy); }
       ctx.stroke(); ctx.setLineDash([]);
+      if (p.move.second?.distance) {
+        const vx = p.move.second.dirX || 1, vy = p.move.second.dirY || 0;
+        ctx.beginPath(); ctx.moveTo((p.x + p.w / 2) * sx, (p.y + p.h / 2) * sy); ctx.lineTo((p.x + p.w / 2 + vx * p.move.second.distance) * sx, (p.y + p.h / 2 + vy * p.move.second.distance) * sy); ctx.stroke(); ctx.setLineDash([]);
+      }
     }
   });
 }
