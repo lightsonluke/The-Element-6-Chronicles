@@ -307,6 +307,41 @@ export function updateSandboxObjects(objects, fighters, platforms, dt, W, H, haz
       }
     }
 
+    // Stage-material hazards apply to every item, including Ball.
+    // These are intentionally handled independently from fighter-only hazard logic.
+    for (const p of platforms) {
+      if (p._deleted) continue;
+      const mat = p.material || 'normal';
+      if (obj.x + hw <= p.x || obj.x - hw >= p.x + p.w || obj.y + hh <= p.y || obj.y - hh >= p.y + p.h) continue;
+      if (mat === 'lava') {
+        obj.vx *= 0.88;
+        obj.vy = Math.min(obj.vy, 5);
+        obj._hazardState = 'lava';
+      } else if (mat === 'acid') {
+        obj.vx *= 0.9;
+        obj.vy *= 0.9;
+        obj._hazardState = 'acid';
+      } else if (mat === 'tar') {
+        obj.vx *= 0.55;
+        obj.vy *= 0.8;
+        obj._hazardState = 'tar';
+      } else if (mat === 'water') {
+        obj.vx *= 0.78;
+        obj.vy *= 0.72;
+        if (obj.vy > 3) obj.vy = 3;
+        obj._hazardState = 'water';
+      } else if (mat === 'quicksand' || mat === 'snow') {
+        obj.vx *= 0.72;
+        if (obj.vy > 4) obj.vy = 4;
+        obj._hazardState = mat;
+      } else if (mat === 'bounce' || mat === 'rubber') {
+        if (obj.vy >= 0 && obj.y + hh >= p.y && obj.y < p.y + p.h + 10) {
+          obj.vy = -Math.abs(obj.vy || 5) * 1.05;
+          obj.grounded = false;
+        }
+      }
+    }
+
     // Wind hazard — push objects inside the zone
     for (const w of (hazards?.wind || [])) {
       if (obj.x > w.x && obj.x < w.x + w.w && obj.y > w.y && obj.y < w.y + w.h) {
