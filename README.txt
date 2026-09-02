@@ -1,17 +1,32 @@
-ELEMENT 6 — STAGE EDITOR BACKDROPS / CAMERA / KO PERIMETER
+ELEMENT 6 — ICON SYSTEM REPLACEMENT
 
-Replace the StageEditor.jsx and stageBackdrops.js files in this package.
+Replace the existing GameIcon.jsx with this file.
 
-Included:
-- Every real playable stage ID is available as a Stage Editor backdrop.
-- Backdrops use the existing stageBackgrounds.js renderer, so the editor previews the actual in-game stage environment instead of a generic gradient.
-- CURSOR mode: drag empty stage space to pan the Stage Editor camera only. It never changes the saved stage or gameplay camera.
-- ZOOM + / ZOOM - / RESET VIEW controls for close-up editing.
-- KO PERIMETER editor with four independently movable walls (left/right/top/bottom).
-- Numeric wall controls plus drag handles.
-- Perimeter can be disabled/removed entirely.
-- killPerimeter is saved into stage_data so the setting survives stage saves.
-- world-stages.sql creates/repairs the community_stages table, RLS, indexes, realtime publication, and the kill_perimeter column.
+This patch upgrades the existing GameIcon compatibility layer so the game's
+existing emoji-style icon calls render as real IconScout Unicons instead of
+empty boxes/spans. It also adds semantic icon aliases for newer UI code.
 
-Important:
-The existing match engine must read stage.killPerimeter / stage_data.kill_perimeter if the custom KO boundary is intended to affect actual matches. This patch stores the editor setting; it does not silently change the global default KO rules for unrelated stages.
+Included categories:
+- navigation / arrows
+- close / X / check / confirmation
+- play / pause / stop / refresh
+- trash / delete / edit / copy / save / upload / download
+- search / filter / settings / info / warning
+- lock / unlock / visibility
+- home / map / layers / box / package / folder
+- user / users / friends / chat / gift
+- trophy / medal / heart / star
+- video / camera / image / music / volume
+- water / fire / snow / trees / leaf / flower
+- flags / running / game / controller
+- calendar / chart / clipboard / paperclip
+- cloud / server / database / wifi
+- stage/editor-oriented icons
+
+The project already declares @iconscout/react-unicons as a dependency.
+No new third-party dependency is required.
+
+NOTE:
+The icon package is IconScout's Unicons. IconScout's official license says
+Unicons can be used in personal and commercial projects under its applicable
+license terms. Review the current license for your specific asset/source.
