@@ -195,9 +195,12 @@ export default function Sandbox({ progress, customCharsData = {}, onBack }) {
                       <option value="dummy">Dummy</option>
                     </select>
                     {p.type === 'bot' && (
-                      <select value={p.difficulty} onChange={e => setPlayerDifficulty(i, e.target.value)} className="text-[10px] bg-secondary text-secondary-foreground rounded px-1 py-0.5 border border-border font-heading">
-                        {DIFFICULTIES.map(d => <option key={d} value={d}>{d}</option>)}
-                      </select><label className="flex items-center gap-1 text-[10px] font-heading text-muted-foreground">STOCKS <input type="number" min="1" max="99" value={p.stocks || stockCount} onChange={e => setPlayerStocks(i, e.target.value)} className="w-12 bg-secondary text-secondary-foreground rounded px-1 py-0.5" /></label>
+                      <>
+                        <select value={p.difficulty} onChange={e => setPlayerDifficulty(i, e.target.value)} className="text-[10px] bg-secondary text-secondary-foreground rounded px-1 py-0.5 border border-border font-heading">
+                          {DIFFICULTIES.map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                        <label className="flex items-center gap-1 text-[10px] font-heading text-muted-foreground">STOCKS <input type="number" min="1" max="99" value={p.stocks || stockCount} onChange={e => setPlayerStocks(i, e.target.value)} className="w-12 bg-secondary text-secondary-foreground rounded px-1 py-0.5" /></label>
+                      </>
                     )}
                   </div>
                 )}
