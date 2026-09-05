@@ -1,6 +1,6 @@
 // Element 6 native-only rolling clip recorder.
-// Uses browser-native Canvas.captureStream + MediaRecorder only.
-// No external media-processing dependency.
+// Browser-native APIs only: Canvas.captureStream + MediaRecorder + Blob.
+// No third-party media libraries.
 
 let stream = null;
 let recorder = null;
@@ -10,20 +10,20 @@ let clipMime = '';
 let startedAt = 0;
 let lastDataAt = 0;
 let saveBusy = false;
-let canvasRef = null;
 
-const CHUNK_MS = 1000;
+const FPS = 30;
+const CHUNK_MS = 250;
 const CLIP_SECONDS = 30;
-const ROLLING_SECONDS = 34;
-const MAX_MEDIA_CHUNKS = ROLLING_SECONDS + 4;
+const MAX_WINDOW_MS = CLIP_SECONDS * 1000 + 250;
+const MIN_RECORDING_MS = CLIP_SECONDS * 1000;
 
 function getSupportedMime() {
   const types = [
     'video/mp4;codecs="avc1.42E01E"',
     'video/mp4;codecs=avc1',
     'video/mp4',
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
+    'video/webm;codecs="vp9"',
+    'video/webm;codecs="vp8"',
     'video/webm',
   ];
 
@@ -39,28 +39,32 @@ function extensionForMime(mime) {
   return String(mime || '').toLowerCase().includes('mp4') ? 'mp4' : 'webm';
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function pruneChunks() {
-  // The first chunk normally contains the container initialization/header.
-  // Keep it plus the newest rolling media chunks. MediaRecorder data must be
-  // reassembled in order before playback; individual slices are not standalone.
-  if (chunks.length <= MAX_MEDIA_CHUNKS + 1) return;
-  chunks = [chunks[0], ...chunks.slice(-(MAX_MEDIA_CHUNKS))];
-}
-
 function resetState() {
   recording = false;
   window.__e6ClipRecorderReady = false;
   stream = null;
   recorder = null;
   chunks = [];
-  canvasRef = null;
   startedAt = 0;
   lastDataAt = 0;
   saveBusy = false;
+  clipMime = '';
+}
+
+function pruneChunks() {
+  if (!chunks.length) return;
+
+  const newestAt = chunks[chunks.length - 1].at;
+  const cutoff = newestAt - MAX_WINDOW_MS;
+
+  // Keep only media from the rolling 30-second window. The first chunk is
+  // retained as the container initialization chunk when the browser emits it.
+  let firstHeader = chunks[0];
+  let recent = chunks.filter((entry, index) => index !== 0 && entry.at >= cutoff);
+
+  // If the browser's first data event is itself a normal media chunk, retaining
+  // it as the header is still required for a reassembled MediaRecorder stream.
+  chunks = [firstHeader, ...recent];
 }
 
 export function initClipRecorder(canvas) {
@@ -68,8 +72,7 @@ export function initClipRecorder(canvas) {
   if (recording) stopClipRecorder();
 
   try {
-    canvasRef = canvas;
-    stream = canvas.captureStream(30);
+    stream = canvas.captureStream(FPS);
     const requestedMime = getSupportedMime();
 
     recorder = requestedMime
@@ -81,17 +84,16 @@ export function initClipRecorder(canvas) {
           videoBitsPerSecond: 4500000,
         });
 
-    // Use the actual browser-selected type. It can differ from the requested
-    // type and is the type that must be used when rebuilding the final Blob.
     clipMime = recorder.mimeType || requestedMime || 'video/webm';
     chunks = [];
-    startedAt = Date.now();
+    startedAt = performance.now();
     lastDataAt = startedAt;
 
     recorder.ondataavailable = event => {
       if (!event.data || event.data.size === 0) return;
-      chunks.push({ blob: event.data, at: Date.now() });
-      lastDataAt = Date.now();
+      const at = performance.now();
+      chunks.push({ blob: event.data, at });
+      lastDataAt = at;
       pruneChunks();
     };
 
@@ -112,91 +114,92 @@ export function initClipRecorder(canvas) {
   }
 }
 
+function waitForNextData(minDelay = 180) {
+  return new Promise(resolve => setTimeout(resolve, minDelay));
+}
+
 async function flushLatestChunk() {
   if (!recorder || recorder.state !== 'recording') return;
   try {
+    const before = chunks.length;
     recorder.requestData();
-    await sleep(120);
+    for (let i = 0; i < 8 && chunks.length === before; i += 1) {
+      await waitForNextData(60);
+    }
+    pruneChunks();
   } catch {}
 }
 
 function buildRollingBlob() {
-  if (!chunks.length) return null;
+  if (chunks.length < 2) return null;
 
   const media = chunks.map(entry => entry.blob);
-  if (!media.length) return null;
-
   return new Blob(media, {
     type: clipMime || recorder?.mimeType || 'video/webm',
   });
 }
 
-async function isPlayableBlob(blob) {
-  if (!blob || blob.size < 1000) return false;
+async function readDuration(blob) {
+  if (!blob) return 0;
 
   return new Promise(resolve => {
     const video = document.createElement('video');
     const url = URL.createObjectURL(blob);
-    let settled = false;
+    let done = false;
 
     const finish = value => {
-      if (settled) return;
-      settled = true;
+      if (done) return;
+      done = true;
       try { video.pause(); } catch {}
       video.removeAttribute('src');
       try { video.load(); } catch {}
       URL.revokeObjectURL(url);
-      resolve(value);
+      resolve(Number.isFinite(value) ? value : 0);
     };
 
     video.preload = 'metadata';
     video.muted = true;
     video.playsInline = true;
-    video.onloadedmetadata = () => finish(Number.isFinite(video.duration) && video.duration > 0);
-    video.onerror = () => finish(false);
+    video.onloadedmetadata = () => finish(video.duration);
+    video.onerror = () => finish(0);
     video.src = url;
-    setTimeout(() => finish(false), 2500);
+    setTimeout(() => finish(0), 4000);
   });
 }
 
 export async function saveClip() {
-  if (
-    saveBusy ||
-    !recording ||
-    !recorder ||
-    recorder.state !== 'recording'
-  ) return null;
+  if (saveBusy || !recording || !recorder || recorder.state !== 'recording') return null;
 
   saveBusy = true;
   try {
-    const elapsed = (Date.now() - startedAt) / 1000;
-    if (elapsed < CLIP_SECONDS) return null;
+    const elapsedMs = performance.now() - startedAt;
+    if (elapsedMs < MIN_RECORDING_MS) return null;
 
-    // Flush the newest slice so the saved window includes the most recent media.
     await flushLatestChunk();
-
-    // We cannot losslessly trim arbitrary media with browser-native APIs alone.
-    // Instead, reassemble the native MediaRecorder stream from its initialization
-    // chunk plus the newest ~34 seconds of sequential slices. The resulting file
-    // stays in the browser's native recording container/codec.
     const source = buildRollingBlob();
     if (!source) return null;
 
-    const playable = await isPlayableBlob(source);
-    if (!playable) {
-      console.error('[Element 6 Clips] Browser produced a non-playable native recording.');
+    const duration = await readDuration(source);
+    if (!duration) {
+      console.error('[Element 6 Clips] Native recording has no readable duration.');
+      return null;
+    }
+
+    // The rolling buffer is deliberately bounded to 30 seconds + one small
+    // chunk. If browser timing causes it to exceed 30.25s, do not save a clip
+    // claiming it is 30 seconds. Native browser APIs cannot accurately cut an
+    // arbitrary encoded frame without a media encoder.
+    if (duration > CLIP_SECONDS + 0.35) {
+      console.warn('[Element 6 Clips] Rolling native recording exceeded the 30s safety window:', duration);
       return null;
     }
 
     const type = recorder.mimeType || clipMime || source.type || 'video/webm';
-    const extension = extensionForMime(type);
-    const durationHint = Math.min(CLIP_SECONDS, elapsed);
-
     return {
       blob: source,
       mime: type,
-      extension,
-      duration: durationHint,
+      extension: extensionForMime(type),
+      duration: Math.min(duration, CLIP_SECONDS),
     };
   } catch (error) {
     console.error('[Element 6 Clips] Native clip creation failed:', error);
@@ -211,7 +214,7 @@ export function getClipRecordingInfo() {
     active: isClipRecorderActive(),
     mime: clipMime,
     extension: extensionForMime(clipMime),
-    ageSeconds: startedAt ? (Date.now() - startedAt) / 1000 : 0,
+    ageSeconds: startedAt ? (performance.now() - startedAt) / 1000 : 0,
     lastDataAt,
   };
 }

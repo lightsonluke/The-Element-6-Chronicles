@@ -2,7 +2,7 @@
 // Native browser recording only. No cloud upload and no media-processing library.
 const DB_NAME = 'element6_clips_native';
 const STORE = 'clips';
-const VERSION = 1;
+const VERSION = 2;
 const MAX_CLIPS = 30;
 
 function openDB() {
