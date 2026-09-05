@@ -13,6 +13,7 @@ import UniversalCharacterSelect from './UniversalCharacterSelect.jsx';
 import ElementSelect from './ElementSelect.jsx';
 import BattleRoyaleEngine from './BattleRoyaleEngine.jsx';
 import GameIcon from './GameIcon.jsx';
+import PrematchAnimation from './PrematchAnimation.jsx';
 import { getEquippedAccessories } from './cosmetics.js';
 import { supabase } from './supabaseClient.js';
 
@@ -26,7 +27,7 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
   const [me, setMe] = useState(null);
   const [myChar, setMyChar] = useState(favoriteId || 'yellow');
   const [myElement, setMyElement] = useState(equippedElements?.[favoriteId || 'yellow'] || 'basic');
-  const [phase, setPhase] = useState('pick'); // pick | element | queue | fight
+  const [phase, setPhase] = useState('pick'); // pick | element | queue | prematch | fight
   const [matchId, setMatchId] = useState(null);
   const [role, setRole] = useState('host');
   const [match, setMatch] = useState(null);
@@ -95,7 +96,7 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
   const startEngine = useCallback((m) => {
     startedRef.current = true;
     setPlayers(m.players || []);
-    setPhase('fight');
+    setPhase('prematch');
     sfx.matchFound();
   }, []);
 
@@ -211,7 +212,7 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
       }
       if (!ok) { startedRef.current = false; setError('Could not start match. Try again.'); setPhase('pick'); return; }
       setPlayers(finalPlayers);
-      setPhase('fight');
+      setPhase('prematch');
       sfx.matchFound();
     } catch { startedRef.current = false; }
   };
@@ -220,6 +221,14 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
     if (matchId) { try { await db.entities.BattleRoyaleMatch.update(matchId, { status: 'finished' }); } catch {} }
     setMatchId(null); setMatch(null); setPhase('pick');
   };
+
+  if (phase === 'prematch' && matchId) {
+    const participants = players.slice(0, 12).map((p, i) => {
+      const c = ALL.find(x => x.id === p.char_id);
+      return c ? { char: c, side: i % 2 === 0 ? 1 : 2, teamColor: i % 2 === 0 ? '#4488FF' : '#AA44FF' } : null;
+    }).filter(Boolean);
+    return <PrematchAnimation participants={participants} sport="battle-royale" title="BATTLE ROYALE" onDone={() => setPhase('fight')} sfxVolume={sfxVolume} musicVolume={musicVolume} />;
+  }
 
   if (phase === 'fight' && matchId) {
     return (

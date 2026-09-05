@@ -64,7 +64,7 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-heading tracking-wider" style={{ color: activeEvent?.color || 'var(--accent)' }}>BATTLE PASS</h2>
-          <p className="text-xs text-muted-foreground font-body">{activeEvent?.name} — Earn XP from battles to climb 50 tiers!</p>
+          <p className="text-xs text-muted-foreground font-body">{activeEvent?.name} — Earn XP from battles to climb 50 tiers. Battle Pass+ adds a second reward on every claimed tier.</p>
           {battlePassPlus && <p className="text-[10px] font-heading text-accent mt-1"><GameIcon emoji="⭐" size={14} /> BATTLE PASS+ ACTIVE — All tiers unlocked!</p>}
           {nextEventInfo?.event && nextEventInfo?.startDate && (() => {
             const diff = Math.max(0, nextEventInfo.startDate.getTime() - now);
@@ -156,7 +156,8 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
                     {bp.tier}
                   </div>
                   <RewardPreview bp={bp} event={activeEvent} />
-                  <p className="text-[8px] font-heading text-foreground text-center truncate w-full">{rewardLabel}</p>
+                  <p className="text-[8px] font-heading text-foreground text-center truncate w-full">FREE: {rewardLabel}</p>
+                  {bp.premiumReward && <p className="text-[7px] font-heading text-accent text-center truncate w-full">PREMIUM: {bp.premiumReward.type === 'tokens' ? `${bp.premiumReward.amount} ◆` : bp.premiumReward.type === 'accessory' ? (bp.premiumReward.item?.name || 'Accessory') : bp.premiumReward.type === 'killfx' ? (bp.premiumReward.item?.name || 'Kill FX') : (bp.premiumReward.name || 'Bonus Reward')}</p>}
                   <p className="text-[6px] text-muted-foreground text-center">
                     {(bp.type || 'reward').toUpperCase()}
                     {isMilestone && ' ★'}

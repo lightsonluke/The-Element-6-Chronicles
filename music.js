@@ -10,7 +10,6 @@ const A = (name) => `${import.meta.env.BASE_URL}audio/${name}`;
 const MENU_TRACKS = [
   A('home.mp3'),
   A('home-2.mp3'),
-  A('pixelated-skyline.mp3'),
 ];
 const HOME_ROTATION_MS = 2 * 60 * 60 * 1000;
 const PARKOUR_TRACK = A('parkour.mp3');
@@ -23,6 +22,7 @@ export const FIGHT_TRACK_LIBRARY = [
   { id: 'pixel-create', name: 'Pixel Create', url: A('pixel-create.mp3') },
   { id: 'pixel-king', name: 'Pixel King', url: A('pixel-king.mp3') },
   { id: 'pixel-many', name: 'Pixel Many', url: A('pixel-many.mp3') },
+  { id: 'super-pixel', name: 'Super Pixel', url: A('super-pixel.mp3') },
   { id: 'blade-of-dawn-one', name: 'Blade of Dawn I', url: A('blade-of-dawn-one.mp3') },
   { id: 'blade-of-dawn', name: 'Blade of Dawn', url: A('blade-of-dawn.mp3') },
   { id: 'boss-fight-circuit', name: 'Boss Fight Circuit', url: A('boss-fight-circuit.mp3') },
@@ -50,6 +50,7 @@ export const FIGHT_TRACK_LIBRARY = [
   { id: 'neon-glitch', name: 'Neon Glitch', url: A('neon-glitch.mp3') },
 ];
 const FIGHT_TRACKS = FIGHT_TRACK_LIBRARY.map(t => t.url);
+const FIGHT_SCENES = new Set(['fight','story','battleroyale','soccer','volleyball','baseball','banger','dodgeball','ctf','team','custombattle','tournament','grandcircuit']);
 
 // Grand Circuit track pool — only these tracks play during Grand Circuit matches.
 // The "Final" track is reserved for the championship match.
@@ -163,7 +164,7 @@ class MusicManager {
       url = PARKOUR_TRACK;
     } else if (sceneName === 'rockclimb') {
       url = ROCKCLIMB_TRACK;
-    } else if (sceneName === 'fight' || sceneName === 'soccer') {
+    } else if (FIGHT_SCENES.has(sceneName)) {
       url = FIGHT_TRACKS[this.fightIndex % FIGHT_TRACKS.length];
     } else {
       url = MENU_TRACKS[Math.floor(Date.now() / HOME_ROTATION_MS) % MENU_TRACKS.length];
@@ -177,7 +178,7 @@ class MusicManager {
     this.currentScene = sceneName;
     this.currentUrl = url;
 
-    if ((sceneName === 'fight' || sceneName === 'soccer' || sceneName === 'story') && !this.customTracks[sceneName]) {
+    if (FIGHT_SCENES.has(sceneName) && !this.customTracks[sceneName]) {
       this.fightIndex = (this.fightIndex + 1) % FIGHT_TRACKS.length;
     }
 

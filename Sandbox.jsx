@@ -28,8 +28,8 @@ function getRosterForEra(eraId) {
 export default function Sandbox({ progress, customCharsData = {}, onBack }) {
   const [phase, setPhase] = useState('config');
   const [players, setPlayers] = useState([
-    { char: progress?.favoriteId || 'yellow', era: 'g5', type: 'human', difficulty: 'regular' },
-    { char: 'red', era: 'g5', type: 'bot', difficulty: 'regular' },
+    { char: progress?.favoriteId || 'yellow', era: 'g5', type: 'human', difficulty: 'regular', stocks: 3 },
+    { char: 'red', era: 'g5', type: 'bot', difficulty: 'regular', stocks: 3 },
   ]);
   const [customStages] = useState(progress?.customStages || []);
   const [stageKey, setStageKey] = useState('splitcity');
@@ -62,12 +62,13 @@ export default function Sandbox({ progress, customCharsData = {}, onBack }) {
   const setPlayerEra = (i, era) => setPlayers(prev => prev.map((p, idx) => idx === i ? { ...p, era } : p));
   const setPlayerDifficulty = (i, diff) => setPlayers(prev => prev.map((p, idx) => idx === i ? { ...p, difficulty: diff } : p));
   const setPlayerType = (i, type) => setPlayers(prev => prev.map((p, idx) => idx === i ? { ...p, type } : p));
+  const setPlayerStocks = (i, stocks) => setPlayers(prev => prev.map((p, idx) => idx === i ? { ...p, stocks: Math.max(1, Math.min(99, Number(stocks) || 1)) } : p));
   const addPlayer = () => {
     if (players.length >= 8) return;
     const used = new Set(players.map(p => p.char));
     const pool = ALL.filter(c => !used.has(c.id));
     const pick = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : ALL[0];
-    setPlayers([...players, { char: pick.id, era: 'g5', type: 'bot', difficulty: 'regular' }]);
+    setPlayers([...players, { char: pick.id, era: 'g5', type: 'bot', difficulty: 'regular', stocks: stockCount }]);
     sfx.click();
   };
   const removePlayer = (i) => { if (i === 0) return; setPlayers(players.filter((_, idx) => idx !== i)); sfx.click(); };
@@ -94,7 +95,7 @@ export default function Sandbox({ progress, customCharsData = {}, onBack }) {
             settings={progress?.settings || {}}
             customCharsData={customCharsData}
             sandboxConfig={{
-              players: players.map(p => ({ char: p.char, difficulty: p.difficulty || 'regular', type: p.type })),
+              players: players.map(p => ({ char: p.char, difficulty: p.difficulty || 'regular', type: p.type, stocks: p.stocks || stockCount })),
               numHumans,
               mapId: stage.map === 'custom' ? 'splitcity' : stage.map,
               customStageIdx: stage.map === 'custom' ? customStageIdx : null,
@@ -196,7 +197,7 @@ export default function Sandbox({ progress, customCharsData = {}, onBack }) {
                     {p.type === 'bot' && (
                       <select value={p.difficulty} onChange={e => setPlayerDifficulty(i, e.target.value)} className="text-[10px] bg-secondary text-secondary-foreground rounded px-1 py-0.5 border border-border font-heading">
                         {DIFFICULTIES.map(d => <option key={d} value={d}>{d}</option>)}
-                      </select>
+                      </select><label className="flex items-center gap-1 text-[10px] font-heading text-muted-foreground">STOCKS <input type="number" min="1" max="99" value={p.stocks || stockCount} onChange={e => setPlayerStocks(i, e.target.value)} className="w-12 bg-secondary text-secondary-foreground rounded px-1 py-0.5" /></label>
                     )}
                   </div>
                 )}

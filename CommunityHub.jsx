@@ -22,6 +22,7 @@ import TradeOfferModal from './TradeOfferModal.jsx';
 import HubChat from './HubChat.jsx';
 import PartyPanel from './PartyPanel.jsx';
 import GameIcon from "./GameIcon.jsx";
+import { getClientRegion } from './hubRegion.js';
 
 const HUB_ROOM_NAME = 'Community Hub';
 const HUB_GROUND_Y = 340; // canvas is 420 tall — player stands fully visible, no jump needed
@@ -102,6 +103,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
   const [showParty, setShowParty] = useState(false);
   const [party, setParty] = useState(null);
   const [partyInviteToast, setPartyInviteToast] = useState(null);
+  const hubRegion = getClientRegion();
   const [timeOfDay, setTimeOfDay] = useState(computeTimeOfDay());
   const [clock, setClock] = useState('');
   const [hoverBoard, setHoverBoard] = useState(null);
@@ -184,6 +186,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
           last_active: now,
           username,
           hub_server: serverCode,
+          hub_region: hubRegion,
           hub_x: HUB_WIDTH / 2,
           hub_y: HUB_GROUND_Y,
           hub_facing: 1,

@@ -1,27 +1,15 @@
-ELEMENT 6 — STAGE EDITOR + GLOBAL WORLD STAGES FIX
+Element 6 Chronicles — checklist replacement package
 
-Replace the matching files in the Element 6 project:
+Changed:
+- Community Hub server list now discovers active regional servers with >=1 player and sorts by player count descending.
+- Presence records now carry a broad matchmaking region.
+- Battle Pass keeps 50 tiers, has star rewards across the unified all-generation roster, and Premium grants a second reward on every tier.
+- Stage Editor includes the global World Stages browser plus a quick-start toolbar while retaining the existing editor feature set/help.
+- Story Mode and Baseball have fullscreen controls.
+- Fight/music rotation now explicitly covers every match-capable scene and uses the full fight library when not overridden by a custom track.
+- Save Codes use the account-bound Supabase RPCs included in the SQL file.
+- Sandbox supports individual stock counts per fighter.
 
-- StageEditor.jsx
-- WorldStages.jsx (new)
-
-Run world-stages.sql once in the same Supabase project used by Element 6.
-
-FIXES
-- Fixes the Stage Editor SEE STAGES flow by supplying the missing/working WorldStages component.
-- SEE STAGES now has MY STAGES and WORLD STAGES.
-- WORLD STAGES loads public stages globally instead of filtering by the current creator.
-- Supports global search by stage name, creator, and description.
-- Supports newest, most played, most liked, and name sorting.
-- Paginates the global list so browsing remains usable with many stages.
-- PLAY / IMPORT and SAVE preserve the complete stored stage_data instead of dropping fields such as KO perimeter or future stage properties.
-- Defensive filtering prevents private/hidden stages from being shown.
-- If the entity filter call is unavailable, World Stages falls back to the entity list call and applies the public filter client-side.
-
-DATABASE
-world-stages.sql creates/updates public.community_stages and its RLS policies.
-Public stages are readable by authenticated users when is_private=false and hidden=false.
-Creators can insert/update/delete their own stages.
-
-NOTE
-The app's existing cloudCommunity.js entity named UploadedStage is expected to map to the community_stages data used by the existing Stage Editor save code.
+Notes:
+- Run the included Supabase account-bound save-code SQL in the same backend used by the app if it has not already been applied.
+- Existing sport/fight pre-match flows are preserved; SoccerMode and SportsShell already use PrematchAnimation.

@@ -615,6 +615,21 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
 
   return (
     <div className="w-full max-w-5xl flex flex-col gap-3">
+        <div className="sticky top-0 z-30 mb-3 rounded-xl border-2 border-accent/50 bg-card/95 backdrop-blur p-3 shadow-xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-heading text-xs text-accent">EDITOR QUICK START</span>
+            <span className="text-[10px] text-muted-foreground">1. Pick a mode → 2. Click/drag → 3. Tune the selected object → 4. SAVE STAGE</span>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1 text-[9px] font-heading">
+            <span className="px-2 py-1 rounded bg-secondary">PLATFORM = place floors</span>
+            <span className="px-2 py-1 rounded bg-secondary">SPAWN = P1–P4</span>
+            <span className="px-2 py-1 rounded bg-secondary">HAZARD = traps</span>
+            <span className="px-2 py-1 rounded bg-secondary">ITEM = pickups</span>
+            <span className="px-2 py-1 rounded bg-secondary">MOVE = drag anything</span>
+            <span className="px-2 py-1 rounded bg-secondary">MOTION = animate selected object</span>
+          </div>
+        </div>
+
       <div className="flex justify-between items-center flex-wrap gap-2">
         <h2 className="text-2xl font-heading text-accent tracking-wider">STAGE EDITOR</h2>
         <div className="flex gap-2 flex-wrap">

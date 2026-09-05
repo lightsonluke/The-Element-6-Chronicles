@@ -39,6 +39,8 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
   const canvasRef = useRef(null);
   const [countdown, setCountdown] = useState(3);
   const [started, setStarted] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
   const keysRef = useRef({});
   const gpRef = useRef({ 0: {}, 1: {} }); // gamepad state per slot
   const gpPrevRef = useRef({ 0: {}, 1: {} }); // previous gamepad state for edge detection
@@ -309,6 +311,16 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
     return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); if (gpRaf) cancelAnimationFrame(gpRaf); };
   }, [started, p2IsCPU, p1Chars, p2Chars, onQuit, is1v1, settings?.controllerEnabled]);
 
+  // Pause menu: offline freezes; online/LAN keeps the authoritative simulation running.
+  useEffect(() => {
+    const kd = (e) => {
+      if (e.key !== 'Escape' && e.key.toLowerCase() !== 'p') return;
+      if (!started) return;
+      e.preventDefault(); pausedRef.current = !pausedRef.current; setPaused(pausedRef.current);
+    };
+    window.addEventListener('keydown', kd); return () => window.removeEventListener('keydown', kd);
+  }, [started]);
+
   // Game loop
   useEffect(() => {
     if (!started) return;
@@ -323,7 +335,9 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
         raf = requestAnimationFrame(loop);
         return;
       }
-      const s = st.current; s.frame++;
+      const s = st.current;
+      if (pausedRef.current && !remoteStateRef.current && !lanConnection) { draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories); raf = requestAnimationFrame(loop); return; }
+      s.frame++;
 
       if (s.phase === 'countdown') {
         s.phaseTimer--;
@@ -1158,6 +1172,8 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
 
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
+      <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="absolute top-3 right-3 z-20 px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
+      {paused && <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/65 rounded-lg pointer-events-none"><div className="bg-card border-2 border-accent rounded-xl px-8 py-6 text-center"><p className="font-heading text-3xl text-accent">PAUSED</p><p className="text-xs text-muted-foreground mt-2">{(remoteStateRef.current || lanConnection) ? 'Online match continues in the background.' : 'Press ESC or P to resume.'}</p></div></div>}
       <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas" />
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">

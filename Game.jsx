@@ -100,9 +100,6 @@ const DEFAULT_SPLIT_CITY_BACKDROP = `${import.meta.env.BASE_URL}assets/split-cit
 import { getKeybinds } from './keybinds.js';
 import UsernamePrompt from './UsernamePrompt.jsx';
 import GameIcon from "./GameIcon.jsx";
-import ClipsScreen from "./ClipsScreen.jsx";
-import GlobalClipRecorder from "./GlobalClipRecorder.jsx";
-import { listClipMetadata } from "./clipStorage.js";
 
 // Screens where a canvas game is actively running and the gamepad is used
 // for gameplay. Menu navigation is disabled ONLY on these screens so the
@@ -210,7 +207,7 @@ const TOUCH_SCREENS = ['fighting', 'soccer', 'sports', 'training', 'tutorial', '
 
 export default function Game() {
   const SCREEN_PATHS = {
-    menu: '/home', clips: '/clips', shop: '/shop', modeSelect: '/fights', onlinelobby: '/online', onlinesports: '/onlinesports',
+    menu: '/home', shop: '/shop', modeSelect: '/fights', onlinelobby: '/online', onlinesports: '/onlinesports',
     sports: '/sports', elo: '/elo', hubserverselect: '/community', leaderboard: '/leaderboards', settings: '/settings',
     hub: '/community-hub', sandbox: '/sandbox-mode', stageeditor: '/stage-editor', mobilecontrols: '/mobile-controls', training: '/training', combos: '/combo-trainer',
     tutorial: '/tutorial', storySaves: '/story-mode', soccer: '/soccer', friends: '/friends', chat: '/chat',
@@ -227,7 +224,7 @@ export default function Game() {
     '/bot-battle': 'botbattle', '/low-gravity': 'lowgravity', '/2v2-teams': 'team', '/tournament-character-select': 'tournament',
   };
   const PATH_ALIASES = {
-    '/home': 'menu', '/clips': 'clips', '/fights': 'modeSelect', '/online': 'onlinelobby', '/ranked': 'onlinelobby', '/unranked': 'onlinelobby',
+    '/home': 'menu', '/fights': 'modeSelect', '/online': 'onlinelobby', '/ranked': 'onlinelobby', '/unranked': 'onlinelobby',
     '/online-fights': 'onlinelobby', '/sports': 'sports', '/online-sports': 'sportslobby', '/onlinesports': 'sportslobby',
     '/soccer': 'soccer', '/soccer-online': 'onlinesports', '/soccer-ranked': 'onlinesports', '/volleyball': 'sports',
     '/volleyball-online': 'onlinesports', '/volleyball-ranked-1v1': 'onlinesports', '/baseball': 'sports', '/parkour': 'sports',
@@ -264,7 +261,6 @@ export default function Game() {
   const [onlineMode, setOnlineMode] = useState('unranked'); // ranked | unranked | soccer
   const [showCutscene, setShowCutscene] = useState(!localStorage.getItem('element6_progress'));
   const [progress, setProgress] = useState(loadProgress);
-  const [clips, setClips] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -440,13 +436,6 @@ export default function Game() {
     if (url) setCustomBackdropUrl(url); else clearCustomBackdrop();
   }, [progress?.settings?.customBackdrop]);
   progressRef.current = progress;
-  const refreshClips = async () => { try { setClips(await listClipMetadata()); } catch { setClips([]); } };
-  useEffect(() => {
-    refreshClips();
-    const onClipSaved = () => refreshClips();
-    window.addEventListener('clipSaved', onClipSaved);
-    return () => window.removeEventListener('clipSaved', onClipSaved);
-  }, []);
   const activeEvent = getActiveEvent();
   const eventColor = activeEvent?.color || '#7744FF';
   const disableEventBg = progress?.settings?.disableEventBackground === true;
@@ -885,7 +874,6 @@ export default function Game() {
     else if (dest === 'fight') setScreen('modeSelect');
     else if (dest === 'creator') setScreen('creator');
     else if (dest === 'mobilecontrols') { setScreen('mobilecontrols'); sfx.click(); }
-    else if (dest === 'clips') { refreshClips(); setScreen('clips'); sfx.click(); }
     else if (dest === 'friends') setScreen('friends');
     else if (dest === 'chat') setScreen('chat');
     else if (dest === 'leaderboard') setScreen('leaderboard');
@@ -901,30 +889,25 @@ export default function Game() {
     setProgress(prev => {
       const eventProgress = { ...(prev.eventProgress || {}) };
       const ep = { ...(eventProgress[eventId] || { xp: 0, claimedTiers: [] }) };
+      if ((ep.claimedTiers || []).includes(tier)) return prev;
       ep.claimedTiers = [...(ep.claimedTiers || []), tier];
       eventProgress[eventId] = ep;
       let next = { ...prev, eventProgress };
-      // Apply reward
-      if (reward.type === 'tokens') {
-        next.coins = (next.coins || 0) + reward.amount;
-      } else if (reward.type === 'skin' && reward.item) {
-        next.ownedSkins = [...new Set([...(next.ownedSkins || []), reward.item.id])];
-      } else if (reward.type === 'allskins' && reward.items) {
-        // Tier 50: grant every character's event skin
-        const newIds = reward.items.map(s => s.id);
-        next.ownedSkins = [...new Set([...(next.ownedSkins || []), ...newIds])];
-      } else if (reward.type === 'accessory' && reward.item) {
-        next.ownedAccessories = [...new Set([...(next.ownedAccessories || []), reward.item.id])];
-      } else if (reward.type === 'allaccessories' && reward.items) {
-        const newIds = reward.items.map(a => a.id);
-        next.ownedAccessories = [...new Set([...(next.ownedAccessories || []), ...newIds])];
-      } else if (reward.type === 'character' && reward.charId) {
-        next.unlockedIds = [...new Set([...(next.unlockedIds || []), reward.charId])];
-      } else if (reward.type === 'killfx' && reward.item) {
-        next.ownedKillFX = [...new Set([...(next.ownedKillFX || []), reward.item.id])];
-      } else if (reward.type === 'emote' && reward.emoteId) {
-        next.ownedEmotes = [...new Set([...(next.ownedEmotes || []), reward.emoteId])];
-      }
+      const applyReward = (target, r) => {
+        if (!r) return target;
+        if (r.type === 'tokens') target.coins = (target.coins || 0) + (r.amount || 0);
+        else if (r.type === 'skin' && r.item) target.ownedSkins = [...new Set([...(target.ownedSkins || []), r.item.id])];
+        else if (r.type === 'allskins' && r.items) target.ownedSkins = [...new Set([...(target.ownedSkins || []), ...r.items.map(x => x.id)])];
+        else if (r.type === 'accessory' && r.item) target.ownedAccessories = [...new Set([...(target.ownedAccessories || []), r.item.id])];
+        else if (r.type === 'allaccessories' && r.items) target.ownedAccessories = [...new Set([...(target.ownedAccessories || []), ...r.items.map(x => x.id)])];
+        else if (r.type === 'character' && r.charId) target.unlockedIds = [...new Set([...(target.unlockedIds || []), r.charId])];
+        else if (r.type === 'killfx' && r.item) target.ownedKillFX = [...new Set([...(target.ownedKillFX || []), r.item.id])];
+        else if (r.type === 'emote' && r.emoteId) target.ownedEmotes = [...new Set([...(target.ownedEmotes || []), r.emoteId])];
+        return target;
+      };
+      next = applyReward(next, reward);
+      // Premium Battle Pass grants the second reward on the same tier.
+      if (next.battlePassPlus === true) next = applyReward(next, reward.premiumReward);
       saveProgress(next);
       return next;
     });
@@ -1741,12 +1724,6 @@ export default function Game() {
             <p className="text-xs font-body text-foreground"><span className="text-accent font-heading">{tradeGiftToast.name}</span> {tradeGiftToast.text}</p>
           </div>
         )}
-        <GlobalClipRecorder />
-
-        {screen === 'clips' && (
-          <ClipsScreen clips={clips} onDeleteClip={(id) => setClips(prev => prev.filter(c => c.id !== id))} onBack={goBack} />
-        )}
-
         {screen === 'menu' && (
           <MainMenu onNavigate={handleNavigate} coins={progress.coins}
             favoriteName={ALL.find(c => c.id === progress.favoriteId)?.name}

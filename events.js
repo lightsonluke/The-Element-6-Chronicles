@@ -230,7 +230,14 @@ function generateEvents() {
         const ai = (tier * 2 + i) % bpAccessories.length;
         reward = { type: 'accessory', item: bpAccessories[ai] };
       }
-      battlePass.push({ tier, ...reward });
+      // Premium is a second reward track, not merely an unlock flag. Every
+      // tier gets an additional reward when Battle Pass+ is active.
+      let premiumReward;
+      if (tier % 10 === 0) premiumReward = { type: 'tokens', amount: 100 + tier * 10 };
+      else if (tier % 5 === 0) premiumReward = { type: 'killfx', item: { id: `event_bp_premium_killfx_${i}_${tier}`, eventId: `event_${i}`, name: `${theme.prefix} Premium KO ${tier}`, baseFxId: theme.killFx, isEvent: true } };
+      else if (tier % 3 === 0) premiumReward = { type: 'emote', emoteId: emoteOrder[(tier + i) % emoteOrder.length]?.id, name: emoteOrder[(tier + i) % emoteOrder.length]?.name || 'Premium Emote' };
+      else premiumReward = { type: 'accessory', item: bpAccessories[(tier + i * 3) % bpAccessories.length] };
+      battlePass.push({ tier, ...reward, premiumReward });
     }
 
     events.push({

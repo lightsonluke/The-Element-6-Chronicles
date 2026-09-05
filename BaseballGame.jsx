@@ -9,6 +9,7 @@ import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
 import { drawMinimap, drawOnDeck } from './baseballOverlay.jsx';
 import GameIcon from "./GameIcon.jsx";
+import { toggleElementFullscreen } from './fullscreen.js';
 
 const charFor = (id, element) => {
   const c = ALL_CHARS.find(c => c.id === id);
@@ -52,6 +53,7 @@ const DIFF_MUL = { newcomer: 0.5, beginner: 0.6, easy: 0.7, amateur: 0.8, regula
 
 export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, onResult, onQuit, p1Jersey = true, p2Jersey = true, musicVolume = 50, sfxVolume = 70, p1Elements = [], p2Elements = [], equippedSkins = {}, equippedAccessories = {}, p1TeamColor = TEAM_COLOR_P1, p2TeamColor = TEAM_COLOR_P2, settings = {}, lanConnection = null, lanRole = null, localScheme = null, remoteState = null, onStateExport = null, isOnlineHost = false }) {
   const canvasRef = useRef(null);
+  const fullscreenRef = useRef(null);
   // Merge bot cosmetics — bots get random accessories every match
   const _botIds = [];
   if (p2IsCPU) p2Chars.forEach(id => _botIds.push(id));
@@ -1082,7 +1084,8 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
   }, []);
 
   return (
-    <div className="relative flex flex-col items-center gap-2 w-full">
+    <div ref={fullscreenRef} className="relative flex flex-col items-center gap-2 w-full">
+<button onClick={() => toggleElementFullscreen(fullscreenRef.current)} className="absolute top-3 right-3 z-50 px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">FULLSCREEN</button>
       <div className="w-full flex items-center justify-between gap-2 flex-wrap">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] font-body text-white/80 px-2">
           <button onClick={onQuit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>

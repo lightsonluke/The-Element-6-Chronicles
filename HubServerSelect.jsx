@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import GameIcon from "./GameIcon.jsx";
+import { getClientRegion } from './hubRegion.js';
 
 const HUB_ROOM_NAME = 'Community Hub';
 const STALE_MS = 120000; // 2 min — same cutoff as CommunityHub
@@ -17,23 +18,28 @@ export default function HubServerSelect({ onBack, onJoin }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [me, setMe] = useState(null);
+  const [region, setRegion] = useState(getClientRegion());
 
   useEffect(() => {
     music.play('menu');
     db.auth.me().then(u => setMe(u)).catch(() => {});
+    setRegion(getClientRegion());
     const load = async () => {
       try {
         const all = await db.entities.Presence.filter({}, '-last_active', 200);
         const cutoff = Date.now() - STALE_MS;
         const active = (all || []).filter(p => p.hub_server && p.last_active && new Date(p.last_active).getTime() > cutoff);
-        // Group by hub_server code
+        // Only show servers in the client's broad matchmaking region. Older
+        // presence rows without a region are ignored until they refresh.
+        const regional = active.filter(p => p.hub_region === region);
+        // Group by hub_server code and keep every server that has >= 1 active player.
         const map = {};
-        active.forEach(p => {
-          if (!map[p.hub_server]) map[p.hub_server] = { code: p.hub_server, players: [], count: 0 };
+        regional.forEach(p => {
+          if (!map[p.hub_server]) map[p.hub_server] = { code: p.hub_server, region, players: [], count: 0 };
           map[p.hub_server].players.push({ id: p.user_id, name: p.username, color: p.hub_color, charId: p.hub_char_id });
           map[p.hub_server].count++;
         });
-        const list = Object.values(map).sort((a, b) => b.count - a.count);
+        const list = Object.values(map).filter(s => s.count >= 1).sort((a, b) => b.count - a.count || a.code.localeCompare(b.code));
         setServers(list);
       } catch {}
     };
@@ -70,7 +76,7 @@ export default function HubServerSelect({ onBack, onJoin }) {
   return (
     <div className="w-full max-w-3xl flex flex-col gap-3">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-heading text-accent tracking-wider"><GameIcon emoji="🌐" size={14} /> SELECT A COMMUNITY SERVER</h2>
+        <div><h2 className="text-xl font-heading text-accent tracking-wider"><GameIcon emoji="🌐" size={14} /> SELECT A COMMUNITY SERVER</h2><p className="text-[10px] text-muted-foreground font-body mt-1">Showing every active server in {region}, sorted by players online.</p></div>
         <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
       </div>
 

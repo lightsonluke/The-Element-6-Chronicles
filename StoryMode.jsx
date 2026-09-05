@@ -3,6 +3,7 @@ import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import {
+import { toggleElementFullscreen } from './fullscreen.js';
   BLOCKS, BLOCK_COLORS, BLOCK_NAMES, BLOCK_SIZE,
   WorldManager, renderWorld, WORLD_HEIGHT, CHUNK_WIDTH
 } from './world.js';
@@ -31,6 +32,7 @@ const MINE_RADIUS_BLOCKS = 5; // cursor mining radius
 
 export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVillain, onUnlockAll, onSaveProgress, onAddCoins, equippedAccessories = {}, equippedSkins = {}, equippedShikigami = {}, equippedEmotes = {} }) {
   const canvasRef = useRef(null);
+  const fullscreenRef = useRef(null);
   const stateRef = useRef(null);
   const keysRef = useRef({});
   const mouseRef = useRef({ x: 0, y: 0, held: false });
@@ -1215,7 +1217,8 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
   const selectedBlock = hotbar[hotbarSlot];
 
   return (
-    <div className="relative flex flex-col items-center gap-2">
+    <div ref={fullscreenRef} className="relative flex flex-col items-center gap-2">
+<button onClick={() => toggleElementFullscreen(fullscreenRef.current)} className="absolute top-3 right-3 z-50 px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">FULLSCREEN</button>
       <div className="flex gap-2 items-center mb-1 flex-wrap justify-center">
         <button onClick={() => {
           if (stateRef.current) {

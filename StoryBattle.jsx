@@ -25,6 +25,8 @@ const W = 960, H = 560;
 
 export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stageId, difficulty = 'hard', battleTitle, onEnd, equippedAccessories = {}, equippedSkins = {}, equippedShikigami = {}, settings = {}, equippedEmotes = {} }) {
   const canvasRef = useRef(null);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
   const gameRef = useRef(null);
   const keysRef = useRef({});
   const [result, setResult] = useState(null);
@@ -385,6 +387,8 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
         {battleTitle && <span className="text-[10px] font-heading text-accent tracking-wider">{battleTitle}</span>}
         <span className="text-[10px] text-muted-foreground font-body">Arrows · , sig · ,+ '↑' recovery · . power · l side heavy · l+ '↓' down/pound · / super</span>
       </div>
+      <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="absolute top-3 right-3 z-20 px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
+      {paused && <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 pointer-events-none"><div className="bg-card border-2 border-accent rounded-xl px-8 py-6 text-center"><p className="font-heading text-3xl text-accent">PAUSED</p><p className="text-xs text-muted-foreground mt-2">Press ESC or P to resume.</p></div></div>}
       <canvas ref={canvasRef} width={W} height={H} className="border-2 border-destructive/50 rounded-lg shadow-2xl" style={{ maxWidth: '100%' }} />
       {result && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-lg gap-4">
