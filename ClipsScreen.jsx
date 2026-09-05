@@ -8,22 +8,14 @@ function extensionForMime(mime) {
   return String(mime || '').toLowerCase().includes('mp4') ? 'mp4' : 'webm';
 }
 
-function makeVideoSource(video, blob) {
-  // Prefer srcObject when the browser accepts Blob/File sources. This can avoid
-  // CSP problems with blob: media URLs. Fall back to a normal object URL.
-  try {
-    if ('srcObject' in video) {
-      video.srcObject = blob;
-      video.removeAttribute('src');
-      video.load();
-      return { url: null, mode: 'srcObject' };
-    }
-  } catch (error) {
-    console.warn('[Element 6 Clips] Blob srcObject unavailable; using object URL.', error);
-  }
-
+function makeVideoSource(video, blob, mime) {
+  // Use the normal src/object-URL path for saved recordings. srcObject=Blob has
+  // inconsistent browser support and is not needed for persisted clips.
   const url = URL.createObjectURL(blob);
   video.src = url;
+  video.preload = 'auto';
+  video.setAttribute('playsinline', '');
+  video.setAttribute('webkit-playsinline', '');
   video.load();
   return { url, mode: 'url' };
 }
@@ -198,20 +190,26 @@ export default function ClipsScreen({ clips, onDeleteClip, onBack }) {
                           if (node && source && sourceRefs.current[clip.id]?.blob !== source.blob) {
                             const old = sourceRefs.current[clip.id];
                             if (old?.url) { try { URL.revokeObjectURL(old.url); } catch {} }
-                            const made = makeVideoSource(node, source.blob);
+                            const made = makeVideoSource(node, source.blob, source.mime);
                             sourceRefs.current[clip.id] = { ...made, video: node, blob: source.blob };
                           }
                         }}
                         controls
                         playsInline
                         preload="metadata"
-                        muted={false}
                         data-fps={DEFAULT_FPS}
                         onLoadedMetadata={event => {
                           const duration = event.currentTarget.duration;
-                          if (!Number.isFinite(duration) || duration <= 0) {
-                            setFailed(prev => ({ ...prev, [clip.id]: true }));
-                          } else {
+                          if (!Number.isFinite(duration) || duration <= 0) return;
+                          setFailed(prev => {
+                            const next = { ...prev };
+                            delete next[clip.id];
+                            return next;
+                          });
+                        }}
+                        onLoadedData={event => {
+                          const video = event.currentTarget;
+                          if (video.videoWidth > 0 && video.videoHeight > 0) {
                             setFailed(prev => {
                               const next = { ...prev };
                               delete next[clip.id];
