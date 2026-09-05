@@ -1,30 +1,27 @@
-ELEMENT 6 — NATIVE CLIPS RECORDER V7
+ELEMENT 6 — STAGE EDITOR + GLOBAL WORLD STAGES FIX
 
-This package fixes the native Clips recording pipeline.
+Replace the matching files in the Element 6 project:
 
-Files:
-- clipRecorder.js
-- useClipRecorder.js
-- GlobalClipRecorder.jsx
-- clipStorage.js
-- ClipsScreen.jsx
+- StageEditor.jsx
+- WorldStages.jsx (new)
 
-What changed:
-- The recorder no longer forces MP4 on Chrome/Chromium or WebM on other browsers.
-- It lets MediaRecorder choose its native format first, then falls back through formats the browser reports as supported.
-- The actual recorder.mimeType is stored and used for the saved file extension/type.
-- Each saved clip is one complete, contiguous MediaRecorder session. No old chunks are deleted from the middle of a file.
-- The recorder does NOT use a timeslice. MediaRecorder.stop() produces the final dataavailable Blob for the complete session.
-- Before a clip is saved, the Blob is loaded into a video element and an actual decoded video frame is required. If the browser cannot decode the recording, the broken Blob is rejected instead of being saved.
-- A fresh recorder segment is started after a successful save.
-- Segments are capped at 30 seconds.
-- A fresh IndexedDB database is used so old malformed clips are not mixed with the new recordings.
-- ClipsScreen continues to use a normal blob: URL for playback, native controls, fullscreen, and frame stepping.
+Run world-stages.sql once in the same Supabase project used by Element 6.
 
-Native-browser limitation:
-Browser-native MediaRecorder cannot retroactively encode an exact arbitrary last-30-second MP4 from an already encoded rolling stream without a media encoder/remuxer. This implementation therefore saves the current complete recording segment, which is always <=30 seconds and is validated before storage.
+FIXES
+- Fixes the Stage Editor SEE STAGES flow by supplying the missing/working WorldStages component.
+- SEE STAGES now has MY STAGES and WORLD STAGES.
+- WORLD STAGES loads public stages globally instead of filtering by the current creator.
+- Supports global search by stage name, creator, and description.
+- Supports newest, most played, most liked, and name sorting.
+- Paginates the global list so browsing remains usable with many stages.
+- PLAY / IMPORT and SAVE preserve the complete stored stage_data instead of dropping fields such as KO perimeter or future stage properties.
+- Defensive filtering prevents private/hidden stages from being shown.
+- If the entity filter call is unavailable, World Stages falls back to the entity list call and applies the public filter client-side.
 
-No third-party media library is used.
+DATABASE
+world-stages.sql creates/updates public.community_stages and its RLS policies.
+Public stages are readable by authenticated users when is_private=false and hidden=false.
+Creators can insert/update/delete their own stages.
 
-Testing note:
-This package has its JavaScript syntax checked locally. A full Element 6 Vite build was not run here because the complete repository/build environment is not included in this focused patch.
+NOTE
+The app's existing cloudCommunity.js entity named UploadedStage is expected to map to the community_stages data used by the existing Stage Editor save code.

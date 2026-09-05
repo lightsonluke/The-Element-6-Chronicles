@@ -632,13 +632,14 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
             // Import world stage into local custom stages
             const stageData = s.stage_data || {};
             const imported = {
-              platforms: stageData.platforms || [],
+              ...stageData,
+              platforms: Array.isArray(stageData.platforms) ? stageData.platforms : [],
               spawnPoints: stageData.spawnPoints || null,
               backdrop: stageData.backdrop || s.backdrop || 'city',
-              name: s.name || 'Imported Stage',
-              emoji: s.emoji || '🎨',
-              hazards: stageData.hazards || [],
-              objects: stageData.objects || [],
+              name: s.name || stageData.name || 'Imported Stage',
+              emoji: s.emoji || stageData.emoji || '🎨',
+              hazards: Array.isArray(stageData.hazards) ? stageData.hazards : [],
+              objects: Array.isArray(stageData.objects) ? stageData.objects : [],
               downloaded: true,
               originalOwnerId: s.owner_user_id,
             };
@@ -649,13 +650,14 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           onDownload={(s) => {
             const stageData = s.stage_data || {};
             onSave?.({
-              platforms: stageData.platforms || [],
+              ...stageData,
+              platforms: Array.isArray(stageData.platforms) ? stageData.platforms : [],
               spawnPoints: stageData.spawnPoints || null,
               backdrop: stageData.backdrop || s.backdrop || 'city',
-              name: s.name || 'Downloaded Stage',
-              emoji: s.emoji || '🎨',
-              hazards: stageData.hazards || [],
-              objects: stageData.objects || [],
+              name: s.name || stageData.name || 'Downloaded Stage',
+              emoji: s.emoji || stageData.emoji || '🎨',
+              hazards: Array.isArray(stageData.hazards) ? stageData.hazards : [],
+              objects: Array.isArray(stageData.objects) ? stageData.objects : [],
               downloaded: true,
               originalOwnerId: s.owner_user_id,
             });
@@ -665,10 +667,17 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
 
       {tab === 'stages' && !showWorldStages && (
         <div className="flex flex-col gap-3">
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => setShowWorldStages(false)} className="px-3 py-1 bg-accent text-accent-foreground rounded font-heading text-xs">MY STAGES ({savedStages.length})</button>
+            <button onClick={() => setShowWorldStages(true)} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="🌍" size={14} /> WORLD STAGES</button>
+          </div>
           {savedStages.length === 0 ? (
             <div className="bg-card border border-border rounded-xl p-8 text-center">
-              <p className="text-muted-foreground font-body text-sm">No saved stages yet. Create one in the EDIT tab!</p>
-              <button onClick={() => setTab('editor')} className="mt-4 px-4 py-2 bg-accent text-accent-foreground rounded font-heading text-xs hover:opacity-80">GO TO EDITOR <GameIcon emoji="→" size={14} /></button>
+              <p className="text-muted-foreground font-body text-sm">No saved stages yet. Create one in the EDIT tab, or browse WORLD STAGES to play stages made by anyone.</p>
+              <div className="flex justify-center gap-2 mt-4">
+                <button onClick={() => setTab('editor')} className="px-4 py-2 bg-accent text-accent-foreground rounded font-heading text-xs hover:opacity-80">GO TO EDITOR <GameIcon emoji="→" size={14} /></button>
+                <button onClick={() => setShowWorldStages(true)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="🌍" size={14} /> WORLD STAGES</button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -683,11 +692,9 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
                     <button onClick={() => loadStage(stage, i)} className="flex-1 px-3 py-1.5 bg-accent text-accent-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="✎" size={14} /> EDIT</button>
                     <button onClick={() => { if (confirm(`Delete "${stage.name || 'Custom Stage'}"?`)) onDeleteStage?.(i); }} className="px-3 py-1.5 bg-destructive text-destructive-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="🗑" size={14} /> DELETE</button>
                   </div>
-                  {(stage.backdrop || stage.platforms) && (
-                    <p className="text-[9px] text-muted-foreground font-body">
-                      {(stage.platforms || stage).length} platforms · {BACKDROPS.find(b => b.id === stage.backdrop)?.name || 'Default'}{((stage.hazards || []).length || (stage.objects || []).length) ? ` · ${(stage.hazards || []).length} hazards · ${(stage.objects || []).length} items` : ''}
-                    </p>
-                  )}
+                  <p className="text-[9px] text-muted-foreground font-body">
+                    {(Array.isArray(stage.platforms) ? stage.platforms : []).length} platforms · {BACKDROPS.find(b => b.id === stage.backdrop)?.name || 'Default'}{((stage.hazards || []).length || (stage.objects || []).length) ? ` · ${(stage.hazards || []).length} hazards · ${(stage.objects || []).length} items` : ''}
+                  </p>
                 </div>
               ))}
             </div>
