@@ -1,6 +1,8 @@
 // Device-local clip persistence using IndexedDB.
 // Native browser recording only. No cloud upload and no media-processing library.
-const DB_NAME = 'element6_clips_native';
+// v3 intentionally uses a fresh store so previously malformed native recordings
+// cannot be mistaken for clips produced by the fixed recorder.
+const DB_NAME = 'element6_clips_native_v3';
 const STORE = 'clips';
 const VERSION = 2;
 const MAX_CLIPS = 30;

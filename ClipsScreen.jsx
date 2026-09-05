@@ -196,7 +196,7 @@ export default function ClipsScreen({ clips, onDeleteClip, onBack }) {
                         }}
                         controls
                         playsInline
-                        preload="metadata"
+                        preload="auto"
                         data-fps={DEFAULT_FPS}
                         onLoadedMetadata={event => {
                           const duration = event.currentTarget.duration;
@@ -247,7 +247,7 @@ export default function ClipsScreen({ clips, onDeleteClip, onBack }) {
 
                   {failed[clip.id] && videoReady && (
                     <div className="mt-2 p-2 rounded bg-destructive/10 text-destructive text-[10px]">
-                      This browser could not decode this clip format. The saved file itself is still available with SAVE {ext}.
+                      This browser could not decode the saved recording. Try SAVE {ext} to verify the file in a media player.
                     </div>
                   )}
 
