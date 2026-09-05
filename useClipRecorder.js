@@ -35,7 +35,7 @@ async function saveCurrentClip() {
         duration: result.duration,
       },
     }));
-    showClipToast(`CLIP SAVED — NATIVE ${result.extension.toUpperCase()}`);
+    showClipToast(`CLIP SAVED — LAST ${Math.max(1, Math.round(result.duration))} SECONDS`);
     return true;
   } catch (error) {
     console.error('[Element 6 Clips] Failed to persist native clip:', error);
@@ -69,11 +69,10 @@ export function useClipRecorder(canvasRef) {
 
       event.preventDefault();
       const saved = await saveCurrentClip();
-      if (!saved) {
-        const age = window.__e6ClipRecorderReady
-          ? 'PLAY FOR AT LEAST 30 SECONDS FIRST — OR YOUR BROWSER DOES NOT SUPPORT A PLAYABLE RECORDING FORMAT.'
-          : 'CLIP RECORDING IS NOT AVAILABLE IN THIS MODE.';
-        showClipToast(age);
+      if (!saved && !window.__e6ClipRecorderReady) {
+        showClipToast('CLIP RECORDING IS NOT AVAILABLE IN THIS MODE.');
+      } else if (!saved) {
+        showClipToast('NO RECORDED CLIP DATA YET.');
       }
     };
 

@@ -47,7 +47,7 @@ export default function GlobalClipRecorder() {
       event.preventDefault();
       const result = await saveClip();
       if (!result?.blob || cancelled) {
-        showToast('PLAY FOR AT LEAST 30 SECONDS FIRST');
+        showToast('NO RECORDED CLIP DATA YET');
         return;
       }
 
@@ -69,7 +69,7 @@ export default function GlobalClipRecorder() {
             duration: result.duration,
           },
         }));
-        showToast(`CLIP SAVED — NATIVE ${result.extension.toUpperCase()}`);
+        showToast(`CLIP SAVED — LAST ${Math.max(1, Math.round(result.duration))} SECONDS`);
       } catch (error) {
         console.error('[Element 6 Clips] Failed to persist global native clip:', error);
         showToast('CLIP SAVE FAILED');

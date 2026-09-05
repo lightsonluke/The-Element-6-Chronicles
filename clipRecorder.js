@@ -14,8 +14,11 @@ let saveBusy = false;
 const FPS = 30;
 const CHUNK_MS = 250;
 const CLIP_SECONDS = 30;
-const MAX_WINDOW_MS = CLIP_SECONDS * 1000 + 250;
-const MIN_RECORDING_MS = CLIP_SECONDS * 1000;
+// Keep a small safety margin because the first MediaRecorder chunk is also the
+// container initialization chunk. This keeps the assembled native recording
+// under 30 seconds without needing a third-party encoder to trim it.
+const MAX_WINDOW_MS = CLIP_SECONDS * 1000 - CHUNK_MS;
+const MIN_RECORDING_MS = 500;
 
 function getSupportedMime() {
   const types = [
@@ -185,21 +188,17 @@ export async function saveClip() {
       return null;
     }
 
-    // The rolling buffer is deliberately bounded to 30 seconds + one small
-    // chunk. If browser timing causes it to exceed 30.25s, do not save a clip
-    // claiming it is 30 seconds. Native browser APIs cannot accurately cut an
-    // arbitrary encoded frame without a media encoder.
-    if (duration > CLIP_SECONDS + 0.35) {
-      console.warn('[Element 6 Clips] Rolling native recording exceeded the 30s safety window:', duration);
-      return null;
-    }
+    // The rolling buffer is intentionally kept below 30 seconds. Native
+    // MediaRecorder cannot frame-accurately trim an encoded Blob without a
+    // media encoder, so we bound the buffer before assembling it instead.
+    const safeDuration = Math.min(duration, CLIP_SECONDS);
 
     const type = recorder.mimeType || clipMime || source.type || 'video/webm';
     return {
       blob: source,
       mime: type,
       extension: extensionForMime(type),
-      duration: Math.min(duration, CLIP_SECONDS),
+      duration: safeDuration,
     };
   } catch (error) {
     console.error('[Element 6 Clips] Native clip creation failed:', error);
