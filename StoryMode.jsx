@@ -2,8 +2,8 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
-import {
 import { toggleElementFullscreen } from './fullscreen.js';
+import {
   BLOCKS, BLOCK_COLORS, BLOCK_NAMES, BLOCK_SIZE,
   WorldManager, renderWorld, WORLD_HEIGHT, CHUNK_WIDTH
 } from './world.js';
