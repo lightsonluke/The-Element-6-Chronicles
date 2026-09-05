@@ -2,6 +2,17 @@ import { useEffect } from 'react';
 import { initClipRecorder, saveClip, stopClipRecorder } from './clipRecorder.js';
 import { saveClipBlob, trimClips } from './clipStorage.js';
 
+function showToast(message) {
+  const existing = document.getElementById('clip-toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.id = 'clip-toast';
+  toast.textContent = message;
+  toast.style.cssText = 'position:fixed;top:18px;right:18px;z-index:99999;background:#FFD700;color:#1a1030;padding:10px 18px;border-radius:10px;font:bold 15px Orbitron,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.5);pointer-events:none;';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2200);
+}
+
 export default function GlobalClipRecorder() {
   useEffect(() => {
     let cancelled = false;
@@ -10,41 +21,73 @@ export default function GlobalClipRecorder() {
 
     const findCanvas = () => {
       if (window.__e6ClipRecorderActive) return;
-      const canvases = Array.from(document.querySelectorAll('canvas'));
-      const canvas = canvases
-        .filter(c => c.width > 0 && c.height > 0)
-        .sort((a,b) => (b.width*b.height) - (a.width*a.height))[0];
+      const canvases = Array.from(document.querySelectorAll('canvas'))
+        .filter(canvas => canvas.width > 0 && canvas.height > 0)
+        .sort((a, b) => (b.width * b.height) - (a.width * a.height));
+      const canvas = canvases[0];
       if (!canvas || canvas === currentCanvas) return;
+
       currentCanvas = canvas;
-      try { initClipRecorder(canvas); } catch {}
+      if (initClipRecorder(canvas)) window.__e6ClipRecorderGlobal = true;
     };
 
     const observer = new MutationObserver(() => {
       clearTimeout(timer);
-      timer = setTimeout(findCanvas, 50);
+      timer = setTimeout(findCanvas, 100);
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+
+    if (document.body) observer.observe(document.body, { childList: true, subtree: true });
     findCanvas();
 
-    const onKey = async (e) => {
-      if (window.__e6ClipRecorderActive) return;
-      if (e.code !== 'Space' && e.key !== ' ') return;
-      if (e.target?.tagName === 'INPUT' || e.target?.tagName === 'TEXTAREA') return;
-      e.preventDefault();
-      const url = await saveClip();
-      if (!url || cancelled) return;
+    const onKey = async event => {
+      if (window.__e6ClipRecorderActive || !window.__e6ClipRecorderGlobal) return;
+      if (event.code !== 'Space' && event.key !== ' ') return;
+      if (event.target?.tagName === 'INPUT' || event.target?.tagName === 'TEXTAREA' || event.target?.isContentEditable) return;
+
+      event.preventDefault();
+      const result = await saveClip();
+      if (!result?.blob || cancelled) {
+        showToast('PLAY FOR AT LEAST 30 SECONDS FIRST');
+        return;
+      }
+
       try {
-        const blob = await fetch(url).then(x => x.blob());
-        if (!blob || blob.size === 0) return;
-        const id = `clip_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
-        await saveClipBlob(id, blob);
+        const id = `clip_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        await saveClipBlob(id, result.blob, {
+          mime: result.mime,
+          extension: result.extension,
+          duration: result.duration,
+        });
         await trimClips(30);
-        window.dispatchEvent(new CustomEvent('clipSaved', { detail: { id, created: Date.now(), mime: blob.type || 'video/webm' } }));
-      } catch {} finally { try { URL.revokeObjectURL(url); } catch {} }
+        window.dispatchEvent(new CustomEvent('clipSaved', {
+          detail: {
+            id,
+            created: Date.now(),
+            mime: result.mime,
+            extension: result.extension,
+            size: result.blob.size,
+            duration: result.duration,
+          },
+        }));
+        showToast(`CLIP SAVED — NATIVE ${result.extension.toUpperCase()}`);
+      } catch (error) {
+        console.error('[Element 6 Clips] Failed to persist global native clip:', error);
+        showToast('CLIP SAVE FAILED');
+      }
     };
+
     window.addEventListener('keydown', onKey);
 
-    return () => { cancelled = true; observer.disconnect(); clearTimeout(timer); window.removeEventListener('keydown', onKey); if (!window.__e6ClipRecorderActive) stopClipRecorder(); currentCanvas = null; };
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+      clearTimeout(timer);
+      window.removeEventListener('keydown', onKey);
+      if (window.__e6ClipRecorderGlobal && !window.__e6ClipRecorderActive) stopClipRecorder();
+      window.__e6ClipRecorderGlobal = false;
+      currentCanvas = null;
+    };
   }, []);
+
   return null;
 }

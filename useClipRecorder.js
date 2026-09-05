@@ -2,54 +2,81 @@ import { useEffect, useRef } from 'react';
 import { initClipRecorder, saveClip, stopClipRecorder } from './clipRecorder.js';
 import { saveClipBlob, trimClips } from './clipStorage.js';
 
-// Shows a small "You saved a clip!" toast in the top-right corner.
-function showClipToast() {
+function showClipToast(message = 'CLIP SAVED — LAST 30 SECONDS') {
   const existing = document.getElementById('clip-toast');
   if (existing) existing.remove();
-  const t = document.createElement('div');
-  t.id = 'clip-toast';
-  t.textContent = '🎬 You saved a clip!';
-  t.style.cssText = 'position:fixed;top:18px;right:18px;z-index:9999;background:#FFD700;color:#1a1030;padding:10px 18px;border-radius:10px;font:bold 15px Orbitron, sans-serif;box-shadow:0 6px 20px rgba(0,0,0,0.5);pointer-events:none;transition:opacity 0.4s;opacity:1;';
-  document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 450); }, 2000);
+  const toast = document.createElement('div');
+  toast.id = 'clip-toast';
+  toast.textContent = message;
+  toast.style.cssText = 'position:fixed;top:18px;right:18px;z-index:99999;background:#FFD700;color:#1a1030;padding:10px 18px;border-radius:10px;font:bold 15px Orbitron,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.5);pointer-events:none;';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2200);
 }
 
-// Attaches to a canvas ref. Pressing SPACE saves the last ~10s as a clip
-// (stored in IndexedDB) and dispatches a 'clipSaved' CustomEvent with { id, created }.
+async function saveCurrentClip() {
+  const result = await saveClip();
+  if (!result?.blob) return false;
+
+  try {
+    const id = `clip_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    await saveClipBlob(id, result.blob, {
+      mime: result.mime,
+      extension: result.extension,
+      duration: result.duration,
+    });
+    await trimClips(30);
+    window.dispatchEvent(new CustomEvent('clipSaved', {
+      detail: {
+        id,
+        created: Date.now(),
+        mime: result.mime,
+        extension: result.extension,
+        size: result.blob.size,
+        duration: result.duration,
+      },
+    }));
+    showClipToast(`CLIP SAVED — NATIVE ${result.extension.toUpperCase()}`);
+    return true;
+  } catch (error) {
+    console.error('[Element 6 Clips] Failed to persist native clip:', error);
+    return false;
+  }
+}
+
 export function useClipRecorder(canvasRef) {
   const initialized = useRef(false);
 
   useEffect(() => {
-    if (canvasRef.current && !initialized.current) {
-      initClipRecorder(canvasRef.current);
-      window.__e6ClipRecorderActive = true;
-      initialized.current = true;
+    const canvas = canvasRef.current;
+    if (canvas && !initialized.current) {
+      const ok = initClipRecorder(canvas);
+      initialized.current = !!ok;
+      if (ok) window.__e6ClipRecorderActive = true;
     }
-    return () => { stopClipRecorder(); initialized.current = false; window.__e6ClipRecorderActive = false; };
+
+    return () => {
+      if (initialized.current) stopClipRecorder();
+      initialized.current = false;
+      window.__e6ClipRecorderActive = false;
+    };
   }, [canvasRef]);
 
   useEffect(() => {
-    const handler = async (e) => {
-      if (e.code !== 'Space' && e.key !== ' ') return;
-      if (e.target?.tagName === 'INPUT' || e.target?.tagName === 'TEXTAREA') return;
-      e.preventDefault();
-      const url = await saveClip();
-      if (!url) return;
-      try {
-        const blob = await fetch(url).then(r => r.blob());
-        // Only keep clips that actually recorded something
-        if (!blob || blob.size === 0) return;
-        const id = `clip_${Date.now()}`;
-        await saveClipBlob(id, blob);
-        await trimClips(30);
-        window.dispatchEvent(new CustomEvent('clipSaved', { detail: { id, created: Date.now(), mime: blob.type || 'video/webm' } }));
-        showClipToast();
-      } catch {}
-      finally {
-        // free the temporary recorder URL
-        try { URL.revokeObjectURL(url); } catch {}
+    const handler = async event => {
+      if (event.code !== 'Space' && event.key !== ' ') return;
+      if (event.target?.tagName === 'INPUT' || event.target?.tagName === 'TEXTAREA' || event.target?.isContentEditable) return;
+      if (!window.__e6ClipRecorderActive) return;
+
+      event.preventDefault();
+      const saved = await saveCurrentClip();
+      if (!saved) {
+        const age = window.__e6ClipRecorderReady
+          ? 'PLAY FOR AT LEAST 30 SECONDS FIRST — OR YOUR BROWSER DOES NOT SUPPORT A PLAYABLE RECORDING FORMAT.'
+          : 'CLIP RECORDING IS NOT AVAILABLE IN THIS MODE.';
+        showClipToast(age);
       }
     };
+
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
