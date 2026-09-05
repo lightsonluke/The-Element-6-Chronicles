@@ -1,17 +1,24 @@
-Element 6 Chronicles — Build Fix v3
+ELEMENT 6 CHRONICLES — CLIPS TAB FIX
 
-This is a replacement-files package based on the previous checklist-fixes v2 package.
+Replace these files in the current project:
+- Game.jsx
+- ClipsScreen.jsx
+- GlobalClipRecorder.jsx
+- clipRecorder.js
+- clipStorage.js
+- useClipRecorder.js
 
-Fixes in this revision:
-- Fixed Sandbox.jsx JSX parse error: the bot difficulty <select> and STOCKS <label> were sibling JSX elements inside one conditional expression without a parent. They are now wrapped in a fragment.
-- Fixed hubRegion.js invalid regular-expression literals caused by over-escaped slash characters.
-- Re-checked the reachable application module graph with the TypeScript parser: 261 reachable modules, 0 syntax errors.
-- Re-checked reachable relative imports: 0 missing local imports.
-- Re-ran TypeScript semantic diagnostics with external-module noise filtered: 0 actionable diagnostics.
+WHAT THIS FIXES
+- Restores the Clips screen route so navigating to Clips actually renders ClipsScreen.
+- Adds /clips to the app's screen/path routing.
+- Rehydrates saved clip metadata from IndexedDB when the game starts.
+- Keeps the progress metadata synchronized whenever a clip is saved or deleted.
+- Mounts the global native clip recorder so the Clips feature is active across gameplay screens.
+- Includes the latest native Clips playback/preview implementation from the v7 clips fix.
 
-Install:
-1. Unzip this package over the project root.
-2. Replace the existing files when prompted.
-3. Run the normal CI build: pnpm install --no-frozen-lockfile && pnpm build.
+IMPORTANT
+This is a focused replacement package. It does NOT replace the online gamemode files, so keep the latest online-gamemode replacement files already installed.
 
-This package does not include the entire 200MB project; it contains only the files changed by the previous checklist-fixes package plus the two files corrected in this revision.
+VALIDATION
+- All local imports used by the six replacement files were checked and resolved.
+- The full Vite production build was not run because the supplied repository does not contain node_modules/build dependencies in this environment.

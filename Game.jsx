@@ -49,6 +49,9 @@ import SportsRollbackArena from './SportsRollbackArena.jsx';
 import ActualSportsOnlineMatch from './ActualSportsOnlineMatch.jsx';
 import BattleRoyaleLobby from './BattleRoyaleLobby.jsx';
 import ShapeshiftSelect from './ShapeshiftSelect.jsx';
+import ClipsScreen from './ClipsScreen.jsx';
+import GlobalClipRecorder from './GlobalClipRecorder.jsx';
+import { listClipMetadata } from './clipStorage.js';
 
 import CharacterCreator from './CharacterCreator.jsx';
 import FriendsScreen from './FriendsScreen.jsx';
@@ -216,7 +219,7 @@ export default function Game() {
     editchars: '/edit-characters', creator: '/create-character', codex: '/hero-codex', daily: '/daily-quests',
     fightquests: '/fight-quests', grandcircuit: '/grand-circuit', tournament: '/tournament', savecodes: '/save',
     onlinesettings: '/online-settings', sportslobby: '/online-sports', creatorMode: '/campaigns', creatormode: '/campaigns',
-    custombattle: '/custom-battle', team: '/2v2-teams', shapeshiftSelect: '/shapeshift', cutscene: '/story-intro',
+    custombattle: '/custom-battle', team: '/2v2-teams', shapeshiftSelect: '/shapeshift', clips: '/clips', cutscene: '/story-intro',
   };
   const CHARACTER_MODE_PATHS = {
     '/regular-battle': 'regular', '/time-battle': 'time', '/super-only': 'superonly', '/sudden-death': 'sudden',
@@ -230,7 +233,7 @@ export default function Game() {
     '/volleyball-online': 'onlinesports', '/volleyball-ranked-1v1': 'onlinesports', '/baseball': 'sports', '/parkour': 'sports',
     '/rock-climbing': 'sports', '/capture-the-flag': 'sports', '/dodgeball': 'sports', '/dodgeball-ranked': 'onlinesports',
     '/dodgeball-online': 'onlinesports', '/ziplining': 'sports', '/banger': 'sports', '/banger-online': 'onlinesports',
-    '/battle-royale': 'battleroyale', '/custom-rooms': 'customrooms', '/lan-play': 'lan', '/friends': 'friends', '/chat': 'chat',
+    '/battle-royale': 'battleroyale', '/clips': 'clips', '/custom-rooms': 'customrooms', '/lan-play': 'lan', '/friends': 'friends', '/chat': 'chat',
     '/elo': 'elo', '/story': 'storySaves', '/story-mode': 'storySaves', '/community': 'hubserverselect', '/community-hub': 'hubserverselect',
     '/settings': 'settings', '/online-settings': 'onlinesettings', '/battle-pass': 'events', '/lore': 'lore', '/lore-library': 'lore',
     '/equip': 'equip', '/equip-tab': 'equip', '/meet-characters': 'meet', '/edit-characters': 'editchars', '/create-character': 'creator',
@@ -261,6 +264,46 @@ export default function Game() {
   const [onlineMode, setOnlineMode] = useState('unranked'); // ranked | unranked | soccer
   const [showCutscene, setShowCutscene] = useState(!localStorage.getItem('element6_progress'));
   const [progress, setProgress] = useState(loadProgress);
+
+  // Clips are stored in IndexedDB while the progress object only keeps the
+  // lightweight metadata needed to render the Clips tab. Rehydrate that
+  // metadata on startup and whenever the recorder announces a newly saved
+  // clip, so navigation into Clips always has the current list.
+  useEffect(() => {
+    let alive = true;
+    const syncClipMetadata = async () => {
+      try {
+        const metadata = await listClipMetadata();
+        if (!alive) return;
+        setProgress(prev => {
+          const next = { ...prev, clips: Array.isArray(metadata) ? metadata : [] };
+          saveProgress(next);
+          return next;
+        });
+      } catch (error) {
+        console.warn('[Element 6 Clips] Could not load clip metadata:', error);
+      }
+    };
+    syncClipMetadata();
+
+    const onClipSaved = event => {
+      const clip = event?.detail;
+      if (!clip?.id) return;
+      setProgress(prev => {
+        const existing = Array.isArray(prev.clips) ? prev.clips : [];
+        const withoutDuplicate = existing.filter(item => item?.id !== clip.id);
+        const next = { ...prev, clips: [...withoutDuplicate, clip].slice(-30) };
+        saveProgress(next);
+        return next;
+      });
+    };
+
+    window.addEventListener('clipSaved', onClipSaved);
+    return () => {
+      alive = false;
+      window.removeEventListener('clipSaved', onClipSaved);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -876,6 +919,7 @@ export default function Game() {
     else if (dest === 'mobilecontrols') { setScreen('mobilecontrols'); sfx.click(); }
     else if (dest === 'friends') setScreen('friends');
     else if (dest === 'chat') setScreen('chat');
+    else if (dest === 'clips') { setScreen('clips'); sfx.click(); }
     else if (dest === 'leaderboard') setScreen('leaderboard');
     else if (dest === 'elo') setScreen('elo');
     else if (dest === 'regularbattle') { setPending({ mode: 'regular' }); setScreen('charSelect'); }
@@ -889,25 +933,30 @@ export default function Game() {
     setProgress(prev => {
       const eventProgress = { ...(prev.eventProgress || {}) };
       const ep = { ...(eventProgress[eventId] || { xp: 0, claimedTiers: [] }) };
-      if ((ep.claimedTiers || []).includes(tier)) return prev;
       ep.claimedTiers = [...(ep.claimedTiers || []), tier];
       eventProgress[eventId] = ep;
       let next = { ...prev, eventProgress };
-      const applyReward = (target, r) => {
-        if (!r) return target;
-        if (r.type === 'tokens') target.coins = (target.coins || 0) + (r.amount || 0);
-        else if (r.type === 'skin' && r.item) target.ownedSkins = [...new Set([...(target.ownedSkins || []), r.item.id])];
-        else if (r.type === 'allskins' && r.items) target.ownedSkins = [...new Set([...(target.ownedSkins || []), ...r.items.map(x => x.id)])];
-        else if (r.type === 'accessory' && r.item) target.ownedAccessories = [...new Set([...(target.ownedAccessories || []), r.item.id])];
-        else if (r.type === 'allaccessories' && r.items) target.ownedAccessories = [...new Set([...(target.ownedAccessories || []), ...r.items.map(x => x.id)])];
-        else if (r.type === 'character' && r.charId) target.unlockedIds = [...new Set([...(target.unlockedIds || []), r.charId])];
-        else if (r.type === 'killfx' && r.item) target.ownedKillFX = [...new Set([...(target.ownedKillFX || []), r.item.id])];
-        else if (r.type === 'emote' && r.emoteId) target.ownedEmotes = [...new Set([...(target.ownedEmotes || []), r.emoteId])];
-        return target;
-      };
-      next = applyReward(next, reward);
-      // Premium Battle Pass grants the second reward on the same tier.
-      if (next.battlePassPlus === true) next = applyReward(next, reward.premiumReward);
+      // Apply reward
+      if (reward.type === 'tokens') {
+        next.coins = (next.coins || 0) + reward.amount;
+      } else if (reward.type === 'skin' && reward.item) {
+        next.ownedSkins = [...new Set([...(next.ownedSkins || []), reward.item.id])];
+      } else if (reward.type === 'allskins' && reward.items) {
+        // Tier 50: grant every character's event skin
+        const newIds = reward.items.map(s => s.id);
+        next.ownedSkins = [...new Set([...(next.ownedSkins || []), ...newIds])];
+      } else if (reward.type === 'accessory' && reward.item) {
+        next.ownedAccessories = [...new Set([...(next.ownedAccessories || []), reward.item.id])];
+      } else if (reward.type === 'allaccessories' && reward.items) {
+        const newIds = reward.items.map(a => a.id);
+        next.ownedAccessories = [...new Set([...(next.ownedAccessories || []), ...newIds])];
+      } else if (reward.type === 'character' && reward.charId) {
+        next.unlockedIds = [...new Set([...(next.unlockedIds || []), reward.charId])];
+      } else if (reward.type === 'killfx' && reward.item) {
+        next.ownedKillFX = [...new Set([...(next.ownedKillFX || []), reward.item.id])];
+      } else if (reward.type === 'emote' && reward.emoteId) {
+        next.ownedEmotes = [...new Set([...(next.ownedEmotes || []), reward.emoteId])];
+      }
       saveProgress(next);
       return next;
     });
@@ -2450,6 +2499,20 @@ export default function Game() {
           />
         )}
 
+        {screen === 'clips' && (
+          <ClipsScreen
+            clips={progress.clips || []}
+            onDeleteClip={(clipId) => {
+              setProgress(prev => {
+                const next = { ...prev, clips: (prev.clips || []).filter(clip => clip?.id !== clipId) };
+                saveProgress(next);
+                return next;
+              });
+            }}
+            onBack={goBack}
+          />
+        )}
+
         {screen === 'matchreview' && (battleResult || soccerResult) && (
           <MatchReview
             mode={battleResult ? 'fight' : 'soccer'}
@@ -2467,6 +2530,7 @@ export default function Game() {
         <TouchControls keybinds={getKeybinds(progress.settings).p1} settings={progress.settings || {}} />
       )}
       <VirtualKeyboard />
+      <GlobalClipRecorder />
 
       {showDailyReward && (
         <DailyRewards
