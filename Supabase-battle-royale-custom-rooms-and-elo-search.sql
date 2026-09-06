@@ -48,22 +48,27 @@ alter table public.online_custom_room_players enable row level security;
 alter table public.online_battle_royale_matches enable row level security;
 alter table public.online_battle_royale_players enable row level security;
 
+create or replace function public.is_element6_custom_room_participant(p_room_id uuid, p_user_id uuid default auth.uid())
+returns boolean language sql security definer stable set search_path=public as $$
+  select exists (select 1 from public.online_custom_room_players p where p.room_id=p_room_id and p.user_id=p_user_id)
+     or exists (select 1 from public.online_custom_rooms r where r.id=p_room_id and r.host_id=p_user_id);
+$$;
+create or replace function public.is_element6_br_participant(p_match_id uuid, p_user_id uuid default auth.uid())
+returns boolean language sql security definer stable set search_path=public as $$
+  select exists (select 1 from public.online_battle_royale_players p where p.match_id=p_match_id and p.user_id=p_user_id)
+     or exists (select 1 from public.online_battle_royale_matches m where m.id=p_match_id and m.host_id=p_user_id);
+$$;
+revoke all on function public.is_element6_custom_room_participant(uuid,uuid), public.is_element6_br_participant(uuid,uuid) from public,anon;
+grant execute on function public.is_element6_custom_room_participant(uuid,uuid), public.is_element6_br_participant(uuid,uuid) to authenticated;
+
 drop policy if exists custom_rooms_participants on public.online_custom_rooms;
-create policy custom_rooms_participants on public.online_custom_rooms for select to authenticated using (
-  host_id = auth.uid() or exists (select 1 from public.online_custom_room_players p where p.room_id = id and p.user_id = auth.uid())
-);
+create policy custom_rooms_participants on public.online_custom_rooms for select to authenticated using (public.is_element6_custom_room_participant(id,auth.uid()));
 drop policy if exists custom_room_players_participants on public.online_custom_room_players;
-create policy custom_room_players_participants on public.online_custom_room_players for select to authenticated using (
-  user_id = auth.uid() or exists (select 1 from public.online_custom_room_players self where self.room_id = room_id and self.user_id = auth.uid())
-);
+create policy custom_room_players_participants on public.online_custom_room_players for select to authenticated using (public.is_element6_custom_room_participant(room_id,auth.uid()));
 drop policy if exists br_matches_participants on public.online_battle_royale_matches;
-create policy br_matches_participants on public.online_battle_royale_matches for select to authenticated using (
-  host_id = auth.uid() or exists (select 1 from public.online_battle_royale_players p where p.match_id = id and p.user_id = auth.uid())
-);
+create policy br_matches_participants on public.online_battle_royale_matches for select to authenticated using (public.is_element6_br_participant(id,auth.uid()));
 drop policy if exists br_players_participants on public.online_battle_royale_players;
-create policy br_players_participants on public.online_battle_royale_players for select to authenticated using (
-  user_id = auth.uid() or exists (select 1 from public.online_battle_royale_players self where self.match_id = match_id and self.user_id = auth.uid())
-);
+create policy br_players_participants on public.online_battle_royale_players for select to authenticated using (public.is_element6_br_participant(match_id,auth.uid()));
 
 create or replace function public.create_element6_custom_room(p_settings jsonb default '{}'::jsonb)
 returns jsonb language plpgsql security definer set search_path = public as $$
@@ -103,6 +108,8 @@ declare u uuid := auth.uid(); m public.online_battle_royale_matches%rowtype; slo
 begin
  if u is null then raise exception 'Sign in first'; end if;
  update public.online_battle_royale_matches set status='cancelled', updated_at=now() where status='searching' and created_at < now() - interval '90 seconds' and not exists (select 1 from public.online_battle_royale_players p where p.match_id=id);
+ update public.online_battle_royale_matches m set status='finished', updated_at=now() where m.status='playing' and m.updated_at < now() - interval '25 seconds';
+ if exists (select 1 from public.online_battle_royale_players p join public.online_battle_royale_matches m on m.id=p.match_id where p.user_id=u and m.status in ('searching','playing')) then raise exception 'Already in an active Battle Royale match'; end if;
  select * into m from public.online_battle_royale_matches where status='searching' and host_id<>u order by created_at asc limit 1 for update skip locked;
  if m.id is null then
   insert into public.online_battle_royale_matches(host_id) values(u) returning * into m;
@@ -132,6 +139,14 @@ language sql security definer set search_path=public as $$
  order by rank_position,username;
 $$;
 grant execute on function public.create_element6_custom_room(jsonb),public.join_element6_custom_room(text,jsonb),public.find_or_create_element6_battle_royale(jsonb),public.get_element6_elo_leaderboard(text,text) to authenticated;
+
+create or replace function public.element6_battle_royale_heartbeat(p_match_id uuid)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+  update public.online_battle_royale_matches set updated_at=now() where id=p_match_id and exists (select 1 from public.online_battle_royale_players p where p.match_id=p_match_id and p.user_id=auth.uid());
+end; $$;
+revoke all on function public.element6_battle_royale_heartbeat(uuid) from public,anon;
+grant execute on function public.element6_battle_royale_heartbeat(uuid) to authenticated;
 
 create or replace function public.start_element6_battle_royale(p_match_id uuid, p_max_players smallint default 50, p_bot_difficulty text default 'honored')
 returns jsonb language plpgsql security definer set search_path = public as $$

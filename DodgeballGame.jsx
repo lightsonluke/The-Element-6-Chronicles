@@ -106,9 +106,9 @@ export default function DodgeballGame({
 
   useEffect(() => {
     music.setVolume(musicVolume); sfx.setVolume(sfxVolume);
-    try { music.play('fight'); } catch {}
-    return () => music.stop();
-  }, [musicVolume, sfxVolume]);
+    try { music.setMatchSeed(matchId); music.play('fight'); } catch {}
+    return () => { music.clearMatchSeed(); music.stop(); };
+  }, [musicVolume, sfxVolume, matchId]);
 
   useEffect(() => {
     const resolveKey = (key) => {

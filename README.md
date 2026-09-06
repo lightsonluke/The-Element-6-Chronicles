@@ -1,16 +1,27 @@
-# Element 6 — Soccer Offline Pause Visibility Fix
+# Element 6 — Targeted Online Matchmaking + Music Replacement
 
-Replace `SoccerFighter.jsx` with the included file.
+THIS IS NOT A WHOLE-GAME REPLACEMENT.
 
-Fixes the actual layering problem that caused the Soccer offline Pause button and pause overlay to sit BEHIND the fixed match canvas (`z-index: 40`).
+Copy/replace ONLY the files in this package in the matching locations of the existing Element 6 project.
 
-Changes:
-- Soccer match root is now the shared full-screen match viewport.
-- Pause (ESC) button is fixed in the top-left with z-index 100.
-- Countdown is above the match but below pause controls.
-- PauseMenu is placed in a full-screen z-index 110 wrapper, so the overlay and its buttons are above the match canvas.
-- Winner/end screen is above the match canvas.
-- Reconnect overlay remains above everything gameplay-related.
-- Existing pause state, ESC/P keyboard behavior, quit behavior, tournament behavior, and game simulation are preserved.
+## Included source fixes
+- Ranked / Unranked OnlineLobby matchmaking lifecycle
+- Rollback online match lifecycle + heartbeat/leave/result reporting
+- Battle Royale queue, deterministic bot roster, stale-match cleanup hooks, heartbeat
+- Battle Royale online leave helper
+- Online Sports active-match heartbeat support
+- Match music seed/full-track selection for online soccer, custom rooms, Banger, Dodgeball, Grand Circuit
+- Full `music.js` seeded track selection
+- Fixes the `camZoom` runtime declaration-order error in RollbackOnlineFight
 
-No character, soccer physics, AI, scoring, or match rules were changed.
+## Included SQL
+Only the four SQL files that were actually changed for these matchmaking fixes are included:
+- Supabase-ranked-online-setup.sql
+- Supabase-ranked-unranked-repair.sql
+- Supabase-online-sports-setup.sql
+- Supabase-battle-royale-custom-rooms-and-elo-search.sql
+
+Run SQL deliberately in Supabase. Do not replace unrelated database scripts.
+
+## Important
+These are full-file replacements for the listed files only. They do not contain the rest of the game.

@@ -1,7 +1,7 @@
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useEffect, useRef, useState } from 'react';
 
-import db from './localBackend';
+import { heartbeatOnlineMatch, leaveOnlineMatch, completeUnrankedMatch, reportRankedMatchResult } from './rankedOnline.js';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
@@ -203,8 +203,8 @@ export default function RollbackOnlineFight({
       // synchronized state, so both screens select the identical view.
       const midpoint = (hostFighter.x + guestFighter.x) / 2;
       const separation = Math.abs(hostFighter.x - guestFighter.x);
-      const camX = (midpoint - ONLINE_STAGE_WIDTH / 2) * (1 - camZoom) * 0.35;
       const camZoom = Math.max(0.82, Math.min(1.12, 1.12 - Math.max(0, separation - 360) / 1800));
+      const camX = (midpoint - ONLINE_STAGE_WIDTH / 2) * (1 - camZoom) * 0.35;
       ctx.save();
       ctx.translate(ONLINE_STAGE_WIDTH / 2, ONLINE_STAGE_HEIGHT / 2);
       ctx.scale(camZoom, camZoom);
@@ -253,7 +253,8 @@ export default function RollbackOnlineFight({
       } : { winnerRole: winningRole, opponentDisconnected: true };
       const result = winningRole === role ? 'me' : winningRole === 'draw' ? 'draw' : 'opp';
       setWinner(result);
-      try { db.entities.OnlineMatch.update(matchId, { status: 'finished', winner: winningRole }).catch(() => {}); } catch {}
+      // Match completion is finalized by the server-side result RPC when the
+      // players confirm the same ranked proof. Unranked uses a small server RPC.
     };
 
     const start = async () => {
@@ -325,8 +326,8 @@ export default function RollbackOnlineFight({
         clearInterval(readyTimer);
         readyTimer = null;
         setConnectionText('CONNECTED');
-        try { db.entities.OnlineMatch.update(matchId, { status: 'active' }).catch(() => {}); } catch {}
-        pingTimer = setInterval(() => transport.ping().catch(() => {}), 1000);
+        heartbeatOnlineMatch(matchId).catch(() => {});
+        pingTimer = setInterval(() => { transport.ping().catch(() => {}); heartbeatOnlineMatch(matchId).catch(() => {}); }, 1000);
         snapshotTimer = setInterval(() => {
           if (isHost && !finished && !resyncing) transport.sendControl('state-snapshot', {
             frame: session.getStats().currentFrame,
@@ -381,9 +382,20 @@ export default function RollbackOnlineFight({
     };
   }, [gameStarted, matchId, playerId, opponentPlayerId, role, mode, myChar, oppChar, stageId]);
 
-  const handleQuit = () => {
-    try { db.entities.OnlineMatch.update(matchId, { status: 'finished', winner: isHost ? 'guest' : 'host' }).catch(() => {}); } catch {}
+  const handleQuit = async () => {
+    try { await leaveOnlineMatch(matchId); } catch {}
     onEnd?.({ won: false, disconnected: true, forfeited: true, mode });
+  };
+
+  const finalizeResult = async () => {
+    try {
+      const proof = resultProofRef.current;
+      if (mode === 'ranked' && proof?.finalFrame != null && proof?.checksum) {
+        await reportRankedMatchResult({ matchId, winnerRole: proof.winnerRole, finalFrame: proof.finalFrame, checksum: proof.checksum });
+      } else if (mode === 'unranked' && proof?.winnerRole) {
+        await completeUnrankedMatch(matchId, proof.winnerRole);
+      }
+    } catch {}
   };
 
   useEffect(() => {
@@ -399,7 +411,7 @@ export default function RollbackOnlineFight({
           <span className="text-5xl font-heading drop-shadow-lg" style={{ color: winner === 'draw' ? '#FFFFFF' : won ? '#FFD700' : '#FF4444' }}>
             {winner === 'draw' ? 'DRAW' : won ? 'YOU WIN!' : 'YOU LOSE'}
           </span>
-          <button onClick={() => onEnd?.({ won, draw: winner === 'draw', mode, ...(resultProofRef.current || {}) })} className="px-8 py-3 bg-primary text-primary-foreground font-heading rounded-lg hover:opacity-80 transition text-lg">CONTINUE</button>
+          <button onClick={async () => { await finalizeResult(); onEnd?.({ won, draw: winner === 'draw', mode, ...(resultProofRef.current || {}) }); }} className="px-8 py-3 bg-primary text-primary-foreground font-heading rounded-lg hover:opacity-80 transition text-lg">CONTINUE</button>
         </div>
       </div>
     );

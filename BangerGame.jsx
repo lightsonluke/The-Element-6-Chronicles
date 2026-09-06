@@ -63,8 +63,6 @@ export default function BangerGame({
 }) {
   const canvasRef = useRef(null);
   const [countdown, setCountdown] = useState(3);
-  const [paused, setPaused] = useState(false);
-  const pausedRef = useRef(false);
   const [started, setStarted] = useState(false);
   const stRef = useRef(null);
   const keysRef = useRef({});
@@ -124,15 +122,11 @@ export default function BangerGame({
 
   useEffect(() => {
     music.setVolume(musicVolume); sfx.setVolume(sfxVolume);
-    music.play('fight');
-    return () => music.stop();
-  }, [musicVolume, sfxVolume]);
+    music.setMatchSeed(matchId); music.play('fight');
+    return () => { music.clearMatchSeed(); music.stop(); };
+  }, [musicVolume, sfxVolume, matchId]);
 
   useEffect(() => { window.__el6GameplayActive = true; return () => { window.__el6GameplayActive = false; }; }, []);
-  useEffect(() => {
-    const kd = (e) => { if (!started || (e.key !== 'Escape' && e.key.toLowerCase() !== 'p')) return; e.preventDefault(); pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); };
-    window.addEventListener('keydown', kd); return () => window.removeEventListener('keydown', kd);
-  }, [started]);
 
   const sigKeys = (side) => {
     if (side === 1) { const ks = [kb.p1.sig.toLowerCase()]; if (p2IsCPU) ks.push(kb.p2.sig.toLowerCase()); return ks; }
@@ -241,8 +235,8 @@ export default function BangerGame({
         draw(ctx, stRef.current);
       } else {
         const s = stRef.current;
-        if (!pausedRef.current && !remoteStateRef.current) { s.frame++; if (!s.done) step(s); }
-
+        s.frame++;
+        if (!s.done) step(s);
         if (onStateExportRef.current) onStateExportRef.current(s);
         draw(ctx, s);
       }
@@ -574,8 +568,6 @@ export default function BangerGame({
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
       <button onClick={onQuit} className="self-start px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-      <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="absolute top-3 right-3 z-20 px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
-      {paused && <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/65 rounded-lg pointer-events-none"><div className="bg-card border-2 border-accent rounded-xl px-8 py-6 text-center"><p className="font-heading text-3xl text-accent">PAUSED</p><p className="text-xs text-muted-foreground mt-2">{remoteStateRef.current ? 'Online match continues in the background.' : 'Press ESC or P to resume.'}</p></div></div>}
       <canvas ref={canvasRef} width={CW} height={CH} className="rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: CW + 'px', height: 'auto', aspectRatio: `${CW} / ${CH}`, background: '#080d1a' }} />
     </div>

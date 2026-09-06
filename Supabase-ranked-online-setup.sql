@@ -71,10 +71,17 @@ alter table public.online_matches enable row level security;
 alter table public.ranked_ratings enable row level security;
 alter table public.ranked_match_reports enable row level security;
 
+create or replace function public.is_online_match_participant(p_match_id uuid, p_user_id uuid default auth.uid())
+returns boolean language sql security definer stable set search_path = public as $$
+  select exists (select 1 from public.online_matches m where m.id = p_match_id and (m.host_user_id = p_user_id or m.guest_user_id = p_user_id));
+$$;
+revoke all on function public.is_online_match_participant(uuid,uuid) from public, anon;
+grant execute on function public.is_online_match_participant(uuid,uuid) to authenticated;
+
 drop policy if exists "participants read online matches" on public.online_matches;
 create policy "participants read online matches" on public.online_matches
   for select to authenticated
-  using (auth.uid() = host_user_id or auth.uid() = guest_user_id);
+  using (public.is_online_match_participant(id, auth.uid()));
 
 drop policy if exists "ratings are publicly readable" on public.ranked_ratings;
 create policy "ratings are publicly readable" on public.ranked_ratings
@@ -136,6 +143,23 @@ begin
     select rating into v_rating from public.ranked_ratings where user_id = v_user;
   end if;
 
+  -- Clear abandoned search rows and abandoned active rows before checking
+  -- whether this user is already in a match. A client that closed the tab
+  -- must never permanently lock the account out of matchmaking.
+  update public.online_matches
+  set status = 'cancelled', updated_at = now()
+  where status = 'searching' and host_last_seen < now() - interval '45 seconds';
+
+  update public.online_matches m
+  set status = 'finished', winner = case when m.host_last_seen < now() - interval '25 seconds' and (m.guest_user_id is null or m.guest_last_seen >= now() - interval '25 seconds') then 'guest' when m.guest_user_id is not null and m.guest_last_seen < now() - interval '25 seconds' and m.host_last_seen >= now() - interval '25 seconds' then 'host' else 'draw' end, updated_at = now()
+  where m.status in ('matched','active')
+    and (m.host_last_seen < now() - interval '25 seconds'
+      or (m.guest_user_id is not null and m.guest_last_seen < now() - interval '25 seconds'));
+
+  if exists (select 1 from public.online_matches m where (m.host_user_id=v_user or m.guest_user_id=v_user) and m.status in ('matched','active')) then
+    raise exception 'Already in an active online match';
+  end if;
+
   update public.online_matches
   set status = 'cancelled', updated_at = now()
   where host_user_id = v_user and status = 'searching';
@@ -193,6 +217,20 @@ begin
   where id = p_match_id and auth.uid() in (host_user_id, guest_user_id);
 end;
 $$;
+
+create or replace function public.complete_online_match(p_match_id uuid, p_winner_role text)
+returns void language plpgsql security definer set search_path = public as $$
+declare m public.online_matches%rowtype;
+begin
+  if p_winner_role not in ('host','guest','draw') then raise exception 'Invalid winner'; end if;
+  select * into m from public.online_matches where id=p_match_id for update;
+  if m.id is null or auth.uid() not in (m.host_user_id,m.guest_user_id) then raise exception 'Match not found'; end if;
+  if m.mode <> 'unranked' then raise exception 'Use ranked result reporting for ranked matches'; end if;
+  update public.online_matches set status='finished', winner=p_winner_role, updated_at=now() where id=p_match_id;
+end; $$;
+
+revoke all on function public.complete_online_match(uuid,text) from public,anon;
+grant execute on function public.complete_online_match(uuid,text) to authenticated;
 
 create or replace function public.leave_online_match(p_match_id uuid)
 returns void

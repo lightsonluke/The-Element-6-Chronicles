@@ -53,6 +53,12 @@ export async function leaveOnlineMatch(matchId) {
   if (error) throw error;
 }
 
+export async function completeUnrankedMatch(matchId, winnerRole) {
+  if (!matchId) return;
+  const { error } = await supabase.rpc('complete_online_match', { p_match_id: matchId, p_winner_role: winnerRole });
+  if (error) throw error;
+}
+
 export async function reportRankedMatchResult({ matchId, winnerRole, finalFrame, checksum }) {
   const { data, error } = await supabase.rpc('report_ranked_match_result', {
     p_match_id: matchId,

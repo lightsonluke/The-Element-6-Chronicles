@@ -131,6 +131,13 @@ begin
   if coalesce(length(trim(p_character_id)), 0) = 0 then raise exception 'Choose a character'; end if;
   v_required := public.online_sport_required_players(p_mode);
 
+  -- A closed tab/network drop must not leave a player permanently locked in
+  -- an active sport match. Active players heartbeat every 5 seconds.
+  update public.online_sport_matches m
+  set status='finished', updated_at=now()
+  where m.status in ('matched','active')
+    and exists (select 1 from public.online_sport_players p where p.match_id=m.id and p.last_seen < now() - interval '25 seconds');
+
   if exists (
     select 1 from public.online_sport_players p
     join public.online_sport_matches m on m.id=p.match_id
@@ -191,6 +198,8 @@ create or replace function public.online_sport_heartbeat(p_match_id uuid)
 returns void language plpgsql security definer set search_path = public as $$
 begin
   update public.online_sport_players set last_seen = now() where match_id = p_match_id and user_id = auth.uid();
+  update public.online_sport_matches set status = case when status='matched' then 'active' else status end, updated_at=now()
+  where id=p_match_id and exists (select 1 from public.online_sport_players where match_id=p_match_id and user_id=auth.uid());
 end;
 $$;
 
