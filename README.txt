@@ -1,17 +1,15 @@
-Element 6 Chronicles — Build Fix v3
+Element 6 Chronicles — checklist replacement package
 
-This is a replacement-files package based on the previous checklist-fixes v2 package.
+Changed:
+- Community Hub server list now discovers active regional servers with >=1 player and sorts by player count descending.
+- Presence records now carry a broad matchmaking region.
+- Battle Pass keeps 50 tiers, has star rewards across the unified all-generation roster, and Premium grants a second reward on every tier.
+- Stage Editor includes the global World Stages browser plus a quick-start toolbar while retaining the existing editor feature set/help.
+- Story Mode and Baseball have fullscreen controls.
+- Fight/music rotation now explicitly covers every match-capable scene and uses the full fight library when not overridden by a custom track.
+- Save Codes use the account-bound Supabase RPCs included in the SQL file.
+- Sandbox supports individual stock counts per fighter.
 
-Fixes in this revision:
-- Fixed Sandbox.jsx JSX parse error: the bot difficulty <select> and STOCKS <label> were sibling JSX elements inside one conditional expression without a parent. They are now wrapped in a fragment.
-- Fixed hubRegion.js invalid regular-expression literals caused by over-escaped slash characters.
-- Re-checked the reachable application module graph with the TypeScript parser: 261 reachable modules, 0 syntax errors.
-- Re-checked reachable relative imports: 0 missing local imports.
-- Re-ran TypeScript semantic diagnostics with external-module noise filtered: 0 actionable diagnostics.
-
-Install:
-1. Unzip this package over the project root.
-2. Replace the existing files when prompted.
-3. Run the normal CI build: pnpm install --no-frozen-lockfile && pnpm build.
-
-This package does not include the entire 200MB project; it contains only the files changed by the previous checklist-fixes package plus the two files corrected in this revision.
+Notes:
+- Run the included Supabase account-bound save-code SQL in the same backend used by the app if it has not already been applied.
+- Existing sport/fight pre-match flows are preserved; SoccerMode and SportsShell already use PrematchAnimation.
