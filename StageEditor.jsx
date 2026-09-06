@@ -8,6 +8,8 @@ import { sfx } from './sfx.js';
 import { STAGE_BACKDROPS } from './stageBackdrops.js';
 import { drawStageBackground } from './stageBackgrounds.js';
 import WorldStages from './WorldStages.jsx';
+import StagePreview from './StagePreview.jsx';
+import { directionVector, makeMotionStep, normalizeMotion } from './StageMotionRuntime.js';
 import GameIcon from "./GameIcon.jsx";
 import { HAZARD_TYPES, OBJECT_TYPES, makeHazard, makeObject } from './stageHazards.js';
 
@@ -55,7 +57,12 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   ]);
   const [spawnSelect, setSpawnSelect] = useState(0);
   // Moving-platform editor
-  const [motionType, setMotionType] = useState('horizontal'); // horizontal | vertical | static
+  const [motionType, setMotionType] = useState('horizontal');
+  const [motionPattern, setMotionPattern] = useState('pingpong');
+  const [motionDirection, setMotionDirection] = useState('right');
+  const [motionLoop, setMotionLoop] = useState(false);
+  const [motionChain, setMotionChain] = useState([makeMotionStep('right', 160, 100)]);
+  const [motionTarget, setMotionTarget] = useState(null);
   const [motionSpeed, setMotionSpeed] = useState(0.5);
   const [motionDistance, setMotionDistance] = useState(160);
   const [motion2Type, setMotion2Type] = useState('none');
@@ -79,7 +86,23 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   const [hazardRange, setHazardRange] = useState(200);
   const [selectedHazardIdx, setSelectedHazardIdx] = useState(null);
   const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
-  const [perimeter, setPerimeter] = useState({ enabled: true, left: -500, right: 1780, top: -600, bottom: 1170 });
+  const [stageCamera, setStageCamera] = useState({ zoom: 1, motion: null });
+  const [cameraMotionPattern, setCameraMotionPattern] = useState('pingpong');
+  const [cameraMotionDirection, setCameraMotionDirection] = useState('right');
+  const [cameraMotionDistance, setCameraMotionDistance] = useState(300);
+  const [cameraMotionSpeed, setCameraMotionSpeed] = useState(100);
+  const [cameraMotionLoop, setCameraMotionLoop] = useState(true);
+  const [cameraMotionChain, setCameraMotionChain] = useState([makeMotionStep('right', 300, 100)]);
+  const [cameraMotionEnabled, setCameraMotionEnabled] = useState(false);
+  const [perimeter, setPerimeter] = useState({ enabled: true, left: -500, right: 1780, top: -600, bottom: 1170, motions: { left: null, right: null, top: null, bottom: null } });
+  const [perimeterWall, setPerimeterWall] = useState('left');
+  const [perimeterMotionEnabled, setPerimeterMotionEnabled] = useState(false);
+  const [perimeterMotionPattern, setPerimeterMotionPattern] = useState('pingpong');
+  const [perimeterMotionDirection, setPerimeterMotionDirection] = useState('up');
+  const [perimeterMotionDistance, setPerimeterMotionDistance] = useState(200);
+  const [perimeterMotionSpeed, setPerimeterMotionSpeed] = useState(100);
+  const [perimeterMotionLoop, setPerimeterMotionLoop] = useState(true);
+  const [perimeterMotionChain, setPerimeterMotionChain] = useState([makeMotionStep('up', 200, 100)]);
   const [perimeterDrag, setPerimeterDrag] = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
   const [isDownloaded, setIsDownloaded] = useState(false);
@@ -90,6 +113,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   const [hazardW, setHazardW] = useState(80);
   const [hazardH, setHazardH] = useState(40);
   const [hazardMotion, setHazardMotion] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
   useEffect(() => {
@@ -463,19 +487,33 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     if (mode === 'motion') {
       const i = findPlatformAt(x, y);
       if (i >= 0) {
-        setSelectedMotionId(i);
-        const next = [...platforms];
-        const cur = next[i].move || {};
-        next[i] = { ...next[i], move: {
-          type: motionType, speed: motionSpeed, distance: motionDistance, pause: motionPaused ? 1 : 0, phase: cur.phase || 0,
-          motion2: motion2Type !== 'none' ? { type: motion2Type, speed: motion2Speed, distance: motion2Distance } : null,
-          offsetX: cur.offsetX || 0, offsetY: cur.offsetY || 0,
-        } };
-        setPlatforms(next);
-      } else {
-        // click empty: just clear selection
-        setSelectedMotionId(null);
+        setSelectedMotionId(i); setSelectedHazardIdx(null); setMotionTarget({ kind: 'platform', index: i });
+        const existing = normalizeMotion(platforms[i].motion || platforms[i].move);
+        if (existing) {
+          setMotionPattern(existing.mode === 'pingpong' ? 'pingpong' : 'chain');
+          setMotionDirection(existing.direction || existing.chain?.[0]?.direction || 'right');
+          setMotionDistance(existing.distance || existing.chain?.[0]?.distance || 160);
+          setMotionSpeed(existing.speed || existing.chain?.[0]?.speed || 100);
+          setMotionLoop(!!existing.loop);
+          setMotionChain(existing.chain?.length ? existing.chain.slice(0,10) : [makeMotionStep(existing.direction || 'right', existing.distance || 160, existing.speed || 100)]);
+        }
+        return;
       }
+      const hi = hazards.findIndex(h => x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h);
+      if (hi >= 0) {
+        setSelectedHazardIdx(hi); setSelectedMotionId(null); setMotionTarget({ kind: 'hazard', index: hi });
+        const existing = normalizeMotion(hazards[hi].motion || hazards[hi].move);
+        if (existing) {
+          setMotionPattern(existing.mode === 'pingpong' ? 'pingpong' : 'chain');
+          setMotionDirection(existing.direction || existing.chain?.[0]?.direction || 'right');
+          setMotionDistance(existing.distance || existing.chain?.[0]?.distance || 160);
+          setMotionSpeed(existing.speed || existing.chain?.[0]?.speed || 100);
+          setMotionLoop(!!existing.loop);
+          setMotionChain(existing.chain?.length ? existing.chain.slice(0,10) : [makeMotionStep(existing.direction || 'right', existing.distance || 160, existing.speed || 100)]);
+        }
+        return;
+      }
+      setSelectedMotionId(null); setSelectedHazardIdx(null); setMotionTarget(null);
       return;
     }
     // ADD mode: if clicking on an existing platform, drag it instead of drawing a new one
@@ -574,7 +612,11 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     setStageName(stage.name || 'Custom Stage');
     setStageEmoji(stage.emoji || '🎨');
     setBackdrop(stage.backdrop || 'splitcity');
-    setPerimeter(stage.killPerimeter || { enabled: true, left: -500, right: 1780, top: -600, bottom: 1170 });
+    setPerimeter(stage.killPerimeter || { enabled: true, left: -500, right: 1780, top: -600, bottom: 1170, motions: { left: null, right: null, top: null, bottom: null } });
+    setStageCamera(stage.stageCamera || { zoom: stage.cameraZoom || 1, motion: stage.cameraMotion || null });
+    const cm = stage.stageCamera?.motion || stage.cameraMotion;
+    setCameraMotionEnabled(!!cm);
+    if (cm) { setCameraMotionPattern(cm.mode === 'pingpong' ? 'pingpong' : 'chain'); setCameraMotionDirection(cm.direction || cm.chain?.[0]?.direction || 'right'); setCameraMotionDistance(cm.distance || cm.chain?.[0]?.distance || 300); setCameraMotionSpeed(cm.speed || cm.chain?.[0]?.speed || 100); setCameraMotionLoop(cm.loop !== false); setCameraMotionChain(cm.chain?.length ? cm.chain.slice(0,10) : [makeMotionStep(cm.direction || 'right', cm.distance || 300, cm.speed || 100)]); }
     if (stage.spawnPoints) setSpawnPoints(stage.spawnPoints);
     setHazards(stage.hazards || []);
     setObjects(stage.objects || []);
@@ -613,6 +655,16 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     });
   };
 
+  const buildMotion = (pattern, direction, distance, speed, loop, chain) => ({
+    enabled: true, mode: pattern === 'pingpong' ? 'pingpong' : 'chain', direction, distance: Number(distance) || 0, speed: Number(speed) || 100, loop: !!loop, chain: (chain || []).slice(0,10).map(s => makeMotionStep(s.direction, s.distance, s.speed))
+  });
+  const applyMotionToTarget = (motion) => {
+    if (!motionTarget) return;
+    if (motionTarget.kind === 'platform') setPlatforms(prev => prev.map((p,i) => i === motionTarget.index ? { ...p, move: motion, motion } : p));
+    if (motionTarget.kind === 'hazard') setHazards(prev => prev.map((h,i) => i === motionTarget.index ? { ...h, move: motion, motion } : h));
+  };
+  const stagePreviewData = { platforms, hazards, objects, backdrop, killPerimeter: perimeter, stageCamera: { ...stageCamera, motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null } };
+
   return (
     <div className="w-full max-w-5xl flex flex-col gap-3">
         <div className="sticky top-0 z-30 mb-3 rounded-xl border-2 border-accent/50 bg-card/95 backdrop-blur p-3 shadow-xl">
@@ -633,6 +685,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       <div className="flex justify-between items-center flex-wrap gap-2">
         <h2 className="text-2xl font-heading text-accent tracking-wider">STAGE EDITOR</h2>
         <div className="flex gap-2 flex-wrap">
+          {tab === 'editor' && <button onClick={() => setPreviewOpen(true)} className="px-3 py-1 rounded font-heading text-xs bg-cyan-600 text-white">PREVIEW</button>}
           <button onClick={() => setTab('editor')} className={`px-3 py-1 rounded font-heading text-xs ${tab === 'editor' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>EDIT</button>
           <button onClick={() => setTab('stages')} className={`px-3 py-1 rounded font-heading text-xs ${tab === 'stages' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>SEE STAGES ({savedStages.length})</button>
           {tab === 'stages' && <button onClick={() => setShowWorldStages(true)} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="🌍" size={14} /> WORLD STAGES</button>}
@@ -728,6 +781,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           <button onClick={() => setMode('spawn')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'spawn' ? 'bg-green-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>SPAWN</button>
           <button onClick={() => setMode('motion')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'motion' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>MOTION</button>
           <button onClick={() => setMode('perimeter')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'perimeter' ? 'bg-red-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>KO PERIMETER</button>
+          <button onClick={() => setMode('camera')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'camera' ? 'bg-indigo-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>CAMERA</button>
           <button onClick={() => setMode('hazard')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'hazard' ? 'bg-orange-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>HAZARD</button>
           <button onClick={() => setMode('item')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'item' ? 'bg-purple-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>ITEM</button>
           <button onClick={() => setMode('move')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'move' ? 'bg-cyan-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>MOVE</button>
@@ -828,6 +882,28 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           )}
           {mode === 'motion' && (
             <div className="flex items-center gap-2 flex-wrap border border-border rounded-lg px-2 py-1">
+              <span className="text-[10px] font-heading text-accent">TARGET:</span><span className="text-[10px]">{motionTarget ? `${motionTarget.kind.toUpperCase()} #${motionTarget.index + 1}` : 'CLICK A MATERIAL/HAZARD'}</span>
+              <span className="text-[10px] font-heading text-muted-foreground">PATTERN:</span>
+              {['pingpong','chain'].map(v => <button key={v} onClick={() => setMotionPattern(v)} className={`px-2 py-1 rounded text-[10px] border-2 ${motionPattern===v?'border-accent':'border-border'}`}>{v === 'pingpong' ? 'BACK/FORTH' : 'CHAIN'}</button>)}
+              <span className="text-[10px] font-heading text-muted-foreground">DIR:</span>
+              {Object.keys({left:1,right:1,up:1,down:1,upLeft:1,upRight:1,downLeft:1,downRight:1}).map(d => <button key={d} onClick={() => setMotionDirection(d)} className={`px-1.5 py-1 rounded text-[11px] border-2 ${motionDirection===d?'border-accent':'border-border'}`}>{({left:'←',right:'→',up:'↑',down:'↓',upLeft:'↖',upRight:'↗',downLeft:'↙',downRight:'↘'})[d]}</button>)}
+              <span className="text-[10px] font-heading text-muted-foreground">SPD</span><input type="range" min=20 max=500 step=10 value={motionSpeed*100} onChange={e=>setMotionSpeed(Number(e.target.value)/100)} className="w-16"/><span className="text-[9px]">{Math.round(motionSpeed*100)}</span>
+              <span className="text-[10px] font-heading text-muted-foreground">DIST</span><input type="range" min=0 max=1500 step=10 value={motionDistance} onChange={e=>setMotionDistance(Number(e.target.value))} className="w-16"/><span className="text-[9px]">{motionDistance}</span>
+              {motionPattern === 'chain' && <><span className="text-[10px] font-heading text-muted-foreground">LOOP</span><button onClick={()=>setMotionLoop(v=>!v)} className={`px-2 py-1 rounded text-[10px] border-2 ${motionLoop?'border-accent bg-accent/20':'border-border'}`}>{motionLoop?'ON ↻':'OFF'}</button><button onClick={()=>setMotionChain(c=>c.length>=10?c:[...c,makeMotionStep(motionDirection,motionDistance,motionSpeed*100)])} className="px-2 py-1 rounded text-[10px] bg-secondary">+ STEP</button><span className="text-[9px]">{motionChain.length}/10</span><button onClick={()=>setMotionChain(c=>c.length>1?c.slice(0,-1):c)} className="px-2 py-1 rounded text-[10px] bg-secondary">− STEP</button></>}
+              <button onClick={()=>applyMotionToTarget(buildMotion(motionPattern,motionDirection,motionDistance,motionSpeed*100,motionLoop,motionChain))} disabled={!motionTarget} className="px-2 py-1 rounded text-[10px] bg-primary text-primary-foreground disabled:opacity-40">APPLY</button>
+              <button onClick={()=>{if(motionTarget?.kind==='platform')setPlatforms(p=>p.map((q,i)=>i===motionTarget.index?{...q,move:null,motion:null}:q)); if(motionTarget?.kind==='hazard')setHazards(h=>h.map((q,i)=>i===motionTarget.index?{...q,move:null,motion:null}:q));}} disabled={!motionTarget} className="px-2 py-1 rounded text-[10px] bg-destructive text-destructive-foreground disabled:opacity-40">CLEAR</button>
+              <span className="text-[9px] text-muted-foreground">Chain steps are executed in order. Loop continues from the current endpoint instead of snapping back.</span>
+            </div>
+          )}
+          {mode === 'camera' && (
+            <div className="flex items-center gap-2 flex-wrap border border-border rounded-lg px-2 py-1">
+              <b className="text-[10px] text-accent">STAGE CAMERA</b>
+              <span className="text-[10px]">ZOOM</span><input type="range" min=0.5 max=2 step=0.05 value={stageCamera.zoom} onChange={e=>setStageCamera(c=>({...c,zoom:Number(e.target.value)}))} className="w-20"/><span className="text-[9px]">{Math.round(stageCamera.zoom*100)}%</span>
+              <button onClick={()=>setCameraMotionEnabled(v=>!v)} className={`px-2 py-1 rounded text-[10px] border-2 ${cameraMotionEnabled?'border-accent bg-accent/20':'border-border'}`}>{cameraMotionEnabled?'MOTION ON':'MOTION OFF'}</button>
+              {cameraMotionEnabled && <><span className="text-[10px]">{cameraMotionPattern==='pingpong'?'BACK/FORTH':'CHAIN'}</span><select value={cameraMotionDirection} onChange={e=>setCameraMotionDirection(e.target.value)} className="bg-secondary text-xs px-1 py-1 rounded"><option value="left">←</option><option value="right">→</option><option value="up">↑</option><option value="down">↓</option><option value="upLeft">↖</option><option value="upRight">↗</option><option value="downLeft">↙</option><option value="downRight">↘</option></select><select value={cameraMotionPattern} onChange={e=>setCameraMotionPattern(e.target.value)} className="bg-secondary text-xs px-1 py-1 rounded"><option value="pingpong">BACK/FORTH</option><option value="chain">CHAIN</option></select><input type="range" min=20 max=500 step=10 value={cameraMotionSpeed} onChange={e=>setCameraMotionSpeed(Number(e.target.value))} className="w-16"/><input type="range" min=20 max=1500 step=10 value={cameraMotionDistance} onChange={e=>setCameraMotionDistance(Number(e.target.value))} className="w-16"/><button onClick={()=>setCameraMotionLoop(v=>!v)} className="px-2 py-1 rounded text-[10px] border border-border">LOOP {cameraMotionLoop?'ON':'OFF'}</button>{cameraMotionPattern==='chain'&&<button onClick={()=>setCameraMotionChain(c=>c.length>=10?c:[...c,makeMotionStep(cameraMotionDirection,cameraMotionDistance,cameraMotionSpeed)])} className="px-2 py-1 rounded text-[10px] bg-secondary">+ STEP</button>}<span className="text-[9px]">{cameraMotionChain.length}/10</span></>}
+            </div>
+          )}
+
               <span className="text-[10px] font-heading text-muted-foreground">MOVE:</span>
               {['static','horizontal','vertical','oneway'].map(t => (
                 <button key={t} onClick={() => setMotionType(t)} className={`px-2 py-1 rounded font-heading text-[10px] border-2 ${motionType === t ? 'border-accent' : 'border-border'}`} style={{ background: motionType === t ? 'rgba(255,215,0,0.2)' : 'transparent' }}>{t === 'horizontal' ? '← →' : t === 'vertical' ? '↑ ↓' : t === 'oneway' ? 'ONE-WAY' : 'STATIC'}</button>
@@ -846,7 +922,15 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
               <button onClick={() => setPlatforms(platforms.map((p, idx) => idx === selectedMotionId ? { ...p, destroyable: !p.destroyable } : p))} className={`px-2 py-1 rounded font-heading text-[10px] border-2 ${selectedMotionId != null && platforms[selectedMotionId]?.destroyable ? 'border-orange-500 bg-orange-600/30 text-orange-300' : 'border-border'}`} disabled={selectedMotionId == null}>{selectedMotionId != null && platforms[selectedMotionId]?.destroyable ? 'ON 💥' : 'OFF'}</button>
             </div>
           )}
-          {mode === 'spawn' && [0, 1, 2, 3].map(i => (
+          {mode === 'perimeter' && <div className="flex items-center gap-2 flex-wrap border border-red-500/30 rounded-lg px-2 py-1">
+          <span className="text-[10px] font-heading text-red-300">WALL:</span>
+          {['left','right','top','bottom'].map(w => <button key={w} onClick={() => { setPerimeterWall(w); const m = perimeter.motions?.[w]; setPerimeterMotionEnabled(!!m); if (m) { setPerimeterMotionPattern(m.mode === 'pingpong' ? 'pingpong' : 'chain'); setPerimeterMotionDirection(m.direction || m.chain?.[0]?.direction || (w === 'left' || w === 'right' ? 'up' : 'right')); setPerimeterMotionDistance(m.distance || m.chain?.[0]?.distance || 200); setPerimeterMotionSpeed(m.speed || m.chain?.[0]?.speed || 100); setPerimeterMotionLoop(m.loop !== false); setPerimeterMotionChain(m.chain?.length ? m.chain.slice(0,10) : [makeMotionStep(m.direction || 'right', m.distance || 200, m.speed || 100)]); } }} className={`px-2 py-1 rounded text-[10px] border-2 ${perimeterWall===w?'border-red-400 bg-red-500/20':'border-border'}`}>{w.toUpperCase()}</button>)}
+          <button onClick={() => { const next = !perimeterMotionEnabled; setPerimeterMotionEnabled(next); const motions = { ...(perimeter.motions || {}) }; motions[perimeterWall] = next ? { enabled:true, mode:perimeterMotionPattern, direction:perimeterMotionDirection, distance:perimeterMotionDistance, speed:perimeterMotionSpeed, loop:perimeterMotionLoop, chain:perimeterMotionChain.slice(0,10) } : null; setPerimeter(p => ({ ...p, motions })); }} className={`px-2 py-1 rounded text-[10px] border-2 ${perimeterMotionEnabled?'border-accent bg-accent/20':'border-border'}`}>{perimeterMotionEnabled?'MOTION ON':'MOTION OFF'}</button>
+          {perimeterMotionEnabled && <><select value={perimeterMotionPattern} onChange={e => setPerimeterMotionPattern(e.target.value)} className="bg-secondary rounded px-1 py-1 text-[10px]"><option value="pingpong">BACK/FORTH</option><option value="chain">CHAIN</option></select><select value={perimeterMotionDirection} onChange={e => setPerimeterMotionDirection(e.target.value)} className="bg-secondary rounded px-1 py-1 text-[10px]"><option value="left">←</option><option value="right">→</option><option value="up">↑</option><option value="down">↓</option><option value="upLeft">↖</option><option value="upRight">↗</option><option value="downLeft">↙</option><option value="downRight">↘</option></select><input type="range" min=20 max=1500 step=10 value={perimeterMotionDistance} onChange={e=>setPerimeterMotionDistance(Number(e.target.value))} className="w-16"/><input type="range" min=20 max=500 step=10 value={perimeterMotionSpeed} onChange={e=>setPerimeterMotionSpeed(Number(e.target.value))} className="w-16"/><button onClick={()=>{setPerimeterMotionLoop(v=>!v); setPerimeter(p=>({...p,motions:{...(p.motions||{}),[perimeterWall]:{enabled:true,mode:perimeterMotionPattern,direction:perimeterMotionDirection,distance:perimeterMotionDistance,speed:perimeterMotionSpeed,loop:!perimeterMotionLoop,chain:perimeterMotionChain.slice(0,10)}}}))}} className="px-2 py-1 rounded text-[10px] border border-border">LOOP {perimeterMotionLoop?'ON':'OFF'}</button>{perimeterMotionPattern==='chain'&&<button onClick={()=>setPerimeterMotionChain(c=>c.length>=10?c:[...c,makeMotionStep(perimeterMotionDirection,perimeterMotionDistance,perimeterMotionSpeed)])} className="px-2 py-1 rounded text-[10px] bg-secondary">+ STEP</button>}<span className="text-[9px]">{perimeterMotionChain.length}/10</span></>}
+          <button onClick={()=>setPerimeter(p=>({...p,motions:{...(p.motions||{}),[perimeterWall]:null}}))} className="px-2 py-1 rounded text-[10px] bg-destructive text-destructive-foreground">CLEAR WALL MOTION</button>
+          <span className="text-[9px] text-muted-foreground">Each wall has its own motion; walls never move as one group.</span>
+        </div>}
+        {mode === 'spawn' && [0, 1, 2, 3].map(i => (
             <button key={i} onClick={() => setSpawnSelect(i)} className={`px-2 py-1 rounded font-heading text-[10px] ${spawnSelect === i ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`} style={{ color: spawnSelect === i ? '#FFF' : spawnPoints[i].color }}>P{i + 1}</button>
           ))}
           <button onClick={() => setShowGrid(g => !g)} className={`px-3 py-1 rounded font-heading text-xs ${showGrid ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>GRID: {showGrid ? 'ON' : 'OFF'}</button>
@@ -858,7 +942,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           <button onClick={async () => {
             // Platforms/hazards/objects/spawns are stored in game coords (1280×720),
             // so no scaling is needed — they map 1:1 to the match canvas.
-            const stageData = { platforms, name: stageName || 'Custom Stage', emoji: stageEmoji, backdrop, killPerimeter: perimeter, spawnPoints, hazards, objects, _editingIndex: editingIndex, downloaded: isDownloaded, originalOwnerId };
+            const stageData = { platforms, name: stageName || 'Custom Stage', emoji: stageEmoji, backdrop, killPerimeter: perimeter, stageCamera: { ...stageCamera, zoom: Number(stageCamera.zoom || 1), motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null }, cameraZoom: Number(stageCamera.zoom || 1), cameraMotion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null, spawnPoints, hazards, objects, _editingIndex: editingIndex, downloaded: isDownloaded, originalOwnerId };
             onSave(stageData);
             // Auto-publish to world — only for stages you created (downloaded stages stay local)
             if (userId && !isDownloaded) {
@@ -974,6 +1058,9 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       </div>
         </>
       )}
+    {previewOpen && <StagePreview stage={stagePreviewData} onClose={() => setPreviewOpen(false)} onEdit={() => setPreviewOpen(false)} tools={[
+      { id: 'add', label: 'ADD' }, { id: 'select', label: 'SELECT' }, { id: 'move', label: 'MOVE' }, { id: 'motion', label: 'MOTION' }, { id: 'hazard', label: 'HAZARD' }, { id: 'perimeter', label: 'KO PERIMETER' }, { id: 'spawn', label: 'SPAWN' }, { id: 'camera', label: 'CAMERA' }
+    ]} onTool={(id) => { setPreviewOpen(false); setMode(id); }} />}
     </div>
   );
 }

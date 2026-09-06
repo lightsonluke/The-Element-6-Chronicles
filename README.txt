@@ -1,44 +1,17 @@
-ELEMENT 6 CHRONICLES — ONLINE GAMEMODE HARDENING REPLACEMENT
+Element 6 Chronicles — Build Fix v3
 
-Replace these files in the project:
+This is a replacement-files package based on the previous checklist-fixes v2 package.
 
-- BattleRoyaleEngine.jsx
-- BattleRoyaleLobby.jsx
-- battleRoyaleOnline.js
-- OnlineSoccerFight.jsx
-- Supabase-battle-royale-custom-rooms-and-elo-search.sql
+Fixes in this revision:
+- Fixed Sandbox.jsx JSX parse error: the bot difficulty <select> and STOCKS <label> were sibling JSX elements inside one conditional expression without a parent. They are now wrapped in a fragment.
+- Fixed hubRegion.js invalid regular-expression literals caused by over-escaped slash characters.
+- Re-checked the reachable application module graph with the TypeScript parser: 261 reachable modules, 0 syntax errors.
+- Re-checked reachable relative imports: 0 missing local imports.
+- Re-ran TypeScript semantic diagnostics with external-module noise filtered: 0 actionable diagnostics.
 
-IMPORTANT SUPABASE STEP:
-Run the included Supabase-battle-royale-custom-rooms-and-elo-search.sql in the Supabase SQL editor after replacing the files. It adds/updates the Battle Royale lifecycle RPCs used by the new online flow.
+Install:
+1. Unzip this package over the project root.
+2. Replace the existing files when prompted.
+3. Run the normal CI build: pnpm install --no-frozen-lockfile && pnpm build.
 
-WHAT THIS PACKAGE FIXES
-
-1. BATTLE ROYALE IS NOW ACTUALLY SERVER-AUTHORITATIVE DURING GAMEPLAY.
-   - Host owns the simulation.
-   - Guests send input only.
-   - Guests render host snapshots instead of independently simulating.
-   - Variable-duration jump input is preserved as held input rather than being converted into a one-time jump event.
-   - Combat, projectiles, loot, zone damage, eliminations, hazards, moving objects and match state come from the authoritative snapshot.
-
-2. BATTLE ROYALE LIVE GAMEPLAY USES SUPABASE REALTIME BROADCAST.
-   - Gameplay is no longer written to a database row every few frames.
-   - Input is sent at high frequency.
-   - Authoritative snapshots are broadcast at a stable rate.
-   - A low-frequency durable final result remains in the database.
-
-3. BATTLE ROYALE MATCHMAKING USES THE SUPABASE BATTLE-ROYALE QUEUE.
-   - No browser-local localStorage matchmaking.
-   - Multiple devices can join the same online match.
-   - The host's final bot roster/settings are stored in the authoritative match settings.
-
-4. SOCCER ONLINE INPUT SYNC.
-   - Guest held-input state is sent on a fixed cadence with a tick/time stamp.
-   - The host accepts the wrapped input payload.
-   - This preserves jump-button hold duration and other held inputs more reliably than sending only on key changes.
-
-VALIDATION
-
-- Reachable source graph: no missing local imports.
-- Reachable source graph: no syntax errors.
-- Full-source scan still reports two old unreachable files under Element6Chronicles-syntax-fix/; they are not part of the reachable Vite graph. They were not modified by this package.
-- A complete pnpm/vite production build was not run because the provided environment does not contain the project's node_modules installation.
+This package does not include the entire 200MB project; it contains only the files changed by the previous checklist-fixes package plus the two files corrected in this revision.
