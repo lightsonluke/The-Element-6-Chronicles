@@ -132,3 +132,59 @@ language sql security definer set search_path=public as $$
 $$;
 grant execute on function public.create_element6_custom_room(jsonb),public.join_element6_custom_room(text,jsonb),public.find_or_create_element6_battle_royale(jsonb),public.get_element6_elo_leaderboard(text,text) to authenticated;
 commit;
+
+-- Online Battle Royale lifecycle helpers. These keep matchmaking and match
+-- state on Supabase instead of browser-local storage.
+create or replace function public.start_element6_battle_royale(p_match_id uuid, p_settings jsonb default '{}'::jsonb)
+returns public.online_battle_royale_matches language plpgsql security definer set search_path=public as $$
+declare r public.online_battle_royale_matches%rowtype;
+begin
+  select * into r from public.online_battle_royale_matches where id=p_match_id for update;
+  if r.id is null then raise exception 'Match not found'; end if;
+  if r.host_id <> auth.uid() then raise exception 'Only the host can start the match'; end if;
+  if r.status <> 'searching' then return r; end if;
+  update public.online_battle_royale_matches
+    set status='playing', settings=coalesce(p_settings,'{}'::jsonb), updated_at=now()
+    where id=p_match_id returning * into r;
+  return r;
+end $$;
+
+create or replace function public.battle_royale_heartbeat(p_match_id uuid)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+  update public.online_battle_royale_players set joined_at=now()
+  where match_id=p_match_id and user_id=auth.uid();
+  update public.online_battle_royale_matches set updated_at=now()
+  where id=p_match_id and (host_id=auth.uid() or exists(select 1 from public.online_battle_royale_players p where p.match_id=id and p.user_id=auth.uid()));
+end $$;
+
+create or replace function public.leave_element6_battle_royale(p_match_id uuid)
+returns void language plpgsql security definer set search_path=public as $$
+declare v_host uuid;
+begin
+  select host_id into v_host from public.online_battle_royale_matches where id=p_match_id for update;
+  if v_host is null then return; end if;
+  if v_host=auth.uid() then
+    update public.online_battle_royale_matches set status='cancelled',updated_at=now() where id=p_match_id and status in('searching','playing');
+  else
+    delete from public.online_battle_royale_players where match_id=p_match_id and user_id=auth.uid();
+  end if;
+end $$;
+
+grant execute on function public.start_element6_battle_royale(uuid,jsonb), public.battle_royale_heartbeat(uuid), public.leave_element6_battle_royale(uuid) to authenticated;
+
+
+create or replace function public.finish_element6_battle_royale(p_match_id uuid, p_result jsonb default '{}'::jsonb)
+returns public.online_battle_royale_matches language plpgsql security definer set search_path=public as $$
+declare r public.online_battle_royale_matches%rowtype;
+begin
+  select * into r from public.online_battle_royale_matches where id=p_match_id for update;
+  if r.id is null then raise exception 'Match not found'; end if;
+  if r.host_id <> auth.uid() then raise exception 'Only the host can finish the match'; end if;
+  update public.online_battle_royale_matches
+    set status='finished', authoritative_state=jsonb_build_object('result',coalesce(p_result,'{}'::jsonb)), updated_at=now()
+    where id=p_match_id returning * into r;
+  return r;
+end $$;
+
+grant execute on function public.finish_element6_battle_royale(uuid,jsonb) to authenticated;

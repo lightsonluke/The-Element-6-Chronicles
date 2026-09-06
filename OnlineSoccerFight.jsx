@@ -124,7 +124,7 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
       if (!ev?.data || ev.data.id !== matchId) return;
       const m = ev.data;
       if (isHost) {
-        if (m.guest_state) { guestInput = m.guest_state; conn.heartbeat(); }
+        if (m.guest_state) { guestInput = m.guest_state.input || m.guest_state; conn.heartbeat(); }
       } else {
         if (m.host_state) {
           // Reject stale snapshots via SeqNum tick
@@ -150,7 +150,7 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
       try {
         const m = await db.entities.OnlineMatch.get(matchId);
         if (!m) return;
-        if (isHost) { if (m.guest_state) { guestInput = m.guest_state; conn.heartbeat(); } }
+        if (isHost) { if (m.guest_state) { guestInput = m.guest_state.input || m.guest_state; conn.heartbeat(); } }
         else {
           if (m.host_state) {
             const tick = m.host_state._tick || 0;
@@ -214,15 +214,14 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
     };
 
     const sendInput = () => {
-      if (isHost) return;
-      if (Date.now() < rateLimitedUntil) return;
+      if (isHost || Date.now() < rateLimitedUntil) return;
       const input = mergeGp(readPlayerInput(keys, kb.p1), settings?.controllerEnabled !== false ? readGamepadInput(0) : null);
       lastLocalInput = input;
-      const changed = !lastSentInput || Object.keys(input).some(k => input[k] !== lastSentInput[k]);
-      if (changed) {
-        lastSentInput = { ...input };
-        try { db.entities.OnlineMatch.update(matchId, { guest_state: input }).catch(checkRateLimit); } catch {}
-      }
+      netTick = (netTick + 1) & 0xFFFF;
+      // Send the complete held-input state on a fixed cadence, not only when a
+      // key changes. This preserves the actual jump-button hold duration on
+      // the authoritative host and prevents a short jump becoming a full jump.
+      try { db.entities.OnlineMatch.update(matchId, { guest_state: { input, _tick: netTick, _time: Date.now() } }).catch(checkRateLimit); } catch {}
     };
 
     const keys = {};
@@ -365,7 +364,7 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
         if (frameCount % 6 === 0) sendState();
 
       } else {
-        if (frameCount % 6 === 0) sendInput();
+        if (frameCount % 3 === 0) sendInput();
         // Use interpolated state from snapshot buffer when available
         const interpState = snapBuffer.getInterpolated(2);
         const stateSource = interpState || remoteState;
