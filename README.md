@@ -1,27 +1,27 @@
-# Element 6 — Targeted Online Matchmaking + Music Replacement
+# Element 6 Online Gameplay Synchronization Repair v1
 
-THIS IS NOT A WHOLE-GAME REPLACEMENT.
+This is a targeted replacement package for the existing Element 6 project.
 
-Copy/replace ONLY the files in this package in the matching locations of the existing Element 6 project.
+## Included fixes
 
-## Included source fixes
-- Ranked / Unranked OnlineLobby matchmaking lifecycle
-- Rollback online match lifecycle + heartbeat/leave/result reporting
-- Battle Royale queue, deterministic bot roster, stale-match cleanup hooks, heartbeat
-- Battle Royale online leave helper
-- Online Sports active-match heartbeat support
-- Match music seed/full-track selection for online soccer, custom rooms, Banger, Dodgeball, Grand Circuit
-- Full `music.js` seeded track selection
-- Fixes the `camZoom` runtime declaration-order error in RollbackOnlineFight
+- Variable-height jump input is synchronized by simulation tick in rollback matches.
+- Rollback input packets now carry held/pressed/released information so a jump press and release cannot be collapsed into a generic `jumped` event.
+- Ranked/Unranked rollback remains authoritative and checksum/resync based.
+- Battle Royale is host-authoritative: guests no longer run a second independent physics/combat simulation.
+- Battle Royale uses Supabase Realtime Broadcast for frequent input/snapshot traffic, with the database retained only as a low-rate recovery/persistence path.
+- Battle Royale authoritative snapshots include fighter gameplay state, zone, loot, projectiles/attack state, and synchronized environment checkpoints.
+- Custom Rooms use Realtime Broadcast for gameplay input/state and guests render the host-authoritative state instead of maintaining a second independent simulation.
+- Online Soccer uses Realtime Broadcast for frequent held-input and authoritative-state traffic while retaining the database as a low-rate recovery path.
+- Online Soccer and offline Soccer character construction now falls back to the unified character registry, so a CPU/bot using a locked character does not prevent the match from mounting.
 
-## Included SQL
-Only the four SQL files that were actually changed for these matchmaking fixes are included:
-- Supabase-ranked-online-setup.sql
-- Supabase-ranked-unranked-repair.sql
-- Supabase-online-sports-setup.sql
-- Supabase-battle-royale-custom-rooms-and-elo-search.sql
+## Replacement files
 
-Run SQL deliberately in Supabase. Do not replace unrelated database scripts.
+Copy the package files over the matching files in the project root, preserving all other project files.
 
-## Important
-These are full-file replacements for the listed files only. They do not contain the rest of the game.
+No Supabase SQL migration is required for this package; it uses the existing Realtime Broadcast channels already used by the project.
+
+## Validation performed
+
+- JavaScript syntax checks passed for the modified `.js` files.
+- TypeScript parser check with JSX enabled passed for the modified `.jsx` files (`tsc --noEmit --noResolve`).
+- Full Vite production build was not claimed because the supplied project directory does not contain `node_modules`.

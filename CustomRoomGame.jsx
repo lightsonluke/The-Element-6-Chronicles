@@ -20,6 +20,7 @@ import { sfx } from './sfx.js';
 import PauseMenu from './PauseMenu.jsx';
 import { useClipRecorder } from './useClipRecorder.js';
 import { SeqNum, SnapshotBuffer, ConnectionState, NetDiagnostics, serializeFighter, reconcileFighter } from './netCore.js';
+import { openCustomRoomTransport } from './customRoomsOnline.js';
 import GameIcon from "./GameIcon.jsx";
 
 // Merge gamepad input with keyboard so both work simultaneously
@@ -63,8 +64,8 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
     ? room.stage_spawn_points : null;
 
   useEffect(() => {
-    music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.setMatchSeed(room?.id); music.play('fight');
-    return () => { music.clearMatchSeed(); music.stop(); };
+    music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.play('fight');
+    return () => music.stop();
   }, [musicVolume, sfxVolume]);
 
   useEffect(() => {
@@ -128,6 +129,23 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
     // Cloud mode: subscribe + poll CustomRoom entity
     let unsub = null;
     let poll = null;
+    let transport = null;
+    let transportReady = false;
+    transport = openCustomRoomTransport(room.id, {
+      onInput: payload => {
+        if (!isHost || !payload?.playerId || !payload.input) return;
+        guestInputs[payload.playerId] = payload.input;
+        conn.heartbeat();
+      },
+      onSnapshot: payload => {
+        if (isHost || !payload?.state) return;
+        remoteState = payload.state;
+        lastStateSeen = Date.now();
+        conn.heartbeat();
+      },
+    });
+    transportReady = true;
+
     if (lanConnection) {
       lanConnection.onMessage((msg) => {
         if (!msg) return;
@@ -222,12 +240,16 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
       if (Date.now() < rateLimitedUntil) return;
       const input = pausedRef.current ? NO_INPUT : mergeGp(readPlayerInput(keys, kb.p1), gp1);
       lastLocalInput = input;
-      // Only write if input changed since last send (reduces API calls)
+      const packet = { version: 2, roomId: room.id, playerId: myUserId, frame: frameCount, input };
+      if (transportReady) transport.input(packet).catch(() => {});
       const changed = !lastSentInput || Object.keys(input).some(k => input[k] !== lastSentInput[k]);
       if (changed) {
         lastSentInput = { ...input };
         guestInputs[myUserId] = input;
-        try { db.entities.CustomRoom.update(room.id, { guest_inputs: { ...guestInputs } }).catch(checkRateLimit); } catch {}
+        // Low-rate persistence fallback only; gameplay transport is Realtime Broadcast.
+        if (frameCount % 60 === 0) {
+          try { db.entities.CustomRoom.update(room.id, { guest_inputs: { ...guestInputs } }).catch(checkRateLimit); } catch {}
+        }
       }
     };
 
@@ -256,7 +278,11 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
       if (lanConnection) {
         lanConnection.sendMessage({ type: 'state', state: snap });
       } else {
-        try { db.entities.CustomRoom.update(room.id, { game_state: snap }).catch(checkRateLimit); } catch {}
+        if (transportReady) transport.snapshot({ roomId: room.id, state: snap }).catch(() => {});
+        // Low-rate persistence fallback so reconnecting clients can recover the latest state.
+        if (frameCount % 60 === 0) {
+          try { db.entities.CustomRoom.update(room.id, { game_state: snap }).catch(checkRateLimit); } catch {}
+        }
       }
     };
 
@@ -381,7 +407,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         if (lanConnection) {
           if (frameCount % 3 === 0) sendState();
         } else {
-          if (frameCount % 6 === 0) sendState();
+          if (frameCount % 3 === 0) sendState();
         }
 
       } else {
@@ -392,26 +418,22 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
           if (frameCount % 6 === 0) sendInput();
         }
 
-        // Local prediction for responsive controls — simulate own fighter locally
-        // then reconcile with host's authoritative state during render.
-        if (localFighter && localFighter.stocks > 0) {
-          const gp1G = _gpEnabled ? readGamepadInput(0) : null;
-          const scheme = localScheme || 'p2';
-          const input = pausedRef.current ? NO_INPUT : mergeGp(readPlayerInput(keys, kb[scheme]), gp1G);
-          updateFighter(localFighter, input, platforms, W, H, null);
-          // Guest does NOT make authoritative death decisions — just reset position
-          if (localFighter._pendingDeath) localFighter._pendingDeath = false;
-          if (localFighter.x < -150 || localFighter.x > W + 150 || localFighter.y > H + 200) {
-            const rp = localFighter.respawnPoint;
-            localFighter.x = rp ? rp.x : SPAWN_X[myPlayerIdx % 8];
-            localFighter.y = rp ? rp.y : 100;
-            localFighter.vx = 0; localFighter.vy = 0; localFighter.invincible = 90;
+        // Guest gameplay is render-only. The host owns the authoritative simulation;
+        // the guest sends tick-stamped inputs and renders the received state. This
+        // prevents a second independent physics/combat simulation from drifting.
+        if (remoteState?.fighters) {
+          const source = remoteState.fighters;
+          for (let i = 0; i < source.length; i++) {
+            const sf = source[i];
+            const rf = fighters[i];
+            if (!sf || !rf) continue;
+            Object.assign(rf, {
+              x: sf.x, y: sf.y, vx: sf.vx, vy: sf.vy, facing: sf.facing, frame: sf.frame,
+              state: sf.state, grounded: sf.grounded, damage: sf.damage, stocks: sf.stocks,
+              superMeter: sf.superMeter, powerActive: sf.powerActive, invincible: sf.invincible,
+              attackData: sf.attackData, emote: sf.emote, playerName: sf.playerName,
+            });
           }
-        }
-        // Update emote timer for guest's local fighter
-        if (localFighter && localFighter.emote && localFighter.emote.timer > 0) {
-          if (!localFighter.grounded) localFighter.emote = null;
-          else { localFighter.emote.timer--; localFighter.emote.progress = 1 - localFighter.emote.timer / localFighter.emote.maxTimer; if (localFighter.emote.timer <= 0) { if (localFighter.emote.key && keys[localFighter.emote.key]) { localFighter.emote.timer = localFighter.emote.maxTimer; } else { localFighter.emote = null; } } }
         }
       }
 
@@ -450,31 +472,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
           }
         }
         renderFighters = guestRenderFighters || [];
-        // Reconcile local prediction with authoritative state
-        if (localFighter && stateSource?.fighters && stateSource.fighters[myPlayerIdx]) {
-          const authF = stateSource.fighters[myPlayerIdx];
-          reconcileFighter(localFighter, authF, { snapThreshold: 120, lerpRate: 0.3 });
-          // Override the guest's slot with the local fighter for responsive rendering
-          if (guestRenderFighters && guestRenderFighters[myPlayerIdx]) {
-            guestRenderFighters[myPlayerIdx] = {
-              ...guestRenderFighters[myPlayerIdx],
-              x: localFighter.x, y: localFighter.y,
-              vx: localFighter.vx, vy: localFighter.vy,
-              facing: localFighter.facing, frame: localFighter.frame,
-              state: localFighter.state, damage: localFighter.damage,
-              stocks: localFighter.stocks, superMeter: localFighter.superMeter,
-              powerActive: localFighter.powerActive, invincible: localFighter.invincible,
-              attackData: localFighter.attackData ? {
-                type: localFighter.attackData.type, progress: localFighter.attackData.progress,
-                name: localFighter.attackData.name, color: localFighter.attackData.color,
-                isNormal: localFighter.attackData.isNormal, isHeavy: localFighter.attackData.isHeavy,
-                isSuper: localFighter.attackData.isSuper, sigType: localFighter.attackData.sigType,
-                damage: localFighter.attackData.damage, range: localFighter.attackData.range,
-              } : null,
-              emote: localFighter.emote,
-            };
-          }
-        }
+        // No local prediction override: authoritative host state remains the single source of truth.
       }
 
       // Camera: zoom to fit all alive fighters
@@ -607,6 +605,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
     return () => {
       if (unsub) unsub();
       if (poll) clearInterval(poll);
+      if (transport) transport.close();
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
     };

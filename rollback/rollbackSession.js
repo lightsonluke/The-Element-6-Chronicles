@@ -47,6 +47,7 @@ export class RollbackSession {
     this.remoteInputs = new Map();
     this.predictedRemoteInputs = new Map();
     this.localChecksums = new Map();
+    this.lastLocalInputMask = NEUTRAL_INPUT_MASK;
     this.remoteChecksums = new Map();
     this.lastChecksumSent = 0;
     this.stats = { rollbackCount: 0, rolledBackFrames: 0, largestRollback: 0, lateInputs: 0, desyncs: 0 };
@@ -62,7 +63,8 @@ export class RollbackSession {
     const frame = this.currentFrame + this.inputDelay;
     const mask = typeof rawInput === 'number' ? normalizeInputMask(rawInput) : encodeInput(rawInput);
     this.localInputs.set(frame, mask);
-    const packet = makeInputPacket({ matchId: this.matchId, playerId: this.playerId, frame, input: mask });
+    const packet = makeInputPacket({ matchId: this.matchId, playerId: this.playerId, frame, input: mask, previousInput: this.lastLocalInputMask });
+    this.lastLocalInputMask = mask;
     Promise.resolve(this.sendInput(packet)).catch(() => {});
     return packet;
   }
@@ -130,6 +132,7 @@ export class RollbackSession {
     this.confirmedFrame = frame;
     this.stateHistory = new Map([[frame, cloneState(this.state)]]);
     this.localInputs.clear(); this.remoteInputs.clear(); this.predictedRemoteInputs.clear();
+    this.lastLocalInputMask = NEUTRAL_INPUT_MASK;
     this.localChecksums.clear(); this.remoteChecksums.clear(); this.lastChecksumSent = 0;
     for (let offset = 0; offset < this.inputDelay; offset += 1) {
       this.localInputs.set(frame + offset, NEUTRAL_INPUT_MASK);

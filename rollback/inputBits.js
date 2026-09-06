@@ -62,24 +62,29 @@ export function inputsEqual(left, right) {
   return normalizeInputMask(left) === normalizeInputMask(right);
 }
 
-export function makeInputPacket({ matchId, playerId, frame, input }) {
+export function makeInputPacket({ matchId, playerId, frame, input, previousInput = NEUTRAL_INPUT_MASK }) {
   if (!matchId) throw new Error('makeInputPacket requires matchId.');
   if (!playerId) throw new Error('makeInputPacket requires playerId.');
   if (!Number.isSafeInteger(frame) || frame < 0) throw new Error('Input frame must be a non-negative integer.');
 
+  const mask = typeof input === 'number' ? normalizeInputMask(input) : encodeInput(input);
+  const previous = normalizeInputMask(previousInput);
   return {
-    version: 1,
+    version: 2,
     matchId: String(matchId),
     playerId: String(playerId),
     frame,
-    input: typeof input === 'number' ? normalizeInputMask(input) : encodeInput(input),
+    input: mask,
+    previousInput: previous,
+    pressed: mask & ~previous,
+    released: previous & ~mask,
   };
 }
 
 export function isValidInputPacket(packet) {
   return Boolean(
     packet &&
-    packet.version === 1 &&
+    (packet.version === 1 || packet.version === 2) &&
     typeof packet.matchId === 'string' && packet.matchId.length > 0 &&
     typeof packet.playerId === 'string' && packet.playerId.length > 0 &&
     Number.isSafeInteger(packet.frame) && packet.frame >= 0 &&

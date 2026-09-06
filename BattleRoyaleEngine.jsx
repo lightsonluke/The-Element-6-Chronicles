@@ -1,5 +1,5 @@
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
-import { supabase } from './supabaseClient.js';
+import db from './localBackend';
 
 // Battle Royale engine — host-authoritative online mode reusing the existing
 // fighter engine, INSANE bot AI, renderer, and netCore sync primitives.
@@ -27,7 +27,8 @@ import { music } from './music.js';
 import { sfx } from './sfx.js';
 import { SeqNum, ConnectionState } from './netCore.js';
 import { BR_W, BR_H, BR_PLATFORMS, BR_SPAWNS, BR_ZONE, buildInitialLoot, applyLootToFighter, BR_LOOT_TYPES } from './battleRoyaleMap.js';
-import { serializeDestructible } from './brDestructible.js';
+import { openBattleRoyaleTransport } from './battleRoyaleOnline.js';
+import { serializeDestructible, applyDestructibleSync } from './brDestructible.js';
 import { buildMovementItems, updateMovementItems, serializeItems } from './brItems.js';
 import { buildHazards, updateHazards, serializeHazards } from './brHazards.js';
 import { buildObjects, updateObjects, processObjectHits, serializeObjects } from './brObjects.js';
@@ -40,8 +41,8 @@ const ALL = ALL_CHARS;
 const getChar = (id) => ALL.find(c => c.id === id) || ALL[0];
 
 const VIEW_W = 1280, VIEW_H = 720;
-const SYNC_INTERVAL = 50;      // host state broadcast frames (~1.2/sec) — stays under entity write rate limits
-const INPUT_SEND_INTERVAL = 30; // guest input send frames (~2/sec) — sent unconditionally so host always has fresh inputs
+const SYNC_INTERVAL = 3;       // 20 Hz authoritative Realtime Broadcast snapshots
+const INPUT_SEND_INTERVAL = 2; // 30 Hz tick-stamped guest inputs
 const DISCONNECT_TIMEOUT = 12000;
 const RECONNECT_WINDOW = 20000; // grace period before a dropped peer ends the match
 const RATE_LIMIT_PAUSE = 1500;  // ms to pause writes after a rate-limit error (was 4000 — too long, killed sync)
@@ -85,13 +86,13 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
   }, [countdown]);
 
   useEffect(() => {
-    music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.setMatchSeed(matchId); music.play('fight');
-    return () => { music.clearMatchSeed(); music.stop(); };
+    music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.play('fight');
+    return () => music.stop();
   }, [musicVolume, sfxVolume]);
 
   // Mark match active when the fight starts (host owns lifecycle).
   useEffect(() => {
-    // Match lifecycle is owned by the Supabase matchmaking RPC; gameplay uses Realtime broadcast.
+    if (isHost) { try { db.entities.BattleRoyaleMatch.update(matchId, { status: 'playing' }).catch(() => {}); } catch {} }
   }, [matchId, isHost]);
 
   useEffect(() => {
@@ -163,40 +164,54 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
 
     // ── Match state subscription: both clients listen for match-finished signal ──
     let remoteState = null;
+    let brTransport = null;
+    const broadcastGuestInputs = {};
+    let lastAuthoritativeTick = -1;
 
     // Both host and guest run the full simulation locally — no prediction needed.
     const myIdx = players.findIndex(p => p.user_id === myUserId);
 
-    // ── Realtime gameplay transport ──
-    // The host is authoritative. Guests send inputs; the host broadcasts the
-    // canonical state. This removes the old Base44/localBackend dependency.
+    // ── Realtime Broadcast is the gameplay transport. Database writes remain
+    // low-rate persistence/fallback only. This is important for variable-height
+    // jumps and every other held/timed action: inputs carry the simulation tick.
+    brTransport = openBattleRoyaleTransport(matchId, {
+      onInput: payload => {
+        if (!isHost || payload?.matchId !== matchId || !payload?.playerId) return;
+        broadcastGuestInputs[payload.playerId] = { ...(payload.input || {}), _tick: payload.tick || 0 };
+        conn.heartbeat();
+      },
+      onSnapshot: payload => {
+        if (isHost || payload?.matchId !== matchId || !payload?.state) return;
+        remoteState = payload.state;
+        lastAuthoritativeTick = Number(payload.state.tick) || lastAuthoritativeTick;
+        conn.heartbeat();
+      },
+      onPresence: () => conn.heartbeat(),
+    });
+
+    // ── Entity subscription: host reads guest_inputs; guest reads match_state ──
     let latestMatch = null;
-    const remoteInputs = {};
-    let brChannel = null;
-    const subscribeGameplay = () => {
-      brChannel = supabase.channel(`br-game:${matchId}`, { config: { broadcast: { self: false, ack: false } } });
-      brChannel
-        .on('broadcast', { event: 'input' }, ({ payload }) => {
-          if (!isHost || !payload?.sender || payload.sender === myUserId) return;
-          remoteInputs[payload.sender] = payload.message || {};
-          conn.heartbeat();
-        })
-        .on('broadcast', { event: 'state' }, ({ payload }) => {
-          if (isHost || !payload?.state) return;
-          remoteState = payload.state;
-          conn.heartbeat();
-        })
-        .on('broadcast', { event: 'result' }, ({ payload }) => {
-          if (!payload?.result || finished) return;
+    const unsub = db.entities.BattleRoyaleMatch.subscribe((ev) => {
+      if (!ev?.data || ev.data.id !== matchId) return;
+      latestMatch = ev.data;
+      if (ev.data.guest_inputs && Object.keys(ev.data.guest_inputs).length > 0) conn.heartbeat();
+      if (ev.data.status === 'finished' && !finished) {
+        finished = true;
+        setWinner(ev.data.winner ? { name: ev.data.winner, charId: null, ...ev.data.match_state?.result } : { name: '—' });
+      }
+    });
+    const poll = setInterval(async () => {
+      try {
+        const m = await db.entities.BattleRoyaleMatch.get(matchId);
+        if (!m) return;
+        latestMatch = m;
+        if (m.guest_inputs && Object.keys(m.guest_inputs).length > 0) conn.heartbeat();
+        if (m.status === 'finished' && !finished) {
           finished = true;
-          setWinner(payload.result);
-        })
-        .subscribe();
-    };
-    subscribeGameplay();
-    const heartbeatTimer = setInterval(() => {
-      supabase.rpc('element6_battle_royale_heartbeat', { p_match_id: matchId }).catch(() => {});
-    }, 5000);
+          setWinner(m.match_state?.result || { name: m.winner || '—' });
+        }
+      } catch {}
+    }, 1000);
 
     // ── Input ──
     const keys = {};
@@ -231,12 +246,18 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
       })).sort((a, b) => a.placement - b.placement || b.kills - a.kills || a.username.localeCompare(b.username));
       const finalResult = { ...result, standings };
       setWinner(finalResult);
-      try { brChannel?.send({ type: 'broadcast', event: 'result', payload: { result: finalResult } }); } catch {}
+      // Both clients can finalize the match — host is a figurehead
+      try { db.entities.BattleRoyaleMatch.update(matchId, { status: 'finished', winner: finalResult.name, match_state: { ...(latestMatch?.match_state || {}), result: finalResult } }).catch(() => {}); } catch {}
     };
 
     const sendGuestInput = (input) => {
       if (Date.now() < rateLimitedUntil) return;
-      try { brChannel?.send({ type: 'broadcast', event: 'input', payload: { sender: myUserId, message: { ...input, _tick: tick } } }); } catch (e) { checkRate(e); }
+      const packet = { version: 2, matchId, playerId: myUserId, tick, input: { ...input } };
+      brTransport?.input(packet).catch(() => {});
+      // Persistence fallback is deliberately much slower than the gameplay transport.
+      if (tick % 60 === 0) {
+        try { db.entities.BattleRoyaleMatch.update(matchId, { guest_inputs: { ...(latestMatch?.guest_inputs || {}), [myUserId]: { ...input, _tick: tick } } }).catch(checkRate); } catch {}
+      }
     };
 
     // ── Helpers: alive list, nearest opponent, zone update ──
@@ -310,7 +331,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           inp = (f.emote && f.emote.timer > 0) ? NO_INPUT : input; // host local player — emote lock
         } else {
           // remote real player — use their latest sent inputs
-          const gi = remoteInputs[f._userId];
+          const gi = broadcastGuestInputs[f._userId] || latestMatch?.guest_inputs?.[f._userId];
           if (gi) f._lastInputTick = gi._tick || 0;
           inp = gi ? { left: !!gi.left, right: !!gi.right, jump: !!gi.jump, up: !!gi.up, down: !!gi.down, sig: !!gi.sig, power: !!gi.power, superMove: !!gi.superMove, heavy: !!gi.heavy } : { ...NO_INPUT };
         }
@@ -430,7 +451,11 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
         alive: aliveList().length,
         time: matchTime,
       };
-      try { brChannel?.send({ type: 'broadcast', event: 'state', payload: { sender: myUserId, state } }); } catch (e) { checkRate(e); }
+      if (brTransport) brTransport.snapshot({ matchId, state }).catch(() => {});
+      // Low-rate persistence fallback / reconnect checkpoint.
+      if (frameCount % 120 === 0 || frameCount <= 1) {
+        try { db.entities.BattleRoyaleMatch.update(matchId, { match_state: state }).catch(checkRate); } catch {}
+      }
     };
 
     // ── Render ──
@@ -533,19 +558,6 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
     let frameCount = 0;
     let lastSentInput = null;
 
-    const applyRemoteState = state => {
-      if (!state?.fighters) return;
-      const byIdx = new Map(state.fighters.map(f => [f.idx, f]));
-      for (const f of fighters) {
-        const r = byIdx.get(f.playerIndex);
-        if (!r) continue;
-        Object.assign(f, { x:r.x, y:r.y, vx:r.vx, vy:r.vy, facing:r.facing, frame:r.frame, state:r.state, grounded:r.grounded, damage:r.damage, hp:r.hp, stocks:r.stocks, superMeter:r.superMeter, powerActive:r.powerActive, invincible:r.invincible, _eliminated:!!r.eliminated, _placement:r.placement, _lastInputTick:r.inputTick, _accessories:r.accs || [], attackData:r.attackData || null, _portalEffect:r.portalEffect || null, _dashSlashEffect:r.dashSlash || null });
-        f.projectiles = r.projectiles || [];
-      }
-      if (state.zone) Object.assign(zone, state.zone);
-      if (Array.isArray(state.loot)) loot = state.loot.map(x => ({ ...x }));
-    };
-
     const loop = (now) => {
       if (finished) return;
       const dt = Math.min((now - lastTime) / 1000, 0.05); lastTime = now;
@@ -559,20 +571,43 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
       const rawInput = mergeGp(readPlayerInput(keys, kb.p1), gp);
       const input = pausedRef.current ? { ...NO_INPUT } : rawInput;
 
-      if (!isHost && frameCount % INPUT_SEND_INTERVAL === 0) {
+      // HOST is the only gameplay simulator. Guests send exact held-input
+      // state every few frames and render the host's authoritative state.
+      if (frameCount % INPUT_SEND_INTERVAL === 0) {
         const snap = { left: input.left, right: input.right, jump: input.jump, up: input.up, down: input.down, sig: input.sig, power: input.power, superMove: input.superMove, heavy: input.heavy };
-        sendGuestInput(snap);
+        if (!isHost) sendGuestInput(snap);
       }
       if (isHost) {
         hostStep(dt, input);
         if (frameCount === 1 || frameCount % SYNC_INTERVAL === 0) broadcast();
-      } else if (remoteState) {
-        applyRemoteState(remoteState);
+      } else if (remoteState?.fighters) {
+        // Apply the complete authoritative fighter state before rendering.
+        for (const sf of remoteState.fighters) {
+          const f = fighters[sf.idx];
+          if (!f) continue;
+          Object.assign(f, {
+            x: sf.x, y: sf.y, vx: sf.vx, vy: sf.vy, facing: sf.facing, frame: sf.frame,
+            state: sf.state, grounded: sf.grounded, damage: sf.damage, hp: sf.hp, stocks: sf.stocks,
+            superMeter: sf.superMeter, powerActive: sf.powerActive, invincible: sf.invincible,
+            _eliminated: sf.eliminated, _placement: sf.placement, _lastInputTick: sf.inputTick,
+            attackData: sf.attackData, projectiles: sf.projectiles || [], emote: sf.emote,
+          });
+        }
+        if (remoteState.zone) Object.assign(zone, remoteState.zone);
+        if (Array.isArray(remoteState.loot)) loot = remoteState.loot.map(l => ({ ...l }));
+        if (Array.isArray(remoteState.brSections)) applyDestructibleSync(brSections, remoteState.brSections);
+        // Rebuild the serialized environment state into the fixed local shells.
+        if (Array.isArray(remoteState.brItems)) remoteState.brItems.forEach((ri, i) => { if (brItems[i]) { brItems[i].cooldown = ri.cd || 0; brItems[i]._activateTimer = ri.at || 0; } });
+        if (remoteState.brHazards) {
+          const hz = remoteState.brHazards;
+          if (Array.isArray(hz.fire)) hz.fire.forEach((v,i)=>{ if(brHazards.fire[i]) Object.assign(brHazards.fire[i],{x:v.x,y:v.y,w:v.w}); });
+          if (Array.isArray(hz.electric)) hz.electric.forEach((v,i)=>{ if(brHazards.electric[i]) Object.assign(brHazards.electric[i],{x:v.x,y:v.y,w:v.w,pulseTimer:v.p||0}); });
+          if (Array.isArray(hz.moving)) hz.moving.forEach((v,i)=>{ if(brHazards.moving[i]) Object.assign(brHazards.moving[i],{x:v.x,y:v.y}); });
+          if (Array.isArray(hz.water)) hz.water.forEach((v,i)=>{ if(brHazards.water[i]) Object.assign(brHazards.water[i],{x:v.x,y:v.y,w:v.w}); });
+        }
       }
 
       // ── Determine the state to render ──
-      // Guests render the latest authoritative host snapshot instead of
-      // running a second independent BR simulation.
       const me = fighters.find(f => f._userId === myUserId);
       const localFighter = (me && !me._eliminated) ? me : null;
 
@@ -746,7 +781,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
     return () => {
       unsub && unsub();
       clearInterval(poll);
-      clearInterval(heartbeatTimer);
+      brTransport?.close();
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
     };
@@ -755,7 +790,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
   iAmEliminatedRef.current = iAmEliminated;
 
   const handleQuit = () => {
-    try { brChannel?.send({ type: 'broadcast', event: 'result', payload: { result: { name: '—' } } }); } catch {}
+    try { db.entities.BattleRoyaleMatch.update(matchId, { status: 'finished', winner: '—' }).catch(() => {}); } catch {}
     onEnd?.({ won: false, disconnected: true });
   };
 

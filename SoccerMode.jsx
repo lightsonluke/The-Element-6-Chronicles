@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { HEROES } from './heroes.js';
-import { VILLAINS } from './villains.js';
+import { PLAYABLE as SPORTS_PLAYABLE } from './sports.js';
 import { getCharNumber } from './characterNumber.js';
 import { withCustomChars } from './characterNumber.js';
 import SoccerFighter from './SoccerFighter.jsx';
@@ -11,8 +10,7 @@ import GroupTournament from './GroupTournament.jsx';
 import UniversalCharacterSelect from './UniversalCharacterSelect.jsx';
 import GameIcon from "./GameIcon.jsx";
 
-const BASE_ALL = [...HEROES, ...VILLAINS];
-const ALL = [...HEROES, ...VILLAINS];
+const BASE_ALL = SPORTS_PLAYABLE;
 
 export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePlay, unlockedIds, favoriteId, sfxVolume = 70, musicVolume = 50, equippedAccessories = {}, equippedSkins = {}, settings = {}, charLevels = {}, equippedElements = {}, onEquipElement, customCharsData = {}, customNumberMap = {}, equippedCrossovers = {}, equippedShikigami = {}, ownedAccessories = [], onEquipAccessory, equippedEmotes = {} }) {
   const ALL = withCustomChars(BASE_ALL, customCharsData, customNumberMap);
@@ -76,20 +74,20 @@ export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePla
 
   const unlockedSet = new Set(unlockedIds || ['yellow']);
 
-  const handleStart = (mode, selectedP1 = p1, selectedP2 = p2, selectedP1b = p1b) => {
+  const handleStart = (mode) => {
     setP1IsCPU(false);
     setGameMode(mode);
     if (mode === 'tournament') {
-      const pool = ALL.filter(c => c.id !== selectedP1 && c.id !== 'evil');
+      const pool = ALL.filter(c => c.id !== p1 && c.id !== 'evil');
       const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, 15);
-      setBracket({ slots: [selectedP1, ...shuffled], results: {}, currentRound: 0 });
+      setBracket({ slots: [p1, ...shuffled], results: {}, currentRound: 0 });
       setPhase('bracket');
     } else {
       // Populate this synchronously before changing screens.  The old code
       // waited for an effect, leaving one render where SoccerFighter had no
       // opponent and returned a completely blank page.
       if (mode === '2v2') {
-        const pool = ALL.filter(c => c.id !== 'evil' && c.id !== selectedP1 && c.id !== selectedP1b);
+        const pool = ALL.filter(c => c.id !== 'evil' && c.id !== p1 && c.id !== p1b);
         const first = pool[Math.floor(Math.random() * pool.length)]?.id || 'blue';
         const secondPool = pool.filter(c => c.id !== first);
         const second = secondPool[Math.floor(Math.random() * secondPool.length)]?.id || first;
@@ -408,7 +406,7 @@ export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePla
         defaultCPUDifficulty={cpuDifficulty}
         onStart={(c1, c2, p2cpu, diff) => {
           setP1(c1); setP2(c2); setP2IsCPU(p2cpu); if (diff) setCpuDifficulty(diff);
-          handleStart(gameMode, c1, c2, p1b);
+          handleStart(gameMode);
         }}
         onBack={onBack}
         extraControls={

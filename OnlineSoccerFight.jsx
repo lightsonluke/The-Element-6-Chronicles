@@ -4,6 +4,7 @@ import db from './localBackend';
 import React, { useRef, useEffect, useState } from 'react';
 
 import { HEROES } from './heroes.js';
+import { ALL_CHARS } from './allCharacters.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { createFighter, updateFighter } from './fighter.js';
@@ -26,6 +27,7 @@ import { music } from './music.js';
 import { sfx } from './sfx.js';
 import PauseMenu from './PauseMenu.jsx';
 import { SnapshotBuffer, ConnectionState, SeqNum, NetDiagnostics } from './netCore.js';
+import { supabase } from './supabaseClient.js';
 
 const W = 1280, H = 720;
 const WALL_TOP = 200, WALL_GAP_TOP = 480, WALL_GAP_BOT = 620;
@@ -41,8 +43,8 @@ const SOCCER_PLATFORMS = [
   { x: 1240, y: WALL_TOP, w: 20, h: WALL_GAP_TOP - WALL_TOP },
 ];
 const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
-const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
-const getCharData = (id) => ALL.find(c => c.id === id);
+const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS, ...ALL_CHARS];
+const getCharData = (id) => ALL.find(c => c.id === id) || ALL_CHARS.find(c => c.id === id) || ALL_CHARS.find(c => c.id === 'yellow') || HEROES[0];
 
 export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLoadout, oppLoadout, sfxVolume = 70, musicVolume = 50, settings = {}, onEnd, equippedEmotes = {} }) {
   const canvasRef = useRef(null);
@@ -63,8 +65,8 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
   }, [countdown]);
 
   useEffect(() => {
-    music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.setMatchSeed(matchId); music.play('soccer');
-    return () => { music.clearMatchSeed(); music.stop(); };
+    music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.play('soccer');
+    return () => music.stop();
   }, [musicVolume, sfxVolume]);
 
   useEffect(() => {
@@ -119,6 +121,33 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
     diag.roomId = matchId;
     diag.playerNetId = isHost ? 'host' : 'guest';
     let netTick = 0;
+    let gameplayChannel = null;
+    let gameplayChannelReady = false;
+
+    gameplayChannel = supabase.channel(`element6-soccer:${matchId}`, { config: { broadcast: { self: false, ack: false } } });
+    gameplayChannel
+      .on('broadcast', { event: 'input' }, ({ payload }) => {
+        if (!isHost && payload?.matchId === matchId) return;
+        if (isHost && payload?.matchId === matchId && payload?.playerId !== 'host') {
+          guestInput = payload.input || NO_INPUT;
+          lastStateSeen = Date.now();
+          conn.heartbeat();
+        }
+      })
+      .on('broadcast', { event: 'snapshot' }, ({ payload }) => {
+        if (isHost || payload?.matchId !== matchId || !payload?.state) return;
+        const state = payload.state;
+        const tick = state._tick || 0;
+        if (SeqNum.is_newer(tick, lastStateTick)) {
+          lastStateTick = tick;
+          remoteState = state;
+          lastStateSeen = Date.now();
+          conn.heartbeat();
+          diag.recordSnapshot(tick, Date.now() - (state._ts || Date.now()));
+          snapBuffer.add(tick, state, Date.now());
+        }
+      })
+      .subscribe(status => { gameplayChannelReady = status === 'SUBSCRIBED'; });
 
     const unsub = db.entities.OnlineMatch.subscribe((ev) => {
       if (!ev?.data || ev.data.id !== matchId) return;
@@ -209,7 +238,13 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
       if (changed) {
         lastSentState = snap;
         diag.currentTick = netTick;
-        try { db.entities.OnlineMatch.update(matchId, { host_state: snap }).catch(checkRateLimit); } catch {}
+        if (gameplayChannelReady) {
+          gameplayChannel.send({ type: 'broadcast', event: 'snapshot', payload: { matchId, state: snap } }).catch(() => {});
+        }
+        // Low-rate recovery checkpoint only.
+        if (frameCount % 60 === 0) {
+          try { db.entities.OnlineMatch.update(matchId, { host_state: snap }).catch(checkRateLimit); } catch {}
+        }
       }
     };
 
@@ -219,7 +254,10 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
       const input = mergeGp(readPlayerInput(keys, kb.p1), settings?.controllerEnabled !== false ? readGamepadInput(0) : null);
       lastLocalInput = input;
       const changed = !lastSentInput || Object.keys(input).some(k => input[k] !== lastSentInput[k]);
-      if (changed) {
+      if (gameplayChannelReady) {
+        gameplayChannel.send({ type: 'broadcast', event: 'input', payload: { version: 2, matchId, playerId: 'guest', frame: frameCount, input } }).catch(() => {});
+      }
+      if (changed && frameCount % 60 === 0) {
         lastSentInput = { ...input };
         try { db.entities.OnlineMatch.update(matchId, { guest_state: input }).catch(checkRateLimit); } catch {}
       }
@@ -362,10 +400,10 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
           }
         }
 
-        if (frameCount % 6 === 0) sendState();
+        if (frameCount % 3 === 0) sendState();
 
       } else {
-        if (frameCount % 6 === 0) sendInput();
+        if (frameCount % 2 === 0) sendInput();
         // Use interpolated state from snapshot buffer when available
         const interpState = snapBuffer.getInterpolated(2);
         const stateSource = interpState || remoteState;
@@ -533,6 +571,7 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
     return () => {
       unsub && unsub();
       clearInterval(poll);
+      if (gameplayChannel) supabase.removeChannel(gameplayChannel);
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
     };

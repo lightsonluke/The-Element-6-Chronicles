@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { HEROES } from './heroes.js';
+import { ALL_CHARS } from './allCharacters.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, CPU_DIFFICULTY } from './fighter.js';
@@ -133,7 +134,14 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
     return () => { if (lanConnection.stopStream) lanConnection.stopStream(); };
   }, [enableStream, lanConnection]);
 
-  const getCharData = (id) => customCharsData[id] || ALL_CHARS.find(c => c.id === id) || HEROES.find(h => h.id === id) || VILLAINS.find(v => v.id === id) || GUARDIANS.find(g => g.id === id);
+  const getCharData = (id) => {
+    const found = customCharsData[id] || HEROES.find(h => h.id === id) || VILLAINS.find(v => v.id === id) || GUARDIANS.find(g => g.id === id) || ALL_CHARS.find(c => c.id === id);
+    if (found) return found;
+    // A bot may use a locked/unowned character. Gameplay construction must never
+    // depend on the human player's unlock list, so fall back to a valid roster
+    // character instead of returning null and aborting the entire match mount.
+    return ALL_CHARS.find(c => c.id === 'yellow') || HEROES[0];
+  };
 
   useEffect(() => {
     music.setVolume(musicVolume);
@@ -162,9 +170,12 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
     const char1 = getCharData(p1Char);
     const char2 = getCharData(p2Char);
     if (!char1 || !char2) return;
+    // Never gate CPU/bot character construction on unlock ownership.
+    const safeChar1 = { ...char1, stats: char1.stats || {}, color: char1.color || '#FFD700', name: char1.name || 'Yellow' };
+    const safeChar2 = { ...char2, stats: char2.stats || {}, color: char2.color || '#AA44FF', name: char2.name || 'Opponent' };
 
-    const f1 = createFighter({ ...char1, stats: applyElement(char1.stats || {}, p1Element) }, 300, 572, 1);
-    const f2 = createFighter({ ...char2, stats: applyElement(char2.stats || {}, p2Element) }, 980, 572, -1);
+    const f1 = createFighter({ ...safeChar1, stats: applyElement(safeChar1.stats || {}, p1Element) }, 300, 572, 1);
+    const f2 = createFighter({ ...safeChar2, stats: applyElement(safeChar2.stats || {}, p2Element) }, 980, 572, -1);
     f1.grounded = true; f2.grounded = true;
     f2.isAI = p2IsCPU;
     f1.isAI = p1IsCPU;
