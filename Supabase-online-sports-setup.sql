@@ -61,16 +61,36 @@ alter table public.online_sport_players enable row level security;
 alter table public.online_sport_ratings enable row level security;
 alter table public.online_sport_result_reports enable row level security;
 
+-- Avoid recursive RLS evaluation: policies must not query online_sport_players
+-- directly while that same table's RLS policy is being evaluated.
+create or replace function public.is_online_sport_participant(p_match_id uuid, p_user_id uuid default auth.uid())
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1
+    from public.online_sport_players p
+    where p.match_id = p_match_id
+      and p.user_id = p_user_id
+  );
+$$;
+
+revoke all on function public.is_online_sport_participant(uuid, uuid) from public;
+grant execute on function public.is_online_sport_participant(uuid, uuid) to authenticated;
+
 drop policy if exists "sport participants can view matches" on public.online_sport_matches;
 create policy "sport participants can view matches" on public.online_sport_matches
   for select to authenticated using (
-    exists (select 1 from public.online_sport_players p where p.match_id = id and p.user_id = auth.uid())
+    public.is_online_sport_participant(id, auth.uid())
   );
 
 drop policy if exists "sport participants can view players" on public.online_sport_players;
 create policy "sport participants can view players" on public.online_sport_players
   for select to authenticated using (
-    exists (select 1 from public.online_sport_players mine where mine.match_id = online_sport_players.match_id and mine.user_id = auth.uid())
+    public.is_online_sport_participant(match_id, auth.uid())
   );
 
 drop policy if exists "sport ratings readable" on public.online_sport_ratings;
