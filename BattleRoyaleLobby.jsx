@@ -15,26 +15,12 @@ import GameIcon from './GameIcon.jsx';
 import PrematchAnimation from './PrematchAnimation.jsx';
 import { getEquippedAccessories } from './cosmetics.js';
 import { supabase } from './supabaseClient.js';
-import { leaveBattleRoyaleMatch } from './battleRoyaleOnline.js';
 
 const MAX_PLAYERS = 50;
 const MATCHMAKE_SECONDS = 60;
 const ALL = ALL_CHARS;
 const randChar = () => ALL[Math.floor(Math.random() * ALL.length)].id;
 const BOT_DIFFICULTIES = ['newcomer', 'beginner', 'easy', 'amateur', 'regular', 'pro', 'hard', 'insane', 'honored'];
-
-function seededRandom(seed) { let x = (Number(seed) >>> 0) || 0x6d2b79f5; return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296; }; }
-function buildBattleRoyaleRoster(realPlayers, matchRow, maxCount = 50) {
-  const real = [...(realPlayers || [])].sort((a, b) => Number(a.player_slot || 0) - Number(b.player_slot || 0));
-  const count = Math.max(1, Math.min(50, Number(matchRow?.max_players || maxCount || 50)));
-  const rand = seededRandom(matchRow?.random_seed || matchRow?.id || 1);
-  const roster = real.slice(0, count);
-  for (let i = roster.length; i < count; i += 1) {
-    const char = ALL[Math.floor(rand() * ALL.length)] || ALL[0];
-    roster.push({ user_id: `bot:${matchRow.id}:${i + 1}`, username: `BOT ${String(i + 1).padStart(2, '0')}`, char_id: char.id, element: 'basic', accessories: [], player_slot: i + 1, is_bot: true });
-  }
-  return roster;
-}
 
 export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favoriteId, equippedElements = {}, equippedAccessories = {}, equippedSkins = {}, charLevels = {}, settings = {}, sfxVolume = 70, musicVolume = 50, onEquipElement, equippedShikigami = {}, equippedEmotes = {} }) {
   const [me, setMe] = useState(null);
@@ -88,9 +74,8 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
           char_id: p.loadout?.character_id || 'yellow', element: p.loadout?.element || 'basic',
           is_bot: false, accessories: p.loadout?.accessories || [], player_slot: p.player_slot,
         }));
-        const roster = buildBattleRoyaleRoster(mapped, m, Number(m.max_players || maxPlayers));
-        setMatch(m); setPlayers(roster);
-        if (m.status === 'playing' && !startedRef.current) startEngine({ ...m, players: roster });
+        setMatch(m); setPlayers(mapped);
+        if (m.status === 'playing' && !startedRef.current) startEngine({ ...m, players: mapped });
         if (m.status === 'finished' && phase !== 'fight') { setError('Match ended.'); setPhase('pick'); }
       } catch {}
     };
@@ -106,12 +91,10 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
 
   const startEngine = useCallback((m) => {
     startedRef.current = true;
-    const sourcePlayers = Array.isArray(m?.players) && m.players.length ? m.players : players;
-    const roster = buildBattleRoyaleRoster(sourcePlayers, m, Number(m?.max_players || maxPlayers));
-    setPlayers(roster);
+    setPlayers(m.players || []);
     setPhase('prematch');
     sfx.matchFound();
-  }, [players, maxPlayers]);
+  }, []);
 
   // Matchmaking countdown (host only): when it hits 0, fill bots + start.
   useEffect(() => {
@@ -121,7 +104,7 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
     const t = setInterval(() => {
       const left = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
       setCountdown(left);
-      const realPlayers = Math.max(1, players.filter(p => !p.is_bot).length);
+      const realPlayers = (matchRef.current?.players || []).filter(p => !p.is_bot).length;
       if (left <= 0 || realPlayers >= maxPlayers) {
         clearInterval(t);
         beginMatch();
@@ -129,7 +112,7 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
     }, 500);
     return () => clearInterval(t);
     // eslint-disable-next-line
-  }, [phase, role, matchId, players, maxPlayers]);
+  }, [phase, role, matchId]);
 
   const findMatch = async (charId) => {
     if (!me) { setError('Not signed in.'); return; }
@@ -153,6 +136,21 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
     }
   };
 
+  // Host starts the match after the configured search window. The SQL RPC
+  // guarantees atomic queue matching, so there is no client-side create/join race.
+  useEffect(() => {
+    if (phase !== 'queue' || role !== 'host' || !matchId) return;
+    setCountdown(MATCHMAKE_SECONDS);
+    deadlineRef.current = Date.now() + MATCHMAKE_SECONDS * 1000;
+    const t = setInterval(async () => {
+      const left = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
+      setCountdown(left);
+      if (left <= 0) { clearInterval(t); await beginMatch(); }
+    }, 500);
+    return () => clearInterval(t);
+    // eslint-disable-next-line
+  }, [phase, role, matchId]);
+
   const beginMatch = async () => {
     if (!matchId || role !== 'host' || startedRef.current) return;
     try {
@@ -165,8 +163,8 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
   };
 
   const cancelSearch = async () => {
-    if (matchId) { try { await leaveBattleRoyaleMatch(matchId); } catch {} }
-    setMatchId(null); setMatch(null); setPlayers([]); setPhase('pick');
+    if (matchId) { try { await db.entities.BattleRoyaleMatch.update(matchId, { status: 'finished' }); } catch {} }
+    setMatchId(null); setMatch(null); setPhase('pick');
   };
 
   if (phase === 'prematch' && matchId) {
@@ -192,7 +190,7 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
     );
   }
 
-  const realCount = Math.max(1, players.filter(p => !p.is_bot).length);
+  const realCount = players.filter(p => !p.is_bot).length;
   const botCount = players.filter(p => p.is_bot).length;
 
   return (

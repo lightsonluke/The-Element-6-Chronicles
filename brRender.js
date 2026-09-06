@@ -677,7 +677,16 @@ export function drawObjects(ctx, objects, frameCount) {
     ctx.rotate(obj._rot || 0);
     const size = obj.w;
 
-    if (obj.type === 'heavy') {
+    if (obj.type === 'ball') {
+      const g = ctx.createRadialGradient(-size*0.2,-size*0.25,2,0,0,size/2);
+      g.addColorStop(0,'#FF7777'); g.addColorStop(0.45,'#E53935'); g.addColorStop(1,'#9E1B1B');
+      ctx.fillStyle=g; ctx.strokeStyle='#5C0F0F'; ctx.lineWidth=3;
+      ctx.shadowColor='#FF3333'; ctx.shadowBlur=10;
+      ctx.beginPath(); ctx.arc(0,0,size/2,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.shadowBlur=0;
+      ctx.fillStyle='rgba(255,255,255,0.38)'; ctx.beginPath(); ctx.arc(-size*.18,-size*.2,size*.12,0,Math.PI*2); ctx.fill();
+    }
+
+    else if (obj.type === 'heavy') {
       // Heavy crate — dark wood with metal bands
       const g = ctx.createLinearGradient(-size / 2, -size / 2, size / 2, size / 2);
       g.addColorStop(0, '#9a8060');
