@@ -1,4 +1,3 @@
-import db from './localBackend';
 
 // Battle Royale lobby — character select (reuses UniversalCharacterSelect),
 // online matchmaking via the BattleRoyaleMatch entity, then bot-fill + start.
@@ -29,6 +28,7 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
   const [myElement, setMyElement] = useState(equippedElements?.[favoriteId || 'yellow'] || 'basic');
   const [phase, setPhase] = useState('pick'); // pick | element | queue | prematch | fight
   const [matchId, setMatchId] = useState(null);
+  const [slot, setSlot] = useState(1);
   const [role, setRole] = useState('host');
   const [match, setMatch] = useState(null);
   const [players, setPlayers] = useState([]);
@@ -52,44 +52,40 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
     return () => music.stop();
   }, [musicVolume, sfxVolume]);
 
-  // When entering the element phase, check whether any open match exists.
-  // If one exists you will JOIN as a guest (host controls settings); otherwise
-  // you will CREATE as the host and your settings apply.
   useEffect(() => {
     if (phase !== 'element' || !me) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const open = await db.entities.BattleRoyaleMatch.filter({ status: 'searching' });
-        const joinable = (open || []).filter(c => c.host_user_id !== me.id);
-        if (!cancelled) setWillBeHost(joinable.length === 0);
-      } catch {}
-    })();
-    return () => { cancelled = true; };
+    setWillBeHost(true);
   }, [phase, me]);
 
-  // Subscribe to the active match for player-count updates + start signal.
+  // Subscribe to the active Supabase match and participant rows.
   useEffect(() => {
     if (!matchId) return;
     matchIdRef.current = matchId;
-    let unsub = () => {};
+    let active = true;
     const refresh = async () => {
       try {
-        const m = await db.entities.BattleRoyaleMatch.get(matchId);
-        if (m) { setMatch(m); setPlayers(m.players || []); if (m.status === 'active' && !startedRef.current) startEngine(m); }
+        const [{ data: m }, { data: ps }] = await Promise.all([
+          supabase.from('online_battle_royale_matches').select('*').eq('id', matchId).maybeSingle(),
+          supabase.from('online_battle_royale_players').select('*').eq('match_id', matchId).order('player_slot'),
+        ]);
+        if (!active || !m) return;
+        const mapped = (ps || []).map(p => ({
+          user_id: p.user_id, username: p.loadout?.username || (p.user_id === me?.id ? 'You' : 'Player'),
+          char_id: p.loadout?.character_id || 'yellow', element: p.loadout?.element || 'basic',
+          is_bot: false, accessories: p.loadout?.accessories || [], player_slot: p.player_slot,
+        }));
+        setMatch(m); setPlayers(mapped);
+        if (m.status === 'playing' && !startedRef.current) startEngine({ ...m, players: mapped });
+        if (m.status === 'finished' && phase !== 'fight') { setError('Match ended.'); setPhase('pick'); }
       } catch {}
     };
     refresh();
-    try {
-      unsub = db.entities.BattleRoyaleMatch.subscribe((ev) => {
-        if (!ev?.data || ev.data.id !== matchId) return;
-        const m = ev.data; setMatch(m); setPlayers(m.players || []);
-        if (m.status === 'active' && !startedRef.current) startEngine(m);
-        if (m.status === 'finished' && phase !== 'fight') { setError('Match ended.'); setPhase('pick'); }
-      });
-    } catch {}
-    const poll = setInterval(refresh, 1000);
-    return () => { unsub(); clearInterval(poll); };
+    const channel = supabase.channel(`br-match:${matchId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'online_battle_royale_matches', filter: `id=eq.${matchId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'online_battle_royale_players', filter: `match_id=eq.${matchId}` }, refresh)
+      .subscribe();
+    const poll = setInterval(refresh, 1500);
+    return () => { active = false; clearInterval(poll); supabase.removeChannel(channel); };
     // eslint-disable-next-line
   }, [matchId]);
 
@@ -118,103 +114,52 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
     // eslint-disable-next-line
   }, [phase, role, matchId]);
 
-  const tryJoinExisting = async (char, afterMs = 0) => {
-    if (!me) return false;
-    const candidates = await db.entities.BattleRoyaleMatch.filter({ status: 'searching' });
-    const now = Date.now();
-    const joinable = (candidates || [])
-      .filter(c => c.host_user_id !== me.id && c.id !== matchIdRef.current)
-      .filter(c => (c.players || []).length < (c.max_players || MAX_PLAYERS))
-      .filter(c => {
-        const created = c.created_date ? new Date(c.created_date).getTime() : 0;
-        return (!c.created_date || now - created < 60000) && created > afterMs;
-      })
-      .sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
-    for (const c of joinable) {
-      try {
-        const existing = await db.entities.BattleRoyaleMatch.get(c.id);
-        const cur = existing?.players || [];
-        if (cur.length >= (c.max_players || MAX_PLAYERS)) continue;
-        await db.entities.BattleRoyaleMatch.update(c.id, { players: [...cur, { user_id: me.id, username: me.full_name || (me.email || 'Player').split('@')[0], char_id: char, element: myElement, is_bot: false, accessories: getEquippedAccessories(equippedAccessories, char) }] });
-        // Guest adopts the host's room settings for the engine + queue UI.
-        const s = existing?.settings || {};
-        if (s.botDifficulty) setBotDifficulty(s.botDifficulty);
-        if (existing?.max_players) setMaxPlayers(existing.max_players);
-        setMatchId(c.id); setRole('guest'); setMatch(existing); return true;
-      } catch {}
-    }
-    return false;
-  };
-
   const findMatch = async (charId) => {
     if (!me) { setError('Not signed in.'); return; }
     const char = charId || myChar;
     if (charId) setMyChar(charId);
-    setError(null); startedRef.current = false;
-    setPhase('queue');
+    setError(null); startedRef.current = false; setPhase('queue');
     try {
-      // Clean stale searching matches in a single call (non-blocking)
-      try { await db.entities.BattleRoyaleMatch.updateMany({ status: 'searching', host_user_id: me.id }, { $set: { status: 'finished' } }); } catch {}
-      // Try to join an existing open match
-      let joined = false;
-      try { joined = await tryJoinExisting(char); } catch {}
-      if (joined) return;
-      const brSettings = { botDifficulty };
-      const playerEntry = { user_id: me.id, username: me.full_name || (me.email || 'Player').split('@')[0], char_id: char, element: myElement, is_bot: false, accessories: getEquippedAccessories(equippedAccessories, char) };
-      const created = await db.entities.BattleRoyaleMatch.create({
-        status: 'searching', host_user_id: me.id, host_username: me.full_name || (me.email || 'Player').split('@')[0],
-        players: [playerEntry],
-        max_players: maxPlayers, guest_inputs: {}, match_state: {}, winner: 'none', settings: brSettings,
-      });
-      setMatchId(created.id); setRole('host'); setMatch(created);
-      hostedCreatedAtRef.current = created.created_date ? new Date(created.created_date).getTime() : Date.now();
+      const loadout = {
+        character_id: char, element: myElement,
+        accessories: getEquippedAccessories(equippedAccessories, char),
+        username: me.full_name || (me.email || 'Player').split('@')[0],
+      };
+      const { data, error: rpcError } = await supabase.rpc('find_or_create_element6_battle_royale', { p_loadout: loadout });
+      if (rpcError) throw rpcError;
+      if (!data?.match_id) throw new Error('Invalid Battle Royale matchmaking response.');
+      setMatchId(data.match_id); setSlot(Number(data.slot || 1)); setRole(data.role || 'guest');
+      const { data: m } = await supabase.from('online_battle_royale_matches').select('*').eq('id', data.match_id).maybeSingle();
+      setMatch(m);
     } catch (e) {
-      setError('Could not search for matches. Please try again.');
-      setPhase('pick');
+      setError(e?.message || 'Could not search for matches.'); setPhase('pick');
     }
   };
 
-  // While hosting a searching match, re-scan for newer matches to join. This
-  // breaks the deadlock where two players both create matches at the same time
-  // and neither finds the other: the older host joins the newer host's match.
+  // Host starts the match after the configured search window. The SQL RPC
+  // guarantees atomic queue matching, so there is no client-side create/join race.
   useEffect(() => {
     if (phase !== 'queue' || role !== 'host' || !matchId) return;
+    setCountdown(MATCHMAKE_SECONDS);
+    deadlineRef.current = Date.now() + MATCHMAKE_SECONDS * 1000;
     const t = setInterval(async () => {
-      if (document.hidden || startedRef.current) return;
-      try { await tryJoinExisting(myChar, hostedCreatedAtRef.current); } catch {}
-    }, 2500);
+      const left = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
+      setCountdown(left);
+      if (left <= 0) { clearInterval(t); await beginMatch(); }
+    }, 500);
     return () => clearInterval(t);
     // eslint-disable-next-line
-  }, [phase, role, matchId, myChar]);
+  }, [phase, role, matchId]);
 
-  // Host: fill remaining slots with bots and start. Re-fetches the latest match
-  // state so newly-joined real players are included, and retries on failure.
   const beginMatch = async () => {
-    if (!me || startedRef.current) return;
-    startedRef.current = true;
+    if (!matchId || role !== 'host' || startedRef.current) return;
     try {
-      // Re-fetch to get the latest player list (guests may have joined since last poll)
-      const latest = await db.entities.BattleRoyaleMatch.get(matchIdRef.current || matchId);
-      if (!latest) { startedRef.current = false; return; }
-      const real = (latest.players || []).filter(p => !p.is_bot);
-      const target = latest.max_players || MAX_PLAYERS;
-      const usedChars = new Set(real.map(p => p.char_id));
-      const bots = [];
-      while (real.length + bots.length < target) {
-        let id; do { id = randChar(); } while (usedChars.has(id) && usedChars.size < ALL.length - 1);
-        usedChars.add(id);
-        bots.push({ user_id: `bot_${bots.length}`, username: `BOT ${bots.length + 1}`, char_id: id, element: 'basic', is_bot: true });
-      }
-      const finalPlayers = [...real, ...bots];
-      let ok = false;
-      for (let attempt = 0; attempt < 3 && !ok; attempt++) {
-        try { await db.entities.BattleRoyaleMatch.update(latest.id, { status: 'active', players: finalPlayers }); ok = true; } catch { await new Promise(r => setTimeout(r, 500)); }
-      }
-      if (!ok) { startedRef.current = false; setError('Could not start match. Try again.'); setPhase('pick'); return; }
-      setPlayers(finalPlayers);
-      setPhase('prematch');
-      sfx.matchFound();
-    } catch { startedRef.current = false; }
+      const { error } = await supabase.rpc('start_element6_battle_royale', { p_match_id: matchId, p_max_players: maxPlayers, p_bot_difficulty: botDifficulty });
+      if (error) throw error;
+      const { data: m } = await supabase.from('online_battle_royale_matches').select('*').eq('id', matchId).maybeSingle();
+      setMatch(m);
+      if (m?.status === 'playing') startEngine(m);
+    } catch (e) { setError(e?.message || 'Could not start match.'); }
   };
 
   const cancelSearch = async () => {
@@ -240,7 +185,7 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
         equippedSkins={equippedSkins}
         equippedShikigami={equippedShikigami}
         equippedEmotes={equippedEmotes}
-        onEnd={(res) => { try { db.entities.BattleRoyaleMatch.update(matchId, { status: 'finished' }).catch(() => {}); } catch {} onEnd?.(res); }}
+        onEnd={(res) => { onEnd?.(res); }}
       />
     );
   }

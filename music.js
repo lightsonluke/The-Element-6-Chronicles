@@ -78,6 +78,9 @@ class MusicManager {
     this.currentScene = null;
     this.customTracks = {};
     this.fightIndex = 0;
+    this.matchMusicSeed = null;
+    this.matchMusicTrack = null;
+    this.fightBag = [];
     this.menuIndex = 0;
     this.muted = false;
     this._allAudioEls = []; // track every Audio element so stop() can kill them all
@@ -127,6 +130,44 @@ class MusicManager {
 
   setCustomTracks(tracks) { this.customTracks = tracks || {}; }
 
+  // Every match can provide a stable seed so all clients choose the same
+  // random song. Offline matches omit the seed and use a shuffle bag that
+  // guarantees the full built-in library is used before repeating.
+  setMatchSeed(seed) {
+    this.matchMusicSeed = seed == null ? null : String(seed);
+    this.matchMusicTrack = null;
+  }
+
+  clearMatchSeed() {
+    this.matchMusicSeed = null;
+    this.matchMusicTrack = null;
+  }
+
+  _seedNumber(seed) {
+    let h = 2166136261;
+    for (let i = 0; i < String(seed).length; i++) {
+      h ^= String(seed).charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  _nextFightTrack() {
+    if (this.matchMusicSeed != null) {
+      if (!this.matchMusicTrack) {
+        const n = this._seedNumber(this.matchMusicSeed);
+        this.matchMusicTrack = FIGHT_TRACKS[n % FIGHT_TRACKS.length];
+      }
+      return this.matchMusicTrack;
+    }
+    if (!this.fightBag.length) {
+      this.fightBag = FIGHT_TRACKS.map((url, i) => ({ url, key: Math.random() + i / FIGHT_TRACKS.length }))
+        .sort((a, b) => a.key - b.key)
+        .map(x => x.url);
+    }
+    return this.fightBag.pop();
+  }
+
   // Play a specific track URL directly (used by Grand Circuit for curated music)
   playTrack(url) {
     this.init();
@@ -159,13 +200,13 @@ class MusicManager {
     } else if (sceneName === 'menu') {
       url = MENU_TRACKS[Math.floor(Date.now() / HOME_ROTATION_MS) % MENU_TRACKS.length];
     } else if (sceneName === 'story') {
-      url = FIGHT_TRACKS[this.fightIndex % FIGHT_TRACKS.length];
+      url = this._nextFightTrack();
     } else if (sceneName === 'parkour') {
       url = PARKOUR_TRACK;
     } else if (sceneName === 'rockclimb') {
       url = ROCKCLIMB_TRACK;
     } else if (FIGHT_SCENES.has(sceneName)) {
-      url = FIGHT_TRACKS[this.fightIndex % FIGHT_TRACKS.length];
+      url = this._nextFightTrack();
     } else {
       url = MENU_TRACKS[Math.floor(Date.now() / HOME_ROTATION_MS) % MENU_TRACKS.length];
     }
@@ -178,9 +219,6 @@ class MusicManager {
     this.currentScene = sceneName;
     this.currentUrl = url;
 
-    if (FIGHT_SCENES.has(sceneName) && !this.customTracks[sceneName]) {
-      this.fightIndex = (this.fightIndex + 1) % FIGHT_TRACKS.length;
-    }
 
     this.audioEl = new Audio(url);
     this.audioEl.preload = 'auto';

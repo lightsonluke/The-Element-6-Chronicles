@@ -108,8 +108,9 @@ export default function RollbackOnlineFight({
   useEffect(() => {
     music.setVolume(musicVolume);
     sfx.setVolume(sfxVolume);
+    music.setMatchSeed(matchId);
     music.play('fight');
-    return () => music.stop();
+    return () => { music.clearMatchSeed(); music.stop(); };
   }, [musicVolume, sfxVolume]);
 
   useEffect(() => {

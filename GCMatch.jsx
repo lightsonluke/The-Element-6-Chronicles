@@ -16,7 +16,7 @@ import { mergeBotCosmetics } from './botCosmetics.js';
 import { getEmoteForKey } from './emoteSlots.js';
 import { getCharRenderColor } from './skins.js';
 import { drawShikigamiFollower } from './shikigami.js';
-import { music, GRAND_CIRCUIT_TRACKS, GRAND_CIRCUIT_FINAL_TRACK } from './music.js';
+import { music } from './music.js';
 import { sfx } from './sfx.js';
 import GameIcon from './GameIcon.jsx';
 
@@ -217,12 +217,9 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
 
   useEffect(() => {
     music.setVolume(musicVolume); sfx.setVolume(sfxVolume);
-    // Grand Circuit uses a curated track pool; Final match always uses the Final track
-    const trackUrl = isFinalMatch
-      ? GRAND_CIRCUIT_FINAL_TRACK
-      : GRAND_CIRCUIT_TRACKS[Math.floor(Math.random() * GRAND_CIRCUIT_TRACKS.length)];
-    music.playTrack(trackUrl);
-    return () => music.stop();
+    music.setMatchSeed(`grand-circuit-${isFinalMatch ? 'final' : Date.now()}-${p1Char}-${p2Char}`);
+    music.play('grandcircuit');
+    return () => { music.clearMatchSeed(); music.stop(); };
   }, [musicVolume, sfxVolume, isFinalMatch]);
 
   useEffect(() => {

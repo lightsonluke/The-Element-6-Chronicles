@@ -63,8 +63,8 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
     ? room.stage_spawn_points : null;
 
   useEffect(() => {
-    music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.play('fight');
-    return () => music.stop();
+    music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.setMatchSeed(room?.id); music.play('fight');
+    return () => { music.clearMatchSeed(); music.stop(); };
   }, [musicVolume, sfxVolume]);
 
   useEffect(() => {

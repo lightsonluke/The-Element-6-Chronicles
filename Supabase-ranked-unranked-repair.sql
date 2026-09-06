@@ -63,6 +63,15 @@ begin
   if p_mode not in ('ranked', 'unranked') then raise exception 'Unsupported online mode'; end if;
   if coalesce(length(trim(p_character_id)), 0) = 0 then raise exception 'Choose a character'; end if;
 
+  -- Expire abandoned search rows so stale hosts never block the queue.
+  update public.online_matches
+  set status='cancelled', updated_at=now()
+  where status='searching' and host_last_seen < now() - interval '45 seconds';
+
+  if exists (select 1 from public.online_matches where status='matched' and (host_user_id=v_user or guest_user_id=v_user)) then
+    raise exception 'Already in an active online match';
+  end if;
+
   if p_mode = 'ranked' then
     insert into public.ranked_ratings (user_id) values (v_user)
     on conflict (user_id) do nothing;

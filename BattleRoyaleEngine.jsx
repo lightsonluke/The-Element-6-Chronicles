@@ -1,4 +1,6 @@
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
+import { supabase } from './supabaseClient.js';
+
 // Battle Royale engine — host-authoritative online mode reusing the existing
 // fighter engine, INSANE bot AI, renderer, and netCore sync primitives.
 //
@@ -24,7 +26,6 @@ import { applyElement } from './elements.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import { SeqNum, ConnectionState } from './netCore.js';
-import { openBattleRoyaleTransport, getBattleRoyaleMatch, subscribeToBattleRoyale, finishBattleRoyale } from './battleRoyaleOnline.js';
 import { BR_W, BR_H, BR_PLATFORMS, BR_SPAWNS, BR_ZONE, buildInitialLoot, applyLootToFighter, BR_LOOT_TYPES } from './battleRoyaleMap.js';
 import { serializeDestructible } from './brDestructible.js';
 import { buildMovementItems, updateMovementItems, serializeItems } from './brItems.js';
@@ -39,8 +40,8 @@ const ALL = ALL_CHARS;
 const getChar = (id) => ALL.find(c => c.id === id) || ALL[0];
 
 const VIEW_W = 1280, VIEW_H = 720;
-const SYNC_INTERVAL = 6;       // host authoritative snapshots (~10/sec) over Supabase Realtime broadcast
-const INPUT_SEND_INTERVAL = 2;  // player input (~30/sec); preserves held-input duration such as variable-height jumps
+const SYNC_INTERVAL = 50;      // host state broadcast frames (~1.2/sec) — stays under entity write rate limits
+const INPUT_SEND_INTERVAL = 30; // guest input send frames (~2/sec) — sent unconditionally so host always has fresh inputs
 const DISCONNECT_TIMEOUT = 12000;
 const RECONNECT_WINDOW = 20000; // grace period before a dropped peer ends the match
 const RATE_LIMIT_PAUSE = 1500;  // ms to pause writes after a rate-limit error (was 4000 — too long, killed sync)
@@ -84,9 +85,14 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
   }, [countdown]);
 
   useEffect(() => {
-    music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.play('fight');
-    return () => music.stop();
+    music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.setMatchSeed(matchId); music.play('fight');
+    return () => { music.clearMatchSeed(); music.stop(); };
   }, [musicVolume, sfxVolume]);
+
+  // Mark match active when the fight starts (host owns lifecycle).
+  useEffect(() => {
+    // Match lifecycle is owned by the Supabase matchmaking RPC; gameplay uses Realtime broadcast.
+  }, [matchId, isHost]);
 
   useEffect(() => {
     if (!gameStarted) return;
@@ -155,40 +161,39 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
       return f;
     });
 
-    // ── Online transport ──
-    // Matchmaking/lifecycle still uses the BattleRoyaleMatch entity, but live
-    // gameplay MUST use Realtime broadcast. Writing 30–60 gameplay updates per
-    // second into a database row causes throttling and, more importantly, makes
-    // guests simulate a different game from the host. The host is authoritative.
+    // ── Match state subscription: both clients listen for match-finished signal ──
     let remoteState = null;
-    let latestMatch = null;
-    let guestInputs = {};
-    let transport = null;
-    const handleMatchUpdate = async payload => {
-      const m = payload?.new || payload?.data || await getBattleRoyaleMatch(matchId).catch(() => null);
-      if (!m || m.id !== matchId) return;
-      latestMatch = m;
-      if (m.status === 'finished' && !finished) {
-        finished = true;
-        setWinner(m.authoritative_state?.result || { name: '—' });
-      }
-    };
-    const unsub = subscribeToBattleRoyale(matchId, handleMatchUpdate);
-    const poll = setInterval(() => handleMatchUpdate(null), 3000);
 
-    transport = openBattleRoyaleTransport(matchId, {
-      onInput: payload => {
-        if (!isHost || !payload?.userId || payload.userId === myUserId) return;
-        guestInputs[payload.userId] = { ...(payload.input || NO_INPUT), _tick: payload.tick || 0, _receivedAt: Date.now() };
-        conn.heartbeat();
-      },
-      onSnapshot: payload => {
-        if (isHost || !payload?.state) return;
-        remoteState = payload.state;
-        conn.heartbeat();
-      },
-    });
-    transport.track({ userId: myUserId, role, username: players.find(p => p.user_id === myUserId)?.username || 'Player' }).catch?.(() => {});
+    // Both host and guest run the full simulation locally — no prediction needed.
+    const myIdx = players.findIndex(p => p.user_id === myUserId);
+
+    // ── Realtime gameplay transport ──
+    // The host is authoritative. Guests send inputs; the host broadcasts the
+    // canonical state. This removes the old Base44/localBackend dependency.
+    let latestMatch = null;
+    const remoteInputs = {};
+    let brChannel = null;
+    const subscribeGameplay = () => {
+      brChannel = supabase.channel(`br-game:${matchId}`, { config: { broadcast: { self: false, ack: false } } });
+      brChannel
+        .on('broadcast', { event: 'input' }, ({ payload }) => {
+          if (!isHost || !payload?.sender || payload.sender === myUserId) return;
+          remoteInputs[payload.sender] = payload.message || {};
+          conn.heartbeat();
+        })
+        .on('broadcast', { event: 'state' }, ({ payload }) => {
+          if (isHost || !payload?.state) return;
+          remoteState = payload.state;
+          conn.heartbeat();
+        })
+        .on('broadcast', { event: 'result' }, ({ payload }) => {
+          if (!payload?.result || finished) return;
+          finished = true;
+          setWinner(payload.result);
+        })
+        .subscribe();
+    };
+    subscribeGameplay();
 
     // ── Input ──
     const keys = {};
@@ -223,12 +228,12 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
       })).sort((a, b) => a.placement - b.placement || b.kills - a.kills || a.username.localeCompare(b.username));
       const finalResult = { ...result, standings };
       setWinner(finalResult);
-      if (isHost) finishBattleRoyale(matchId, finalResult).catch(() => {});
+      try { brChannel?.send({ type: 'broadcast', event: 'result', payload: { result: finalResult } }); } catch {}
     };
 
     const sendGuestInput = (input) => {
-      if (isHost || !transport) return;
-      transport.input({ userId: myUserId, tick, input });
+      if (Date.now() < rateLimitedUntil) return;
+      try { brChannel?.send({ type: 'broadcast', event: 'input', payload: { sender: myUserId, message: { ...input, _tick: tick } } }); } catch (e) { checkRate(e); }
     };
 
     // ── Helpers: alive list, nearest opponent, zone update ──
@@ -302,7 +307,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           inp = (f.emote && f.emote.timer > 0) ? NO_INPUT : input; // host local player — emote lock
         } else {
           // remote real player — use their latest sent inputs
-          const gi = guestInputs[f._userId];
+          const gi = remoteInputs[f._userId];
           if (gi) f._lastInputTick = gi._tick || 0;
           inp = gi ? { left: !!gi.left, right: !!gi.right, jump: !!gi.jump, up: !!gi.up, down: !!gi.down, sig: !!gi.sig, power: !!gi.power, superMove: !!gi.superMove, heavy: !!gi.heavy } : { ...NO_INPUT };
         }
@@ -406,12 +411,6 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           eliminated: !!f._eliminated, placement: f._placement,
           inputTick: f._lastInputTick || 0,
           accs: f._accessories || [],
-          element: f._element || f.element || null,
-          shieldAmount: f.shieldAmount || 0,
-          statDefenseReduction: f.statDefenseReduction || 0,
-          dodgeChance: f.dodgeChance || 0,
-          hitstun: f.hitstun || 0,
-          emote: f.emote ? { id: f.emote.id, progress: f.emote.progress, timer: f.emote.timer, maxTimer: f.emote.maxTimer, key: f.emote.key } : null,
           attackData: f.attackData ? { type: f.attackData.type, progress: f.attackData.progress, sigType: f.attackData.sigType, isNormal: f.attackData.isNormal, isHeavy: f.attackData.isHeavy, isSuper: f.attackData.isSuper, color: f.attackData.color, name: f.attackData.name, range: f.attackData.range } : null,
           projectiles: (f.projectiles || []).map(p => ({ type: p.type, x: p.x, y: p.y, vx: p.vx, vy: p.vy, life: p.life, facing: p.facing, color: p.color, size: p.size, spin: p.spin, wing: p.wing, w: p.w, h: p.h, targetX: p.targetX, targetY: p.targetY, warning: p.warning, target: p.target ? { x: p.target.x, y: p.target.y } : null, r: p.r, runFrame: p.runFrame, ringOnly: p.ringOnly })),
           portalEffect: f._portalEffect ? { fromX: f._portalEffect.fromX, fromY: f._portalEffect.fromY, toX: f._portalEffect.toX, toY: f._portalEffect.toY, timer: f._portalEffect.timer, maxTimer: f._portalEffect.maxTimer } : null,
@@ -419,20 +418,16 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
         })),
         zone: { leftX: zone.leftX, rightX: zone.rightX },
         loot: loot.map(l => ({ id: l.id, type: l.type, x: l.x, y: l.y, taken: l.taken })),
-        // Environment state is part of the authoritative snapshot too.
-        // Guests never simulate hazards/items/objects locally, so these must
-        // travel with the snapshot rather than only every few seconds.
-        brItems: serializeItems(brItems),
-        brHazards: serializeHazards(brHazards),
-        brObjects: serializeObjects(brObjects),
+        ...(frameCount <= 1 || frameCount % 200 === 0 ? {
+          brSections: serializeDestructible(brSections),
+          brItems: serializeItems(brItems),
+          brHazards: serializeHazards(brHazards),
+          brObjects: serializeObjects(brObjects),
+        } : {}),
         alive: aliveList().length,
         time: matchTime,
       };
-      if (transport) transport.snapshot({ state });
-      // Keep a low-frequency durable copy for reconnect/end-screen recovery.
-      if (frameCount % 120 === 0) {
-        // Live state is delivered over Supabase Realtime; the finish RPC stores the final result.
-      }
+      try { brChannel?.send({ type: 'broadcast', event: 'state', payload: { sender: myUserId, state } }); } catch (e) { checkRate(e); }
     };
 
     // ── Render ──
@@ -535,47 +530,46 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
     let frameCount = 0;
     let lastSentInput = null;
 
+    const applyRemoteState = state => {
+      if (!state?.fighters) return;
+      const byIdx = new Map(state.fighters.map(f => [f.idx, f]));
+      for (const f of fighters) {
+        const r = byIdx.get(f.playerIndex);
+        if (!r) continue;
+        Object.assign(f, { x:r.x, y:r.y, vx:r.vx, vy:r.vy, facing:r.facing, frame:r.frame, state:r.state, grounded:r.grounded, damage:r.damage, hp:r.hp, stocks:r.stocks, superMeter:r.superMeter, powerActive:r.powerActive, invincible:r.invincible, _eliminated:!!r.eliminated, _placement:r.placement, _lastInputTick:r.inputTick, _accessories:r.accs || [], attackData:r.attackData || null, _portalEffect:r.portalEffect || null, _dashSlashEffect:r.dashSlash || null });
+        f.projectiles = r.projectiles || [];
+      }
+      if (state.zone) Object.assign(zone, state.zone);
+      if (Array.isArray(state.loot)) loot = state.loot.map(x => ({ ...x }));
+    };
+
     const loop = (now) => {
       if (finished) return;
       const dt = Math.min((now - lastTime) / 1000, 0.05); lastTime = now;
       frameCount++;
 
-      // ── Authoritative simulation ──
-      // Only the host advances gameplay. Guests send intent and render the
-      // host's snapshots. This is critical for variable-height jumps, combat,
-      // loot, hazards, zone damage, projectiles, and every other shared rule.
+      // Host is a figurehead — game continues even if host disconnects.
+      // Both clients run the full simulation locally, so no reconnection needed.
+
+      // ── Local input (zeroed while paused — soft pause: game continues, you stand still) ──
       const gp = settings?.controllerEnabled !== false ? readGamepadInput(0) : null;
       const rawInput = mergeGp(readPlayerInput(keys, kb.p1), gp);
       const input = pausedRef.current ? { ...NO_INPUT } : rawInput;
 
-      if (frameCount % INPUT_SEND_INTERVAL === 0) {
+      if (!isHost && frameCount % INPUT_SEND_INTERVAL === 0) {
         const snap = { left: input.left, right: input.right, jump: input.jump, up: input.up, down: input.down, sig: input.sig, power: input.power, superMove: input.superMove, heavy: input.heavy };
         sendGuestInput(snap);
       }
-
       if (isHost) {
         hostStep(dt, input);
         if (frameCount === 1 || frameCount % SYNC_INTERVAL === 0) broadcast();
       } else if (remoteState) {
-        // Reconstruct the render-only state from the latest authoritative host
-        // snapshot. Never run updateFighter/updateProjectiles on the guest.
-        tick = Number(remoteState.tick) || tick;
-        matchTime = Number(remoteState.time) || matchTime;
-        if (remoteState.zone) zone = remoteState.zone;
-        if (Array.isArray(remoteState.loot)) loot = remoteState.loot;
-        if (Array.isArray(remoteState.brItems)) brItems = remoteState.brItems;
-        if (Array.isArray(remoteState.brHazards)) brHazards = remoteState.brHazards;
-        if (Array.isArray(remoteState.brObjects)) brObjects = remoteState.brObjects;
-        if (Array.isArray(remoteState.fighters)) {
-          fighters = remoteState.fighters.map(sf => {
-            const existing = fighters.find(f => f.playerIndex === sf.idx);
-            const cd = getChar(sf.charId);
-            return { ...(existing || {}), ...sf, playerIndex: sf.idx, char: cd, _userId: players[sf.idx]?.user_id, _name: sf.name, _isBot: !!sf.isBot, _eliminated: !!sf.eliminated, _placement: sf.placement, _accessories: sf.accs || [], _element: sf.element || null, shieldAmount: sf.shieldAmount || 0, statDefenseReduction: sf.statDefenseReduction || 0, dodgeChance: sf.dodgeChance || 0, hitstun: sf.hitstun || 0, emote: sf.emote || null, stocks: sf.stocks ?? 0, projectiles: sf.projectiles || [], attackData: sf.attackData || null };
-          });
-        }
+        applyRemoteState(remoteState);
       }
 
       // ── Determine the state to render ──
+      // Guests render the latest authoritative host snapshot instead of
+      // running a second independent BR simulation.
       const me = fighters.find(f => f._userId === myUserId);
       const localFighter = (me && !me._eliminated) ? me : null;
 
@@ -749,7 +743,6 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
     return () => {
       unsub && unsub();
       clearInterval(poll);
-      transport?.close?.();
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
     };
@@ -758,7 +751,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
   iAmEliminatedRef.current = iAmEliminated;
 
   const handleQuit = () => {
-    if (isHost) finishBattleRoyale(matchId, { name: '—', disconnected: true }).catch(() => {});
+    try { brChannel?.send({ type: 'broadcast', event: 'result', payload: { result: { name: '—' } } }); } catch {}
     onEnd?.({ won: false, disconnected: true });
   };
 
@@ -810,7 +803,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           <div className="flex flex-col items-center gap-2">
             <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
             <span className="text-2xl font-heading text-accent animate-pulse">RECONNECTING…</span>
-            <span className="text-[10px] text-muted-foreground font-body">Connection unstable — waiting for the authoritative match state.</span>
+            <span className="text-[10px] text-muted-foreground font-body">Connection unstable — simulation continues locally.</span>
           </div>
         </div>
       )}

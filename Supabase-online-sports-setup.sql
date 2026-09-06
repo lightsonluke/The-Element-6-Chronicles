@@ -131,6 +131,20 @@ begin
   if coalesce(length(trim(p_character_id)), 0) = 0 then raise exception 'Choose a character'; end if;
   v_required := public.online_sport_required_players(p_mode);
 
+  if exists (
+    select 1 from public.online_sport_players p
+    join public.online_sport_matches m on m.id=p.match_id
+    where p.user_id=v_user and m.status in ('matched','playing')
+  ) then
+    raise exception 'Already in an active online sport match';
+  end if;
+
+  -- Expire abandoned queues and stale participants before matching.
+  update public.online_sport_matches m set status='cancelled', updated_at=now()
+  where m.status='searching'
+    and (m.created_at < now() - interval '90 seconds'
+      or not exists (select 1 from public.online_sport_players p where p.match_id=m.id and p.last_seen > now() - interval '45 seconds'));
+
   -- Remove only this player's abandoned searching entry before retrying.
   delete from public.online_sport_players p
   using public.online_sport_matches m

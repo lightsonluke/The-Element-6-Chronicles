@@ -5,6 +5,7 @@ import VolleyballGame from './VolleyballGame.jsx';
 import DodgeballGame from './DodgeballGame.jsx';
 import BangerGame from './BangerGame.jsx';
 import { reportOnlineSportResult } from './sportsOnline.js';
+import { music } from './music.js';
 
 // Runs the existing sport components. This file does not replace or modify
 // any offline component. Soccer forwards both players' inputs; Volleyball and
@@ -64,6 +65,12 @@ export default function ActualSportsOnlineMatch({
   const p1 = p1Team[0];
   const p2 = p2Team[0];
   const mePlayer = orderedPlayers.find(player => String(player.user_id) === String(me?.id));
+
+  useEffect(() => {
+    if (!match?.id || !me?.id || !sport) return undefined;
+    music.setMatchSeed(match.id);
+    return () => music.clearMatchSeed();
+  }, [match?.id, me?.id, sport]);
 
   useEffect(() => {
     if (!match?.id || !me?.id || !sport) return undefined;

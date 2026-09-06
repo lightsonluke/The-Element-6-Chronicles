@@ -80,7 +80,6 @@ export default function BangerGame({
   const startNet = matchSettings.startNet ?? 480;
   const maxNet = matchSettings.maxNet ?? 330;
   const ballSpeed = matchSettings.ballSpeed ?? 1.0;
-  const musicTrack = matchSettings.music ?? 'arena';
   const weather = matchSettings.weather ?? 'clear';
   const localSide = Number.isInteger(localPlayerSlot) ? (localPlayerSlot % 2 === 0 ? 1 : 2) : null;
   const localTeamSlot = Number.isInteger(localPlayerSlot) ? Math.floor(localPlayerSlot / 2) : null;
@@ -125,9 +124,9 @@ export default function BangerGame({
 
   useEffect(() => {
     music.setVolume(musicVolume); sfx.setVolume(sfxVolume);
-    music.play(musicTrack === 'chill' ? 'menu' : musicTrack === 'epic' ? 'tournament' : 'fight');
+    music.play('fight');
     return () => music.stop();
-  }, [musicVolume, sfxVolume, musicTrack]);
+  }, [musicVolume, sfxVolume]);
 
   useEffect(() => { window.__el6GameplayActive = true; return () => { window.__el6GameplayActive = false; }; }, []);
   useEffect(() => {
