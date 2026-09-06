@@ -426,7 +426,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
     const broadcast = () => {
       if (Date.now() < rateLimitedUntil) return;
       const state = {
-        tick, time: matchTime,
+        tick,
         fighters: fighters.map(f => ({
           idx: f.playerIndex, charId: f.char?.id, name: f._name, isBot: !!f._isBot,
           x: f.x, y: f.y, vx: f.vx, vy: f.vy, facing: f.facing, frame: f.frame,

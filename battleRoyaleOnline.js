@@ -23,3 +23,10 @@ export function openBattleRoyaleTransport(matchId, { onInput, onSnapshot, onPres
   };
 }
 
+
+
+export async function leaveBattleRoyaleMatch(matchId) {
+  if (!matchId) return;
+  const { error } = await supabase.rpc('leave_element6_battle_royale', { p_match_id: matchId });
+  if (error) throw error;
+}
