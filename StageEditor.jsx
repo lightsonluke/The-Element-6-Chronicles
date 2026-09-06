@@ -15,6 +15,11 @@ import { HAZARD_TYPES, OBJECT_TYPES, makeHazard, makeObject } from './stageHazar
 
 const BACKDROPS = STAGE_BACKDROPS;
 
+function stageEntity() {
+  const entities = db?.entities || {};
+  return entities.UploadedStage || entities.CommunityStage || entities.community_stages || null;
+}
+
 // Editor canvas covers the full KO perimeter of an actual match.
 // A normal (non-large) stage's blast zone extends 500px left/right and
 // 600px up / 450px down beyond the 1280×720 play area, so the editor canvas
@@ -628,12 +633,21 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
 
   // Render stage thumbnail preview on a small canvas
   const renderThumbnail = (ctx, stage, w, h) => {
-    const platforms = stage.platforms || stage;
+    // Saved stages can come from older versions where the stage itself was
+    // stored as the platform array. Normalize both shapes before rendering.
+    const safeStage = stage && typeof stage === 'object' ? stage : {};
+    const platforms = Array.isArray(safeStage.platforms)
+      ? safeStage.platforms
+      : Array.isArray(stage)
+        ? stage
+        : [];
     ctx.clearRect(0, 0, w, h);
-    const bd = BACKDROPS.find(b => b.id === (stage.backdrop || 'city')) || BACKDROPS[0];
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, bd.colors[0]); g.addColorStop(1, bd.colors[1]);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+    // STAGE_BACKDROPS now stores { id, name } only. Do not read bd.colors
+    // here — that was the crash that made SEE STAGES fail to render. Use the
+    // same procedural background renderer as the actual stage preview.
+    drawStageBackground(ctx, w, h, 0, safeStage.backdrop || 'splitcity', null, null);
+
     const sx = w / 1280, sy = h / 720;
     platforms.forEach(p => {
       const mat = MATERIALS.find(m => m.id === (p.material || 'normal')) || MATERIALS[0];
@@ -642,13 +656,13 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       drawMaterialOverlay(ctx, { ...p, x: p.x * sx, y: p.y * sy, w: p.w * sx, h: Math.max(2, p.h * sy) }, 0);
     });
     // hazards + objects in thumbnail
-    (stage.hazards || []).forEach(hz => {
+    (Array.isArray(safeStage.hazards) ? safeStage.hazards : []).forEach(hz => {
       const def = HAZARD_TYPES.find(t => t.id === hz.type) || HAZARD_TYPES[0];
       ctx.globalAlpha = 0.6; ctx.fillStyle = def.color;
       ctx.fillRect(hz.x * sx, hz.y * sy, Math.max(2, hz.w * sx), Math.max(2, hz.h * sy));
       ctx.globalAlpha = 1;
     });
-    (stage.objects || []).forEach(o => {
+    (Array.isArray(safeStage.objects) ? safeStage.objects : []).forEach(o => {
       const def = OBJECT_TYPES.find(t => t.id === o.type) || OBJECT_TYPES[0];
       ctx.fillStyle = def.color;
       ctx.beginPath(); ctx.arc(o.x * sx, o.y * sy, Math.max(2, def.size * sx * 0.5), 0, Math.PI * 2); ctx.fill();
@@ -929,17 +943,19 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
             if (userId && !isDownloaded) {
               setPublishStatus('Publishing…');
               try {
-                const existing = await db.entities.UploadedStage.filter({ owner_user_id: userId, name: stageName || 'Custom Stage' });
+                const entity = stageEntity();
+                if (!entity) throw new Error('World Stages entity is not available');
+                const existing = typeof entity.filter === 'function' ? await entity.filter({ owner_user_id: userId, name: stageName || 'Custom Stage' }) : [];
                 if (existing.length > 0) {
                   // Keep only the most-recently-updated record; update it and delete any older duplicates
                   existing.sort((a, b) => (b.updated_date || '').localeCompare(a.updated_date || ''));
                   const keep = existing[0];
-                  await db.entities.UploadedStage.update(keep.id, { stage_data: stageData, backdrop, emoji: stageEmoji });
+                  await entity.update(keep.id, { stage_data: stageData, backdrop, emoji: stageEmoji });
                   for (const dup of existing.slice(1)) {
-                    try { await db.entities.UploadedStage.delete(dup.id); } catch (e) {}
+                    try { await entity.delete(dup.id); } catch (e) {}
                   }
                 } else {
-                  await db.entities.UploadedStage.create({ owner_user_id: userId, owner_username: username, name: stageName || 'Custom Stage', description: '', emoji: stageEmoji, backdrop, stage_data: stageData });
+                  await entity.create({ owner_user_id: userId, owner_username: username, name: stageName || 'Custom Stage', description: '', emoji: stageEmoji, backdrop, stage_data: stageData });
                 }
                 sfx.purchaseSuccess();
                 setPublishStatus('Published to world! ✓');

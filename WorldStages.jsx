@@ -7,7 +7,36 @@ import { HAZARD_TYPES, OBJECT_TYPES } from './stageHazards.js';
 const PAGE_SIZE = 24;
 
 function stageDataOf(stage) {
-  return stage?.stage_data && typeof stage.stage_data === 'object' ? stage.stage_data : {};
+  if (!stage) return {};
+  const raw = stage.stage_data;
+  if (raw && typeof raw === 'object') return raw;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {}
+  }
+  // Some older records stored the stage fields directly.
+  return stage.platforms || stage.hazards || stage.objects ? stage : {};
+}
+
+function normalizeStage(row) {
+  if (!row || typeof row !== 'object') return null;
+  const data = stageDataOf(row);
+  return {
+    ...row,
+    stage_data: data,
+    backdrop: row.backdrop || data.backdrop || 'splitcity',
+    emoji: row.emoji || data.emoji || '🎨',
+    name: row.name || data.name || 'Untitled Stage',
+  };
+}
+
+function stageEntity() {
+  const entities = db?.entities || {};
+  // Keep compatibility with the existing UploadedStage entity, but also
+  // support the community_stages table/entity used by the current SQL schema.
+  return entities.UploadedStage || entities.CommunityStage || entities.community_stages || null;
 }
 
 function platformCount(stage) {
@@ -68,16 +97,21 @@ function Thumbnail({ stage }) {
 }
 
 async function fetchPublicStages() {
-  // The Stage Editor already uses the UploadedStage entity. Query it without an
-  // owner filter so World Stages is genuinely global rather than "my stages".
+  const entity = stageEntity();
+  if (!entity) throw new Error('World Stages entity is not available');
+
   try {
-    const rows = await db.entities.UploadedStage.filter({ is_private: false, hidden: false });
-    if (Array.isArray(rows)) return rows;
+    if (typeof entity.filter === 'function') {
+      const rows = await entity.filter({ is_private: false, hidden: false });
+      if (Array.isArray(rows)) return rows.map(normalizeStage).filter(Boolean);
+    }
   } catch {}
 
   try {
-    const rows = await db.entities.UploadedStage.list();
-    if (Array.isArray(rows)) return rows.filter(s => !s?.is_private && !s?.hidden);
+    if (typeof entity.list === 'function') {
+      const rows = await entity.list();
+      if (Array.isArray(rows)) return rows.map(normalizeStage).filter(Boolean).filter(s => !s.is_private && !s.hidden);
+    }
   } catch {}
 
   return [];
@@ -97,9 +131,10 @@ export default function WorldStages({ onBack, onPlay, onDownload }) {
       const rows = await fetchPublicStages();
       // Defensive normalization + global public-only filtering.
       const clean = rows
+        .map(normalizeStage)
         .filter(Boolean)
         .filter(s => !s.is_private && !s.hidden)
-        .filter(s => s.stage_data && Array.isArray(s.stage_data.platforms));
+        .filter(s => Array.isArray(stageDataOf(s).platforms));
       setStages(clean);
     } catch (e) {
       setStages([]);
