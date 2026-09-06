@@ -194,6 +194,9 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
         .subscribe();
     };
     subscribeGameplay();
+    const heartbeatTimer = setInterval(() => {
+      supabase.rpc('element6_battle_royale_heartbeat', { p_match_id: matchId }).catch(() => {});
+    }, 5000);
 
     // ── Input ──
     const keys = {};
@@ -743,6 +746,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
     return () => {
       unsub && unsub();
       clearInterval(poll);
+      clearInterval(heartbeatTimer);
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
     };

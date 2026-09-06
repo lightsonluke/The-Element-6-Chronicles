@@ -74,6 +74,14 @@ export default function ActualSportsOnlineMatch({
 
   useEffect(() => {
     if (!match?.id || !me?.id || !sport) return undefined;
+    const beat = () => supabase.rpc('online_sport_heartbeat', { p_match_id: match.id }).catch(() => {});
+    beat();
+    const timer = setInterval(beat, 5000);
+    return () => clearInterval(timer);
+  }, [match?.id, me?.id, sport]);
+
+  useEffect(() => {
+    if (!match?.id || !me?.id || !sport) return undefined;
     let active = true;
     const realtime = supabase.channel(`actual-sport:${match.id}`, {
       config: { broadcast: { self: false, ack: true } },
