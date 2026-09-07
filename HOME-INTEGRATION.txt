@@ -1,0 +1,59 @@
+ELEMENT 6 CLANS — HOME / ECONOMY INTEGRATION
+
+This package includes the full Clans screen and SQL, but the current Library copy
+does not include the actual root Home/App navigation file. I intentionally did not
+guess that file because replacing the wrong Home file is how unrelated game systems
+get broken.
+
+1. Add ClansMenuButton.jsx to the project.
+2. Import it in the Home screen.
+3. Place it immediately before the existing Settings button:
+   <ClansMenuButton onOpenClans={() => setScreen('clans')} />
+4. Add the existing app's screen route:
+   case 'clans':
+     return <ClansScreen
+       supabase={supabase}
+       onBack={() => setScreen('home')}
+       tokenBalance={progress.coins || 0}
+       onSpendTokens={async amount => YOUR_EXISTING_ATOMIC_TOKEN_SPEND(amount)}
+       onGrantTokens={async amount => YOUR_EXISTING_TOKEN_GRANT(amount)}
+       currentUserId={user?.id}
+     />;
+
+TOKEN COST:
+- Clan creation costs exactly 30,000 tokens.
+- The package deliberately uses onSpendTokens instead of inventing a second
+  token wallet, because the available project files do not expose the game's
+  authoritative token-account table.
+- Connect onSpendTokens to the SAME server-side economy used by the Shop.
+- Do not trust a browser-only decrement for a permanent 30,000-token purchase.
+
+CLAN ICON:
+- The creator UI validates the selected image as exactly 1×1 pixels.
+- The current implementation stores the tiny image as a data URL in the clan row.
+  If the existing project already has a Supabase Storage upload helper, replace
+  that one adapter point with the existing helper.
+
+MATCH PROGRESSION:
+- Import clanActivity.js.
+- Call recordClanMatchActivity exactly once after each authoritative match result.
+- Never call it from render/input/polling loops.
+- Tier 0 -> Tier 1 happens on the first qualifying match.
+- Later tiers require both activity XP and minimum clan age.
+- Tier 10 has a 365-day minimum, so the system cannot be rushed to Tier 10 in
+  a few days by grinding.
+
+ELO:
+The SQL reads the existing:
+  ranked_ratings
+  online_sport_ratings
+
+and exposes Ranked, Soccer, Volleyball, and Dodgeball rating/win/loss/match
+statistics to clan members through element6_get_clan_member_elo.
+
+SECURITY:
+The SQL uses RLS plus SECURITY DEFINER RPCs for privileged clan mutations.
+Do not expose a service-role key in the browser.
+
+REALTIME:
+Clan chat, applications, and meetings are added to Supabase Realtime.
