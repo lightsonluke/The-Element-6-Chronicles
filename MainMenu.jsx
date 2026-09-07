@@ -84,6 +84,8 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
     { type: 'tab', id: 'creator', label: 'CAMPAIGN', items: [
       { label: 'Campaign', key: 'creatormode' },
     ]},
+    { type: 'button', label: 'CLIPS', key: 'clips' },
+    { type: 'button', label: 'CLANS', key: 'clans' },
     { type: 'button', label: 'SHOP', key: 'shop' },
     { type: 'button', label: 'SAVE CODES', key: 'savecodes' },
   ];
@@ -153,6 +155,8 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
             <span className="text-muted-foreground">Ranked ELO: <span className="text-primary">{onlineRankedRating}</span></span>
           </div>
           <div className="flex items-center gap-1.5">
+            <button onClick={() => handleNav('clips')} className="inline-flex items-center gap-1 px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[10px] hover:opacity-80"><GameIcon emoji="🎬" size={12} /> CLIPS</button>
+            <button onClick={() => handleNav('clans')} className="inline-flex items-center gap-1 px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[10px] hover:opacity-80"><GameIcon emoji="⚔" size={12} /> CLANS</button>
             <button onClick={() => handleNav('settings')} className="inline-flex items-center gap-1 px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[10px] hover:opacity-80"><GameIcon emoji="⚙" size={12} /> SETTINGS</button>
             <button onClick={() => handleNav('howto')} className="inline-flex items-center gap-1 px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[10px] hover:opacity-80"><GameIcon emoji="?" size={12} /> HOW TO</button>
           </div>
@@ -233,6 +237,7 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
         <TitleArt />
         <div className="flex gap-2 flex-wrap justify-center">
           <button onClick={() => handleNav('clips')} className="px-6 py-2 rounded-xl font-heading text-xs text-white" style={{ background: 'linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)))' }}>🎬 CLIPS</button>
+          <button onClick={() => handleNav('clans')} className="px-6 py-2 rounded-xl font-heading text-xs text-white" style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))' }}>⚔ CLANS</button>
           <button onClick={() => handleNav('hub')} className="px-6 py-2 rounded-xl font-heading text-xs text-white"
             style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))' }}>HUB</button>
           <button onClick={() => handleNav('events')} className="px-6 py-2 rounded-xl font-heading text-xs text-white"

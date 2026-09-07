@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { initClipRecorder, saveClip, stopClipRecorder } from './clipRecorder.js';
+import { initClipRecorder, saveClip, stopClipRecorder, isClipRecorderActive } from './clipRecorder.js';
 import { saveClipBlob, trimClips } from './clipStorage.js';
 
 function showToast(message) {
@@ -17,32 +17,60 @@ export default function GlobalClipRecorder() {
   useEffect(() => {
     let cancelled = false;
     let currentCanvas = null;
-    let timer = null;
+    let scanTimer = null;
+    let rebindTimer = null;
 
-    const findCanvas = () => {
-      if (window.__e6ClipRecorderActive) return;
+    const findBestCanvas = () => {
       const canvases = Array.from(document.querySelectorAll('canvas'))
-        .filter(canvas => canvas.width > 0 && canvas.height > 0)
+        .filter(canvas => canvas.isConnected && canvas.width > 0 && canvas.height > 0)
         .sort((a, b) => (b.width * b.height) - (a.width * a.height));
-      const canvas = canvases[0];
-      if (!canvas || canvas === currentCanvas) return;
-
-      currentCanvas = canvas;
-      if (initClipRecorder(canvas)) window.__e6ClipRecorderGlobal = true;
+      return canvases[0] || null;
     };
 
-    const observer = new MutationObserver(() => {
-      clearTimeout(timer);
-      timer = setTimeout(findCanvas, 100);
-    });
+    const bindCanvas = () => {
+      if (cancelled) return;
+      const canvas = findBestCanvas();
 
+      if (!canvas) {
+        if (currentCanvas && isClipRecorderActive()) stopClipRecorder();
+        currentCanvas = null;
+        window.__e6ClipRecorderGlobal = false;
+        return;
+      }
+
+      // The previous implementation refused to rebind while a recorder was
+      // active. That left the recorder attached to a destroyed game's canvas
+      // after navigation, so later clips were blank/stale. Rebind whenever
+      // the active canvas changes or is disconnected from the document.
+      if (canvas === currentCanvas && isClipRecorderActive()) return;
+
+      if (currentCanvas && canvas !== currentCanvas) {
+        try { stopClipRecorder(); } catch {}
+      }
+
+      currentCanvas = canvas;
+      const ok = initClipRecorder(canvas);
+      window.__e6ClipRecorderGlobal = !!ok;
+      if (!ok) currentCanvas = null;
+    };
+
+    const scheduleBind = (delay = 80) => {
+      clearTimeout(scanTimer);
+      scanTimer = setTimeout(bindCanvas, delay);
+    };
+
+    const observer = new MutationObserver(() => scheduleBind(100));
     if (document.body) observer.observe(document.body, { childList: true, subtree: true });
-    findCanvas();
+
+    bindCanvas();
+    rebindTimer = setInterval(() => {
+      if (!currentCanvas || !currentCanvas.isConnected || !isClipRecorderActive()) scheduleBind(0);
+    }, 500);
 
     const onKey = async event => {
-      if (window.__e6ClipRecorderActive || !window.__e6ClipRecorderGlobal) return;
       if (event.code !== 'Space' && event.key !== ' ') return;
       if (event.target?.tagName === 'INPUT' || event.target?.tagName === 'TEXTAREA' || event.target?.isContentEditable) return;
+      if (!window.__e6ClipRecorderGlobal || !isClipRecorderActive()) return;
 
       event.preventDefault();
       const result = await saveClip();
@@ -69,7 +97,7 @@ export default function GlobalClipRecorder() {
             duration: result.duration,
           },
         }));
-        showToast(`CLIP SAVED — LAST ${Math.max(1, Math.round(result.duration))} SECONDS`);
+        showToast(`CLIP SAVED — ${Math.max(1, Math.round(result.duration))} SECONDS`);
       } catch (error) {
         console.error('[Element 6 Clips] Failed to persist global native clip:', error);
         showToast('CLIP SAVE FAILED');
@@ -81,9 +109,13 @@ export default function GlobalClipRecorder() {
     return () => {
       cancelled = true;
       observer.disconnect();
-      clearTimeout(timer);
+      clearTimeout(scanTimer);
+      clearInterval(rebindTimer);
+      clearTimeout(rebindTimer);
       window.removeEventListener('keydown', onKey);
-      if (window.__e6ClipRecorderGlobal && !window.__e6ClipRecorderActive) stopClipRecorder();
+      if (window.__e6ClipRecorderGlobal) {
+        try { stopClipRecorder(); } catch {}
+      }
       window.__e6ClipRecorderGlobal = false;
       currentCanvas = null;
     };

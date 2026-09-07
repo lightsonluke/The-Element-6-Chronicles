@@ -73,7 +73,12 @@ export default function ClipsScreen({ clips = [], onDeleteClip = () => {}, onBac
     };
 
     loadClips();
-    return () => { cancelled = true; };
+    const onClipSaved = () => loadClips();
+    window.addEventListener('clipSaved', onClipSaved);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('clipSaved', onClipSaved);
+    };
   }, [clips]);
 
   useEffect(() => () => {

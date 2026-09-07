@@ -97,7 +97,7 @@ export default function ClansScreen({
       setClans(clanRows || []);
       if (mine?.element6_clans) {
         setMyClan({ ...mine.element6_clans, myRole: mine.role });
-        await loadClan(mine.element6_clans);
+        await loadClan(mine.element6_clans, mine.role);
       } else {
         setMyClan(null);
         setMembers([]);
@@ -112,9 +112,10 @@ export default function ClansScreen({
     }
   }
 
-  async function loadClan(clan) {
+  async function loadClan(clan, roleOverride = null) {
     if (!clan) return;
     const uid = await getUid();
+    const leaderMode = roleOverride ? roleOverride === 'leader' : myClan?.myRole === 'leader';
 
     const [{ data: ms, error: me }, { data: apps, error: ae }, eloResult] = await Promise.all([
       supabase
@@ -136,7 +137,7 @@ export default function ClansScreen({
     if (eloResult.error) throw eloResult.error;
 
     setMembers(ms || []);
-    setApplications(isLeader ? (apps || []) : []);
+    setApplications(leaderMode ? (apps || []) : []);
     setEloRows(eloResult.data || []);
 
     const { data: chat, error: ce } = await supabase
@@ -156,7 +157,7 @@ export default function ClansScreen({
       .limit(50);
     setMeetings(meetingRows || []);
 
-    if (isLeader) {
+    if (leaderMode) {
       const { data: threads } = await supabase
         .from('element6_clan_leader_threads')
         .select('*')
@@ -177,9 +178,9 @@ export default function ClansScreen({
 
     const channel = supabase
       .channel(`element6-clan-${myClan.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'element6_clan_chat_messages', filter: `clan_id=eq.${myClan.id}` }, () => loadClan(myClan))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'element6_clan_applications', filter: `clan_id=eq.${myClan.id}` }, () => loadClan(myClan))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'element6_clan_meetings' }, () => loadClan(myClan))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'element6_clan_chat_messages', filter: `clan_id=eq.${myClan.id}` }, () => loadClan(myClan, myClan.myRole))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'element6_clan_applications', filter: `clan_id=eq.${myClan.id}` }, () => loadClan(myClan, myClan.myRole))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'element6_clan_meetings' }, () => loadClan(myClan, myClan.myRole))
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -326,23 +327,10 @@ export default function ClansScreen({
     if (!myClan || tier > myClan.tier || !onGrantTokens) return;
     setBusy(true);
     try {
-      const { data: already } = await supabase
-        .from('element6_clan_reward_claims')
-        .select('tier')
-        .eq('clan_id', myClan.id)
-        .eq('user_id', userId)
-        .eq('tier', tier)
-        .maybeSingle();
-      if (already) throw new Error('You already claimed this clan reward.');
-
-      const reward = TIERS.find(t => t.tier === tier)?.reward || 0;
-      if (!(await onGrantTokens(reward))) throw new Error('Could not grant the reward.');
-
-      const { error } = await supabase.from('element6_clan_reward_claims').insert({
-        clan_id: myClan.id, user_id: userId, tier
-      });
+      const { data: reward, error } = await supabase.rpc('element6_claim_clan_reward', { p_tier: tier });
       if (error) throw error;
-      setNotice(`Claimed ${reward.toLocaleString()} tokens for Tier ${tier}.`);
+      if (!(await onGrantTokens(Number(reward) || 0))) throw new Error('Could not grant the reward.');
+      setNotice(`Claimed ${(Number(reward) || 0).toLocaleString()} tokens for Tier ${tier}.`);
     } catch (e) { setNotice(safeError(e)); }
     finally { setBusy(false); }
   }
@@ -361,7 +349,7 @@ export default function ClansScreen({
       if (error) throw error;
       setMeetingForm({ clanId: '', title: '', notes: '', scheduledAt: '' });
       setNotice('Meeting scheduled.');
-      await loadClan(myClan);
+      await loadClan(myClan, myClan.myRole);
     } catch (e) { setNotice(safeError(e)); }
   }
 
