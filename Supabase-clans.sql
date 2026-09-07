@@ -148,8 +148,9 @@ create table if not exists public.element6_clan_activity_events (
 );
 create index if not exists element6_clan_activity_clan_idx
 on public.element6_clan_activity_events(clan_id,created_at desc);
+drop index if exists public.element6_clan_activity_source_uq;
 create unique index if not exists element6_clan_activity_source_uq
-on public.element6_clan_activity_events(clan_id,user_id,event_key,source_match_id)
+on public.element6_clan_activity_events(clan_id,event_key,source_match_id)
 where source_match_id is not null;
 
 -- Tier 0 -> Tier 1 happens on the first qualifying match/event.
@@ -670,17 +671,6 @@ with check (
  )
 );
 
-drop policy if exists element6_meetings_insert_leader on public.element6_clan_meetings;
-create policy element6_meetings_insert_leader on public.element6_clan_meetings
-for insert to authenticated
-with check (
-  created_by=auth.uid()
-  and exists(
-    select 1 from public.element6_clan_members m
-    where m.user_id=auth.uid() and m.role='leader' and m.clan_id=organizer_clan_id
-  )
-);
-
 -- Public members may not update clan tables directly; all mutation paths go through RPCs.
 revoke insert,update,delete on public.element6_clans from authenticated;
 revoke insert,update,delete on public.element6_clan_members from authenticated;
@@ -694,8 +684,6 @@ do $$ begin
     then alter publication supabase_realtime add table public.element6_clan_applications; end if;
   if not exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='element6_clan_meetings')
     then alter publication supabase_realtime add table public.element6_clan_meetings; end if;
-  if not exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='element6_clan_leader_messages')
-    then alter publication supabase_realtime add table public.element6_clan_leader_messages; end if;
 end $$;
 
 commit;
