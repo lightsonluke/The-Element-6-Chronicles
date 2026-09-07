@@ -121,10 +121,19 @@ export default function BangerGame({
   }, [countdown]);
 
   useEffect(() => {
-    music.setVolume(musicVolume); sfx.setVolume(sfxVolume);
-    music.setMatchSeed(matchId); music.play('fight');
-    return () => { music.clearMatchSeed(); music.stop(); };
-  }, [musicVolume, sfxVolume, matchId]);
+  music.setVolume(musicVolume);
+  sfx.setVolume(sfxVolume);
+
+  try {
+    music.clearMatchSeed();
+    music.play('fight');
+  } catch {}
+
+  return () => {
+    try { music.clearMatchSeed(); } catch {}
+    try { music.stop(); } catch {}
+  };
+}, [musicVolume, sfxVolume]);
 
   useEffect(() => { window.__el6GameplayActive = true; return () => { window.__el6GameplayActive = false; }; }, []);
 
