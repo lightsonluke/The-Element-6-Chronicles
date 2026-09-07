@@ -8,7 +8,9 @@ import React, { useEffect, useMemo, useState } from 'react';
  *   onBack         - returns to Home
  *   tokenBalance   - current token count from the existing game economy
  *   onSpendTokens  - async (amount) => true/false; MUST atomically deduct from your existing economy
- *   onGrantTokens  - optional async (amount) => true/false for clan tier rewards
+ *   onGrantTokens  - optional async (amount) => true/false for legacy clan token rewards
+ *   onGrantClanReward - async reward object grant for shared clan milestones
+ *   onSyncClanMilestones - optional async sync used by the root Game economy
  *   currentUserId  - optional; otherwise read supabase.auth.getUser()
  *   formatElo      - optional formatter for your existing ELO UI
  */
@@ -49,6 +51,8 @@ export default function ClansScreen({
   tokenBalance = 0,
   onSpendTokens,
   onGrantTokens,
+  onGrantClanReward,
+  onSyncClanMilestones,
   currentUserId,
   formatElo = value => String(value ?? 1000),
 }) {
@@ -82,8 +86,16 @@ export default function ClansScreen({
     return data.user?.id || null;
   }
 
+  async function syncClanMilestoneRewards() {
+    if (!onSyncClanMilestones) return [];
+    const granted = await onSyncClanMilestones();
+    if (granted?.length) setNotice(granted.map(r => r.label || `Clan milestone Tier ${r.tier}`).join(' • '));
+    return granted || [];
+  }
+
   async function refresh() {
     if (!supabase) return;
+    await syncClanMilestoneRewards();
     setBusy(true);
     try {
       const uid = await getUid();
@@ -470,6 +482,14 @@ export default function ClansScreen({
                 <div className="text-right"><div className="font-heading text-lg">{myClan.xp.toLocaleString()} XP</div><div className="text-xs text-muted-foreground">365-day minimum to Tier 10</div></div>
               </div>
               <div className="mt-3 h-3 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary" style={{width:`${tierProgress(myClan).percent}%`}} /></div>
+              <div className="mt-3 rounded-xl bg-secondary/40 p-3 text-sm">
+                <b>CLAN MILESTONE REWARDS</b>
+                <p className="mt-1 text-xs text-muted-foreground">Every member who was in the clan when a milestone was reached receives the milestone reward on their next clan sync.</p>
+                <div className="mt-2 grid gap-1 text-xs">
+                  <span>50% milestone: large token reward + exclusive cosmetic/Shikigami</span>
+                  <span>Tier completion: even larger token reward + another exclusive cosmetic/Shikigami</span>
+                </div>
+              </div>
             </div>
 
             <div className="rounded-2xl border bg-card p-4">

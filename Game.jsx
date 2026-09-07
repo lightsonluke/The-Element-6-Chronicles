@@ -94,13 +94,16 @@ import MobileControlsTest from './MobileControlsTest.jsx';
 import { useGamepadMenuNav } from './useGamepadMenuNav.js';
 import { loadCloudProgress, saveCloudProgress } from './cloudSaves.js';
 import { supabase } from './supabaseClient.js';
-import { recordClanMatchActivity } from './clanActivity.js';
 import { syncSharedLeaderboard } from './sharedLeaderboard.js';
 
 const DEFAULT_SPLIT_CITY_BACKDROP = `${import.meta.env.BASE_URL}assets/split-city-background.png`;
 import { getKeybinds } from './keybinds.js';
 import UsernamePrompt from './UsernamePrompt.jsx';
 import GameIcon from "./GameIcon.jsx";
+import ClipsScreen from './ClipsScreen.jsx';
+import ClansScreen from './ClansScreen.jsx';
+import GlobalClipRecorder from './GlobalClipRecorder.jsx';
+import { recordClanMatchActivity } from './clanActivity.js';
 
 // Screens where a canvas game is actively running and the gamepad is used
 // for gameplay. Menu navigation is disabled ONLY on these screens so the
@@ -215,7 +218,7 @@ export default function Game() {
     battleroyale: '/battle-royale', customrooms: '/custom-rooms', lan: '/lan-play', leaderboardhall: '/leaderboard',
     about: '/about-the-game', battlepass: '/battle-pass', lore: '/lore-library', equip: '/equip', meet: '/meet-characters',
     editchars: '/edit-characters', creator: '/create-character', codex: '/hero-codex', daily: '/daily-quests',
-    fightquests: '/fight-quests', grandcircuit: '/grand-circuit', tournament: '/tournament', savecodes: '/save',
+    fightquests: '/fight-quests', clips: '/clips', clans: '/clans', grandcircuit: '/grand-circuit', tournament: '/tournament', savecodes: '/save',
     onlinesettings: '/online-settings', sportslobby: '/online-sports', creatorMode: '/campaigns', creatormode: '/campaigns',
     custombattle: '/custom-battle', team: '/2v2-teams', shapeshiftSelect: '/shapeshift', cutscene: '/story-intro',
   };
@@ -235,7 +238,7 @@ export default function Game() {
     '/elo': 'elo', '/story': 'storySaves', '/story-mode': 'storySaves', '/community': 'hubserverselect', '/community-hub': 'hubserverselect',
     '/settings': 'settings', '/online-settings': 'onlinesettings', '/battle-pass': 'events', '/lore': 'lore', '/lore-library': 'lore',
     '/equip': 'equip', '/equip-tab': 'equip', '/meet-characters': 'meet', '/edit-characters': 'editchars', '/create-character': 'creator',
-    '/hero-codex': 'codex', '/daily-quests': 'daily', '/fight-quests': 'fightquests', '/leaderboard': 'leaderboard', '/leaderboards': 'leaderboard',
+    '/hero-codex': 'codex', '/clips': 'clips', '/clans': 'clans', '/daily-quests': 'daily', '/fight-quests': 'fightquests', '/leaderboard': 'leaderboard', '/leaderboards': 'leaderboard',
     '/campaigns': 'creatormode', '/shop': 'shop', '/save': 'savecodes', '/about': 'about', '/about-the-game': 'about',
     '/sandbox': 'sandbox', '/sandbox-mode': 'sandbox', '/stage-editor': 'stageeditor', '/mobile-controls': 'mobilecontrols',
     '/training': 'training', '/combo-trainer': 'combos', '/tutorial': 'tutorial', '/custom-battle': 'custombattle', '/tournament': 'tournament',
@@ -305,6 +308,7 @@ export default function Game() {
   const chatInitRef = useRef(false);
   const prevUnreadRef = useRef(0);
   const onChatScreenRef = useRef(false);
+  const clanRewardSyncInFlightRef = useRef(false);
 
   // Human-readable URLs work while browsing. GitHub Pages still needs its
   // normal SPA fallback for a direct refresh on a non-root URL.
@@ -509,6 +513,70 @@ export default function Game() {
     setProgress(prev => { const next = { ...prev, coins: (prev.coins || 0) + n }; saveProgress(next); return next; });
     if (n > 0) { setTokenFlash(n); setTimeout(() => setTokenFlash(null), 2500); }
   };
+  const spendClanTokens = async (amount) => {
+    const cost = Math.max(0, Number(amount) || 0);
+    if (!cost) return true;
+    if ((progressRef.current?.coins || 0) < cost) return false;
+    setProgress(prev => {
+      if ((prev.coins || 0) < cost) return prev;
+      const next = { ...prev, coins: (prev.coins || 0) - cost };
+      saveProgress(next);
+      return next;
+    });
+    return true;
+  };
+  const grantClanTokens = async (amount) => {
+    const reward = Math.max(0, Number(amount) || 0);
+    if (reward) addCoins(reward);
+    return true;
+  };
+  const grantClanReward = async (reward) => {
+    if (!reward) return false;
+    const tokens = Math.max(0, Number(reward.token_reward) || 0);
+    const shikigamiId = reward.shikigami_id || null;
+    const accessoryId = reward.accessory_id || null;
+
+    setProgress(prev => {
+      const next = { ...prev };
+      if (tokens > 0) next.coins = (next.coins || 0) + tokens;
+      if (shikigamiId) next.ownedShikigami = [...new Set([...(next.ownedShikigami || []), shikigamiId])];
+      if (accessoryId) next.ownedAccessories = [...new Set([...(next.ownedAccessories || []), accessoryId])];
+      saveProgress(next);
+      return next;
+    });
+    if (tokens > 0) {
+      setTokenFlash(tokens);
+      setTimeout(() => setTokenFlash(null), 2500);
+    }
+    return true;
+  };
+  const syncClanMilestoneRewards = async () => {
+    if (!supabase || !me?.id || clanRewardSyncInFlightRef.current) return [];
+    clanRewardSyncInFlightRef.current = true;
+    try {
+      const { data, error } = await supabase.rpc('element6_get_available_clan_milestones');
+      if (error) throw error;
+      const rewards = Array.isArray(data) ? data : [];
+      const granted = [];
+      for (const reward of rewards) {
+        const ok = await grantClanReward(reward);
+        if (!ok) continue;
+        const { data: claimed, error: claimError } = await supabase.rpc('element6_claim_clan_milestone', { p_milestone_key: reward.milestone_key });
+        if (!claimError) granted.push(claimed || reward);
+      }
+      return granted;
+    } catch {
+      return [];
+    } finally {
+      clanRewardSyncInFlightRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (!me?.id) return;
+    syncClanMilestoneRewards();
+  }, [me?.id]);
+
   const addXP = (charId, xp) => {
     if (!charId || xp <= 0) return;
     setProgress(prev => {
@@ -877,6 +945,8 @@ export default function Game() {
     else if (dest === 'mobilecontrols') { setScreen('mobilecontrols'); sfx.click(); }
     else if (dest === 'friends') setScreen('friends');
     else if (dest === 'chat') setScreen('chat');
+    else if (dest === 'clips') setScreen('clips');
+    else if (dest === 'clans') setScreen('clans');
     else if (dest === 'leaderboard') setScreen('leaderboard');
     else if (dest === 'elo') setScreen('elo');
     else if (dest === 'regularbattle') { setPending({ mode: 'regular' }); setScreen('charSelect'); }
@@ -1378,19 +1448,6 @@ export default function Game() {
     setScreen('loading');
   };
 
-  // Clan XP is awarded once for each completed match. The database de-duplicates
-  // the same match for a clan, so two members of one clan playing each other
-  // still contribute only one match's worth of clan XP.
-  const recordCompletedClanMatch = (mode, matchId, result = 'played') => {
-    if (!mode) return;
-    supabase.auth.getUser().then(({ data }) => {
-      const userId = data?.user?.id;
-      if (!userId) return;
-      const stableMatchId = matchId ? String(matchId) : `${mode}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      recordClanMatchActivity({ supabase, userId, mode, matchId: stableMatchId, result }).catch(() => {});
-    }).catch(() => {});
-  };
-
   // Shared per-match award routine. Used by both the in-game Rematch button
   // (onAward — pays out immediately so progress is never lost mid-session) and
   // handleFightEnd (onEnd — pays the final match, then shows the rewards screen).
@@ -1412,7 +1469,13 @@ export default function Game() {
     if (reward > 0) addCoins(reward);
     recordFightResult(fighters.p1, m.stats || {}, won, m.moveStats);
     const clanMode = fighters.gameMode === 'regular' ? 'offline_regularbattle' : fighters.gameMode === 'ranked' ? 'bot_ranked' : fighters.gameMode === 'time' ? 'time_battle' : null;
-    if (clanMode) recordCompletedClanMatch(clanMode, m.matchId || m.id, won ? 'win' : 'loss');
+    if (clanMode) {
+      supabase.auth.getUser().then(({ data }) => {
+        if (!data?.user?.id) return;
+        const matchId = `fight_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        recordClanMatchActivity({ supabase, userId: data.user.id, mode: clanMode, matchId, result: won ? 'win' : 'loss' }).catch(() => {});
+      }).catch(() => {});
+    }
     const xpGained = usedEvil ? 0 : calculateBattleXP(fighters.difficulty, won, isPvP);
     if (xpGained > 0) {
       setProgress(prev => {
@@ -1511,8 +1574,19 @@ export default function Game() {
     const coins = result.tournamentWon ? (result.reward || 50) : (won ? 15 : 5);
     if (coins > 0) addCoins(coins);
     addXP(result.p1CharId || progress.favoriteId || 'yellow', xp);
-    const clanSportMode = ({ soccer: result.online ? 'soccer_online' : 'soccer_offline', volleyball: result.online ? 'volleyball_online' : 'volleyball_offline', dodgeball: result.online ? 'dodgeball_online' : 'dodgeball_offline', banger: result.online ? 'banger_online' : null })[sport];
-    if (clanSportMode) recordCompletedClanMatch(clanSportMode, result.matchId || result.match_id, won ? 'win' : 'loss');
+    const clanSportMode = ({
+      soccer: result.online ? 'soccer_online' : 'soccer_offline',
+      volleyball: result.online ? 'volleyball_online' : 'volleyball_offline',
+      dodgeball: result.online ? 'dodgeball_online' : 'dodgeball_offline',
+      banger: result.online ? 'banger_online' : null,
+    })[sport];
+    if (clanSportMode) {
+      supabase.auth.getUser().then(({ data }) => {
+        if (!data?.user?.id) return;
+        const matchId = result.matchId || `${sport}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        recordClanMatchActivity({ supabase, userId: data.user.id, mode: clanSportMode, matchId, result: won ? 'win' : 'loss' }).catch(() => {});
+      }).catch(() => {});
+    }
     if (result.p2IsHuman && result.p2CharId) addXP(result.p2CharId, calculateSportXP(sport, result.stats, !won));
     // Mastery: award wins for any game mode
     if (won) {
@@ -2193,6 +2267,23 @@ export default function Game() {
           <MeetCharacters onBack={goBack} favoriteId={progress.favoriteId} onSetFavorite={setFavorite} progress={progress} customCharsData={customCharData} customNumberMap={customNumberMap} />
         )}
 
+        {screen === 'clips' && (
+          <ClipsScreen onBack={goBack} />
+        )}
+
+        {screen === 'clans' && (
+          <ClansScreen
+            supabase={supabase}
+            onBack={goBack}
+            tokenBalance={progress.coins || 0}
+            onSpendTokens={spendClanTokens}
+            onGrantTokens={grantClanTokens}
+            onGrantClanReward={grantClanReward}
+            onSyncClanMilestones={syncClanMilestoneRewards}
+            currentUserId={me?.id}
+          />
+        )}
+
         {screen === 'daily' && (
           <DailyQuests
             progress={progress}
@@ -2337,9 +2428,6 @@ export default function Game() {
                   saveProgress(next); return next;
                 });
               }
-              if (res && !res.disconnected) {
-                recordCompletedClanMatch('battle_royale_online', res.matchId || res.match_id, res.placement === 1 ? 'win' : 'played');
-              }
               setScreen('menu');
             }}
             unlockedIds={progress.unlockedIds}
@@ -2370,9 +2458,6 @@ export default function Game() {
                   saveProgress(next);
                   return next;
                 });
-              }
-              if (!res?.disconnected && !res?.forfeited && res?.matchId) {
-                recordCompletedClanMatch(onlineMode === 'ranked' ? 'ranked' : 'unranked', res.matchId, res.won ? 'win' : 'loss');
               }
               setScreen('menu');
             }}
@@ -2496,6 +2581,7 @@ export default function Game() {
       {progress?.settings?.mobileMode === true && TOUCH_SCREENS.includes(screen) && (
         <TouchControls keybinds={getKeybinds(progress.settings).p1} settings={progress.settings || {}} />
       )}
+      <GlobalClipRecorder />
       <VirtualKeyboard />
 
       {showDailyReward && (

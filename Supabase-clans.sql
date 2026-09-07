@@ -137,6 +137,178 @@ create table if not exists public.element6_clan_reward_claims (
   primary key(clan_id,user_id,tier)
 );
 
+
+-- Shared clan milestone rewards: every member becomes entitled to each milestone
+-- when the clan reaches 50% of the next tier threshold and when the tier is completed.
+create table if not exists public.element6_clan_milestone_rewards (
+  milestone_key text primary key,
+  tier smallint not null check (tier between 1 and 10),
+  milestone_type text not null check (milestone_type in ('half','full')),
+  xp_threshold bigint not null check (xp_threshold >= 0),
+  token_reward integer not null default 0 check (token_reward >= 0),
+  shikigami_id text,
+  accessory_id text,
+  label text not null
+);
+
+create table if not exists public.element6_clan_milestone_claims (
+  clan_id uuid not null references public.element6_clans(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  milestone_key text not null references public.element6_clan_milestone_rewards(milestone_key),
+  claimed_at timestamptz not null default now(),
+  primary key(clan_id,user_id,milestone_key)
+);
+create index if not exists element6_clan_milestone_claims_user_idx
+on public.element6_clan_milestone_claims(user_id,claimed_at desc);
+
+create table if not exists public.element6_clan_milestone_reached (
+  clan_id uuid not null references public.element6_clans(id) on delete cascade,
+  milestone_key text not null references public.element6_clan_milestone_rewards(milestone_key),
+  reached_at timestamptz not null default now(),
+  primary key(clan_id,milestone_key)
+);
+
+create or replace function public.element6_stamp_clan_milestones()
+returns trigger
+language plpgsql
+security definer
+set search_path='' 
+as $$
+begin
+  insert into public.element6_clan_milestone_reached(clan_id,milestone_key,reached_at)
+  select new.id, r.milestone_key, now()
+  from public.element6_clan_milestone_rewards r
+  where (r.milestone_type='full' and new.tier >= r.tier)
+     or (r.milestone_type='half' and new.xp >= r.xp_threshold)
+  on conflict do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists element6_stamp_clan_milestones on public.element6_clans;
+create trigger element6_stamp_clan_milestones
+after update of xp,tier on public.element6_clans
+for each row execute function public.element6_stamp_clan_milestones();
+
+
+insert into public.element6_clan_milestone_rewards
+  (milestone_key,tier,milestone_type,xp_threshold,token_reward,shikigami_id,accessory_id,label)
+values
+  ('tier1_half',1,'half',0,3000,'kaze','aura_gold','Tier 1 halfway reward'),
+  ('tier1_full',1,'full',1,7000,'kitsune','crown','Tier 1 completion reward'),
+  ('tier2_half',2,'half',38,3500,'yuki','sparkles','Tier 2 halfway reward'),
+  ('tier2_full',2,'full',75,8000,'kuro','wings','Tier 2 completion reward'),
+  ('tier3_half',3,'half',163,4000,'mizu','comet','Tier 3 halfway reward'),
+  ('tier3_full',3,'full',250,9000,'tora','halo','Tier 3 completion reward'),
+  ('tier4_half',4,'half',400,4500,'hana','flower','Tier 4 halfway reward'),
+  ('tier4_full',4,'full',550,10000,'rai','lightning','Tier 4 completion reward'),
+  ('tier5_half',5,'half',775,5000,'sora','shadow','Tier 5 halfway reward'),
+  ('tier5_full',5,'full',1000,11000,'tsuki','crystals','Tier 5 completion reward'),
+  ('tier6_half',6,'half',1300,5500,'nami','bubble','Tier 6 halfway reward'),
+  ('tier6_full',6,'full',1600,12000,'hi','lightning','Tier 6 completion reward'),
+  ('tier7_half',7,'half',2000,6000,'kumo','mist','Tier 7 halfway reward'),
+  ('tier7_full',7,'full',2400,13000,'kage','cape','Tier 7 completion reward'),
+  ('tier8_half',8,'half',2900,7000,'koi','star','Tier 8 halfway reward'),
+  ('tier8_full',8,'full',3400,15000,'akuma','horns','Tier 8 completion reward'),
+  ('tier9_half',9,'half',4050,8000,'mori','aura_cyan','Tier 9 halfway reward'),
+  ('tier9_full',9,'full',4700,17000,'ishi','crystals','Tier 9 completion reward'),
+  ('tier10_half',10,'half',5600,10000,'hoshi','aura_rainbow','Tier 10 halfway reward'),
+  ('tier10_full',10,'full',6500,25000,'ryuu','wings','Tier 10 completion reward')
+on conflict(milestone_key) do update set
+  tier=excluded.tier, milestone_type=excluded.milestone_type, xp_threshold=excluded.xp_threshold,
+  token_reward=excluded.token_reward, shikigami_id=excluded.shikigami_id,
+  accessory_id=excluded.accessory_id, label=excluded.label;
+
+-- Backfill milestone reach records for clans that already existed before this migration.
+insert into public.element6_clan_milestone_reached(clan_id,milestone_key,reached_at)
+select c.id, r.milestone_key, coalesce(c.updated_at,c.created_at,now())
+from public.element6_clans c
+cross join public.element6_clan_milestone_rewards r
+where (r.milestone_type='full' and c.tier >= r.tier)
+   or (r.milestone_type='half' and c.xp >= r.xp_threshold)
+on conflict do nothing;
+
+-- Return currently available milestone entitlements for the signed-in member.
+create or replace function public.element6_get_available_clan_milestones()
+returns jsonb
+language sql
+security definer
+set search_path='' 
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'milestone_key', r.milestone_key,
+    'tier', r.tier,
+    'milestone_type', r.milestone_type,
+    'xp_threshold', r.xp_threshold,
+    'token_reward', r.token_reward,
+    'shikigami_id', r.shikigami_id,
+    'accessory_id', r.accessory_id,
+    'label', r.label
+  ) order by r.tier, case when r.milestone_type='half' then 0 else 1 end), '[]'::jsonb)
+  from public.element6_clan_members m
+  join public.element6_clans c on c.id=m.clan_id
+  join public.element6_clan_milestone_reached rr on rr.clan_id=c.id
+  join public.element6_clan_milestone_rewards r on r.milestone_key=rr.milestone_key
+  where m.user_id=auth.uid()
+    and m.joined_at <= rr.reached_at
+    and not exists (
+      select 1 from public.element6_clan_milestone_claims x
+      where x.clan_id=c.id and x.user_id=auth.uid() and x.milestone_key=r.milestone_key
+    );
+$$;
+revoke all on function public.element6_get_available_clan_milestones() from public,anon;
+grant execute on function public.element6_get_available_clan_milestones() to authenticated;
+
+create or replace function public.element6_claim_clan_milestone(p_milestone_key text)
+returns jsonb
+language plpgsql
+security definer
+set search_path='' 
+as $$
+declare
+  v_user uuid:=auth.uid();
+  v_clan uuid;
+  v_xp bigint;
+  v_row public.element6_clan_milestone_rewards%rowtype;
+begin
+  select clan_id into v_clan from public.element6_clan_members where user_id=v_user;
+  if v_clan is null then raise exception 'Not in a clan'; end if;
+  select xp into v_xp from public.element6_clans where id=v_clan;
+  select * into v_row from public.element6_clan_milestone_rewards where milestone_key=p_milestone_key;
+  if v_row.milestone_key is null then raise exception 'Milestone not found'; end if;
+
+  if not exists (
+    select 1
+    from public.element6_clan_milestone_reached rr
+    join public.element6_clan_members mm on mm.clan_id=rr.clan_id and mm.user_id=v_user
+    where rr.clan_id=v_clan and rr.milestone_key=p_milestone_key and mm.joined_at <= rr.reached_at
+  ) then raise exception 'Milestone not reached or member joined too late'; end if;
+
+  insert into public.element6_clan_milestone_claims(clan_id,user_id,milestone_key)
+  values(v_clan,v_user,p_milestone_key)
+  on conflict do nothing;
+  if not found then raise exception 'Milestone already claimed'; end if;
+
+  return jsonb_build_object(
+    'milestone_key',v_row.milestone_key, 'tier',v_row.tier, 'milestone_type',v_row.milestone_type,
+    'token_reward',v_row.token_reward, 'shikigami_id',v_row.shikigami_id,
+    'accessory_id',v_row.accessory_id, 'label',v_row.label
+  );
+end;
+$$;
+revoke all on function public.element6_claim_clan_milestone(text) from public,anon;
+grant execute on function public.element6_claim_clan_milestone(text) to authenticated;
+
+alter table public.element6_clan_milestone_rewards enable row level security;
+alter table public.element6_clan_milestone_claims enable row level security;
+alter table public.element6_clan_milestone_reached enable row level security;
+drop policy if exists element6_clan_milestone_reached_read on public.element6_clan_milestone_reached;
+create policy element6_clan_milestone_reached_read on public.element6_clan_milestone_reached for select to authenticated using (exists (select 1 from public.element6_clan_members m where m.clan_id=element6_clan_milestone_reached.clan_id and m.user_id=auth.uid()));
+drop policy if exists element6_clan_milestones_read on public.element6_clan_milestone_rewards;
+create policy element6_clan_milestones_read on public.element6_clan_milestone_rewards for select to authenticated using (true);
+drop policy if exists element6_clan_milestone_claims_read on public.element6_clan_milestone_claims;
+create policy element6_clan_milestone_claims_read on public.element6_clan_milestone_claims for select to authenticated using (user_id=auth.uid());
+
 create table if not exists public.element6_clan_activity_events (
   id bigint generated by default as identity primary key,
   clan_id uuid not null references public.element6_clans(id) on delete cascade,
@@ -148,9 +320,8 @@ create table if not exists public.element6_clan_activity_events (
 );
 create index if not exists element6_clan_activity_clan_idx
 on public.element6_clan_activity_events(clan_id,created_at desc);
-drop index if exists public.element6_clan_activity_source_uq;
 create unique index if not exists element6_clan_activity_source_uq
-on public.element6_clan_activity_events(clan_id,event_key,source_match_id)
+on public.element6_clan_activity_events(clan_id,user_id,event_key,source_match_id)
 where source_match_id is not null;
 
 -- Tier 0 -> Tier 1 happens on the first qualifying match/event.
@@ -671,6 +842,17 @@ with check (
  )
 );
 
+drop policy if exists element6_meetings_insert_leader on public.element6_clan_meetings;
+create policy element6_meetings_insert_leader on public.element6_clan_meetings
+for insert to authenticated
+with check (
+  created_by=auth.uid()
+  and exists(
+    select 1 from public.element6_clan_members m
+    where m.user_id=auth.uid() and m.role='leader' and m.clan_id=organizer_clan_id
+  )
+);
+
 -- Public members may not update clan tables directly; all mutation paths go through RPCs.
 revoke insert,update,delete on public.element6_clans from authenticated;
 revoke insert,update,delete on public.element6_clan_members from authenticated;
@@ -684,6 +866,8 @@ do $$ begin
     then alter publication supabase_realtime add table public.element6_clan_applications; end if;
   if not exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='element6_clan_meetings')
     then alter publication supabase_realtime add table public.element6_clan_meetings; end if;
+  if not exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='element6_clan_leader_messages')
+    then alter publication supabase_realtime add table public.element6_clan_leader_messages; end if;
 end $$;
 
 commit;
