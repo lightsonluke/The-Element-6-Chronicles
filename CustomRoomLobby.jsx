@@ -1,4 +1,5 @@
 import db from './localBackend';
+import { supabase } from './supabaseClient.js';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
@@ -66,10 +67,41 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
   }, [lan.status, phase]);
 
   useEffect(() => {
+    let cancelled = false;
     music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.play('menu');
-    db.auth.me().then(u => setMe(u)).catch(() => setMe(null));
+
+    const applyAuthUser = (user) => {
+      if (cancelled) return;
+      if (user) {
+        const name = user.user_metadata?.full_name || user.user_metadata?.username || user.email?.split('@')[0] || 'Player';
+        setMe({
+          ...user,
+          id: user.id,
+          email: user.email || '',
+          username: user.user_metadata?.username || name,
+          full_name: name,
+          role: user.role || 'player',
+        });
+        return;
+      }
+      // Local/offline fallback only. A valid Supabase session always wins.
+      db.auth.me().then(localUser => { if (!cancelled) setMe(localUser); }).catch(() => { if (!cancelled) setMe(null); });
+    };
+
+    supabase.auth.getUser()
+      .then(({ data }) => applyAuthUser(data?.user || null))
+      .catch(() => applyAuthUser(null));
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      applyAuthUser(session?.user || null);
+    });
+
     refreshBrowse();
-    return () => music.stop();
+    return () => {
+      cancelled = true;
+      authListener?.subscription?.unsubscribe?.();
+      music.stop();
+    };
   }, [musicVolume, sfxVolume]);
 
   const refreshBrowse = async () => {
