@@ -103,12 +103,21 @@ export default function DodgeballGame({
     if (countdown > 0) { const t = setTimeout(() => setCountdown(c => c - 1), 750); return () => clearTimeout(t); }
     setStarted(true);
   }, [countdown]);
+  
+useEffect(() => {
+  music.setVolume(musicVolume);
+  sfx.setVolume(sfxVolume);
 
-  useEffect(() => {
-    music.setVolume(musicVolume); sfx.setVolume(sfxVolume);
-    try { music.setMatchSeed(matchId); music.play('fight'); } catch {}
-    return () => { music.clearMatchSeed(); music.stop(); };
-  }, [musicVolume, sfxVolume, matchId]);
+  try {
+    music.clearMatchSeed();
+    music.play('fight');
+  } catch {}
+
+  return () => {
+    try { music.clearMatchSeed(); } catch {}
+    try { music.stop(); } catch {}
+  };
+}, [musicVolume, sfxVolume]);
 
   useEffect(() => {
     const resolveKey = (key) => {
