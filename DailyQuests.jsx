@@ -34,16 +34,12 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
   const getQuestProgress = (q) => {
     // dailyStats accumulates today's fight stats per stat type, summed across all characters
     const daily = questState.dailyStats || {};
-    if (q.stat === 'wins') {
-      return Object.values(daily).reduce((sum, charStats) => sum + (charStats.wins || 0), 0);
-    }
-    if (q.stat === 'sigs') {
-      // Count sigs - from moveStats
-      let total = 0;
-      const ms = progress?.moveStats || {};
-      // We track daily sigs via a simple counter
-      return daily._total?.sigs || 0;
-    }
+    if (q.stat === 'wins') return daily._total?.wins || 0;
+    if (q.stat === 'matches') return daily._total?.matches || 0;
+    if (q.stat === 'sigs') return daily._total?.sigs || 0;
+    if (q.stat === 'signatureKOs') return daily._total?.signatureKOs || 0;
+    if (q.stat === 'groundPoundKOs') return daily._total?.groundPoundKOs || 0;
+    if (q.stat === 'emoteBeforeMove') return daily._total?.emoteBeforeMove || 0;
     if (q.stat === 'heavies') return daily._total?.heavies || 0;
     if (q.stat === 'powers') return daily._total?.powers || 0;
     if (q.stat === 'supers') return daily._total?.supers || 0;
@@ -122,6 +118,11 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
               <div className="flex justify-between items-start mb-1">
                 <p className="font-heading text-sm text-foreground">{q.title}</p>
                 <span className="text-2xl" style={{ color: chest?.color }}>{chest ? <GameIcon emoji="🎁" size={14} /> : ''}</span>
+              </div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-[9px] font-heading uppercase ${q.category === 'hard' ? 'text-red-400' : q.category === 'medium' ? 'text-yellow-400' : 'text-green-400'}`}>
+                  {q.category || 'daily'}
+                </span>
               </div>
               <p className="text-[11px] text-muted-foreground font-body mb-2">{q.desc}</p>
               <div className="h-2 bg-muted rounded-full overflow-hidden mb-1">

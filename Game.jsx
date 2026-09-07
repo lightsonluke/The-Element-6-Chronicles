@@ -1432,15 +1432,22 @@ export default function Game() {
       if (!prev.dailyQuests) return prev;
       const dq = { ...prev.dailyQuests };
       dq.dailyStats = dq.dailyStats || {};
-      dq.dailyStats._total = dq.dailyStats._total || { sigs: 0, heavies: 0, powers: 0, supers: 0, distance: 0, wins: 0 };
+      dq.dailyStats._total = dq.dailyStats._total || {
+        sigs: 0, heavies: 0, powers: 0, supers: 0, distance: 0,
+        wins: 0, matches: 0, signatureKOs: 0, groundPoundKOs: 0, emoteBeforeMove: 0
+      };
       dq.dailyStats._total.heavies += stats.heavies || 0;
       dq.dailyStats._total.powers += stats.powers || 0;
       dq.dailyStats._total.supers += stats.supers || 0;
       dq.dailyStats._total.distance += stats.distance || 0;
+      dq.dailyStats._total.matches += 1;
       if (won) dq.dailyStats._total.wins += 1;
       if (m.moveStats) {
         for (const v of Object.values(m.moveStats)) {
-          dq.dailyStats._total.sigs = (dq.dailyStats._total.sigs || 0) + (v.sig || 0) + (v.recovery || 0);
+          dq.dailyStats._total.sigs += (v.sigSide || 0) + (v.sigUp || 0) + (v.sigDown || 0) + (v.recovery || 0);
+          dq.dailyStats._total.signatureKOs += v.signatureKOs || 0;
+          dq.dailyStats._total.groundPoundKOs += v.groundPoundKOs || 0;
+          dq.dailyStats._total.emoteBeforeMove += v.emoteBeforeMove || 0;
         }
       }
       const next = { ...prev, dailyQuests: dq };

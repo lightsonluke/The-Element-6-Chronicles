@@ -108,7 +108,7 @@ export function createFighter(charData, startX, startY, facing) {
     noBlastKill: 0,
     dotTargets: null,
     dotDamage: 0,
-    moveStats: { heavy: 0, downHeavy: 0, groundPound: 0, recovery: 0, aerial: 0, sigSide: 0, sigUp: 0, sigDown: 0, super: 0, power: 0, normal: 0 },
+    moveStats: { heavy: 0, downHeavy: 0, groundPound: 0, recovery: 0, aerial: 0, sigSide: 0, sigUp: 0, sigDown: 0, super: 0, power: 0, normal: 0, signatureKOs: 0, groundPoundKOs: 0, emoteBeforeMove: 0 },
     recoveryAirUses: 0,
     platformMaterial: null,
     powerDisabled: 0,
@@ -1825,6 +1825,17 @@ export function loseStock(fighter, stageWidth, stageHeight) {
   }
   fighter._deathX = fighter.x;
   fighter._deathY = fighter.y;
+  // Attribute the KO to the last attacker when the death came from a hit.
+  // This powers daily objectives such as Signature KOs and Ground Pound KOs.
+  const killer = fighter._lastHitBy;
+  if (killer && killer !== fighter && killer.moveStats) {
+    const attack = killer.attackData || {};
+    if (attack.isGroundPound) killer.moveStats.groundPoundKOs = (killer.moveStats.groundPoundKOs || 0) + 1;
+    else if (attack.sigType === 'side' || attack.sigType === 'up' || attack.sigType === 'down') {
+      killer.moveStats.signatureKOs = (killer.moveStats.signatureKOs || 0) + 1;
+    }
+  }
+  fighter._lastHitBy = null;
   fighter.stocks--;
   fighter.damage = 0;
   fighter.x = rp ? rp.x : (stageWidth / 2 + (Math.random() - 0.5) * 80);

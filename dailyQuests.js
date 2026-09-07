@@ -10,14 +10,27 @@ import { SKINS } from './skins.js';
 
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 
-// Quest pool — each generates a random target + reward
+// Daily quest pool.
+// The rotation intentionally mixes hard, medium, and occasional easier objectives.
+// Progress is recorded from authoritative match results so the same match cannot
+// be counted differently by the quest UI.
 const QUEST_POOL = [
-  { id: 'win_fights',   title: 'Win Fights',       desc: 'Win {n} fights in any mode.',          stat: 'wins',    targets: [2, 3, 5] },
-  { id: 'land_sigs',    title: 'Signature Moves',  desc: 'Land {n} signature attacks.',         stat: 'sigs',    targets: [10, 15, 20] },
-  { id: 'land_heavies', title: 'Heavy Hits',       desc: 'Land {n} heavy attacks.',             stat: 'heavies', targets: [5, 8, 12] },
-  { id: 'use_powers',   title: 'Power Up',          desc: 'Activate your power {n} times.',      stat: 'powers',  targets: [3, 5, 8] },
-  { id: 'use_supers',   title: 'Super Moves',      desc: 'Use your super move {n} times.',      stat: 'supers',  targets: [1, 2, 3] },
-  { id: 'travel',       title: 'Road Warrior',     desc: 'Travel {n} meters in fights.',        stat: 'distance',targets: [200, 400, 600] },
+  // HARD
+  { id: 'signature_kos', category: 'hard', title: 'Signature Finishers', desc: 'Score {n} KOs with signature attacks.', stat: 'signatureKOs', targets: [5] },
+  { id: 'ground_pound_kos', category: 'hard', title: 'Grounded No More', desc: 'Score {n} KOs with Ground Pound attacks.', stat: 'groundPoundKOs', targets: [5] },
+  { id: 'emote_then_move', category: 'hard', title: 'Style Then Strike', desc: 'Emote before moving {n} times in matches.', stat: 'emoteBeforeMove', targets: [5] },
+
+  // MEDIUM
+  { id: 'win_fights', category: 'medium', title: 'Take the Win', desc: 'Win {n} matches.', stat: 'wins', targets: [3] },
+  { id: 'land_heavies', category: 'medium', title: 'Heavy Hitter', desc: 'Land {n} heavy attacks.', stat: 'heavies', targets: [8] },
+  { id: 'use_powers', category: 'medium', title: 'Power Up', desc: 'Activate your power {n} times.', stat: 'powers', targets: [6] },
+  { id: 'use_supers', category: 'medium', title: 'Unleash', desc: 'Use your super move {n} times.', stat: 'supers', targets: [2] },
+  { id: 'travel', category: 'medium', title: 'Road Warrior', desc: 'Travel {n} meters in matches.', stat: 'distance', targets: [350] },
+
+  // OCCASIONAL EASIER OBJECTIVES
+  { id: 'land_signatures', category: 'easy', title: 'Signature Practice', desc: 'Land {n} signature attacks.', stat: 'sigs', targets: [5] },
+  { id: 'play_matches', category: 'easy', title: 'Step Into Battle', desc: 'Complete {n} match.', stat: 'matches', targets: [1] },
+  { id: 'use_power', category: 'easy', title: 'Spark Up', desc: 'Activate your power {n} time.', stat: 'powers', targets: [2] },
 ];
 
 export const CHEST_TYPES = [
@@ -26,24 +39,41 @@ export const CHEST_TYPES = [
   { id: 'gold', name: 'Gold Quest', color: '#FFD700', minCoins: 200, maxCoins: 200, cosmeticChance: 0.35 },
 ];
 
-// Generate 3 daily quests based on a seed (date string)
+// Deterministic daily rotation: one hard, one medium, and one flexible slot.
+// This keeps the pool varied while still guaranteeing a challenging objective.
 export function generateDailyQuests(seed) {
   const rng = mulberry(hashString(seed));
-  const pool = [...QUEST_POOL].sort(() => rng() - 0.5);
-  return pool.slice(0, 3).map((q, i) => {
-    // Bronze, silver, and gold always step up in difficulty.
-    const targetIdx = Math.min(i, q.targets.length - 1);
-    const target = q.targets[targetIdx];
-    const reward = CHEST_TYPES[Math.min(i, CHEST_TYPES.length - 1)];
-    return {
-      id: `daily_${q.id}`,
-      title: q.title,
-      desc: q.desc.replace('{n}', target),
-      stat: q.stat,
-      target,
-      chestReward: reward.id,
-    };
-  });
+  const byCategory = category => QUEST_POOL.filter(q => q.category === category);
+
+  const pick = (pool, used) => {
+    const available = pool.filter(q => !used.has(q.id));
+    if (!available.length) return null;
+    return available[Math.floor(rng() * available.length)];
+  };
+
+  const used = new Set();
+  const picks = [];
+
+  const hard = pick(byCategory('hard'), used);
+  if (hard) { used.add(hard.id); picks.push(hard); }
+
+  const medium = pick(byCategory('medium'), used);
+  if (medium) { used.add(medium.id); picks.push(medium); }
+
+  // 70% medium, 30% easy for the third slot. A second hard is never forced.
+  const flexPool = rng() < 0.3 ? byCategory('easy') : byCategory('medium');
+  const flex = pick(flexPool, used) || pick(byCategory('easy'), used) || pick(byCategory('medium'), used);
+  if (flex) { used.add(flex.id); picks.push(flex); }
+
+  return picks.map((q, i) => ({
+    id: `daily_${q.id}`,
+    title: q.title,
+    desc: q.desc.replace('{n}', q.targets[0]),
+    stat: q.stat,
+    target: q.targets[0],
+    chestReward: CHEST_TYPES[Math.min(i, CHEST_TYPES.length - 1)].id,
+    category: q.category,
+  }));
 }
 
 // Open a chest — returns the reward

@@ -752,11 +752,11 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         const _emoteMode = lanConnection ? 'online' : (!p2IsCPU && !dummy) ? 'coop' : 'solo';
         if (_emoteMode === 'coop' && ['1','2','3','4','5'].includes(e.key)) {
           const emote = getEmoteForKey(e.key, equippedEmotes, 2, 'coop');
-          if (emote && f2.grounded && !f2.emote) f2.emote = { id: emote.id, timer: emote.duration, maxTimer: emote.duration, progress: 0, key: e.key };
+          if (emote && f2.grounded && !f2.emote) f2.emote = { id: emote.id, timer: emote.duration, maxTimer: emote.duration, progress: 0, key: e.key, _questAwaitingMove: true };
         } else {
           const _key = _emoteMode === 'coop' && ['6','7','8','9','0'].includes(e.key) ? e.key : e.key;
           const emote = getEmoteForKey(e.key, equippedEmotes, 1, _emoteMode);
-          if (emote && f1.grounded && !f1.emote) f1.emote = { id: emote.id, timer: emote.duration, maxTimer: emote.duration, progress: 0, key: e.key };
+          if (emote && f1.grounded && !f1.emote) f1.emote = { id: emote.id, timer: emote.duration, maxTimer: emote.duration, progress: 0, key: e.key, _questAwaitingMove: true };
         }
       }
       if (!['F5', 'F12'].includes(e.key)) e.preventDefault();
@@ -942,6 +942,19 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           else { f.emote.timer--; f.emote.progress = 1 - f.emote.timer / f.emote.maxTimer; if (f.emote.timer <= 0) { if (f.emote.key && keysRef.current[f.emote.key]) { f.emote.timer = f.emote.maxTimer; } else { f.emote = null; } } }
         }
       });
+      // Daily quest: count an emote followed by actual movement.
+      // Emotes lock movement while active, so the first movement input after
+      // the emote finishes is the unambiguous "emote before moving" event.
+      [f1, f2].forEach((f, idx) => {
+        if (!f.emote && f._questAwaitingMove) {
+          const inp = idx === 0 ? p1In : p2In;
+          if (inp && (inp.left || inp.right || inp.jump)) {
+            f.moveStats.emoteBeforeMove = (f.moveStats.emoteBeforeMove || 0) + 1;
+            f._questAwaitingMove = false;
+          }
+        }
+      });
+
       // High Five — requires shikigami; cancel if none equipped
       [f1, f2].forEach(f => {
         if (f.emote?.id === 'highfive' && !f.emote._checked) {
