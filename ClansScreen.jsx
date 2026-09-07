@@ -17,7 +17,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 const CREATE_COST = 15000;
 const COMMUNITY_CREATE_COST = 5000;
 const PROVEN_WINS_REQUIRED = 50;
-const PROVEN_PLAYTIME_REQUIRED = 5 * 60 * 60;
+const PROVEN_PLAYTIME_REQUIRED = 15 * 60 * 60;
 const COMMUNITY_FOUNDERS_REQUIRED = 3;
 
 const TIERS = [

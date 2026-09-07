@@ -9,7 +9,7 @@ ROUTE 1 — WEALTHY FOUNDER
 ROUTE 2 — PROVEN FOUNDER
 - No token cost.
 - Requires 50 lifetime wins.
-- Requires 5 hours of lifetime playtime.
+- Requires 15 hours of lifetime playtime.
 - The existing Game progress is used to display and submit the proof values.
 
 ROUTE 3 — COMMUNITY FOUNDER

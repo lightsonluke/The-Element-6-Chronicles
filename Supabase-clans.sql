@@ -516,7 +516,7 @@ grant execute on function public.element6_get_clan_member_elo(uuid) to authentic
 
 -- CLAN FOUNDING ROUTES
 -- Wealthy Founder: 15,000 tokens (deducted by the existing client economy).
--- Proven Founder: 50 lifetime wins + 5 hours playtime.
+-- Proven Founder: 50 lifetime wins + 15 hours playtime.
 -- Community Founder: 3 other players confirm a temporary founding session + 5,000 tokens.
 
 create table if not exists public.element6_clan_founder_sessions (
@@ -708,7 +708,7 @@ begin
 
   if p_creation_method='proven' then
     if coalesce(p_proof_wins,0) < 50 then raise exception 'Proven Founder requires 50 total wins'; end if;
-    if coalesce(p_proof_playtime_seconds,0) < 18000 then raise exception 'Proven Founder requires 5 hours of playtime'; end if;
+    if coalesce(p_proof_playtime_seconds,0) < 54000 then raise exception 'Proven Founder requires 15 hours of playtime'; end if;
   elsif p_creation_method='community' then
     if p_founder_session_id is null then raise exception 'Community founding session required'; end if;
     select * into v_session from public.element6_clan_founder_sessions where id=p_founder_session_id;

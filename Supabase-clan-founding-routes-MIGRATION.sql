@@ -2,7 +2,7 @@
 -- Run after the existing clan SQL.
 -- Adds:
 --   1) Wealthy Founder: 15,000 tokens
---   2) Proven Founder: 50 lifetime wins + 5 hours playtime
+--   2) Proven Founder: 50 lifetime wins + 15 hours playtime
 --   3) Community Founder: 3 other player confirmations + 5,000 tokens
 
 create table if not exists public.element6_clan_founder_sessions (
@@ -190,7 +190,7 @@ begin
 
   if p_creation_method='proven' then
     if coalesce(p_proof_wins,0) < 50 then raise exception 'Proven Founder requires 50 total wins'; end if;
-    if coalesce(p_proof_playtime_seconds,0) < 18000 then raise exception 'Proven Founder requires 5 hours of playtime'; end if;
+    if coalesce(p_proof_playtime_seconds,0) < 54000 then raise exception 'Proven Founder requires 15 hours of playtime'; end if;
   elsif p_creation_method='community' then
     if p_founder_session_id is null then raise exception 'Community founding session required'; end if;
     select * into v_session from public.element6_clan_founder_sessions where id=p_founder_session_id;
