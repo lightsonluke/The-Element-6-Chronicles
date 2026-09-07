@@ -137,37 +137,100 @@ export default function ClansScreen({
     const uid = await getUid();
     const leaderMode = roleOverride ? roleOverride === 'leader' : myClan?.myRole === 'leader';
 
-    const [{ data: ms, error: me }, { data: apps, error: ae }, eloResult] = await Promise.all([
+    // Do not use nested player_profiles(...) selects here. The clan rows point
+    // at auth.users, not directly at player_profiles, so PostgREST cannot
+    // reliably infer that relationship. Load the IDs first, then join names
+    // in the client.
+    const [{ data: ms, error: me }, { data: apps, error: ae }, eloResult, { data: chat, error: ce }] = await Promise.all([
       supabase
         .from('element6_clan_members')
-        .select('user_id,role,joined_at,player_profiles(username)')
+        .select('user_id,role,joined_at')
         .eq('clan_id', clan.id)
         .order('joined_at', { ascending: true }),
-      supabase
-        .from('element6_clan_applications')
-        .select('id,user_id,message,status,created_at,player_profiles(username)')
-        .eq('clan_id', clan.id)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: true }),
+      leaderMode
+        ? supabase
+            .from('element6_clan_applications')
+            .select('id,user_id,message,status,created_at')
+            .eq('clan_id', clan.id)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: true })
+        : Promise.resolve({ data: [], error: null }),
       supabase.rpc('element6_get_clan_member_elo', { p_clan_id: clan.id }),
+      supabase
+        .from('element6_clan_chat_messages')
+        .select('id,clan_id,user_id,body,created_at')
+        .eq('clan_id', clan.id)
+        .order('created_at', { ascending: false })
+        .limit(100),
     ]);
 
     if (me) throw me;
     if (ae) throw ae;
-    if (eloResult.error) throw eloResult.error;
-
-    setMembers(ms || []);
-    setApplications(leaderMode ? (apps || []) : []);
-    setEloRows(eloResult.data || []);
-
-    const { data: chat, error: ce } = await supabase
-      .from('element6_clan_chat_messages')
-      .select('id,clan_id,user_id,body,created_at,player_profiles(username)')
-      .eq('clan_id', clan.id)
-      .order('created_at', { ascending: false })
-      .limit(100);
     if (ce) throw ce;
-    setMessages((chat || []).reverse());
+
+    const memberRows = ms || [];
+    const applicationRows = apps || [];
+    const chatRows = chat || [];
+    const allUserIds = [...new Set([
+      ...memberRows.map(r => r.user_id),
+      ...applicationRows.map(r => r.user_id),
+      ...chatRows.map(r => r.user_id),
+    ].filter(Boolean))];
+
+    let profileMap = {};
+    if (allUserIds.length) {
+      const { data: profiles, error: pe } = await supabase
+        .from('player_profiles')
+        .select('user_id,username')
+        .in('user_id', allUserIds);
+      if (pe) throw pe;
+      profileMap = Object.fromEntries((profiles || []).map(p => [p.user_id, p]));
+    }
+
+    setMembers(memberRows.map(m => ({
+      ...m,
+      player_profiles: profileMap[m.user_id] || null,
+    })));
+    setApplications(leaderMode ? applicationRows.map(a => ({
+      ...a,
+      player_profiles: profileMap[a.user_id] || null,
+    })) : []);
+    setMessages(chatRows.reverse().map(m => ({
+      ...m,
+      player_profiles: profileMap[m.user_id] || null,
+    })));
+
+    if (eloResult.error) {
+      // Keep the member list visible even if the ELO RPC has not been installed
+      // yet. The migration in this package installs/fixes that RPC.
+      setEloRows(memberRows.map(m => ({
+        user_id: m.user_id,
+        username: profileMap[m.user_id]?.username || 'Player',
+        role: m.role,
+        ranked_rating: 1000,
+        ranked_wins: 0,
+        ranked_losses: 0,
+        ranked_matches: 0,
+        soccer_rating: 1000,
+        soccer_wins: 0,
+        soccer_losses: 0,
+        soccer_matches: 0,
+        volleyball_rating: 1000,
+        volleyball_wins: 0,
+        volleyball_losses: 0,
+        volleyball_matches: 0,
+        dodgeball_rating: 1000,
+        dodgeball_wins: 0,
+        dodgeball_losses: 0,
+        dodgeball_matches: 0,
+      })));
+      setNotice(`Clan members loaded, but ELO data needs the clan ELO SQL migration: ${safeError(eloResult.error)}`);
+    } else {
+      setEloRows((eloResult.data || []).map(r => ({
+        ...r,
+        username: r.username || profileMap[r.user_id]?.username || 'Player',
+      })));
+    }
 
     const { data: meetingRows } = await supabase
       .from('element6_clan_meetings')
