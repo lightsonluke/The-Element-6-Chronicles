@@ -14,7 +14,11 @@ import React, { useEffect, useMemo, useState } from 'react';
  *   currentUserId  - optional; otherwise read supabase.auth.getUser()
  *   formatElo      - optional formatter for your existing ELO UI
  */
-const CREATE_COST = 30000;
+const CREATE_COST = 15000;
+const COMMUNITY_CREATE_COST = 5000;
+const PROVEN_WINS_REQUIRED = 50;
+const PROVEN_PLAYTIME_REQUIRED = 5 * 60 * 60;
+const COMMUNITY_FOUNDERS_REQUIRED = 3;
 
 const TIERS = [
   { tier: 0, xp: 0, days: 0, reward: 0 },
@@ -55,6 +59,7 @@ export default function ClansScreen({
   onSyncClanMilestones,
   currentUserId,
   formatElo = value => String(value ?? 1000),
+  founderProgress = { wins: 0, playtimeSeconds: 0 },
 }) {
   const [userId, setUserId] = useState(currentUserId || null);
   const [view, setView] = useState('browse');
@@ -72,6 +77,9 @@ export default function ClansScreen({
   const [busy, setBusy] = useState(false);
 
   const [createForm, setCreateForm] = useState({ name: '', tag: '', bio: '', icon: '' });
+  const [founderMethod, setFounderMethod] = useState('wealthy');
+  const [communitySession, setCommunitySession] = useState(null);
+  const [communityCodeInput, setCommunityCodeInput] = useState('');
   const [applyText, setApplyText] = useState('');
   const [chatText, setChatText] = useState('');
   const [meetingForm, setMeetingForm] = useState({ clanId: '', title: '', notes: '', scheduledAt: '' });
@@ -207,37 +215,95 @@ export default function ClansScreen({
     );
   }, [clans, search]);
 
+  async function startCommunityFounding() {
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.rpc('element6_start_clan_founder_session');
+      if (error) throw error;
+      setCommunitySession(data);
+      setNotice(`Community founding code: ${data.code}. Get ${COMMUNITY_FOUNDERS_REQUIRED} other players to confirm it.`);
+    } catch (e) {
+      setNotice(safeError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function refreshCommunityFounding() {
+    if (!communitySession?.session_id) return;
+    try {
+      const { data, error } = await supabase.rpc('element6_get_clan_founder_session', { p_session_id: communitySession.session_id });
+      if (error) throw error;
+      setCommunitySession(data);
+    } catch (e) { setNotice(safeError(e)); }
+  }
+
+  async function confirmCommunityFounding() {
+    const code = communityCodeInput.trim().toUpperCase();
+    if (!code) return;
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.rpc('element6_confirm_clan_founder', { p_code: code });
+      if (error) throw error;
+      setCommunityCodeInput('');
+      setNotice(data.message || 'Community founding confirmed.');
+    } catch (e) {
+      setNotice(safeError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function createClan() {
-    if (tokenBalance < CREATE_COST) {
-      setNotice(`You need ${CREATE_COST.toLocaleString()} tokens to create a clan.`);
+    const wins = Number(founderProgress?.wins || 0);
+    const playtimeSeconds = Number(founderProgress?.playtimeSeconds || 0);
+    const isProven = wins >= PROVEN_WINS_REQUIRED && playtimeSeconds >= PROVEN_PLAYTIME_REQUIRED;
+    const isCommunity = founderMethod === 'community';
+    const requiredTokens = founderMethod === 'wealthy' ? CREATE_COST : (isCommunity ? COMMUNITY_CREATE_COST : 0);
+
+    if (founderMethod === 'proven' && !isProven) {
+      setNotice(`Proven Founder requires ${PROVEN_WINS_REQUIRED} total wins and ${PROVEN_PLAYTIME_REQUIRED / 3600} hours of playtime.`);
       return;
     }
-    if (!onSpendTokens) {
-      setNotice('Your existing token economy needs to be connected to onSpendTokens before clan creation can be enabled.');
+    if (isCommunity && (!communitySession?.confirmed || Number(communitySession.confirmations || 0) < COMMUNITY_FOUNDERS_REQUIRED)) {
+      setNotice(`Community Founder needs ${COMMUNITY_FOUNDERS_REQUIRED} other players to confirm the founding.`);
+      return;
+    }
+    if (requiredTokens > 0 && tokenBalance < requiredTokens) {
+      setNotice(`You need ${requiredTokens.toLocaleString()} tokens for this founding route.`);
+      return;
+    }
+    if (requiredTokens > 0 && !onSpendTokens) {
+      setNotice('Your existing token economy needs to be connected to onSpendTokens before this route can be enabled.');
       return;
     }
 
     setBusy(true);
     try {
-      const spent = await onSpendTokens(CREATE_COST);
-      if (!spent) throw new Error('Token purchase failed or you do not have enough tokens.');
+      let spent = false;
+      if (requiredTokens > 0) {
+        spent = await onSpendTokens(requiredTokens);
+        if (!spent) throw new Error('Token purchase failed or you do not have enough tokens.');
+      }
 
-      const { data, error } = await supabase.rpc('element6_create_clan', {
+      const { data, error } = await supabase.rpc('element6_create_clan_v2', {
         p_name: createForm.name,
         p_tag: createForm.tag,
         p_bio: createForm.bio,
         p_icon_url: createForm.icon || null,
+        p_creation_method: founderMethod,
+        p_founder_session_id: communitySession?.session_id || null,
+        p_proof_wins: wins,
+        p_proof_playtime_seconds: playtimeSeconds,
       });
       if (error) {
-        // If SQL creation failed after the economy was charged, the app should
-        // refund through the existing economy callback rather than silently
-        // losing tokens.
-        try { await onGrantTokens?.(CREATE_COST); } catch {}
+        if (spent) { try { await onGrantTokens?.(requiredTokens); } catch {} }
         throw error;
       }
 
       setNotice(`Clan ${data.name} created!`);
       setCreateForm({ name: '', tag: '', bio: '', icon: '' });
+      setCommunitySession(null);
       await refresh();
       setView('mine');
     } catch (e) {
@@ -448,9 +514,56 @@ export default function ClansScreen({
         )}
 
         {view === 'create' && !myClan && (
-          <section className="mx-auto max-w-2xl rounded-2xl border bg-card p-5 space-y-4">
+          <section className="mx-auto max-w-3xl rounded-2xl border bg-card p-5 space-y-4">
             <h2 className="font-heading text-xl">CREATE CLAN</h2>
-            <p className="text-sm text-muted-foreground">Creation costs {CREATE_COST.toLocaleString()} tokens. New clans begin at Tier 0.</p>
+            <p className="text-sm text-muted-foreground">Choose one of three founding routes. New clans begin at Tier 0.</p>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              {[
+                ['wealthy','💰 Wealthy Founder',`Pay ${CREATE_COST.toLocaleString()} tokens.`],
+                ['proven','🏆 Proven Founder',`${PROVEN_WINS_REQUIRED} wins + ${PROVEN_PLAYTIME_REQUIRED / 3600} hours playtime.`],
+                ['community','🤝 Community Founder',`${COMMUNITY_FOUNDERS_REQUIRED} other players confirm + ${COMMUNITY_CREATE_COST.toLocaleString()} tokens.`],
+              ].map(([id,title,desc]) => (
+                <button key={id} type="button" onClick={() => setFounderMethod(id)} className={`rounded-xl border p-4 text-left ${founderMethod === id ? 'border-primary bg-primary/10' : 'bg-secondary/40'}`}>
+                  <div className="font-semibold">{title}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{desc}</div>
+                </button>
+              ))}
+            </div>
+
+            {founderMethod === 'proven' && (
+              <div className="rounded-xl bg-secondary/50 p-4 text-sm">
+                <div className="font-semibold">Founder Trial</div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                  <span>Wins: {Math.min(PROVEN_WINS_REQUIRED, Number(founderProgress?.wins || 0))}/{PROVEN_WINS_REQUIRED}</span>
+                  <span>Playtime: {Math.min(PROVEN_PLAYTIME_REQUIRED, Number(founderProgress?.playtimeSeconds || 0)) / 3600 >= PROVEN_PLAYTIME_REQUIRED / 3600 ? PROVEN_PLAYTIME_REQUIRED / 3600 : (Number(founderProgress?.playtimeSeconds || 0) / 3600).toFixed(1)}/{PROVEN_PLAYTIME_REQUIRED / 3600}h</span>
+                </div>
+                <div className="mt-2 text-muted-foreground">No token fee. Your existing gameplay progress unlocks the founding route.</div>
+              </div>
+            )}
+
+            {founderMethod === 'community' && (
+              <div className="space-y-3 rounded-xl bg-secondary/50 p-4">
+                <div className="text-sm font-semibold">Community Founding</div>
+                <div className="text-xs text-muted-foreground">The founder starts a 24-hour founding session. Three other players enter the code and confirm. Then the founder pays {COMMUNITY_CREATE_COST.toLocaleString()} tokens to create the clan.</div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={startCommunityFounding} disabled={busy} className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">Start Founding Session</button>
+                  {communitySession && <button type="button" onClick={refreshCommunityFounding} disabled={busy} className="rounded-lg bg-secondary px-3 py-2 text-sm">Refresh</button>}
+                </div>
+                {communitySession && (
+                  <div className="rounded-lg border p-3 text-sm">
+                    <div>Code: <b className="tracking-widest">{communitySession.code}</b></div>
+                    <div className="text-xs text-muted-foreground">Confirmations: {communitySession.confirmations || 0}/{COMMUNITY_FOUNDERS_REQUIRED}</div>
+                    <div className="text-xs text-muted-foreground">{communitySession.confirmed ? 'Ready to create.' : 'Waiting for confirmations.'}</div>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input value={communityCodeInput} onChange={e=>setCommunityCodeInput(e.target.value.toUpperCase())} placeholder="Enter someone else's founding code" className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm" maxLength={12} />
+                  <button type="button" onClick={confirmCommunityFounding} disabled={busy || !communityCodeInput.trim()} className="rounded-lg bg-secondary px-3 py-2 text-sm disabled:opacity-50">Confirm</button>
+                </div>
+              </div>
+            )}
+
             <input value={createForm.name} onChange={e=>setCreateForm({...createForm,name:e.target.value})} placeholder="Clan name" className="w-full rounded-xl border bg-background px-4 py-3" />
             <input value={createForm.tag} onChange={e=>setCreateForm({...createForm,tag:e.target.value})} placeholder="Clan tag (2-6 characters)" className="w-full rounded-xl border bg-background px-4 py-3" />
             <textarea value={createForm.bio} onChange={e=>setCreateForm({...createForm,bio:e.target.value})} placeholder="Clan bio" className="w-full rounded-xl border bg-background px-4 py-3 min-h-24" />
@@ -468,8 +581,8 @@ export default function ClansScreen({
                 img.src=URL.createObjectURL(f);
               }} />
             </div>
-            <button disabled={busy || tokenBalance < CREATE_COST} onClick={createClan} className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground disabled:opacity-50">
-              Create for {CREATE_COST.toLocaleString()} Tokens
+            <button disabled={busy || (founderMethod === 'wealthy' && tokenBalance < CREATE_COST) || (founderMethod === 'community' && (tokenBalance < COMMUNITY_CREATE_COST || !communitySession?.confirmed)) || (founderMethod === 'proven' && (Number(founderProgress?.wins || 0) < PROVEN_WINS_REQUIRED || Number(founderProgress?.playtimeSeconds || 0) < PROVEN_PLAYTIME_REQUIRED))} onClick={createClan} className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground disabled:opacity-50">
+              {founderMethod === 'wealthy' ? `Create for ${CREATE_COST.toLocaleString()} Tokens` : founderMethod === 'community' ? `Create for ${COMMUNITY_CREATE_COST.toLocaleString()} Tokens` : 'Create with Founder Trial'}
             </button>
           </section>
         )}

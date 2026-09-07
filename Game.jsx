@@ -2281,6 +2281,10 @@ export default function Game() {
             onGrantClanReward={grantClanReward}
             onSyncClanMilestones={syncClanMilestoneRewards}
             currentUserId={me?.id}
+            founderProgress={{
+              wins: Object.values(progress.stats?.wins || {}).reduce((sum, value) => sum + (Number(value) || 0), 0),
+              playtimeSeconds: Number(progress.playtimeSeconds || 0),
+            }}
           />
         )}
 
