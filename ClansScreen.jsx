@@ -35,6 +35,8 @@ const TIERS = [
 ];
 
 const ROLE_ORDER = { member: 1, officer: 2, lieutenant: 3, leader: 4 };
+const ROLE_LABELS = { member: 'Member', officer: 'Officer', lieutenant: 'Lieutenant', leader: 'Leader' };
+const roleLabel = role => ROLE_LABELS[role] || 'Member';
 
 function safeError(error) {
   return error?.message || 'Something went wrong.';
@@ -85,6 +87,11 @@ export default function ClansScreen({
   const [meetingForm, setMeetingForm] = useState({ clanId: '', title: '', notes: '', scheduledAt: '' });
 
   const isLeader = myClan?.myRole === 'leader';
+  const isLieutenant = myClan?.myRole === 'lieutenant';
+  const isOfficer = myClan?.myRole === 'officer';
+  const canReviewApplications = isLeader || isLieutenant || isOfficer;
+  const canManageMembers = isLeader || isLieutenant;
+  const canScheduleMeetings = isLeader || isLieutenant;
 
   async function getUid() {
     if (userId) return userId;
@@ -135,112 +142,54 @@ export default function ClansScreen({
   async function loadClan(clan, roleOverride = null) {
     if (!clan) return;
     const uid = await getUid();
-    const leaderMode = roleOverride ? roleOverride === 'leader' : myClan?.myRole === 'leader';
+    const currentRole = roleOverride || myClan?.myRole || null;
+    const canReview = ['leader', 'lieutenant', 'officer'].includes(currentRole);
 
-    // Do not use nested player_profiles(...) selects here. The clan rows point
-    // at auth.users, not directly at player_profiles, so PostgREST cannot
-    // reliably infer that relationship. Load the IDs first, then join names
-    // in the client.
-    const [{ data: ms, error: me }, { data: apps, error: ae }, eloResult, { data: chat, error: ce }] = await Promise.all([
-      supabase
-        .from('element6_clan_members')
-        .select('user_id,role,joined_at')
-        .eq('clan_id', clan.id)
-        .order('joined_at', { ascending: true }),
-      leaderMode
-        ? supabase
-            .from('element6_clan_applications')
-            .select('id,user_id,message,status,created_at')
-            .eq('clan_id', clan.id)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: true })
+    const [memberResult, applicationResult, chatResult, eloResult] = await Promise.all([
+      supabase.rpc('element6_get_clan_member_overview', { p_clan_id: clan.id }),
+      canReview
+        ? supabase.rpc('element6_get_clan_applications', { p_clan_id: clan.id })
         : Promise.resolve({ data: [], error: null }),
+      supabase.rpc('element6_get_clan_chat', { p_clan_id: clan.id }),
       supabase.rpc('element6_get_clan_member_elo', { p_clan_id: clan.id }),
-      supabase
-        .from('element6_clan_chat_messages')
-        .select('id,clan_id,user_id,body,created_at')
-        .eq('clan_id', clan.id)
-        .order('created_at', { ascending: false })
-        .limit(100),
     ]);
 
-    if (me) throw me;
-    if (ae) throw ae;
-    if (ce) throw ce;
+    if (memberResult.error) throw memberResult.error;
+    if (applicationResult.error) throw applicationResult.error;
+    if (chatResult.error) throw chatResult.error;
 
-    const memberRows = ms || [];
-    const applicationRows = apps || [];
-    const chatRows = chat || [];
-    const allUserIds = [...new Set([
-      ...memberRows.map(r => r.user_id),
-      ...applicationRows.map(r => r.user_id),
-      ...chatRows.map(r => r.user_id),
-    ].filter(Boolean))];
+    const memberRows = memberResult.data || [];
+    const applicationRows = applicationResult.data || [];
+    const chatRows = chatResult.data || [];
 
-    let profileMap = {};
-    if (allUserIds.length) {
-      const { data: profiles, error: pe } = await supabase
-        .from('player_profiles')
-        .select('user_id,username')
-        .in('user_id', allUserIds);
-      if (pe) throw pe;
-      profileMap = Object.fromEntries((profiles || []).map(p => [p.user_id, p]));
-    }
-
-    setMembers(memberRows.map(m => ({
-      ...m,
-      player_profiles: profileMap[m.user_id] || null,
-    })));
-    setApplications(leaderMode ? applicationRows.map(a => ({
-      ...a,
-      player_profiles: profileMap[a.user_id] || null,
-    })) : []);
-    setMessages(chatRows.reverse().map(m => ({
-      ...m,
-      player_profiles: profileMap[m.user_id] || null,
-    })));
+    setMembers(memberRows);
+    setApplications(applicationRows);
+    setMessages([...chatRows].reverse());
 
     if (eloResult.error) {
-      // Keep the member list visible even if the ELO RPC has not been installed
-      // yet. The migration in this package installs/fixes that RPC.
       setEloRows(memberRows.map(m => ({
-        user_id: m.user_id,
-        username: profileMap[m.user_id]?.username || 'Player',
-        role: m.role,
-        ranked_rating: 1000,
-        ranked_wins: 0,
-        ranked_losses: 0,
-        ranked_matches: 0,
-        soccer_rating: 1000,
-        soccer_wins: 0,
-        soccer_losses: 0,
-        soccer_matches: 0,
-        volleyball_rating: 1000,
-        volleyball_wins: 0,
-        volleyball_losses: 0,
-        volleyball_matches: 0,
-        dodgeball_rating: 1000,
-        dodgeball_wins: 0,
-        dodgeball_losses: 0,
-        dodgeball_matches: 0,
+        ...m,
+        ranked_rating: 1000, ranked_wins: 0, ranked_losses: 0, ranked_matches: 0,
+        soccer_rating: 1000, soccer_wins: 0, soccer_losses: 0, soccer_matches: 0,
+        volleyball_rating: 1000, volleyball_wins: 0, volleyball_losses: 0, volleyball_matches: 0,
+        dodgeball_rating: 1000, dodgeball_wins: 0, dodgeball_losses: 0, dodgeball_matches: 0,
       })));
       setNotice(`Clan members loaded, but ELO data needs the clan ELO SQL migration: ${safeError(eloResult.error)}`);
     } else {
-      setEloRows((eloResult.data || []).map(r => ({
-        ...r,
-        username: r.username || profileMap[r.user_id]?.username || 'Player',
-      })));
+      const eloMap = Object.fromEntries((eloResult.data || []).map(r => [r.user_id, r]));
+      setEloRows(memberRows.map(m => ({ ...m, ...(eloMap[m.user_id] || {}) })));
     }
 
-    const { data: meetingRows } = await supabase
+    const { data: meetingRows, error: meetingError } = await supabase
       .from('element6_clan_meetings')
       .select('*')
       .or(`organizer_clan_id.eq.${clan.id},invited_clan_id.eq.${clan.id}`)
       .order('scheduled_at', { ascending: true })
       .limit(50);
+    if (meetingError) throw meetingError;
     setMeetings(meetingRows || []);
 
-    if (leaderMode) {
+    if (currentRole === 'leader') {
       const { data: threads } = await supabase
         .from('element6_clan_leader_threads')
         .select('*')
@@ -394,6 +343,7 @@ export default function ClansScreen({
   }
 
   async function reviewApplication(id, approve) {
+    if (!canReviewApplications) return;
     setBusy(true);
     try {
       const { error } = await supabase.rpc('element6_review_clan_application', {
@@ -401,6 +351,7 @@ export default function ClansScreen({
         p_approve: approve,
       });
       if (error) throw error;
+      setNotice(approve ? 'Application approved.' : 'Application rejected.');
       await refresh();
     } catch (e) {
       setNotice(safeError(e));
@@ -441,6 +392,7 @@ export default function ClansScreen({
   }
 
   async function setMemberRole(userIdToChange, role) {
+    if (!canManageMembers) return;
     try {
       const { error } = await supabase.rpc('element6_set_clan_member_role', {
         p_member: userIdToChange,
@@ -448,6 +400,18 @@ export default function ClansScreen({
       });
       if (error) throw error;
       await refresh();
+    } catch (e) { setNotice(safeError(e)); }
+  }
+
+  async function removeMember(userIdToRemove, username) {
+    if (!canManageMembers || userIdToRemove === userId) return;
+    if (!window.confirm(`Remove ${username || 'this member'} from the clan?`)) return;
+    try {
+      const { error } = await supabase.rpc('element6_remove_clan_member', { p_member: userIdToRemove });
+      if (error) throw error;
+      setNotice(`${username || 'Member'} was removed from the clan.`);
+      await refresh();
+      setView('members');
     } catch (e) { setNotice(safeError(e)); }
   }
 
@@ -477,15 +441,13 @@ export default function ClansScreen({
   }
 
   async function createMeeting() {
-    if (!isLeader) return;
+    if (!canScheduleMeetings) return;
     try {
-      const { error } = await supabase.from('element6_clan_meetings').insert({
-        organizer_clan_id: myClan.id,
-        invited_clan_id: meetingForm.clanId,
-        title: meetingForm.title,
-        notes: meetingForm.notes,
-        scheduled_at: meetingForm.scheduledAt,
-        created_by: userId,
+      const { error } = await supabase.rpc('element6_schedule_clan_meeting', {
+        p_invited_clan_id: meetingForm.clanId,
+        p_title: meetingForm.title,
+        p_notes: meetingForm.notes,
+        p_scheduled_at: meetingForm.scheduledAt,
       });
       if (error) throw error;
       setMeetingForm({ clanId: '', title: '', notes: '', scheduledAt: '' });
@@ -510,11 +472,12 @@ export default function ClansScreen({
 
         {notice && <button onClick={() => setNotice('')} className="w-full rounded-xl border border-primary/20 bg-card p-3 text-left text-sm">{notice}</button>}
 
-        <nav className="grid grid-cols-2 gap-2 md:grid-cols-5">
+        <nav className="grid grid-cols-2 gap-2 md:grid-cols-6">
           {[
             ['browse','Browse Clans'],
             ['mine','My Clan'],
-            ['applications','Applications'],
+            ...(myClan ? [['members','Members']] : []),
+            ...(canReviewApplications ? [['applications','Applications']] : []),
             ['meetings','Meetings'],
             ['create','Create Clan'],
           ].map(([id,label]) => (
@@ -671,44 +634,92 @@ export default function ClansScreen({
             <div className="rounded-2xl border bg-card p-4">
               <h3 className="font-heading">CLAN CHAT</h3>
               <div className="mt-3 max-h-80 space-y-2 overflow-auto rounded-xl bg-background p-3">
-                {messages.map(m=><div key={m.id}><b>{m.player_profiles?.username || 'Player'}:</b> <span>{m.body}</span></div>)}
+                {messages.map(m=><div key={m.id} className="rounded-lg px-2 py-1"><div className="text-[11px] font-semibold text-muted-foreground">{roleLabel(m.role)}</div><div><b>{m.username || 'Player'}</b>: <span>{m.body}</span></div></div>)}
               </div>
               <div className="mt-3 flex gap-2"><input value={chatText} onChange={e=>setChatText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendChat()} placeholder="Message your clan..." className="flex-1 rounded-lg border bg-background px-3 py-2" /><button onClick={sendChat} className="rounded-lg bg-primary px-4 text-primary-foreground">Send</button></div>
             </div>
 
             <div className="rounded-2xl border bg-card p-4">
-              <h3 className="font-heading">CLAN MEMBERS + ELO</h3>
-              <div className="mt-3 grid gap-2 md:grid-cols-2">
-                {eloRows.map(r=><div key={r.user_id} className="rounded-xl border p-3"><div className="flex justify-between"><b>{r.username}</b><span className="text-xs">{r.role}</span></div><div className="text-xs mt-2">Ranked {formatElo(r.ranked_rating)} · Soccer {formatElo(r.soccer_rating)} · Volleyball {formatElo(r.volleyball_rating)} · Dodgeball {formatElo(r.dodgeball_rating)}</div></div>)}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div><h3 className="font-heading">CLAN MEMBERS</h3><p className="text-xs text-muted-foreground">See every member, rank, ELO, and personal clan XP contribution.</p></div>
+                <button onClick={() => setView('members')} className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">Open Members</button>
               </div>
             </div>
 
             {isLeader && <div className="rounded-2xl border bg-card p-4">
-              <h3 className="font-heading">LEADER CONTROLS</h3>
-              <div className="mt-3 space-y-3">
-                {members.map(m=> <div key={m.user_id} className="flex flex-wrap items-center gap-2 rounded-xl border p-3">
-                  <span className="flex-1">{m.player_profiles?.username || m.user_id} · {m.role}</span>
-                  {m.user_id!==userId && <><select value={m.role} onChange={e=>setMemberRole(m.user_id,e.target.value)} className="rounded-lg border bg-background px-2 py-1"><option value="member">Member</option><option value="officer">Officer</option><option value="lieutenant">Lieutenant</option></select><button onClick={()=>transferOwnership({user_id:m.user_id,username:m.player_profiles?.username})} className="rounded-lg bg-secondary px-2 py-1 text-xs">Transfer</button></>}
-                </div>)}
+              <h3 className="font-heading">CLAN CONTROLS</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button onClick={() => setView('members')} className="rounded-lg bg-secondary px-4 py-2 text-sm">Manage Members</button>
                 <button onClick={disbandClan} className="rounded-lg bg-destructive px-4 py-2 text-sm text-destructive-foreground">Disband Clan</button>
-                <button onClick={leaveClan} className="rounded-lg bg-secondary px-4 py-2 text-sm">Leave</button>
               </div>
             </div>}
             {!isLeader && <button onClick={leaveClan} className="rounded-lg bg-secondary px-4 py-2">Leave Clan</button>}
           </section>
         )}
 
-        {view === 'applications' && isLeader && (
+        {view === 'members' && myClan && (
+          <section className="space-y-4">
+            <div className="rounded-2xl border bg-card p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="font-heading text-xl">CLAN MEMBERS</h2>
+                  <p className="text-xs text-muted-foreground">Rank, ELO, and the XP each member personally contributed to the clan.</p>
+                </div>
+                <span className="rounded-lg bg-secondary px-3 py-2 text-xs">{members.length} member{members.length === 1 ? '' : 's'}</span>
+              </div>
+              <div className="mt-4 space-y-3">
+                {eloRows.map(m => {
+                  const canEditThisMember = canManageMembers && m.user_id !== userId && m.role !== 'leader';
+                  const lieutenantLimited = isLieutenant;
+                  return (
+                    <div key={m.user_id} className="rounded-xl border p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <b>{m.username || 'Player'}</b>
+                            <span className="rounded-md bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">{roleLabel(m.role)}</span>
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">Personal clan contribution: <b>{Number(m.contribution_xp || 0).toLocaleString()} XP</b></div>
+                        </div>
+                        {canEditThisMember && <div className="flex flex-wrap items-center gap-2">
+                          {isLeader ? (
+                            <select value={m.role} onChange={e => setMemberRole(m.user_id, e.target.value)} className="rounded-lg border bg-background px-2 py-1 text-sm">
+                              <option value="member">Member</option><option value="officer">Officer</option><option value="lieutenant">Lieutenant</option>
+                            </select>
+                          ) : lieutenantLimited && m.role === 'member' ? (
+                            <button onClick={() => setMemberRole(m.user_id, 'officer')} className="rounded-lg bg-primary px-3 py-2 text-xs text-primary-foreground">Promote to Officer</button>
+                          ) : null}
+                          <button onClick={() => removeMember(m.user_id, m.username)} className="rounded-lg bg-destructive px-3 py-2 text-xs text-destructive-foreground">Remove</button>
+                          {isLeader && <button onClick={() => transferOwnership({ user_id: m.user_id, username: m.username })} className="rounded-lg bg-secondary px-3 py-2 text-xs">Transfer Ownership</button>}
+                        </div>}
+                      </div>
+                      <div className="mt-3 grid gap-2 text-xs md:grid-cols-2 lg:grid-cols-4">
+                        <span className="rounded-lg bg-secondary/50 p-2">Ranked: <b>{formatElo(m.ranked_rating)}</b> · {m.ranked_wins}-{m.ranked_losses}</span>
+                        <span className="rounded-lg bg-secondary/50 p-2">Soccer: <b>{formatElo(m.soccer_rating)}</b> · {m.soccer_wins}-{m.soccer_losses}</span>
+                        <span className="rounded-lg bg-secondary/50 p-2">Volleyball: <b>{formatElo(m.volleyball_rating)}</b> · {m.volleyball_wins}-{m.volleyball_losses}</span>
+                        <span className="rounded-lg bg-secondary/50 p-2">Dodgeball: <b>{formatElo(m.dodgeball_rating)}</b> · {m.dodgeball_wins}-{m.dodgeball_losses}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {isLeader && <div className="rounded-2xl border bg-card p-4 text-sm"><b>Ownership</b><p className="mt-1 text-xs text-muted-foreground">Only the current leader can transfer ownership. After transfer, the previous leader becomes a Lieutenant.</p></div>}
+            {isLieutenant && <div className="rounded-2xl border bg-card p-4 text-sm"><b>Lieutenant permissions</b><p className="mt-1 text-xs text-muted-foreground">You can promote Members to Officers and remove non-leaders. You cannot create Lieutenants or transfer ownership.</p></div>}
+          </section>
+        )}
+
+        {view === 'applications' && canReviewApplications && (
           <section className="rounded-2xl border bg-card p-4 space-y-3">
             <h2 className="font-heading">JOIN APPLICATIONS</h2>
-            {applications.map(a=><div key={a.id} className="rounded-xl border p-3"><div><b>{a.player_profiles?.username || a.user_id}</b><p className="text-sm text-muted-foreground">{a.message || 'No message.'}</p></div><div className="mt-2 flex gap-2"><button onClick={()=>reviewApplication(a.id,true)} className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">Approve</button><button onClick={()=>reviewApplication(a.id,false)} className="rounded-lg bg-secondary px-3 py-2 text-sm">Reject</button></div></div>)}
+            {applications.map(a=><div key={a.id} className="rounded-xl border p-3"><div><div className="font-semibold">{a.username || a.user_id}</div><div className="text-[11px] text-muted-foreground">{roleLabel(a.applicant_role || 'member')}</div><p className="text-sm text-muted-foreground">{a.message || 'No message.'}</p></div><div className="mt-2 flex gap-2"><button onClick={()=>reviewApplication(a.id,true)} className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">Approve</button><button onClick={()=>reviewApplication(a.id,false)} className="rounded-lg bg-secondary px-3 py-2 text-sm">Reject</button></div></div>)}
             {!applications.length && <p className="text-sm text-muted-foreground">No pending applications.</p>}
           </section>
         )}
 
         {view === 'meetings' && myClan && (
           <section className="space-y-4">
-            {isLeader && <div className="rounded-2xl border bg-card p-4">
+            {canScheduleMeetings && <div className="rounded-2xl border bg-card p-4">
               <h2 className="font-heading">SCHEDULE CLAN MEETING</h2>
               <div className="grid gap-2 mt-3">
                 <select value={meetingForm.clanId} onChange={e=>setMeetingForm({...meetingForm,clanId:e.target.value})} className="rounded-lg border bg-background px-3 py-2"><option value="">Choose another clan</option>{clans.filter(c=>c.id!==myClan.id).map(c=><option key={c.id} value={c.id}>{c.name} [{c.tag}]</option>)}</select>
