@@ -134,3 +134,8 @@ export async function deleteClipBlob(id) {
     };
   });
 }
+
+
+export async function refreshClipMetadata() {
+  return listClipMetadata();
+}

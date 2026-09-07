@@ -10,6 +10,7 @@ import { ALL_CHARS, getRosterForEra, ERAS } from './allCharacters.js';
 import PowerInfoCard from './PowerInfoCard.jsx';
 import AchievementsPanel from './AchievementsPanel.jsx';
 import GameIcon from "./GameIcon.jsx";
+import { getCanonicalLore } from './characterLore.js';
 
 const BASE_ALL = ALL_CHARS;
 
@@ -162,7 +163,7 @@ export default function MeetCharacters({ onBack, favoriteId, onSetFavorite, prog
 
                 {/* Lore — full text */}
                 <div className="bg-muted/20 rounded-lg p-3 border border-border/50 mb-3 max-h-48 overflow-y-auto">
-                  <p className="text-xs text-foreground/80 font-body leading-relaxed">{selected.lore || (selected.isCustom ? 'A mysterious custom creation — their story is yet to be written.' : 'No lore available.')}</p>
+                  <p className="text-xs text-foreground/80 font-body leading-relaxed">{getCanonicalLore(selected) || (selected.isCustom ? 'A mysterious custom creation — their story is yet to be written.' : 'No lore available.')}</p>
                 </div>
 
                 {selected.weapon && (

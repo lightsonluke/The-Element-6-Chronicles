@@ -8,6 +8,7 @@ import { music } from './music.js';
 import { ALL_CHARS, getRosterForEra, ERAS, ERA_MAP } from './allCharacters.js';
 import { getMasteryProgress, getMasteryRankForChar, MASTERY_REWARDS } from './mastery.js';
 import { getNameColor } from './charSelectHelpers.js';
+import { getCanonicalLore } from './characterLore.js';
 import GameIcon from "./GameIcon.jsx";
 
 // Backdrop themes per character
@@ -409,7 +410,7 @@ export default function HeroCodex({ onBack, progress }) {
                   {selected.fullName && selected.fullName !== selected.name && (
                     <p className="text-xs text-muted-foreground/80 font-body mb-2">Full Name: <span className="text-foreground/90 font-heading">{selected.fullName}</span></p>
                   )}
-                  <p className="text-xs text-foreground/70 font-body mb-3 leading-relaxed">{selected.lore}</p>
+                  <p className="text-xs text-foreground/70 font-body mb-3 leading-relaxed">{getCanonicalLore(selected)}</p>
 
                   {selected.weapon && (
                     <div className="flex gap-3 mb-3 text-[10px] font-body">

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { getClipBlob, deleteClipBlob } from './clipStorage.js';
+import { getClipBlob, deleteClipBlob, listClipMetadata } from './clipStorage.js';
 import GameIcon from './GameIcon.jsx';
 
 const DEFAULT_FPS = 30;
@@ -20,10 +20,11 @@ function makeVideoSource(video, blob, mime) {
   return { url, mode: 'url' };
 }
 
-export default function ClipsScreen({ clips, onDeleteClip, onBack }) {
+export default function ClipsScreen({ clips = [], onDeleteClip = () => {}, onBack = () => {} }) {
   const [clipSources, setClipSources] = useState({});
   const [failed, setFailed] = useState({});
   const [activeViewer, setActiveViewer] = useState(null);
+  const [visibleClips, setVisibleClips] = useState(Array.isArray(clips) ? clips : []);
   const videoRefs = useRef({});
   const sourceRefs = useRef({});
 
@@ -31,9 +32,26 @@ export default function ClipsScreen({ clips, onDeleteClip, onBack }) {
     let cancelled = false;
 
     const loadClips = async () => {
+      const supplied = Array.isArray(clips) ? clips : [];
+      let metadata = supplied;
+
+      // If the parent screen has not supplied its clip list yet, recover it
+      // directly from the same IndexedDB store. This keeps the Clips tab from
+      // failing just because navigation mounted it before parent state loaded.
+      if (!metadata.length) {
+        try {
+          metadata = await listClipMetadata();
+        } catch (error) {
+          console.error('[Element 6 Clips] Could not read clip metadata:', error);
+          metadata = [];
+        }
+      }
+
+      if (!cancelled) setVisibleClips(metadata);
+
       const next = {};
 
-      for (const clip of clips) {
+      for (const clip of metadata) {
         try {
           const blob = await getClipBlob(clip.id);
           if (!blob || blob.size < 1000) throw new Error('Saved clip blob is empty.');
@@ -141,7 +159,8 @@ export default function ClipsScreen({ clips, onDeleteClip, onBack }) {
       return next;
     });
     if (activeViewer === clipId) setActiveViewer(null);
-    onDeleteClip(clipId);
+    onDeleteClip?.(clipId);
+    setVisibleClips(prev => prev.filter(clip => clip.id !== clipId));
   };
 
   const handleDownload = clip => {
@@ -171,11 +190,11 @@ export default function ClipsScreen({ clips, onDeleteClip, onBack }) {
           Saved locally in your browser. Clips contain the most recent native recording window, up to 30 seconds.
         </p>
 
-        {clips.length === 0 ? (
+        {visibleClips.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground font-body">No clips yet.</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {clips.slice(0, 30).map(clip => {
+            {visibleClips.slice(0, 30).map(clip => {
               const source = clipSources[clip.id];
               const ext = (source?.extension || extensionForMime(clip.mime)).toUpperCase();
               const videoReady = !!source?.blob;
