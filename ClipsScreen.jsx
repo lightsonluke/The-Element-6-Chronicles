@@ -20,13 +20,31 @@ function makeVideoSource(video, blob, mime) {
   return { url, mode: 'url' };
 }
 
-export default function ClipsScreen({ clips = [], onDeleteClip = () => {}, onBack = () => {} }) {
+export default function ClipsScreen({ clips: externalClips = null, onDeleteClip = () => {}, onBack = () => {} }) {
+  const [storedClips, setStoredClips] = useState([]);
+  const clips = Array.isArray(externalClips) ? externalClips : storedClips;
   const [clipSources, setClipSources] = useState({});
   const [failed, setFailed] = useState({});
   const [activeViewer, setActiveViewer] = useState(null);
-  const [visibleClips, setVisibleClips] = useState(Array.isArray(clips) ? clips : []);
   const videoRefs = useRef({});
   const sourceRefs = useRef({});
+
+  useEffect(() => {
+    if (Array.isArray(externalClips)) return;
+    let alive = true;
+    const refresh = async () => {
+      try {
+        const rows = await listClipMetadata();
+        if (alive) setStoredClips(rows);
+      } catch (error) {
+        console.error('[Element 6 Clips] Could not list clips:', error);
+      }
+    };
+    refresh();
+    const onSaved = () => refresh();
+    window.addEventListener('clipSaved', onSaved);
+    return () => { alive = false; window.removeEventListener('clipSaved', onSaved); };
+  }, [externalClips]);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,7 +65,6 @@ export default function ClipsScreen({ clips = [], onDeleteClip = () => {}, onBac
         }
       }
 
-      if (!cancelled) setVisibleClips(metadata);
 
       const next = {};
 
@@ -73,12 +90,7 @@ export default function ClipsScreen({ clips = [], onDeleteClip = () => {}, onBac
     };
 
     loadClips();
-    const onClipSaved = () => loadClips();
-    window.addEventListener('clipSaved', onClipSaved);
-    return () => {
-      cancelled = true;
-      window.removeEventListener('clipSaved', onClipSaved);
-    };
+    return () => { cancelled = true; };
   }, [clips]);
 
   useEffect(() => () => {
@@ -165,7 +177,7 @@ export default function ClipsScreen({ clips = [], onDeleteClip = () => {}, onBac
     });
     if (activeViewer === clipId) setActiveViewer(null);
     onDeleteClip?.(clipId);
-    setVisibleClips(prev => prev.filter(clip => clip.id !== clipId));
+    if (!Array.isArray(externalClips)) setStoredClips(prev => prev.filter(clip => clip.id !== clipId));
   };
 
   const handleDownload = clip => {
@@ -195,11 +207,11 @@ export default function ClipsScreen({ clips = [], onDeleteClip = () => {}, onBac
           Saved locally in your browser. Clips contain the most recent native recording window, up to 30 seconds.
         </p>
 
-        {visibleClips.length === 0 ? (
+        {clips.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground font-body">No clips yet.</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {visibleClips.slice(0, 30).map(clip => {
+            {clips.slice(0, 30).map(clip => {
               const source = clipSources[clip.id];
               const ext = (source?.extension || extensionForMime(clip.mime)).toUpperCase();
               const videoReady = !!source?.blob;

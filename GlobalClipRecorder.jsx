@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { initClipRecorder, saveClip, stopClipRecorder, isClipRecorderActive } from './clipRecorder.js';
 import { saveClipBlob, trimClips } from './clipStorage.js';
 
@@ -14,72 +14,83 @@ function showToast(message) {
 }
 
 export default function GlobalClipRecorder() {
+  const [enabled, setEnabled] = useState(() => !!window.__e6ClipRecorderActive);
+  const [busy, setBusy] = useState(false);
+  const busyRef = React.useRef(false);
+
   useEffect(() => {
     let cancelled = false;
-    let currentCanvas = null;
-    let scanTimer = null;
-    let rebindTimer = null;
+    let currentStream = null;
 
-    const findBestCanvas = () => {
-      const canvases = Array.from(document.querySelectorAll('canvas'))
-        .filter(canvas => canvas.isConnected && canvas.width > 0 && canvas.height > 0)
-        .sort((a, b) => (b.width * b.height) - (a.width * a.height));
-      return canvases[0] || null;
-    };
-
-    const bindCanvas = () => {
-      if (cancelled) return;
-      const canvas = findBestCanvas();
-
-      if (!canvas) {
-        if (currentCanvas && isClipRecorderActive()) stopClipRecorder();
-        currentCanvas = null;
-        window.__e6ClipRecorderGlobal = false;
+    const enable = async () => {
+      if (isClipRecorderActive()) {
+        setEnabled(true);
         return;
       }
-
-      // The previous implementation refused to rebind while a recorder was
-      // active. That left the recorder attached to a destroyed game's canvas
-      // after navigation, so later clips were blank/stale. Rebind whenever
-      // the active canvas changes or is disconnected from the document.
-      if (canvas === currentCanvas && isClipRecorderActive()) return;
-
-      if (currentCanvas && canvas !== currentCanvas) {
-        try { stopClipRecorder(); } catch {}
-      }
-
-      currentCanvas = canvas;
-      const ok = initClipRecorder(canvas);
-      window.__e6ClipRecorderGlobal = !!ok;
-      if (!ok) currentCanvas = null;
-    };
-
-    const scheduleBind = (delay = 80) => {
-      clearTimeout(scanTimer);
-      scanTimer = setTimeout(bindCanvas, delay);
-    };
-
-    const observer = new MutationObserver(() => scheduleBind(100));
-    if (document.body) observer.observe(document.body, { childList: true, subtree: true });
-
-    bindCanvas();
-    rebindTimer = setInterval(() => {
-      if (!currentCanvas || !currentCanvas.isConnected || !isClipRecorderActive()) scheduleBind(0);
-    }, 500);
-
-    const onKey = async event => {
-      if (event.code !== 'Space' && event.key !== ' ') return;
-      if (event.target?.tagName === 'INPUT' || event.target?.tagName === 'TEXTAREA' || event.target?.isContentEditable) return;
-      if (!window.__e6ClipRecorderGlobal || !isClipRecorderActive()) return;
-
-      event.preventDefault();
-      const result = await saveClip();
-      if (!result?.blob || cancelled) {
-        showToast('NO RECORDED CLIP DATA YET');
+      if (!navigator.mediaDevices?.getDisplayMedia || !window.MediaRecorder) {
+        showToast('CLIP RECORDING IS NOT SUPPORTED IN THIS BROWSER');
         return;
       }
 
       try {
+        // The browser will ask the user what to capture. Choose the Element 6
+        // tab/window so recording follows the app across every screen.
+        const capture = await navigator.mediaDevices.getDisplayMedia({
+          video: { frameRate: { ideal: 30, max: 30 } },
+          audio: true,
+        });
+
+        if (cancelled) {
+          capture.getTracks().forEach(track => track.stop());
+          return;
+        }
+
+        currentStream = capture;
+        const ok = initClipRecorder(capture);
+        if (!ok) {
+          capture.getTracks().forEach(track => track.stop());
+          showToast('COULD NOT START CLIP RECORDING');
+          return;
+        }
+
+        const videoTrack = capture.getVideoTracks()[0];
+        if (videoTrack) {
+          videoTrack.addEventListener('ended', () => {
+            stopClipRecorder();
+            if (!cancelled) {
+              setEnabled(false);
+              showToast('CLIP RECORDING STOPPED');
+            }
+          }, { once: true });
+        }
+
+        setEnabled(true);
+        showToast('CLIP RECORDING ENABLED — PRESS SPACE TO CLIP');
+      } catch (error) {
+        console.warn('[Element 6 Clips] Screen capture was not started:', error);
+        showToast('CLIP RECORDING WAS NOT ENABLED');
+      }
+    };
+
+    const save = async event => {
+      if (event.code !== 'Space' && event.key !== ' ') return;
+      if (event.target?.tagName === 'INPUT' || event.target?.tagName === 'TEXTAREA' || event.target?.isContentEditable) return;
+      if (!isClipRecorderActive() || busyRef.current) return;
+
+      // Space is also a gameplay key in some modes. The recorder owns it only
+      // when the browser has active clip recording enabled.
+      event.preventDefault();
+      event.stopPropagation();
+
+      busyRef.current = true;
+      setBusy(true);
+      try {
+        const result = await saveClip();
+        if (!result?.blob) {
+          showToast('WAIT A MOMENT — NO 30-SECOND CLIP IS READY YET');
+          return;
+        }
+
         const id = `clip_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         await saveClipBlob(id, result.blob, {
           mime: result.mime,
@@ -87,10 +98,12 @@ export default function GlobalClipRecorder() {
           duration: result.duration,
         });
         await trimClips(30);
+
+        const created = Date.now();
         window.dispatchEvent(new CustomEvent('clipSaved', {
           detail: {
             id,
-            created: Date.now(),
+            created,
             mime: result.mime,
             extension: result.extension,
             size: result.blob.size,
@@ -99,27 +112,43 @@ export default function GlobalClipRecorder() {
         }));
         showToast(`CLIP SAVED — ${Math.max(1, Math.round(result.duration))} SECONDS`);
       } catch (error) {
-        console.error('[Element 6 Clips] Failed to persist global native clip:', error);
+        console.error('[Element 6 Clips] Failed to save clip:', error);
         showToast('CLIP SAVE FAILED');
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
       }
     };
 
-    window.addEventListener('keydown', onKey);
+    const enableEvent = () => { enable(); };
+    window.addEventListener('element6-enable-clips', enableEvent);
+    window.addEventListener('keydown', save, true);
 
     return () => {
       cancelled = true;
-      observer.disconnect();
-      clearTimeout(scanTimer);
-      clearInterval(rebindTimer);
-      clearTimeout(rebindTimer);
-      window.removeEventListener('keydown', onKey);
-      if (window.__e6ClipRecorderGlobal) {
-        try { stopClipRecorder(); } catch {}
+      window.removeEventListener('element6-enable-clips', enableEvent);
+      window.removeEventListener('keydown', save, true);
+      if (currentStream && !window.__e6ClipRecorderActive) {
+        currentStream.getTracks().forEach(track => track.stop());
       }
-      window.__e6ClipRecorderGlobal = false;
-      currentCanvas = null;
     };
   }, []);
 
-  return null;
+  if (enabled || isClipRecorderActive()) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        // Reuse the exact same user gesture so getDisplayMedia is allowed by
+        // the browser's security model.
+        const event = new Event('element6-enable-clips');
+        window.dispatchEvent(event);
+      }}
+      className="fixed bottom-4 right-4 z-[99998] px-4 py-3 rounded-xl bg-accent text-accent-foreground font-heading text-xs shadow-xl hover:opacity-90"
+      title="Enable the always-on last-30-seconds clip recorder"
+    >
+      🎬 ENABLE CLIPS
+    </button>
+  );
 }

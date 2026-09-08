@@ -280,12 +280,17 @@ async function finishAndRestartSegment(generation = segmentGeneration) {
   await startSegment();
 }
 
-export function initClipRecorder(canvas) {
-  if (!canvas || typeof canvas.captureStream !== 'function' || !window.MediaRecorder) return false;
+export function initClipRecorder(source) {
+  if (!source || !window.MediaRecorder) return false;
   if (recording) stopClipRecorder();
 
   try {
-    stream = canvas.captureStream(FPS);
+    // Accept either a MediaStream (screen/tab capture) or a canvas.
+    // Screen capture keeps recording while React changes screens/components.
+    stream = typeof source.getTracks === 'function'
+      ? source
+      : (typeof source.captureStream === 'function' ? source.captureStream(FPS) : null);
+    if (!stream) return false;
     recording = true;
     window.__e6ClipRecorderReady = false;
     window.__e6ClipRecorderActive = true;
