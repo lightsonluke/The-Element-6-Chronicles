@@ -463,6 +463,25 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
           </div>
         </div>
       </div>
+      <div className="flex items-center justify-between">
+  <div className="flex flex-col gap-0.5">
+    <span className="text-xs font-body text-muted-foreground">
+      Enable Clips:
+    </span>
+
+    <span className="text-[9px] text-muted-foreground/70 font-body">
+      Records the game's gameplay canvas for 30-second clips.
+      No browser screen-capture permission is used.
+    </span>
+  </div>
+
+  <Toggle
+    on={local.enableClips === true}
+    onClick={() => apply({
+      enableClips: !(local.enableClips === true),
+    })}
+  />
+</div>
 
       {/* EDIT CONTROLS */}
       <EditControls
