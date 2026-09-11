@@ -56,32 +56,21 @@ export default function Settings({ onBack, settings, onSave, onReset, onUsername
   const [myUserId, setMyUserId] = useState('');
   const [usernameCooldownMs, setUsernameCooldownMs] = useState(0);
 
- const apply = (patch) => {
-  const next = { ...local, ...patch };
+  const apply = (patch) => {
+    const next = { ...local, ...patch };
+    setLocal(next);
+    onSave?.(next);
+    if (next.musicVolume != null) music.setVolume(next.musicVolume);
+    if (next.sfxVolume != null) sfx.setVolume(next.sfxVolume);
+    if (patch.customMusic) music.setCustomTracks(next.customMusic);
 
-  setLocal(next);
-  onSave?.(next);
-
-  if (next.musicVolume != null) {
-    music.setVolume(next.musicVolume);
-  }
-
-  if (next.sfxVolume != null) {
-    sfx.setVolume(next.sfxVolume);
-  }
-
-  if (patch.customMusic) {
-    music.setCustomTracks(next.customMusic);
-  }
-
-  // Let the globally mounted clip recorder immediately react to
-  // Enable Clips being switched on/off.
-  window.dispatchEvent(
-    new CustomEvent('element6-settings-changed', {
-      detail: next,
-    })
-  );
-};
+    // Notify the globally mounted clip recorder immediately when
+    // Enable Clips changes. CustomEvent lets another component react
+    // without changing the existing Settings prop API.
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('element6-settings-changed', { detail: next }));
+    }
+  };
 
   useEffect(() => {
     db.auth.me().then(u => {
@@ -441,6 +430,19 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
               {GAME_MODES.map(m => <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>)}
             </select>
           </div>
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-0.5 pr-4">
+              <span className="text-xs font-body text-muted-foreground">Enable Clips:</span>
+              <span className="text-[9px] text-muted-foreground/70 font-body">
+                Save 30-second game clips from the Element 6 game canvas. Starts off.
+              </span>
+            </div>
+            <Toggle
+              on={local.enableClips === true}
+              onClick={() => apply({ enableClips: local.enableClips !== true })}
+            />
+          </div>
+
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Screen shake:</span><Toggle on={local.screenShake !== false} onClick={() => apply({ screenShake: !local.screenShake })} /></div>
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Damage numbers:</span><Toggle on={local.showDamageNumbers !== false} onClick={() => apply({ showDamageNumbers: !local.showDamageNumbers })} /></div>
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Kill FX animations:</span><Toggle on={local.killFXEnabled !== false} onClick={() => apply({ killFXEnabled: !local.killFXEnabled })} /></div>
@@ -463,46 +465,6 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between">
-  <div className="flex flex-col gap-0.5">
-    <span className="text-xs font-body text-muted-foreground">
-      Enable Clips:
-    </span>
-
-    <span className="text-[9px] text-muted-foreground/70 font-body">
-      Records the game's gameplay canvas for 30-second clips.
-      No browser screen-capture permission is used.
-    </span>
-  </div>
-        <div className="flex items-center justify-between">
-  <div className="flex flex-col gap-0.5">
-    <span className="text-xs font-body text-muted-foreground">
-      Enable Clips:
-    </span>
-
-    <span className="text-[9px] text-muted-foreground/70 font-body">
-      Save the game's last 30 seconds as a clip.
-    </span>
-  </div>
-
-  <Toggle
-    on={local.enableClips === true}
-    onClick={() =>
-      apply({
-        enableClips:
-          local.enableClips !== true,
-      })
-    }
-  />
-</div>
-
-  <Toggle
-    on={local.enableClips === true}
-    onClick={() => apply({
-      enableClips: !(local.enableClips === true),
-    })}
-  />
-</div>
 
       {/* EDIT CONTROLS */}
       <EditControls
