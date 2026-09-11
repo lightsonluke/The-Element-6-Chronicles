@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   initClipRecorder,
   saveClip,
@@ -11,9 +11,7 @@ import {
 } from './clipStorage.js';
 
 function showToast(message) {
-  const old = document.getElementById(
-    'clip-toast'
-  );
+  const old = document.getElementById('clip-toast');
 
   if (old) old.remove();
 
@@ -23,29 +21,26 @@ function showToast(message) {
   toast.textContent = message;
 
   toast.style.cssText =
-    'position:fixed;top:18px;right:18px;z-index:99999;background:#FFD700;color:#1a1030;padding:10px 18px;border-radius:10px;font:bold 15px Orbitron,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.5);pointer-events:none;';
+    'position:fixed;top:18px;right:18px;z-index:99999;' +
+    'background:#FFD700;color:#1a1030;padding:10px 18px;' +
+    'border-radius:10px;font:bold 15px Orbitron,sans-serif;' +
+    'box-shadow:0 6px 20px rgba(0,0,0,.5);pointer-events:none;';
 
   document.body.appendChild(toast);
 
-  setTimeout(() => {
-    toast.remove();
-  }, 2200);
+  setTimeout(() => toast.remove(), 2200);
 }
 
 function clipsEnabled() {
   try {
     const raw =
-      localStorage.getItem(
-        'element6_progress'
-      );
+      localStorage.getItem('element6_progress');
 
     if (!raw) return false;
 
     const progress = JSON.parse(raw);
 
-    return (
-      progress?.settings?.enableClips === true
-    );
+    return progress?.settings?.enableClips === true;
   } catch {
     return false;
   }
@@ -57,8 +52,7 @@ function findGameCanvas() {
   ];
 
   const visible = canvases.filter(canvas => {
-    const rect =
-      canvas.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
 
     if (!rect.width || !rect.height) {
       return false;
@@ -75,28 +69,19 @@ function findGameCanvas() {
       return false;
     }
 
-    return (
-      rect.width >= 300 &&
-      rect.height >= 250
-    );
+    return rect.width >= 300 &&
+      rect.height >= 250;
   });
 
-  if (!visible.length) return null;
+  visible.sort((a, b) =>
+    (b.width * b.height) -
+    (a.width * a.height)
+  );
 
-  visible.sort((a, b) => {
-    return (
-      b.width * b.height -
-      a.width * a.height
-    );
-  });
-
-  return visible[0];
+  return visible[0] || null;
 }
 
 export default function GlobalClipRecorder() {
-  const [enabled, setEnabled] =
-    useState(() => clipsEnabled());
-
   const canvasRef = useRef(null);
   const scanTimer = useRef(null);
 
@@ -108,15 +93,10 @@ export default function GlobalClipRecorder() {
       canvasRef.current = null;
     };
 
-    const sync = () => {
+    const startIfEnabled = () => {
       if (cancelled) return;
 
-      const shouldRecord =
-        clipsEnabled();
-
-      setEnabled(shouldRecord);
-
-      if (!shouldRecord) {
+      if (!clipsEnabled()) {
         if (isClipRecorderActive()) {
           stop();
         }
@@ -124,14 +104,9 @@ export default function GlobalClipRecorder() {
         return;
       }
 
-      const canvas =
-        findGameCanvas();
+      const canvas = findGameCanvas();
 
       if (!canvas) {
-        if (isClipRecorderActive()) {
-          stop();
-        }
-
         return;
       }
 
@@ -146,12 +121,11 @@ export default function GlobalClipRecorder() {
         stop();
       }
 
-      const ok =
-        initClipRecorder(canvas);
+      const ok = initClipRecorder(canvas);
 
       if (!ok) {
         showToast(
-          'COULD NOT START CLIP RECORDING'
+          'COULD NOT START CLIPS'
         );
         return;
       }
@@ -159,8 +133,12 @@ export default function GlobalClipRecorder() {
       canvasRef.current = canvas;
 
       showToast(
-        'CLIPS ENABLED — RECORDING GAMEPLAY'
+        'CLIPS ENABLED — PRESS SPACE TO SAVE'
       );
+    };
+
+    const settingsChanged = () => {
+      startIfEnabled();
     };
 
     const save = async event => {
@@ -179,20 +157,16 @@ export default function GlobalClipRecorder() {
         return;
       }
 
-      if (!isClipRecorderActive()) {
-        return;
-      }
+      if (!clipsEnabled()) return;
+      if (!isClipRecorderActive()) return;
 
-      if (!clipsEnabled()) {
-        return;
-      }
-
+      // IMPORTANT:
+      // No busy lock. Multiple saves can overlap.
       event.preventDefault();
       event.stopPropagation();
 
       try {
-        const result =
-          await saveClip();
+        const result = await saveClip();
 
         if (!result?.blob) {
           showToast(
@@ -211,40 +185,29 @@ export default function GlobalClipRecorder() {
           result.blob,
           {
             mime: result.mime,
-            extension:
-              result.extension,
-            duration:
-              result.duration,
+            extension: result.extension,
+            duration: result.duration,
           }
         );
 
         await trimClips(30);
 
         window.dispatchEvent(
-          new CustomEvent(
-            'clipSaved',
-            {
-              detail: {
-                id,
-                created: Date.now(),
-                mime: result.mime,
-                extension:
-                  result.extension,
-                size:
-                  result.blob.size,
-                duration:
-                  result.duration,
-              },
-            }
-          )
+          new CustomEvent('clipSaved', {
+            detail: {
+              id,
+              created: Date.now(),
+              mime: result.mime,
+              extension: result.extension,
+              size: result.blob.size,
+              duration: result.duration,
+            },
+          })
         );
 
         showToast(
-          `CLIP SAVED — ${Math.max(
-            1,
-            Math.round(
-              result.duration
-            )
+          `CLIP SAVED — ${Math.round(
+            result.duration
           )} SECONDS`
         );
       } catch (error) {
@@ -253,14 +216,9 @@ export default function GlobalClipRecorder() {
           error
         );
 
-        showToast(
-          'CLIP SAVE FAILED'
-        );
+        showToast('CLIP SAVE FAILED');
       }
     };
-
-    const settingsChanged =
-      () => sync();
 
     window.addEventListener(
       'element6-settings-changed',
@@ -273,10 +231,12 @@ export default function GlobalClipRecorder() {
       true
     );
 
-    sync();
+    scanTimer.current = setInterval(
+      startIfEnabled,
+      750
+    );
 
-    scanTimer.current =
-      setInterval(sync, 750);
+    startIfEnabled();
 
     return () => {
       cancelled = true;
@@ -293,10 +253,7 @@ export default function GlobalClipRecorder() {
       );
 
       if (scanTimer.current) {
-        clearInterval(
-          scanTimer.current
-        );
-
+        clearInterval(scanTimer.current);
         scanTimer.current = null;
       }
 
