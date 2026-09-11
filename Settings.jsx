@@ -474,6 +474,27 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       No browser screen-capture permission is used.
     </span>
   </div>
+        <div className="flex items-center justify-between">
+  <div className="flex flex-col gap-0.5">
+    <span className="text-xs font-body text-muted-foreground">
+      Enable Clips:
+    </span>
+
+    <span className="text-[9px] text-muted-foreground/70 font-body">
+      Save the game's last 30 seconds as a clip.
+    </span>
+  </div>
+
+  <Toggle
+    on={local.enableClips === true}
+    onClick={() =>
+      apply({
+        enableClips:
+          local.enableClips !== true,
+      })
+    }
+  />
+</div>
 
   <Toggle
     on={local.enableClips === true}
