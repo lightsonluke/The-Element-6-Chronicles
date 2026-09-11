@@ -56,14 +56,32 @@ export default function Settings({ onBack, settings, onSave, onReset, onUsername
   const [myUserId, setMyUserId] = useState('');
   const [usernameCooldownMs, setUsernameCooldownMs] = useState(0);
 
-  const apply = (patch) => {
-    const next = { ...local, ...patch };
-    setLocal(next);
-    onSave?.(next);
-    if (next.musicVolume != null) music.setVolume(next.musicVolume);
-    if (next.sfxVolume != null) sfx.setVolume(next.sfxVolume);
-    if (patch.customMusic) music.setCustomTracks(next.customMusic);
-  };
+ const apply = (patch) => {
+  const next = { ...local, ...patch };
+
+  setLocal(next);
+  onSave?.(next);
+
+  if (next.musicVolume != null) {
+    music.setVolume(next.musicVolume);
+  }
+
+  if (next.sfxVolume != null) {
+    sfx.setVolume(next.sfxVolume);
+  }
+
+  if (patch.customMusic) {
+    music.setCustomTracks(next.customMusic);
+  }
+
+  // Let the globally mounted clip recorder immediately react to
+  // Enable Clips being switched on/off.
+  window.dispatchEvent(
+    new CustomEvent('element6-settings-changed', {
+      detail: next,
+    })
+  );
+};
 
   useEffect(() => {
     db.auth.me().then(u => {
