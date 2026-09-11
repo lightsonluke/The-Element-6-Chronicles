@@ -5,12 +5,17 @@ import {
   stopClipRecorder,
   isClipRecorderActive,
 } from './clipRecorder.js';
-import { saveClipBlob, trimClips } from './clipStorage.js';
+import {
+  saveClipBlob,
+  trimClips,
+} from './clipStorage.js';
 
 function showToast(message) {
-  const existing = document.getElementById('clip-toast');
+  const old = document.getElementById(
+    'clip-toast'
+  );
 
-  if (existing) existing.remove();
+  if (old) old.remove();
 
   const toast = document.createElement('div');
 
@@ -27,29 +32,40 @@ function showToast(message) {
   }, 2200);
 }
 
-function clipsEnabledInSettings() {
+function clipsEnabled() {
   try {
-    const raw = localStorage.getItem('element6_progress');
+    const raw =
+      localStorage.getItem(
+        'element6_progress'
+      );
 
     if (!raw) return false;
 
     const progress = JSON.parse(raw);
 
-    return progress?.settings?.enableClips === true;
+    return (
+      progress?.settings?.enableClips === true
+    );
   } catch {
     return false;
   }
 }
 
 function findGameCanvas() {
-  const canvases = [...document.querySelectorAll('canvas')];
+  const canvases = [
+    ...document.querySelectorAll('canvas'),
+  ];
 
   const visible = canvases.filter(canvas => {
-    const rect = canvas.getBoundingClientRect();
+    const rect =
+      canvas.getBoundingClientRect();
 
-    if (!rect.width || !rect.height) return false;
+    if (!rect.width || !rect.height) {
+      return false;
+    }
 
-    const style = window.getComputedStyle(canvas);
+    const style =
+      window.getComputedStyle(canvas);
 
     if (
       style.display === 'none' ||
@@ -59,30 +75,30 @@ function findGameCanvas() {
       return false;
     }
 
-    return rect.width >= 300 && rect.height >= 250;
+    return (
+      rect.width >= 300 &&
+      rect.height >= 250
+    );
   });
 
   if (!visible.length) return null;
 
-  // Element 6 has lots of small preview canvases.
-  // Pick the largest visible canvas so we capture the actual game canvas.
   visible.sort((a, b) => {
-    const aArea = a.width * a.height;
-    const bArea = b.width * b.height;
-    return bArea - aArea;
+    return (
+      b.width * b.height -
+      a.width * a.height
+    );
   });
 
   return visible[0];
 }
 
 export default function GlobalClipRecorder() {
-  const [enabled, setEnabled] = useState(() =>
-    clipsEnabledInSettings()
-  );
+  const [enabled, setEnabled] =
+    useState(() => clipsEnabled());
 
-  const busyRef = useRef(false);
   const canvasRef = useRef(null);
-  const scanTimerRef = useRef(null);
+  const scanTimer = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,27 +108,33 @@ export default function GlobalClipRecorder() {
       canvasRef.current = null;
     };
 
-    const tryStart = () => {
+    const sync = () => {
       if (cancelled) return;
 
-      const shouldBeEnabled = clipsEnabledInSettings();
+      const shouldRecord =
+        clipsEnabled();
 
-      setEnabled(shouldBeEnabled);
+      setEnabled(shouldRecord);
 
-      if (!shouldBeEnabled) {
-        if (isClipRecorderActive()) stop();
+      if (!shouldRecord) {
+        if (isClipRecorderActive()) {
+          stop();
+        }
+
         return;
       }
 
-      const canvas = findGameCanvas();
+      const canvas =
+        findGameCanvas();
 
-      // Clips only exist while an actual gameplay canvas exists.
       if (!canvas) {
-        if (isClipRecorderActive()) stop();
+        if (isClipRecorderActive()) {
+          stop();
+        }
+
         return;
       }
 
-      // Already recording the correct canvas.
       if (
         isClipRecorderActive() &&
         canvasRef.current === canvas
@@ -120,22 +142,24 @@ export default function GlobalClipRecorder() {
         return;
       }
 
-      // A new game canvas appeared.
       if (isClipRecorderActive()) {
         stop();
       }
 
-      const ok = initClipRecorder(canvas);
+      const ok =
+        initClipRecorder(canvas);
 
       if (!ok) {
-        showToast('COULD NOT START GAME CLIP RECORDING');
+        showToast(
+          'COULD NOT START CLIP RECORDING'
+        );
         return;
       }
 
       canvasRef.current = canvas;
 
       showToast(
-        'GAME CLIPS ENABLED — PRESS SPACE TO SAVE'
+        'CLIPS ENABLED — RECORDING GAMEPLAY'
       );
     };
 
@@ -155,20 +179,25 @@ export default function GlobalClipRecorder() {
         return;
       }
 
-      if (!isClipRecorderActive()) return;
+      if (!isClipRecorderActive()) {
+        return;
+      }
 
-      // Do NOT use a global busy lock.
-      // Multiple clip saves are intentionally allowed to overlap.
-      if (!clipsEnabledInSettings()) return;
+      if (!clipsEnabled()) {
+        return;
+      }
 
       event.preventDefault();
       event.stopPropagation();
 
       try {
-        const result = await saveClip();
+        const result =
+          await saveClip();
 
         if (!result?.blob) {
-          showToast('CLIP COULD NOT BE CREATED');
+          showToast(
+            'CLIP COULD NOT BE CREATED'
+          );
           return;
         }
 
@@ -177,48 +206,61 @@ export default function GlobalClipRecorder() {
             .toString(36)
             .slice(2, 10)}`;
 
-        await saveClipBlob(id, result.blob, {
-          mime: result.mime,
-          extension: result.extension,
-          duration: result.duration,
-        });
+        await saveClipBlob(
+          id,
+          result.blob,
+          {
+            mime: result.mime,
+            extension:
+              result.extension,
+            duration:
+              result.duration,
+          }
+        );
 
         await trimClips(30);
 
-        const created = Date.now();
-
         window.dispatchEvent(
-          new CustomEvent('clipSaved', {
-            detail: {
-              id,
-              created,
-              mime: result.mime,
-              extension: result.extension,
-              size: result.blob.size,
-              duration: result.duration,
-            },
-          })
+          new CustomEvent(
+            'clipSaved',
+            {
+              detail: {
+                id,
+                created: Date.now(),
+                mime: result.mime,
+                extension:
+                  result.extension,
+                size:
+                  result.blob.size,
+                duration:
+                  result.duration,
+              },
+            }
+          )
         );
 
         showToast(
           `CLIP SAVED — ${Math.max(
             1,
-            Math.round(result.duration)
+            Math.round(
+              result.duration
+            )
           )} SECONDS`
         );
       } catch (error) {
         console.error(
-          '[Element 6 Clips] Failed to save clip:',
+          '[Element 6 Clips] Save failed:',
           error
         );
 
-        showToast('CLIP SAVE FAILED');
+        showToast(
+          'CLIP SAVE FAILED'
+        );
       }
     };
 
-    const settingsChanged = () => {
-      tryStart();
-    };
+    const settingsChanged =
+      () => sync();
 
     window.addEventListener(
       'element6-settings-changed',
@@ -231,13 +273,10 @@ export default function GlobalClipRecorder() {
       true
     );
 
-    // Check for gameplay canvases appearing/disappearing.
-    scanTimerRef.current = setInterval(
-      tryStart,
-      750
-    );
+    sync();
 
-    tryStart();
+    scanTimer.current =
+      setInterval(sync, 750);
 
     return () => {
       cancelled = true;
@@ -253,9 +292,12 @@ export default function GlobalClipRecorder() {
         true
       );
 
-      if (scanTimerRef.current) {
-        clearInterval(scanTimerRef.current);
-        scanTimerRef.current = null;
+      if (scanTimer.current) {
+        clearInterval(
+          scanTimer.current
+        );
+
+        scanTimer.current = null;
       }
 
       stop();
