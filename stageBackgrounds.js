@@ -1,9 +1,7 @@
 // Stage backgrounds — fully procedural, drawn with canvas primitives.
-// Overhauled to a rich, layered pixel-art style: sky gradients, volumetric
-// clouds, atmospheric-perspective mountain ranges, detailed mid-ground
-// (hills with winding roads + statues, forests, crystals, lava, etc.),
-// foreground structures (waterfront houses on piers, neon city blocks),
-// and layered 3-tone animated water. No images — all drawn from code.
+// V2: significantly denser detail pass across every motif — more layers,
+// more texture strokes, richer atmosphere — while staying 100% code-drawn.
+// No text, no character/person silhouettes anywhere in the scenery.
 
 function hexToRgba(hex, a) {
   const n = parseInt(hex.replace('#', ''), 16);
@@ -64,7 +62,7 @@ const STAGE_THEMES = {
   colossalcoliseum: { skyTop: '#1a1208', skyBottom: '#3a2a18', sil: '#2a1a10', accent: '#cc8866', weather: 'clear',  motif: 'arena' },
   infiniteexpanse:  { skyTop: '#05051a', skyBottom: '#0a0a2a', sil: '#05051a', accent: '#5566aa', weather: 'fog',    motif: 'void' },
   opalcave:         { skyTop: '#1a0a2a', skyBottom: '#2a1a4a', sil: '#150a30', accent: '#77ddbb', weather: 'clear',  motif: 'crystals' },
-  // ── 20 NEW STAGES ──
+  // ── 20 stages ──
   g1_thunder_peak:  { skyTop: '#1a1a00', skyBottom: '#3a3a10', sil: '#2a2a10', accent: '#FFD700', weather: 'storm',  motif: 'mountains' },
   g1_inferno_realm: { skyTop: '#1a0500', skyBottom: '#440a00', sil: '#2a0805', accent: '#FF6600', weather: 'embers', motif: 'lava' },
   g1_ocean_depth:   { skyTop: '#001030', skyBottom: '#003366', sil: '#002050', accent: '#00CCFF', weather: 'clear',  motif: 'coastal', water: true },
@@ -91,8 +89,14 @@ const STAGE_THEMES = {
 function drawSky(ctx, w, h, pal) {
   const g = ctx.createLinearGradient(0, 0, 0, h);
   g.addColorStop(0, pal.skyTop);
+  g.addColorStop(0.55, mixHex(pal.skyTop, pal.skyBottom, 0.5));
   g.addColorStop(1, pal.skyBottom);
   ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  // subtle horizon haze band — adds a painted-matte feel like reference art
+  const haze = ctx.createLinearGradient(0, h * 0.5, 0, h * 0.68);
+  haze.addColorStop(0, 'transparent');
+  haze.addColorStop(1, hexToRgba(mixHex(pal.skyBottom, '#ffffff', 0.3), 0.18));
+  ctx.fillStyle = haze; ctx.fillRect(0, h * 0.5, w, h * 0.18);
 }
 
 // ── Stars ──
@@ -101,15 +105,20 @@ function drawStars(ctx, w, h, frame, count, color, maxBright) {
     const sx = (i * 137) % w;
     const sy = (i * 79) % (h * 0.6);
     const tw = 0.4 + Math.sin(frame * 0.04 + i) * 0.2;
+    const r = 0.8 + (i % 3) * 0.4;
     ctx.fillStyle = hexToRgba(color, (maxBright || 0.5) * tw);
-    ctx.beginPath(); ctx.arc(sx, sy, 0.8 + (i % 3) * 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+    if (i % 9 === 0) {
+      // occasional bright star with a tiny cross glint
+      ctx.strokeStyle = hexToRgba(color, (maxBright || 0.5) * tw * 0.6);
+      ctx.lineWidth = 0.6;
+      ctx.beginPath(); ctx.moveTo(sx - r * 2.5, sy); ctx.lineTo(sx + r * 2.5, sy);
+      ctx.moveTo(sx, sy - r * 2.5); ctx.lineTo(sx, sy + r * 2.5); ctx.stroke();
+    }
   }
 }
 
 // ── Volumetric clouds (soft, rounded, buttery off-white with blue shadows) ──
-// Clouds are randomized per match: a seed re-rolls whenever drawClouds hasn't
-// been called for >2s (i.e. between matches), so every match gets a different
-// cloud layout while staying stable during a single match.
 let _cloudSeed = Math.random() * 100000;
 let _lastCloudCall = 0;
 function cloudRng(i) { return srand(i + _cloudSeed); }
@@ -124,26 +133,36 @@ function drawClouds(ctx, w, h, frame, pal, density = 6, opacity = 0.10) {
     const scale = 0.8 + cloudRng(i + 7) * 0.7;
     ctx.save();
     ctx.globalAlpha = opacity * (0.7 + cloudRng(i + 3) * 0.5);
-    // shadow blobs
     ctx.fillStyle = sh;
-    for (let b = 0; b < 5; b++) {
-      const bx = cx + (b - 2) * 26 * scale;
+    for (let b = 0; b < 6; b++) {
+      const bx = cx + (b - 2.5) * 24 * scale;
       const by = cy + 8 * scale + Math.sin(b) * 3;
       ctx.beginPath(); ctx.ellipse(bx, by, 30 * scale, 16 * scale, 0, 0, Math.PI * 2); ctx.fill();
     }
-    // highlight blobs
     ctx.fillStyle = hi;
-    for (let b = 0; b < 5; b++) {
-      const bx = cx + (b - 2) * 26 * scale;
+    for (let b = 0; b < 6; b++) {
+      const bx = cx + (b - 2.5) * 24 * scale;
       const by = cy + Math.sin(b) * 3;
       ctx.beginPath(); ctx.ellipse(bx, by, 28 * scale, 15 * scale, 0, 0, Math.PI * 2); ctx.fill();
     }
+    // top-lit rim highlight for volume
+    ctx.fillStyle = hexToRgba('#ffffff', 0.5);
+    ctx.beginPath(); ctx.ellipse(cx, cy - 8 * scale, 40 * scale, 9 * scale, 0, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 }
 
-// ── Distant mountain range (atmospheric perspective — pale, muted) ──
+// ── Distant mountain range (atmospheric perspective, layered ridgelines) ──
 function drawDistantMountains(ctx, w, h, pal, tint) {
+  // far-far pale ridge
+  const far = mixHex(tint || pal.skyBottom, '#ffffff', 0.35);
+  ctx.fillStyle = hexToRgba(far, 0.35);
+  ctx.beginPath(); ctx.moveTo(0, h * 0.58);
+  for (let x = 0; x <= w; x += 46) {
+    ctx.lineTo(x, h * 0.58 - (24 + Math.sin(x * 0.008 + 4) * 18 + srand(x * 0.02 + 9) * 14));
+  }
+  ctx.lineTo(w, h * 0.58); ctx.closePath(); ctx.fill();
+
   const base = tint || mixHex(pal.skyBottom, '#7fb865', 0.35);
   ctx.fillStyle = hexToRgba(base, 0.55);
   ctx.beginPath();
@@ -153,8 +172,14 @@ function drawDistantMountains(ctx, w, h, pal, tint) {
     ctx.lineTo(x, peak);
   }
   ctx.lineTo(w, h * 0.62); ctx.closePath(); ctx.fill();
+  // ridge texture strokes (rock striations)
+  ctx.strokeStyle = hexToRgba('#000000', 0.06); ctx.lineWidth = 1;
+  for (let x = 10; x < w; x += 30) {
+    const peak = h * 0.62 - (40 + Math.sin(x * 0.012) * 30 + srand(x * 0.01) * 25);
+    ctx.beginPath(); ctx.moveTo(x, peak + 6); ctx.lineTo(x + 10, h * 0.62); ctx.stroke();
+  }
   // snow caps on tallest
-  ctx.fillStyle = hexToRgba('#ffffff', 0.18);
+  ctx.fillStyle = hexToRgba('#ffffff', 0.22);
   for (let x = 20; x < w; x += 120) {
     const peak = h * 0.62 - (40 + Math.sin(x * 0.012) * 30 + srand(x * 0.01) * 25);
     if (peak < h * 0.62 - 55) {
@@ -164,38 +189,71 @@ function drawDistantMountains(ctx, w, h, pal, tint) {
   }
 }
 
+// ── Thin waterfall ribbon cutting through distant cliffs (reusable) ──
+function drawWaterfallRibbon(ctx, x, topY, bottomY, width, frame, tone) {
+  ctx.save();
+  const g = ctx.createLinearGradient(x, topY, x, bottomY);
+  g.addColorStop(0, hexToRgba(tone, 0.05));
+  g.addColorStop(0.5, hexToRgba('#ffffff', 0.55));
+  g.addColorStop(1, hexToRgba(tone, 0.35));
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(x - width / 2, topY);
+  for (let y = topY; y <= bottomY; y += 10) {
+    const jitter = Math.sin(y * 0.3 + frame * 0.2) * 1.4;
+    ctx.lineTo(x - width / 2 + jitter, y);
+  }
+  ctx.lineTo(x + width / 2, bottomY);
+  for (let y = bottomY; y >= topY; y -= 10) {
+    const jitter = Math.sin(y * 0.3 + frame * 0.2 + 2) * 1.4;
+    ctx.lineTo(x + width / 2 + jitter, y);
+  }
+  ctx.closePath(); ctx.fill();
+  // mist pool at base
+  ctx.fillStyle = hexToRgba('#ffffff', 0.18);
+  ctx.beginPath(); ctx.ellipse(x, bottomY, width * 1.6, 14, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
 // ── Layered animated water (3-tone waves) ──
 function drawWater(ctx, w, h, frame, pal) {
   const crest = mixHex(pal.accent, '#74b4e2', 0.6);
   const mid = mixHex(pal.accent, '#3c7cb8', 0.5);
   const base = mixHex(pal.sil, '#2a4e8a', 0.5);
   const waterTop = h * 0.62;
-  // base fill
   const g = ctx.createLinearGradient(0, waterTop, 0, h);
   g.addColorStop(0, mid); g.addColorStop(1, base);
   ctx.fillStyle = g; ctx.fillRect(0, waterTop, w, h - waterTop);
-  // 4 repeating wave bands
-  for (let band = 0; band < 4; band++) {
-    const by = waterTop + band * (h - waterTop) / 4;
-    const amp = 6 + band * 3;
-    const tone = band === 0 ? crest : band === 1 ? mid : band === 2 ? mixHex(mid, base, 0.5) : base;
-    ctx.fillStyle = hexToRgba(tone, 0.55 - band * 0.08);
+  for (let band = 0; band < 5; band++) {
+    const by = waterTop + band * (h - waterTop) / 5;
+    const amp = 5 + band * 2.6;
+    const tone = band === 0 ? crest : band === 1 ? mid : band === 2 ? mixHex(mid, base, 0.4) : band === 3 ? mixHex(mid, base, 0.7) : base;
+    ctx.fillStyle = hexToRgba(tone, 0.5 - band * 0.06);
     ctx.beginPath();
     ctx.moveTo(0, by);
-    for (let x = 0; x <= w; x += 12) {
-      const wy = by + Math.sin(x * 0.018 + frame * 0.05 + band * 1.3) * amp;
+    for (let x = 0; x <= w; x += 10) {
+      const wy = by + Math.sin(x * 0.02 + frame * 0.05 + band * 1.3) * amp;
       ctx.lineTo(x, wy);
     }
     ctx.lineTo(w, by + amp + 8); ctx.lineTo(0, by + amp + 8); ctx.closePath(); ctx.fill();
-    // crest highlight line
-    ctx.strokeStyle = hexToRgba(band === 0 ? '#ffffff' : crest, 0.35 - band * 0.06);
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = hexToRgba(band === 0 ? '#ffffff' : crest, 0.3 - band * 0.04);
+    ctx.lineWidth = 1.4;
     ctx.beginPath();
-    for (let x = 0; x <= w; x += 12) {
-      const wy = by + Math.sin(x * 0.018 + frame * 0.05 + band * 1.3) * amp;
+    for (let x = 0; x <= w; x += 10) {
+      const wy = by + Math.sin(x * 0.02 + frame * 0.05 + band * 1.3) * amp;
       x === 0 ? ctx.moveTo(x, wy) : ctx.lineTo(x, wy);
     }
     ctx.stroke();
+  }
+  // shimmering light glints on the surface
+  for (let i = 0; i < 24; i++) {
+    const gx = (i * 61 + frame * 0.6) % w;
+    const gy = waterTop + 10 + (i * 17) % (h - waterTop - 20);
+    const tw = 0.3 + Math.sin(frame * 0.1 + i) * 0.3;
+    if (tw > 0.35) {
+      ctx.fillStyle = hexToRgba('#ffffff', tw * 0.4);
+      ctx.fillRect(gx, gy, 6, 1.4);
+    }
   }
 }
 
@@ -209,25 +267,31 @@ function drawPierHouses(ctx, w, h, frame, pal, side) {
   for (let i = 0; i < count; i++) {
     const hx = baseX + dir * i * 60;
     const hy = waterTop - 6;
-    // pier posts
-    ctx.fillStyle = '#5a3a22';
+    ctx.fillStyle = '#3a2414';
     for (let p = 0; p < 3; p++) {
-      ctx.fillRect(hx + p * 16 - 2, hy, 4, 30);
+      ctx.fillRect(hx + p * 16 - 2, hy, 4, 32);
+      ctx.fillRect(hx + p * 16 - 2, hy + 30, 4, 3); // waterline brace
     }
-    // pier deck
     ctx.fillStyle = '#7a5230'; ctx.fillRect(hx - 6, hy - 3, 52, 6);
-    // house body
+    ctx.strokeStyle = hexToRgba('#4a2a14', 0.5); ctx.lineWidth = 1;
+    for (let pl = 0; pl < 5; pl++) { ctx.beginPath(); ctx.moveTo(hx - 4 + pl * 10, hy - 3); ctx.lineTo(hx - 4 + pl * 10, hy + 3); ctx.stroke(); }
     const hc = houseColors[(i + (side === 'left' ? 0 : 2)) % houseColors.length];
     ctx.fillStyle = hc; ctx.fillRect(hx, hy - 34, 44, 32);
-    // roof
+    ctx.fillStyle = hexToRgba('#000000', 0.12); ctx.fillRect(hx, hy - 34, 44, 8); // eave shadow
     ctx.fillStyle = mixHex(hc, '#000000', 0.35);
     ctx.beginPath(); ctx.moveTo(hx - 4, hy - 34); ctx.lineTo(hx + 22, hy - 50); ctx.lineTo(hx + 48, hy - 34); ctx.closePath(); ctx.fill();
-    // window
+    // roof ridge highlight
+    ctx.strokeStyle = hexToRgba('#ffffff', 0.25); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(hx + 22, hy - 50); ctx.lineTo(hx + 22, hy - 46); ctx.stroke();
     ctx.fillStyle = hexToRgba('#ffeeaa', 0.85);
     ctx.fillRect(hx + 8, hy - 26, 10, 10);
     ctx.fillRect(hx + 26, hy - 26, 10, 10);
-    // door
+    ctx.strokeStyle = hexToRgba('#4a2a18', 0.6); ctx.lineWidth = 1;
+    ctx.strokeRect(hx + 8, hy - 26, 10, 10); ctx.strokeRect(hx + 26, hy - 26, 10, 10);
     ctx.fillStyle = '#4a2a18'; ctx.fillRect(hx + 18, hy - 16, 8, 14);
+    // window reflection glow on water
+    ctx.fillStyle = hexToRgba('#ffeeaa', 0.12);
+    ctx.fillRect(hx + 6, hy + 4, 34, 3);
   }
 }
 
@@ -236,14 +300,19 @@ function drawHillWithStatue(ctx, w, h, frame, pal, side) {
   const waterTop = h * 0.62;
   const dir = side === 'left' ? 1 : -1;
   const baseX = side === 'left' ? 0 : w;
-  // hill
   ctx.fillStyle = mixHex('#7fb865', pal.sil, 0.25);
   ctx.beginPath();
   ctx.moveTo(baseX, waterTop);
   ctx.quadraticCurveTo(baseX + dir * 120, waterTop - 40, baseX + dir * 180, waterTop - 110);
   ctx.quadraticCurveTo(baseX + dir * 240, waterTop - 40, baseX + dir * 300, waterTop);
   ctx.closePath(); ctx.fill();
-  // winding road (pale gray)
+  // tree dots scattered on hill for texture
+  ctx.fillStyle = hexToRgba(mixHex('#4f8a3a', pal.sil, 0.2), 0.7);
+  for (let t = 0; t < 14; t++) {
+    const tx = baseX + dir * (20 + srand(t) * 260);
+    const ty = waterTop - 10 - srand(t + 5) * 90;
+    if (ty < waterTop - 8) { ctx.beginPath(); ctx.arc(tx, ty, 5 + srand(t + 2) * 4, 0, Math.PI * 2); ctx.fill(); }
+  }
   ctx.strokeStyle = '#c8c0b0'; ctx.lineWidth = 5; ctx.globalAlpha = 0.7;
   ctx.beginPath();
   ctx.moveTo(baseX + dir * 30, waterTop - 4);
@@ -254,62 +323,93 @@ function drawHillWithStatue(ctx, w, h, frame, pal, side) {
     ctx.lineTo(rx, ry);
   }
   ctx.stroke(); ctx.globalAlpha = 1;
-  // statue at peak (gray stone sea creature)
   const peakX = baseX + dir * 220, peakY = waterTop - 104;
   ctx.fillStyle = '#8c9fa1';
-  // base
   ctx.fillRect(peakX - 14, peakY - 4, 28, 8);
-  // body
   ctx.beginPath(); ctx.ellipse(peakX, peakY - 18, 12, 16, 0, 0, Math.PI * 2); ctx.fill();
-  // head
   ctx.beginPath(); ctx.arc(peakX + dir * 10, peakY - 24, 8, 0, Math.PI * 2); ctx.fill();
-  // fin
   ctx.beginPath(); ctx.moveTo(peakX - dir * 6, peakY - 28); ctx.lineTo(peakX - dir * 16, peakY - 40); ctx.lineTo(peakX - dir * 2, peakY - 30); ctx.fill();
   ctx.fillStyle = hexToRgba('#ffffff', 0.2); ctx.fillRect(peakX - 14, peakY - 4, 28, 2);
+  // weathering cracks on statue
+  ctx.strokeStyle = hexToRgba('#000000', 0.15); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(peakX - 4, peakY - 30); ctx.lineTo(peakX - 2, peakY - 12); ctx.stroke();
 }
 
-// ── MOTIF: coastal (the attached reference style) ──
+// ── Small stone gate silhouette in the far distance (purely architectural motif) ──
+function drawFarGate(ctx, w, h, pal, cx, baseY, scale) {
+  ctx.save();
+  ctx.fillStyle = hexToRgba(mixHex(pal.sil, '#8a3a2a', 0.4), 0.6);
+  const legW = 6 * scale, legH = 46 * scale, spread = 34 * scale;
+  ctx.fillRect(cx - spread, baseY - legH, legW, legH);
+  ctx.fillRect(cx + spread - legW, baseY - legH, legW, legH);
+  ctx.fillRect(cx - spread - 6 * scale, baseY - legH - 10 * scale, spread * 2 + 12 * scale, 8 * scale);
+  ctx.fillRect(cx - spread - 12 * scale, baseY - legH - 22 * scale, spread * 2 + 24 * scale, 7 * scale);
+  ctx.restore();
+}
+
+// ── MOTIF: coastal ──
 function motifCoastal(ctx, w, h, frame, pal) {
   drawStars(ctx, w, h, frame, 30, '#ffffff', 0.25);
-  drawClouds(ctx, w, h, frame, pal, 7, 0.12);
+  drawClouds(ctx, w, h, frame, pal, 8, 0.13);
   drawDistantMountains(ctx, w, h, pal, mixHex(pal.skyBottom, '#7fd9d8', 0.4));
+  drawFarGate(ctx, w, h, pal, w * 0.5, h * 0.615, 0.7);
   drawHillWithStatue(ctx, w, h, frame, pal, 'left');
   drawHillWithStatue(ctx, w, h, frame, pal, 'right');
   drawWater(ctx, w, h, frame, pal);
   drawPierHouses(ctx, w, h, frame, pal, 'left');
   drawPierHouses(ctx, w, h, frame, pal, 'right');
+  // gulls
+  ctx.strokeStyle = hexToRgba('#ffffff', 0.4); ctx.lineWidth = 1.4;
+  for (let i = 0; i < 4; i++) {
+    const gx = (i * 210 + frame * 0.4) % w, gy = h * 0.18 + srand(i) * h * 0.12;
+    ctx.beginPath(); ctx.moveTo(gx - 6, gy); ctx.quadraticCurveTo(gx, gy - 4, gx + 6, gy);
+    ctx.moveTo(gx + 6, gy); ctx.quadraticCurveTo(gx + 12, gy - 4, gx + 18, gy); ctx.stroke();
+  }
 }
 
-// ── MOTIF: city (detailed neon skyline with reflections) ──
+// ── MOTIF: city (dense neon skyline) ──
 function motifCity(ctx, w, h, frame, pal) {
   drawStars(ctx, w, h, frame, 60, '#ffffff', 0.45);
-  drawClouds(ctx, w, h, frame, pal, 4, 0.06);
-  const count = Math.ceil(w / 80);
+  drawClouds(ctx, w, h, frame, pal, 5, 0.07);
+  // far hazy skyline layer
+  ctx.fillStyle = hexToRgba(mixHex(pal.sil, pal.accent, 0.1), 0.35);
+  for (let i = 0; i < Math.ceil(w / 60); i++) {
+    const bw = 30 + srand(i + 50) * 30, bh = 90 + srand(i + 51) * 140, x = i * 60;
+    ctx.fillRect(x, h - bh, bw, bh);
+  }
+  const count = Math.ceil(w / 78);
   for (let i = 0; i < count; i++) {
     const bw = 46 + Math.floor(srand(i + 1) * 50);
-    const bh = 140 + Math.floor(srand(i + 2) * 200);
-    const x = i * 80 + srand(i + 3) * 16;
-    // building body with vertical gradient
+    const bh = 150 + Math.floor(srand(i + 2) * 220);
+    const x = i * 78 + srand(i + 3) * 16;
     const g = ctx.createLinearGradient(x, h - bh, x, h);
-    g.addColorStop(0, mixHex(pal.sil, pal.accent, 0.15));
+    g.addColorStop(0, mixHex(pal.sil, pal.accent, 0.2));
     g.addColorStop(1, pal.sil);
     ctx.fillStyle = g; ctx.fillRect(x, h - bh, bw, bh);
-    // neon edge
-    ctx.strokeStyle = hexToRgba(pal.accent, 0.35); ctx.lineWidth = 1;
+    // rooftop cap detail (varied silhouette, not flat boxes)
+    ctx.fillStyle = pal.sil;
+    const capType = Math.floor(srand(i + 40) * 3);
+    if (capType === 0) { ctx.fillRect(x + bw * 0.3, h - bh - 18, bw * 0.4, 18); }
+    else if (capType === 1) { ctx.beginPath(); ctx.moveTo(x, h - bh); ctx.lineTo(x + bw / 2, h - bh - 22); ctx.lineTo(x + bw, h - bh); ctx.fill(); }
+    else { ctx.fillRect(x + 4, h - bh - 10, bw - 8, 10); ctx.fillRect(x + bw * 0.4, h - bh - 24, bw * 0.2, 14); }
+    ctx.strokeStyle = hexToRgba(pal.accent, 0.4); ctx.lineWidth = 1;
     ctx.strokeRect(x, h - bh, bw, bh);
-    // windows
-    for (let wy = h - bh + 14; wy < h - 14; wy += 20) {
-      for (let wx = x + 7; wx < x + bw - 7; wx += 14) {
+    for (let wy = h - bh + 14; wy < h - 14; wy += 18) {
+      for (let wx = x + 7; wx < x + bw - 7; wx += 13) {
         if (srand(wx * wy + i) > 0.4) {
           const lit = srand(wx + wy) > 0.5;
           ctx.fillStyle = pal.neon
             ? (lit ? hexToRgba('#FFD700', 0.6) : hexToRgba(pal.accent, 0.55))
             : hexToRgba('#4466FF', 0.4);
-          ctx.fillRect(wx, wy, 7, 9);
+          ctx.fillRect(wx, wy, 6.5, 8.5);
         }
       }
     }
-    // antenna + beacon
+    // vertical neon accent strip on some towers
+    if (srand(i + 21) > 0.55) {
+      ctx.fillStyle = hexToRgba(pal.accent, 0.5 + Math.sin(frame * 0.06 + i) * 0.15);
+      ctx.fillRect(x + bw * 0.5 - 1.5, h - bh + 6, 3, bh - 12);
+    }
     if (srand(i + 9) > 0.6) {
       ctx.strokeStyle = pal.sil; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(x + bw / 2, h - bh); ctx.lineTo(x + bw / 2, h - bh - 24); ctx.stroke();
@@ -317,66 +417,119 @@ function motifCity(ctx, w, h, frame, pal) {
       ctx.fillStyle = blink; ctx.beginPath(); ctx.arc(x + bw / 2, h - bh - 26, 2.5, 0, Math.PI * 2); ctx.fill();
     }
   }
+  // holographic ring signage shapes (no text, just glowing geometric ads)
+  for (let i = 0; i < 3; i++) {
+    const rx = (i * w / 3) + w / 6, ry = h * 0.3 + srand(i + 60) * h * 0.15;
+    ctx.strokeStyle = hexToRgba(pal.accent, 0.3 + Math.sin(frame * 0.05 + i) * 0.1);
+    ctx.lineWidth = 3;
+    ctx.strokeRect(rx - 20, ry - 12, 40, 24);
+    ctx.beginPath(); ctx.arc(rx, ry, 8, 0, Math.PI * 2); ctx.stroke();
+  }
+  // volumetric light beams from streets below
+  for (let i = 0; i < 3; i++) {
+    const bx = (i * w / 3) + w / 6;
+    const g = ctx.createLinearGradient(bx, h * 0.4, bx, h);
+    g.addColorStop(0, hexToRgba(pal.accent, 0.14)); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.beginPath();
+    ctx.moveTo(bx - 40, h); ctx.lineTo(bx - 6, h * 0.4); ctx.lineTo(bx + 6, h * 0.4); ctx.lineTo(bx + 40, h); ctx.fill();
+  }
 }
 
 // ── MOTIF: mansion ──
 function motifMansion(ctx, w, h, frame, pal) {
   drawStars(ctx, w, h, frame, 70, '#ddddff', 0.4);
-  drawClouds(ctx, w, h, frame, pal, 4, 0.08);
-  // moon
+  drawClouds(ctx, w, h, frame, pal, 5, 0.09);
   ctx.fillStyle = '#DDDDEE'; ctx.shadowColor = '#DDDDEE'; ctx.shadowBlur = 24;
   ctx.beginPath(); ctx.arc(w * 0.78, 80, 30, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-  const mw = 280, mh = 220, mx = w / 2 - mw / 2;
-  // main hall
+  // craters
+  ctx.fillStyle = hexToRgba('#aaaacc', 0.4);
+  ctx.beginPath(); ctx.arc(w * 0.78 - 8, 74, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(w * 0.78 + 10, 88, 5, 0, Math.PI * 2); ctx.fill();
+  drawDistantMountains(ctx, w, h, pal, mixHex(pal.sil, '#334455', 0.3));
+  const mw = 300, mh = 230, mx = w / 2 - mw / 2;
   const g = ctx.createLinearGradient(mx, h - mh, mx, h);
-  g.addColorStop(0, mixHex(pal.sil, pal.accent, 0.2)); g.addColorStop(1, pal.sil);
+  g.addColorStop(0, mixHex(pal.sil, pal.accent, 0.22)); g.addColorStop(1, pal.sil);
   ctx.fillStyle = g; ctx.fillRect(mx, h - mh, mw, mh);
-  // wings
+  // stone block texture lines
+  ctx.strokeStyle = hexToRgba('#000000', 0.1); ctx.lineWidth = 1;
+  for (let r = 0; r < 8; r++) { ctx.beginPath(); ctx.moveTo(mx, h - mh + r * 28); ctx.lineTo(mx + mw, h - mh + r * 28); ctx.stroke(); }
   ctx.fillStyle = pal.sil;
-  ctx.fillRect(mx - 34, h - mh - 60, 54, mh + 60);
-  ctx.fillRect(mx + mw - 20, h - mh - 60, 54, mh + 60);
-  // roofs
+  ctx.fillRect(mx - 36, h - mh - 64, 56, mh + 64);
+  ctx.fillRect(mx + mw - 20, h - mh - 64, 56, mh + 64);
+  // corner turret finials
   ctx.fillStyle = mixHex(pal.sil, '#000000', 0.4);
-  ctx.beginPath(); ctx.moveTo(mx - 34, h - mh - 60); ctx.lineTo(mx - 7, h - mh - 104); ctx.lineTo(mx + 20, h - mh - 60); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(mx + mw - 20, h - mh - 60); ctx.lineTo(mx + mw + 7, h - mh - 104); ctx.lineTo(mx + mw + 34, h - mh - 60); ctx.fill();
-  // glowing windows
+  ctx.beginPath(); ctx.moveTo(mx - 36, h - mh - 64); ctx.lineTo(mx - 8, h - mh - 110); ctx.lineTo(mx + 20, h - mh - 64); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(mx + mw - 20, h - mh - 64); ctx.lineTo(mx + mw + 8, h - mh - 110); ctx.lineTo(mx + mw + 36, h - mh - 64); ctx.fill();
+  ctx.beginPath(); ctx.arc(mx - 8, h - mh - 112, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(mx + mw + 8, h - mh - 112, 4, 0, Math.PI * 2); ctx.fill();
+  // main roof + spire
+  ctx.beginPath(); ctx.moveTo(mx - 10, h - mh); ctx.lineTo(mx + mw / 2, h - mh - 70); ctx.lineTo(mx + mw + 10, h - mh); ctx.fill();
+  ctx.strokeStyle = hexToRgba('#000000', 0.15); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(mx + mw / 2, h - mh - 70); ctx.lineTo(mx + mw / 2, h - mh); ctx.stroke();
+  // glowing windows w/ frame + arch top
   for (let i = 0; i < 4; i++) {
-    ctx.fillStyle = hexToRgba(pal.accent, 0.5);
-    ctx.fillRect(mx + 30 + i * 58, h - mh + 44, 26, 34);
-    ctx.fillStyle = hexToRgba('#ffffff', 0.2);
-    ctx.fillRect(mx + 30 + i * 58, h - mh + 44, 26, 4);
+    const wx = mx + 34 + i * 58;
+    ctx.fillStyle = hexToRgba(pal.accent, 0.55);
+    ctx.beginPath();
+    ctx.moveTo(wx, h - mh + 60); ctx.lineTo(wx, h - mh + 46);
+    ctx.quadraticCurveTo(wx + 13, h - mh + 36, wx + 26, h - mh + 46);
+    ctx.lineTo(wx + 26, h - mh + 60); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = hexToRgba('#000000', 0.2); ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = hexToRgba('#ffffff', 0.25);
+    ctx.fillRect(wx, h - mh + 44, 26, 3);
   }
-  // gate
+  // ivy / vine texture at base
+  ctx.strokeStyle = hexToRgba('#2a4a2a', 0.4); ctx.lineWidth = 2;
+  for (let i = 0; i < 5; i++) {
+    const vx = mx + 20 + i * 55;
+    ctx.beginPath(); ctx.moveTo(vx, h); 
+    for (let s = 1; s <= 4; s++) ctx.lineTo(vx + Math.sin(s) * 8, h - s * 14);
+    ctx.stroke();
+  }
   ctx.strokeStyle = mixHex(pal.sil, '#000000', 0.3); ctx.lineWidth = 3;
   ctx.beginPath(); ctx.moveTo(mx + mw / 2 - 16, h); ctx.lineTo(mx + mw / 2 - 16, h - 40);
   ctx.moveTo(mx + mw / 2 + 16, h); ctx.lineTo(mx + mw / 2 + 16, h - 40); ctx.stroke();
 }
 
-// ── MOTIF: forest (layered canopy + spores) ──
+// ── MOTIF: forest (layered canopy + mist + spores) ──
 function motifForest(ctx, w, h, frame, pal) {
-  drawClouds(ctx, w, h, frame, pal, 3, 0.05);
-  // back layer trees (pale, atmospheric)
-  for (let i = 0; i < Math.ceil(w / 50); i++) {
-    const tx = i * 50 + srand(i) * 18;
-    const th = 100 + Math.floor(srand(i + 5) * 100);
-    ctx.fillStyle = hexToRgba(mixHex(pal.sil, pal.accent, 0.2), 0.6);
-    ctx.fillRect(tx + 14, h - th, 8, th);
-    ctx.beginPath(); ctx.arc(tx + 18, h - th - 22, 28, 0, Math.PI * 2); ctx.fill();
+  drawClouds(ctx, w, h, frame, pal, 4, 0.05);
+  // far mist bands between tree layers
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = hexToRgba(mixHex(pal.sil, '#ffffff', 0.4), 0.06);
+    ctx.fillRect(0, h * (0.45 + i * 0.1), w, 30);
   }
-  // front layer (dark, detailed)
-  for (let i = 0; i < Math.ceil(w / 75); i++) {
-    const tx = i * 75 + 30 + srand(i + 9) * 14;
-    const th = 140 + Math.floor(srand(i + 11) * 90);
+  for (let i = 0; i < Math.ceil(w / 46); i++) {
+    const tx = i * 46 + srand(i) * 18;
+    const th = 100 + Math.floor(srand(i + 5) * 100);
+    ctx.fillStyle = hexToRgba(mixHex(pal.sil, pal.accent, 0.2), 0.55);
+    ctx.fillRect(tx + 14, h - th, 7, th);
+    ctx.beginPath(); ctx.arc(tx + 17, h - th - 22, 27, 0, Math.PI * 2); ctx.fill();
+  }
+  for (let i = 0; i < Math.ceil(w / 70); i++) {
+    const tx = i * 70 + 30 + srand(i + 9) * 14;
+    const th = 145 + Math.floor(srand(i + 11) * 95);
     const g = ctx.createLinearGradient(tx, h - th, tx, h);
-    g.addColorStop(0, mixHex(pal.sil, pal.accent, 0.15)); g.addColorStop(1, pal.sil);
+    g.addColorStop(0, mixHex(pal.sil, pal.accent, 0.18)); g.addColorStop(1, pal.sil);
     ctx.fillStyle = g; ctx.fillRect(tx + 18, h - th, 11, th);
-    // layered canopy
+    // bark texture
+    ctx.strokeStyle = hexToRgba('#000000', 0.15); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(tx + 21, h - th + 10); ctx.lineTo(tx + 21, h - 10); ctx.stroke();
     ctx.fillStyle = pal.sil;
     ctx.beginPath(); ctx.arc(tx + 23, h - th - 30, 34, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(tx + 8, h - th - 18, 22, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(tx + 40, h - th - 20, 24, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(tx + 6, h - th - 16, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(tx + 42, h - th - 18, 25, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(tx + 23, h - th - 52, 20, 0, Math.PI * 2); ctx.fill();
+    // canopy rim light
+    ctx.fillStyle = hexToRgba(pal.accent, 0.18);
+    ctx.beginPath(); ctx.arc(tx + 15, h - th - 40, 30, Math.PI * 1.1, Math.PI * 1.6); ctx.fill();
   }
-  // floating spores
+  // undergrowth silhouettes at base
+  ctx.fillStyle = hexToRgba(pal.sil, 0.6);
+  for (let i = 0; i < Math.ceil(w / 30); i++) {
+    const fx = i * 30 + srand(i + 80) * 10;
+    ctx.beginPath(); ctx.moveTo(fx, h); ctx.lineTo(fx + 4, h - 14 - srand(i) * 12); ctx.lineTo(fx + 9, h); ctx.fill();
+  }
   for (let i = 0; i < 22; i++) {
     const fx = (i * 53 + frame * 0.3) % w;
     const fy = (i * 37 + Math.sin(frame * 0.02 + i) * 18) % h;
@@ -385,17 +538,15 @@ function motifForest(ctx, w, h, frame, pal) {
   }
 }
 
-// ── MOTIF: mountains (detailed peaks + snow + road) ──
+// ── MOTIF: mountains (peaks + snow + waterfall + road) ──
 function motifMountains(ctx, w, h, frame, pal) {
   drawStars(ctx, w, h, frame, 40, '#ffffff', 0.35);
-  drawClouds(ctx, w, h, frame, pal, 5, 0.10);
-  // back peaks (pale)
+  drawClouds(ctx, w, h, frame, pal, 6, 0.11);
   ctx.fillStyle = hexToRgba(mixHex(pal.sil, pal.accent, 0.2), 0.6);
   for (let i = 0; i < 6; i++) {
     const px = i * (w / 5) - 40;
     ctx.beginPath(); ctx.moveTo(px, h); ctx.lineTo(px + 120, h - 240 - srand(i) * 70); ctx.lineTo(px + 240, h); ctx.fill();
   }
-  // front peaks (dark, with snow caps)
   for (let i = 0; i < 7; i++) {
     const px = i * (w / 6) - 60;
     const ph = 170 + srand(i + 3) * 90;
@@ -403,25 +554,36 @@ function motifMountains(ctx, w, h, frame, pal) {
     g.addColorStop(0, mixHex(pal.sil, pal.accent, 0.15)); g.addColorStop(1, pal.sil);
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.moveTo(px, h); ctx.lineTo(px + 110, h - ph); ctx.lineTo(px + 220, h); ctx.fill();
-    // snow cap
+    // rock striation shading
+    ctx.strokeStyle = hexToRgba('#000000', 0.08); ctx.lineWidth = 1;
+    for (let s = 0; s < 4; s++) {
+      ctx.beginPath(); ctx.moveTo(px + 40 + s * 20, h); ctx.lineTo(px + 90 + s * 8, h - ph * 0.5); ctx.stroke();
+    }
     ctx.fillStyle = hexToRgba('#ffffff', 0.7);
     ctx.beginPath(); ctx.moveTo(px + 110, h - ph); ctx.lineTo(px + 86, h - ph + 30); ctx.lineTo(px + 134, h - ph + 30); ctx.fill();
+    if (i === 3) drawWaterfallRibbon(ctx, px + 110, h - ph + 26, h - 30, 9, frame, pal.accent);
   }
 }
 
-// ── MOTIF: ice (snow mounds + crystal shards + aurora hints) ──
+// ── MOTIF: ice (snow mounds + crystal shards + ground glints) ──
 function motifIce(ctx, w, h, frame, pal) {
   drawStars(ctx, w, h, frame, 55, '#ffffff', 0.4);
-  drawClouds(ctx, w, h, frame, pal, 4, 0.08);
-  // snow mounds
+  drawClouds(ctx, w, h, frame, pal, 5, 0.09);
   for (let i = 0; i < 5; i++) {
     const mx = i * (w / 4) - 60;
     const g = ctx.createLinearGradient(mx, h, mx, h - 70);
     g.addColorStop(0, mixHex(pal.sil, '#ffffff', 0.3)); g.addColorStop(1, hexToRgba(pal.sil, 0.7));
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.ellipse(mx, h, 190, 75, 0, Math.PI, 0); ctx.fill();
+    // sparkle glints across the snow
+    for (let s = 0; s < 6; s++) {
+      const sx = mx - 140 + srand(i * 10 + s) * 280, sy = h - 8 - srand(s + i) * 40;
+      if (Math.sin(frame * 0.08 + s + i) > 0.6) {
+        ctx.fillStyle = hexToRgba('#ffffff', 0.7);
+        ctx.fillRect(sx, sy, 2, 2);
+      }
+    }
   }
-  // crystal shards
   for (let i = 0; i < 9; i++) {
     const cx = i * (w / 8) + 40;
     const ch = 70 + srand(i) * 60;
@@ -430,25 +592,28 @@ function motifIce(ctx, w, h, frame, pal) {
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.moveTo(cx, h - 60); ctx.lineTo(cx - 13, h - 60 + ch); ctx.lineTo(cx + 13, h - 60 + ch); ctx.fill();
     ctx.strokeStyle = hexToRgba('#ffffff', 0.4); ctx.lineWidth = 1; ctx.stroke();
+    // internal facet lines for a cut-gem look
+    ctx.strokeStyle = hexToRgba('#ffffff', 0.3);
+    ctx.beginPath(); ctx.moveTo(cx, h - 60); ctx.lineTo(cx - 5, h - 60 + ch * 0.6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, h - 60); ctx.lineTo(cx + 5, h - 60 + ch * 0.6); ctx.stroke();
   }
 }
 
-// ── MOTIF: lava (glow + rock cones + lava cracks) ──
+// ── MOTIF: lava (glow + rock cones + cracks + drips) ──
 function motifLava(ctx, w, h, frame, pal) {
-  // ambient glow
   const glow = ctx.createLinearGradient(0, h * 0.45, 0, h);
   glow.addColorStop(0, 'transparent'); glow.addColorStop(1, hexToRgba(pal.accent, 0.4));
   ctx.fillStyle = glow; ctx.fillRect(0, h * 0.45, w, h * 0.55);
   drawClouds(ctx, w, h, frame, pal, 3, 0.05);
-  // dark rock cones
   for (let i = 0; i < 6; i++) {
     const px = i * (w / 5) - 40;
     const g = ctx.createLinearGradient(px, h - 170, px, h);
     g.addColorStop(0, mixHex(pal.sil, '#000000', 0.2)); g.addColorStop(1, pal.sil);
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.moveTo(px, h); ctx.lineTo(px + 90, h - 160 - srand(i) * 60); ctx.lineTo(px + 180, h); ctx.fill();
+    ctx.strokeStyle = hexToRgba('#000000', 0.2); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px + 60, h); ctx.lineTo(px + 85, h - 100); ctx.stroke();
   }
-  // lava cracks (pulsing)
   const pulse = 0.5 + Math.sin(frame * 0.08) * 0.2;
   ctx.strokeStyle = hexToRgba(pal.accent, 0.7 * pulse); ctx.lineWidth = 2.5; ctx.shadowColor = pal.accent; ctx.shadowBlur = 10;
   for (let i = 0; i < 6; i++) {
@@ -456,44 +621,80 @@ function motifLava(ctx, w, h, frame, pal) {
     ctx.beginPath(); ctx.moveTo(cx, h - 20); ctx.lineTo(cx + 12, h - 60); ctx.lineTo(cx - 8, h - 110); ctx.stroke();
   }
   ctx.shadowBlur = 0;
+  // slow drifting embers rising
+  for (let i = 0; i < 16; i++) {
+    const ex = (i * 71 + Math.sin(i) * 30) % w;
+    const ey = h - ((i * 53 + frame * 0.5) % (h * 0.7));
+    ctx.fillStyle = hexToRgba('#ffcc66', 0.5);
+    ctx.beginPath(); ctx.arc(ex, ey, 1.2, 0, Math.PI * 2); ctx.fill();
+  }
 }
 
-// ── MOTIF: crystals (refracted shards) ──
+// ── MOTIF: crystals (refracted shards + clustered geodes) ──
 function motifCrystals(ctx, w, h, frame, pal) {
   drawStars(ctx, w, h, frame, 35, pal.accent, 0.3);
-  for (let i = 0; i < 10; i++) {
-    const cx = i * (w / 9) + 40;
-    const ch = 90 + srand(i) * 100;
-    const cw = 22 + srand(i + 2) * 20;
+  // background haze glow cluster
+  for (let i = 0; i < 3; i++) {
+    const gx = (i * w / 3) + w / 6;
+    const grad = ctx.createRadialGradient(gx, h * 0.5, 10, gx, h * 0.5, 160);
+    grad.addColorStop(0, hexToRgba(pal.accent, 0.12)); grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+  }
+  for (let i = 0; i < 12; i++) {
+    const cx = i * (w / 11) + 30;
+    const ch = 80 + srand(i) * 110;
+    const cw = 18 + srand(i + 2) * 22;
     const g = ctx.createLinearGradient(cx, h - ch, cx, h);
     g.addColorStop(0, hexToRgba('#ffffff', 0.4)); g.addColorStop(0.5, hexToRgba(pal.accent, 0.5)); g.addColorStop(1, hexToRgba(pal.accent, 0.2));
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.moveTo(cx, h - ch); ctx.lineTo(cx - cw, h); ctx.lineTo(cx + cw, h); ctx.fill();
     ctx.strokeStyle = hexToRgba('#ffffff', 0.35); ctx.lineWidth = 1; ctx.stroke();
-    // facet line
     ctx.strokeStyle = hexToRgba('#ffffff', 0.5); ctx.beginPath(); ctx.moveTo(cx, h - ch); ctx.lineTo(cx, h); ctx.stroke();
+    // small companion shards clustered at base
+    for (let s = 0; s < 2; s++) {
+      const sx = cx + (s === 0 ? -cw * 1.3 : cw * 1.3), sh = ch * 0.35;
+      ctx.fillStyle = hexToRgba(pal.accent, 0.3);
+      ctx.beginPath(); ctx.moveTo(sx, h - sh); ctx.lineTo(sx - 6, h); ctx.lineTo(sx + 6, h); ctx.fill();
+    }
   }
 }
 
-// ── MOTIF: clouds (floating islands) ──
+// ── MOTIF: clouds (floating islands with rooted structure + chains) ──
 function motifClouds(ctx, w, h, frame, pal) {
   drawStars(ctx, w, h, frame, 45, '#ffffff', 0.35);
-  drawClouds(ctx, w, h, frame, pal, 8, 0.14);
-  // floating islands
+  drawClouds(ctx, w, h, frame, pal, 9, 0.15);
   for (let i = 0; i < 5; i++) {
-    const ix = (i * (w / 4) + frame * 0.08) % (w + 200) - 100;
-    const iy = h * 0.25 + srand(i) * h * 0.3;
+    const ix = (i * (w / 4) + frame * 0.08) % (w + 220) - 110;
+    const iy = h * 0.22 + srand(i) * h * 0.32;
+    // rocky underside (jagged, not just an ellipse)
+    ctx.fillStyle = hexToRgba(mixHex(pal.sil, pal.accent, 0.1), 0.75);
+    ctx.beginPath();
+    ctx.moveTo(ix - 42, iy);
+    ctx.lineTo(ix - 20, iy + 26); ctx.lineTo(ix, iy + 14); ctx.lineTo(ix + 24, iy + 30); ctx.lineTo(ix + 42, iy);
+    ctx.closePath(); ctx.fill();
+    // cloud base under island
     ctx.fillStyle = hexToRgba(mixHex(pal.sil, pal.accent, 0.15), 0.7);
-    ctx.beginPath(); ctx.ellipse(ix, iy, 75, 20, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(ix, iy, 76, 20, 0, 0, Math.PI * 2); ctx.fill();
+    // island top plateau
     ctx.fillStyle = pal.sil;
-    ctx.beginPath(); ctx.ellipse(ix, iy, 42, 14, 0, 0, Math.PI * 2); ctx.fill();
-    // waterfall drip
+    ctx.beginPath(); ctx.ellipse(ix, iy - 4, 42, 14, 0, 0, Math.PI * 2); ctx.fill();
+    // small foliage tuft on top
+    ctx.fillStyle = hexToRgba('#4a8a4a', 0.5);
+    ctx.beginPath(); ctx.arc(ix - 10, iy - 12, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ix + 8, iy - 10, 6, 0, Math.PI * 2); ctx.fill();
+    // hanging chain fragment (small ruin detail, like reference)
+    if (srand(i + 30) > 0.5) {
+      ctx.strokeStyle = hexToRgba('#888888', 0.3); ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      for (let s = 0; s < 5; s++) ctx.lineTo(ix + 20, iy + 20 + s * 6 + Math.sin(frame * 0.05 + s) * 2);
+      ctx.stroke();
+    }
     ctx.strokeStyle = hexToRgba(pal.accent, 0.3); ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(ix, iy + 10); ctx.lineTo(ix, iy + 40 + Math.sin(frame * 0.1 + i) * 6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ix, iy + 16); ctx.lineTo(ix, iy + 44 + Math.sin(frame * 0.1 + i) * 6); ctx.stroke();
   }
 }
 
-// ── MOTIF: void (nebula clouds + drifting orbs) ──
+// ── MOTIF: void (nebula clouds + drifting orbs + shard debris) ──
 function motifVoid(ctx, w, h, frame, pal) {
   drawStars(ctx, w, h, frame, 80, pal.accent, 0.45);
   for (let i = 0; i < 6; i++) {
@@ -503,18 +704,25 @@ function motifVoid(ctx, w, h, frame, pal) {
     grad.addColorStop(0, hexToRgba(pal.accent, 0.22)); grad.addColorStop(1, 'transparent');
     ctx.fillStyle = grad; ctx.beginPath(); ctx.ellipse(vx, vy, 130, 65, 0, 0, Math.PI * 2); ctx.fill();
   }
+  // drifting broken shard fragments (debris, no characters)
+  for (let i = 0; i < 8; i++) {
+    const dx = (i * 210 + frame * 0.15) % (w + 100) - 50;
+    const dy = h * 0.3 + Math.sin(frame * 0.02 + i * 2) * 40 + srand(i) * h * 0.35;
+    const sz = 6 + srand(i + 4) * 10;
+    ctx.save(); ctx.translate(dx, dy); ctx.rotate(frame * 0.01 + i);
+    ctx.fillStyle = hexToRgba(pal.accent, 0.3);
+    ctx.beginPath(); ctx.moveTo(0, -sz); ctx.lineTo(sz * 0.7, sz * 0.5); ctx.lineTo(-sz * 0.6, sz * 0.6); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
 }
 
 // ── MOTIF: grid (retro sun + perspective grid + banners) ──
 function motifGrid(ctx, w, h, frame, pal) {
-  // sun
   const sg = ctx.createRadialGradient(w * 0.2, 80, 5, w * 0.2, 80, 60);
   sg.addColorStop(0, '#ffffff'); sg.addColorStop(0.5, pal.accent); sg.addColorStop(1, 'transparent');
   ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(w * 0.2, 80, 50, 0, Math.PI * 2); ctx.fill();
-  // sun bands
   ctx.fillStyle = pal.skyBottom;
   for (let b = 0; b < 4; b++) ctx.fillRect(w * 0.2 - 50, 70 + b * 8, 100, 3);
-  // perspective grid
   ctx.strokeStyle = hexToRgba(pal.sil, 0.55); ctx.lineWidth = 1;
   const horizon = h * 0.55;
   for (let gx = -w; gx < w * 2; gx += 50) {
@@ -525,38 +733,56 @@ function motifGrid(ctx, w, h, frame, pal) {
     if (gy > h) break;
     ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
   }
-  // banners
+  // distant low silhouette skyline above horizon for depth
+  ctx.fillStyle = hexToRgba(pal.sil, 0.5);
+  for (let i = 0; i < 10; i++) {
+    const bx = i * (w / 9), bh = 20 + srand(i) * 34;
+    ctx.fillRect(bx, horizon - bh, w / 12, bh);
+  }
   for (let i = 0; i < 5; i++) {
     ctx.fillStyle = hexToRgba(pal.accent, 0.35);
     ctx.fillRect(i * 220 + 80, 0, 14, 60 + Math.sin(frame * 0.05 + i) * 8);
   }
 }
 
-// ── MOTIF: arena (tiered stands + pillars) ──
+// ── MOTIF: arena (tiered stands + pillars + banners + torches) ──
 function motifArena(ctx, w, h, frame, pal) {
   drawStars(ctx, w, h, frame, 35, '#ffffff', 0.3);
-  drawClouds(ctx, w, h, frame, pal, 3, 0.06);
-  // tiered stands
+  drawClouds(ctx, w, h, frame, pal, 4, 0.07);
   for (let i = 0; i < 4; i++) {
     const sy = h - 40 - i * 55;
     const g = ctx.createLinearGradient(0, sy, 0, sy + 45);
     g.addColorStop(0, hexToRgba(pal.sil, 0.4 + i * 0.12)); g.addColorStop(1, hexToRgba(pal.sil, 0.6 + i * 0.1));
     ctx.fillStyle = g; ctx.fillRect(0, sy, w, 45);
     ctx.strokeStyle = hexToRgba(pal.accent, 0.25); ctx.lineWidth = 1; ctx.strokeRect(0, sy, w, 45);
-    // crowd dots
+    // arch supports beneath each tier
+    ctx.strokeStyle = hexToRgba('#000000', 0.15); ctx.lineWidth = 1;
+    for (let a = 0; a < 14; a++) {
+      const ax = a * (w / 14) + 10;
+      ctx.beginPath(); ctx.arc(ax, sy + 45, 12, Math.PI, 0); ctx.stroke();
+    }
     ctx.fillStyle = hexToRgba(pal.accent, 0.4);
     for (let c = 0; c < 40; c++) {
       ctx.beginPath(); ctx.arc(c * (w / 40) + srand(c + i) * 8, sy + 12 + srand(c) * 20, 2, 0, Math.PI * 2); ctx.fill();
     }
   }
-  // pillars
   for (let i = 0; i < 6; i++) {
     const px = i * (w / 5) + 20;
     const g = ctx.createLinearGradient(px, h * 0.2, px, h * 0.7);
     g.addColorStop(0, mixHex(pal.sil, '#ffffff', 0.15)); g.addColorStop(1, pal.sil);
     ctx.fillStyle = g; ctx.fillRect(px, h * 0.2, 32, h * 0.5);
-    // capital
     ctx.fillRect(px - 4, h * 0.2, 40, 8);
+    ctx.fillRect(px - 2, h * 0.7 - 4, 36, 8); // base plinth
+    // flame torch atop each pillar
+    const flick = 0.7 + Math.sin(frame * 0.2 + i) * 0.2;
+    ctx.fillStyle = hexToRgba('#ffaa33', flick);
+    ctx.beginPath(); ctx.moveTo(px + 16, h * 0.2 - 8); ctx.quadraticCurveTo(px + 24, h * 0.2 - 20, px + 16, h * 0.2 - 30); ctx.quadraticCurveTo(px + 8, h * 0.2 - 20, px + 16, h * 0.2 - 8); ctx.fill();
+  }
+  // triangular pennant banners hung between pillars
+  for (let i = 0; i < 5; i++) {
+    const bx = i * (w / 5) + 52;
+    ctx.fillStyle = hexToRgba(pal.accent, 0.4);
+    ctx.beginPath(); ctx.moveTo(bx, h * 0.22); ctx.lineTo(bx + 26, h * 0.22); ctx.lineTo(bx + 13, h * 0.34 + Math.sin(frame * 0.03 + i) * 3); ctx.fill();
   }
 }
 
@@ -570,7 +796,7 @@ const MOTIFS = {
 function drawLightRays(ctx, w, h, frame, pal) {
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
-  const rayCount = 4;
+  const rayCount = 5;
   for (let i = 0; i < rayCount; i++) {
     const rx = (i / rayCount) * w + Math.sin(frame * 0.01 + i) * 30;
     const grad = ctx.createLinearGradient(rx, 0, rx + 60, h * 0.7);
@@ -588,10 +814,10 @@ function drawLightRays(ctx, w, h, frame, pal) {
   ctx.restore();
 }
 
-// ── Floating dust motes (atmospheric depth particles) ──
+// ── Floating dust motes ──
 function drawDustMotes(ctx, w, h, frame, pal) {
   ctx.save();
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < 22; i++) {
     const dx = ((i * 83 + frame * 0.12) % (w + 40)) - 20;
     const dy = h * 0.2 + (i * 47) % (h * 0.6) + Math.sin(frame * 0.02 + i) * 12;
     const alpha = 0.15 + Math.sin(frame * 0.03 + i * 0.5) * 0.08;
@@ -603,11 +829,10 @@ function drawDustMotes(ctx, w, h, frame, pal) {
   ctx.restore();
 }
 
-// ── Foreground silhouette layer (dark shapes for depth) ──
+// ── Foreground silhouette layer ──
 function drawForegroundSilhouette(ctx, w, h, frame, pal) {
   ctx.save();
   ctx.fillStyle = hexToRgba(pal.sil, 0.5);
-  // Left foreground mound
   ctx.beginPath();
   ctx.moveTo(0, h);
   ctx.lineTo(0, h - 40);
@@ -617,7 +842,6 @@ function drawForegroundSilhouette(ctx, w, h, frame, pal) {
   ctx.lineTo(260, h);
   ctx.closePath();
   ctx.fill();
-  // Right foreground mound
   ctx.beginPath();
   ctx.moveTo(w, h);
   ctx.lineTo(w, h - 35);
@@ -627,10 +851,16 @@ function drawForegroundSilhouette(ctx, w, h, frame, pal) {
   ctx.lineTo(w - 300, h);
   ctx.closePath();
   ctx.fill();
+  // texture speckle on the mounds for grit
+  ctx.fillStyle = hexToRgba('#000000', 0.15);
+  for (let i = 0; i < 10; i++) {
+    ctx.beginPath(); ctx.arc(srand(i) * 260, h - 20 - srand(i + 4) * 20, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(w - srand(i + 8) * 280, h - 20 - srand(i + 9) * 20, 2, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.restore();
 }
 
-// ── Depth vignette (darkens edges for better character contrast) ──
+// ── Depth vignette ──
 function drawDepthVignette(ctx, w, h, pal) {
   ctx.save();
   const grad = ctx.createRadialGradient(w / 2, h / 2, h * 0.35, w / 2, h / 2, h * 0.75);
@@ -651,21 +881,16 @@ export function drawStageBackground(ctx, w, h, frame, mapId, mapData, eventColor
     pal = STAGE_THEMES[mapId] || STAGE_THEMES.splitcity;
   }
 
-  // Background layer — sky gradient
   drawSky(ctx, w, h, pal);
 
-  // Midground layer — themed motif (buildings, scenery, structures)
   const motif = MOTIFS[pal.motif] || motifCity;
   motif(ctx, w, h, frame, pal);
 
-  // Atmospheric depth — light rays and dust motes
   drawLightRays(ctx, w, h, frame, pal);
   drawDustMotes(ctx, w, h, frame, pal);
 
-  // Weather overlay (rain, snow, fog, embers, etc.)
   drawWeather(ctx, w, h, frame, pal.weather, pal.accent);
 
-  // Floor ambient glow — accent-colored light rising from the bottom
   const accent = (mapData && mapData.accentColor) || pal.accent;
   const floorGrad = ctx.createLinearGradient(0, h - 90, 0, h);
   floorGrad.addColorStop(0, 'transparent');
@@ -673,14 +898,11 @@ export function drawStageBackground(ctx, w, h, frame, mapId, mapData, eventColor
   ctx.fillStyle = floorGrad;
   ctx.fillRect(0, h - 90, w, 90);
 
-  // Foreground depth — dark silhouette shapes at the bottom edges
   drawForegroundSilhouette(ctx, w, h, frame, pal);
-
-  // Depth vignette — darkens screen edges for better character/platform contrast
   drawDepthVignette(ctx, w, h, pal);
 }
 
-// ── Weather (animated, drawn over the backdrop) ──
+// ── Weather ──
 function drawWeather(ctx, w, h, frame, weather, accentHex) {
   switch (weather) {
     case 'rain': {
