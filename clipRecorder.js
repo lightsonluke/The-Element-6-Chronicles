@@ -1,55 +1,54 @@
-// Element 6 native-only clip recorder.
-// Browser-native APIs only: Canvas.captureStream + MediaRecorder + Blob.
-// No third-party media libraries.
+// Element 6 native game-canvas clip recorder.
 //
-// The important rule here is: NEVER manufacture a rolling media file by
-// deleting old MediaRecorder chunks from the middle of a recording. A saved
-// clip is always the complete output of ONE MediaRecorder session, so its
-// container/header/timestamps remain internally consistent.
+// IMPORTANT:
+// - NEVER uses getDisplayMedia()
+// - NEVER captures the browser window/tab
+// - Captures only the Element 6 gameplay canvas
+// - Uses overlapping MediaRecorder sessions
+// - No clip-save cooldown
+// - Multiple clip requests can overlap
 //
-// Native-browser limitation:
-// MediaRecorder cannot retroactively encode exactly the previous 30 seconds
-// from an already-encoded stream without a media encoder/remuxer. This native
-// implementation therefore keeps a complete recording session at <=30s and
-// saves the current complete session when requested.
+// HTMLCanvasElement.captureStream() provides a MediaStream containing the
+// canvas's rendered frames, which MediaRecorder can record. :contentReference[oaicite:1]{index=1}
 
-let stream = null;
-let recorder = null;
-let chunks = [];
+let sourceCanvas = null;
+let sourceStream = null;
 let recording = false;
 let clipMime = '';
-let segmentStartedAt = 0;
-let lastDataAt = 0;
-let saveBusy = false;
-let segmentTimer = null;
-let segmentGeneration = 0;
+let saveSequence = 0;
 
 const FPS = 30;
 const CLIP_SECONDS = 30;
 const CLIP_MS = CLIP_SECONDS * 1000;
-const MIN_RECORDING_MS = 500;
-const VIDEO_BITRATE = 4500000;
+
+// Six overlapping recorders.
+// A new recorder starts every 5 seconds, and each one records for 30 seconds.
+// This means there is always a recorder covering approximately the previous
+// 30 seconds once the initial 30-second warmup has completed.
+const SLOT_COUNT = 6;
+const SLOT_INTERVAL_MS = 5000;
+
+const VIDEO_BITRATE = 2500000;
+
+const slots = new Map();
 
 function extensionForMime(mime) {
   return String(mime || '').toLowerCase().includes('mp4') ? 'mp4' : 'webm';
 }
 
 function getCandidateMimes() {
-  // Prefer browser-default MediaRecorder output first. This is intentionally
-  // NOT forced to MP4 or WebM: the user agent chooses the format/codecs it can
-  // actually record for this MediaStream.
   const candidates = [
     '',
     'video/webm;codecs=vp8',
     'video/webm',
     'video/mp4',
     'video/mp4;codecs=avc1',
-    'video/mp4;codecs="avc1.42E01E"',
   ];
 
   return candidates.filter((type, index) => {
     if (candidates.indexOf(type) !== index) return false;
     if (!type) return true;
+
     try {
       return !!window.MediaRecorder?.isTypeSupported?.(type);
     } catch {
@@ -58,51 +57,89 @@ function getCandidateMimes() {
   });
 }
 
-function clearSegmentTimer() {
-  if (segmentTimer) clearTimeout(segmentTimer);
-  segmentTimer = null;
+function createRecorder(stream) {
+  if (!stream || !window.MediaRecorder) return null;
+
+  let lastError = null;
+
+  for (const mime of getCandidateMimes()) {
+    try {
+      const options = {
+        videoBitsPerSecond: VIDEO_BITRATE,
+      };
+
+      if (mime) options.mimeType = mime;
+
+      return new MediaRecorder(stream, options);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  console.error('[Element 6 Clips] Could not create MediaRecorder:', lastError);
+  return null;
 }
 
-function resetState() {
-  clearSegmentTimer();
-  recording = false;
-  window.__e6ClipRecorderReady = false;
-  stream = null;
-  recorder = null;
-  chunks = [];
-  segmentStartedAt = 0;
-  lastDataAt = 0;
-  saveBusy = false;
-  clipMime = '';
-  segmentGeneration += 1;
+function waitForRecorderStop(recorder) {
+  return new Promise(resolve => {
+    if (!recorder || recorder.state === 'inactive') {
+      resolve();
+      return;
+    }
+
+    const previousStop = recorder.onstop;
+
+    recorder.onstop = event => {
+      try {
+        previousStop?.(event);
+      } catch {}
+
+      resolve();
+    };
+
+    try {
+      recorder.stop();
+    } catch {
+      resolve();
+    }
+  });
 }
 
-function buildBlob(sourceChunks, mime) {
-  if (!sourceChunks?.length) return null;
-  return new Blob(sourceChunks, { type: mime || 'video/webm' });
-}
-
-function wait(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function loadVideoForValidation(blob, { requireFrame = false } = {}) {
-  if (!blob) return Promise.resolve({ ok: false, duration: 0, reason: 'empty blob' });
+function validateBlob(blob) {
+  if (!blob || blob.size < 1000) {
+    return Promise.resolve({
+      ok: false,
+      duration: 0,
+      reason: 'empty recording',
+    });
+  }
 
   return new Promise(resolve => {
     const video = document.createElement('video');
     const url = URL.createObjectURL(blob);
     let finished = false;
-    let frameTimer = null;
+    let timeout = null;
 
     const finish = result => {
       if (finished) return;
+
       finished = true;
-      if (frameTimer) clearTimeout(frameTimer);
-      try { video.pause(); } catch {}
-      try { video.removeAttribute('src'); } catch {}
-      try { video.load(); } catch {}
-      try { URL.revokeObjectURL(url); } catch {}
+
+      if (timeout) clearTimeout(timeout);
+
+      try {
+        video.pause();
+      } catch {}
+
+      try {
+        video.removeAttribute('src');
+        video.load();
+      } catch {}
+
+      try {
+        URL.revokeObjectURL(url);
+      } catch {}
+
       resolve(result);
     };
 
@@ -110,286 +147,371 @@ function loadVideoForValidation(blob, { requireFrame = false } = {}) {
     video.playsInline = true;
     video.preload = 'auto';
 
-    video.onerror = () => finish({
-      ok: false,
-      duration: 0,
-      reason: video.error?.message || `media error ${video.error?.code || ''}`,
-    });
+    video.onerror = () => {
+      finish({
+        ok: false,
+        duration: 0,
+        reason: video.error?.message || 'video decode error',
+      });
+    };
 
     video.onloadedmetadata = async () => {
       const duration = Number(video.duration);
-      if (!Number.isFinite(duration) || duration <= 0) {
-        finish({ ok: false, duration: 0, reason: 'invalid duration' });
-        return;
-      }
 
-      if (!requireFrame) {
-        finish({ ok: true, duration, width: video.videoWidth, height: video.videoHeight });
+      if (!Number.isFinite(duration) || duration <= 0) {
+        finish({
+          ok: false,
+          duration: 0,
+          reason: 'invalid duration',
+        });
         return;
       }
 
       try {
-        // Move to the beginning and ask the browser to decode an actual frame.
         video.currentTime = 0;
+
         await video.play();
 
         if (typeof video.requestVideoFrameCallback === 'function') {
-          video.requestVideoFrameCallback(() => finish({
-            ok: video.videoWidth > 0 && video.videoHeight > 0,
-            duration,
-            width: video.videoWidth,
-            height: video.videoHeight,
-            reason: video.videoWidth > 0 ? '' : 'no decoded video frame',
-          }));
+          video.requestVideoFrameCallback(() => {
+            finish({
+              ok: video.videoWidth > 0 && video.videoHeight > 0,
+              duration,
+              reason:
+                video.videoWidth > 0
+                  ? ''
+                  : 'no decoded video frame',
+            });
+          });
         } else {
-          // Fallback for browsers without requestVideoFrameCallback.
-          setTimeout(() => finish({
-            ok: video.videoWidth > 0 && video.videoHeight > 0,
-            duration,
-            width: video.videoWidth,
-            height: video.videoHeight,
-            reason: video.videoWidth > 0 ? '' : 'no decoded video frame',
-          }), 300);
+          setTimeout(() => {
+            finish({
+              ok: video.videoWidth > 0 && video.videoHeight > 0,
+              duration,
+              reason:
+                video.videoWidth > 0
+                  ? ''
+                  : 'no decoded video frame',
+            });
+          }, 300);
         }
       } catch (error) {
-        finish({ ok: false, duration, reason: error?.message || 'playback validation failed' });
+        finish({
+          ok: false,
+          duration,
+          reason: error?.message || 'video validation failed',
+        });
       }
     };
 
-    frameTimer = setTimeout(() => finish({
-      ok: false,
-      duration: 0,
-      reason: 'timed out while validating recording',
-    }), 7000);
+    timeout = setTimeout(() => {
+      finish({
+        ok: false,
+        duration: 0,
+        reason: 'video validation timed out',
+      });
+    }, 7000);
 
     video.src = url;
-    try { video.load(); } catch {}
+
+    try {
+      video.load();
+    } catch {}
   });
 }
 
-async function validateRecording(blob, requireFrame = true) {
-  // First verify the container/metadata, then verify that at least one real
-  // video frame can be decoded. This prevents broken files from being saved.
-  return loadVideoForValidation(blob, { requireFrame });
-}
+function createSlot(slotId) {
+  if (!sourceStream || !recording) return false;
 
-function createRecorderForStream(mediaStream) {
-  if (!mediaStream || !window.MediaRecorder) return null;
+  const recorder = createRecorder(sourceStream);
 
-  const candidates = getCandidateMimes();
-  let lastError = null;
+  if (!recorder) return false;
 
-  for (const requestedMime of candidates) {
-    try {
-      const options = {
-        videoBitsPerSecond: VIDEO_BITRATE,
-      };
-      if (requestedMime) options.mimeType = requestedMime;
+  const slot = {
+    id: slotId,
+    recorder,
+    chunks: [],
+    startedAt: performance.now(),
+    stopped: false,
+  };
 
-      const next = new MediaRecorder(mediaStream, options);
-      // IMPORTANT: trust what the browser actually selected, not what we asked
-      // for. MDN documents recorder.mimeType as the resulting container/media
-      // type for the recording.
-      return next;
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  console.error('[Element 6 Clips] No supported MediaRecorder format:', lastError);
-  return null;
-}
-
-function waitForStop(targetRecorder) {
-  return new Promise(resolve => {
-    if (!targetRecorder || targetRecorder.state === 'inactive') {
-      resolve();
-      return;
-    }
-
-    const previous = targetRecorder.onstop;
-    targetRecorder.onstop = event => {
-      try { previous?.(event); } catch {}
-      resolve();
-    };
-
-    try {
-      targetRecorder.stop();
-    } catch {
-      resolve();
-    }
-  });
-}
-
-function attachRecorderHandlers(targetRecorder, generation) {
-  targetRecorder.ondataavailable = event => {
-    if (generation !== segmentGeneration) return;
+  recorder.ondataavailable = event => {
     if (!event.data || event.data.size === 0) return;
-    chunks.push(event.data);
-    lastDataAt = performance.now();
+    if (slot.stopped) return;
+
+    slot.chunks.push(event.data);
   };
 
-  targetRecorder.onerror = event => {
-    console.error('[Element 6 Clips] Native MediaRecorder error:', event?.error || event);
+  recorder.onerror = event => {
+    console.error(
+      '[Element 6 Clips] Recorder slot error:',
+      event?.error || event
+    );
   };
-}
-
-async function startSegment() {
-  if (!stream || !window.MediaRecorder || !recording) return false;
-
-  const generation = ++segmentGeneration;
-  const nextRecorder = createRecorderForStream(stream);
-  if (!nextRecorder) return false;
 
   try {
-    recorder = nextRecorder;
-    chunks = [];
-    segmentStartedAt = performance.now();
-    lastDataAt = segmentStartedAt;
-    clipMime = recorder.mimeType || '';
-
-    attachRecorderHandlers(recorder, generation);
-
-    // No timeslice. We want one complete contiguous MediaRecorder output.
     recorder.start();
-    clipMime = recorder.mimeType || clipMime || 'video/webm';
-    window.__e6ClipRecorderMime = clipMime;
-
-    clearSegmentTimer();
-    segmentTimer = setTimeout(async () => {
-      if (!recording || generation !== segmentGeneration) return;
-      if (!recorder || recorder.state !== 'recording') return;
-      await finishAndRestartSegment(generation);
-    }, CLIP_MS - 100);
-
-    return true;
   } catch (error) {
-    console.error('[Element 6 Clips] Could not start native recorder:', error);
+    console.error(
+      '[Element 6 Clips] Could not start recorder slot:',
+      error
+    );
+
     return false;
   }
+
+  slot.mime = recorder.mimeType || 'video/webm';
+
+  slots.set(slotId, slot);
+
+  // Automatically finish this 30-second recorder.
+  slot.timer = setTimeout(async () => {
+    await finishSlot(slotId, false);
+  }, CLIP_MS + 100);
+
+  return true;
 }
 
-async function finishAndRestartSegment(generation = segmentGeneration) {
-  if (!recorder || recorder.state !== 'recording' || generation !== segmentGeneration) return;
+async function finishSlot(slotId, requestedByUser) {
+  const slot = slots.get(slotId);
 
-  clearSegmentTimer();
-  const oldRecorder = recorder;
-  await waitForStop(oldRecorder);
+  if (!slot || slot.stopped) return null;
 
-  if (!recording || generation !== segmentGeneration) return;
-  await startSegment();
+  slot.stopped = true;
+
+  if (slot.timer) {
+    clearTimeout(slot.timer);
+    slot.timer = null;
+  }
+
+  const recorder = slot.recorder;
+
+  await waitForRecorderStop(recorder);
+
+  slots.delete(slotId);
+
+  const blob = new Blob(slot.chunks, {
+    type: recorder.mimeType || slot.mime || 'video/webm',
+  });
+
+  const validation = await validateBlob(blob);
+
+  const result = {
+    blob,
+    mime: recorder.mimeType || slot.mime || blob.type || 'video/webm',
+    extension: extensionForMime(
+      recorder.mimeType || slot.mime || blob.type
+    ),
+    duration: Math.min(
+      validation.duration || (performance.now() - slot.startedAt) / 1000,
+      CLIP_SECONDS
+    ),
+    startedAt: slot.startedAt,
+    requestedByUser,
+    valid: validation.ok,
+  };
+
+  if (!validation.ok) {
+    console.warn(
+      '[Element 6 Clips] Discarded invalid recorder output:',
+      validation.reason
+    );
+
+    return null;
+  }
+
+  return result;
 }
 
-export function initClipRecorder(source) {
-  if (!source || !window.MediaRecorder) return false;
-  if (recording) stopClipRecorder();
+async function restartSlot(slotId) {
+  if (!recording) return;
+
+  // Do not create duplicate slot IDs.
+  if (slots.has(slotId)) return;
+
+  createSlot(slotId);
+}
+
+function chooseBestSlot() {
+  const now = performance.now();
+
+  const available = [...slots.values()]
+    .filter(slot => !slot.stopped)
+    .map(slot => ({
+      slot,
+      age: now - slot.startedAt,
+    }))
+    .sort((a, b) => b.age - a.age);
+
+  if (!available.length) return null;
+
+  // Prefer a recorder that has reached the full 30 seconds.
+  const full = available.find(
+    entry => entry.age >= CLIP_MS - 750
+  );
+
+  if (full) return full.slot;
+
+  // During the initial warmup, return the oldest available recording
+  // rather than forcing the player to wait.
+  return available[0].slot;
+}
+
+export function initClipRecorder(canvas) {
+  if (!canvas || typeof canvas.captureStream !== 'function') {
+    console.warn(
+      '[Element 6 Clips] No canvas.captureStream() available.'
+    );
+    return false;
+  }
+
+  if (!window.MediaRecorder) {
+    console.warn(
+      '[Element 6 Clips] MediaRecorder is not supported.'
+    );
+    return false;
+  }
+
+  stopClipRecorder();
 
   try {
-    // Accept either a MediaStream (screen/tab capture) or a canvas.
-    // Screen capture keeps recording while React changes screens/components.
-    stream = typeof source.getTracks === 'function'
-      ? source
-      : (typeof source.captureStream === 'function' ? source.captureStream(FPS) : null);
-    if (!stream) return false;
-    recording = true;
-    window.__e6ClipRecorderReady = false;
-    window.__e6ClipRecorderActive = true;
+    sourceCanvas = canvas;
 
-    startSegment().then(ok => {
-      if (!ok) {
-        console.error('[Element 6 Clips] Native recorder could not start.');
-        stopClipRecorder();
-        return;
-      }
-      window.__e6ClipRecorderReady = true;
-      window.__e6ClipRecorderMime = clipMime;
-    });
+    // THIS is the important change:
+    // capture only the Element 6 canvas.
+    sourceStream = canvas.captureStream(FPS);
+
+    if (!sourceStream) {
+      sourceCanvas = null;
+      return false;
+    }
+
+    recording = true;
+
+    window.__e6ClipRecorderActive = true;
+    window.__e6ClipRecorderReady = false;
+
+    // Start the six overlapping recording windows.
+    let started = 0;
+
+    for (let i = 0; i < SLOT_COUNT; i++) {
+      if (createSlot(i)) started++;
+    }
+
+    // Stagger the remaining recorder windows.
+    for (let i = 1; i < SLOT_COUNT; i++) {
+      setTimeout(() => {
+        if (!recording) return;
+
+        if (!slots.has(i)) {
+          createSlot(i);
+        }
+      }, i * SLOT_INTERVAL_MS);
+    }
+
+    if (started === 0) {
+      stopClipRecorder();
+      return false;
+    }
+
+    clipMime =
+      slots.values().next().value?.mime ||
+      'video/webm';
+
+    window.__e6ClipRecorderMime = clipMime;
+    window.__e6ClipRecorderReady = true;
 
     return true;
   } catch (error) {
-    console.error('[Element 6 Clips] Could not initialize native recorder:', error);
-    try { stream?.getTracks?.().forEach(track => track.stop()); } catch {}
-    resetState();
+    console.error(
+      '[Element 6 Clips] Canvas recorder initialization failed:',
+      error
+    );
+
+    stopClipRecorder();
     return false;
   }
 }
 
 export async function saveClip() {
-  if (saveBusy || !recording || !recorder || recorder.state !== 'recording') return null;
+  if (!recording) return null;
 
-  saveBusy = true;
-  const generation = segmentGeneration;
+  const slot = chooseBestSlot();
 
-  try {
-    const elapsedMs = performance.now() - segmentStartedAt;
-    if (elapsedMs < MIN_RECORDING_MS) return null;
-
-    const target = recorder;
-    clearSegmentTimer();
-
-    // Stop the CURRENT complete recording. The final dataavailable event is
-    // guaranteed to happen as part of MediaRecorder.stop().
-    await waitForStop(target);
-
-    const source = buildBlob(chunks, target.mimeType || clipMime || 'video/webm');
-    if (!source) return null;
-
-    const validation = await validateRecording(source, true);
-    if (!validation.ok) {
-      console.error('[Element 6 Clips] Recorder output failed frame validation:', validation.reason, {
-        mime: target.mimeType,
-        size: source.size,
-        duration: validation.duration,
-      });
-      return null;
-    }
-
-    const type = target.mimeType || clipMime || source.type || 'video/webm';
-
-    // Start a brand-new complete segment immediately after the validated clip
-    // is captured. The saved Blob remains immutable and self-contained.
-    if (recording && generation === segmentGeneration) {
-      await startSegment();
-    }
-
-    return {
-      blob: source,
-      mime: type,
-      extension: extensionForMime(type),
-      duration: Math.min(validation.duration, CLIP_SECONDS),
-    };
-  } catch (error) {
-    console.error('[Element 6 Clips] Native clip creation failed:', error);
+  if (!slot) {
     return null;
-  } finally {
-    saveBusy = false;
   }
+
+  const slotId = slot.id;
+
+  // This slot is consumed for this clip.
+  const result = await finishSlot(slotId, true);
+
+  // Immediately replace the consumed recording window.
+  // There is NO cooldown.
+  if (recording) {
+    restartSlot(slotId);
+  }
+
+  if (!result) return null;
+
+  saveSequence++;
+
+  return {
+    ...result,
+    sequence: saveSequence,
+  };
 }
 
 export function getClipRecordingInfo() {
+  const now = performance.now();
+
+  const ages = [...slots.values()]
+    .filter(slot => !slot.stopped)
+    .map(slot => (now - slot.startedAt) / 1000);
+
   return {
-    active: isClipRecorderActive(),
+    active: recording,
     mime: clipMime,
     extension: extensionForMime(clipMime),
-    ageSeconds: segmentStartedAt ? (performance.now() - segmentStartedAt) / 1000 : 0,
-    lastDataAt,
+    recorderCount: slots.size,
+    oldestSeconds: ages.length ? Math.max(...ages) : 0,
+    newestSeconds: ages.length ? Math.min(...ages) : 0,
   };
 }
 
 export function stopClipRecorder() {
   recording = false;
-  clearSegmentTimer();
-  ++segmentGeneration;
+
+  for (const slot of slots.values()) {
+    slot.stopped = true;
+
+    if (slot.timer) {
+      clearTimeout(slot.timer);
+      slot.timer = null;
+    }
+
+    try {
+      if (slot.recorder.state !== 'inactive') {
+        slot.recorder.stop();
+      }
+    } catch {}
+  }
+
+  slots.clear();
 
   try {
-    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    sourceStream?.getTracks?.().forEach(track => track.stop());
   } catch {}
-  try { stream?.getTracks?.().forEach(track => track.stop()); } catch {}
 
-  resetState();
+  sourceStream = null;
+  sourceCanvas = null;
+  clipMime = '';
+
   window.__e6ClipRecorderActive = false;
+  window.__e6ClipRecorderReady = false;
 }
 
 export function isClipRecorderActive() {
-  return recording && !!recorder && recorder.state === 'recording';
+  return recording && slots.size > 0;
 }
