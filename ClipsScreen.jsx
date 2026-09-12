@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { getClipBlob, deleteClipBlob, listClipMetadata } from './clipStorage.js';
 import GameIcon from './GameIcon.jsx';
 
-const DEFAULT_FPS = 30;
+const DEFAULT_FPS = 60;
 
 function extensionForMime(mime) {
   return String(mime || '').toLowerCase().includes('mp4') ? 'mp4' : 'webm';
@@ -204,7 +204,7 @@ export default function ClipsScreen({ clips: externalClips = null, onDeleteClip 
           <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80">← BACK</button>
         </div>
         <p className="text-xs text-muted-foreground font-body mb-5">
-          Saved locally in your browser. Clips contain the most recent native recording window, up to 30 seconds.
+          Saved locally in your browser. Clips are valid MP4 recordings at up to 60 FPS, with a rolling window of up to 30 seconds.
         </p>
 
         {clips.length === 0 ? (

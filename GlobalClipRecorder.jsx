@@ -51,9 +51,9 @@ export default function GlobalClipRecorder() {
         return;
       }
 
-      // initClipRecorder deliberately preserves the existing rolling buffer
-      // when changing canvases. This is what keeps the previous match attached
-      // to Victory / Match Facts clips.
+      // When the game changes canvases, clipRecorder.js preserves one complete
+      // MP4 window from the old canvas while starting the new canvas. This is
+      // what keeps the previous match available on Victory / Match Facts.
       const ok = initClipRecorder(canvas);
       if (!ok) {
         window.__e6ClipRecorderActive = false;
@@ -73,33 +73,39 @@ export default function GlobalClipRecorder() {
     const save = async event => {
       if (event.code !== 'Space' && event.key !== ' ') return;
       if (event.target?.tagName === 'INPUT' || event.target?.tagName === 'TEXTAREA' || event.target?.isContentEditable) return;
-      if (!isClipRecorderActive()) return;
+      if (!isClipRecorderActive() || saveInFlight.current) return;
 
       event.preventDefault();
       event.stopPropagation();
-      if (saveInFlight.current) return;
       saveInFlight.current = true;
 
       try {
         const result = await saveClip();
         if (!result?.blob) {
-          showToast('CLIP BUFFER IS NOT READY YET');
+          showToast('NO COMPLETE MP4 CLIP IS READY YET');
           return;
+        }
+
+        // saveClip() returns a COMPLETE MediaRecorder MP4 session. Do not
+        // change its bytes or MIME type here; doing so can corrupt the file.
+        if (String(result.mime || '').toLowerCase().indexOf('video/mp4') !== 0) {
+          throw new Error(`Recorder returned unsupported MIME: ${result.mime}`);
         }
 
         const id = `clip_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
         await saveClipBlob(id, result.blob, {
-          mime: 'video/mp4',
+          mime: result.mime,
           extension: 'mp4',
           duration: result.duration,
         });
         await trimClips(30);
 
+        const created = Date.now();
         window.dispatchEvent(new CustomEvent('clipSaved', {
           detail: {
             id,
-            created: Date.now(),
-            mime: 'video/mp4',
+            created,
+            mime: result.mime,
             extension: 'mp4',
             size: result.blob.size,
             duration: result.duration,
@@ -109,7 +115,7 @@ export default function GlobalClipRecorder() {
         showToast(`CLIP SAVED — ${Math.max(1, Math.round(result.duration))} SECONDS — MP4 60 FPS`);
       } catch (error) {
         console.error('[Element 6 Clips] Save failed:', error);
-        showToast('CLIP SAVE FAILED');
+        showToast('CLIP SAVE FAILED — MP4 RECORDING ERROR');
       } finally {
         saveInFlight.current = false;
       }
