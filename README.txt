@@ -1,40 +1,55 @@
-ELEMENT 6 — CLIPS MP4/60FPS FIX
+ELEMENT 6 — FINAL BUILD-SAFE CLIPS FIX
 
-WHY THIS VERSION IS DIFFERENT
-The previous implementation tried to require a browser-native MP4 MediaRecorder.
-Chrome frequently records canvas MediaStreams as WebM instead. That made the
-"complete MP4" check fail.
+The build failure shown in the screenshot was caused by this kind of static import:
 
-This version:
-1. Captures the Element 6 canvas at 60 FPS.
-2. Records reliable WebM segments with MediaRecorder.
-3. Waits for a complete segment when Space is pressed.
-4. Converts that complete WebM into a real H.264 MP4 with ffmpeg.wasm.
-5. Validates the resulting MP4 before saving it.
-6. Keeps multiple staggered recording windows so the previous match remains
-   available during Victory / Match Facts transitions.
+  import { FFmpeg } from '@ffmpeg/ffmpeg';
 
-INSTALL
-Run:
+Rollup/Vite could not resolve @ffmpeg/ffmpeg because the dependency was not
+present in the project's installed node_modules/lockfile.
 
-npm install @ffmpeg/ffmpeg @ffmpeg/util
+THIS PACKAGE DOES NOT USE A STATIC @ffmpeg IMPORT.
+FFmpeg.wasm is loaded at runtime from jsDelivr after the app has built.
 
-Then replace:
-- clipRecorder.js
-- GlobalClipRecorder.jsx
-- useClipRecorder.js
+Therefore:
+- no @ffmpeg package is required for the Vite/Rollup build
+- no package-lock/pnpm-lock edit is required
+- no browser screen capture is used
+- no getDisplayMedia() exists in the recorder
+- capture is from the Element 6 canvas only
+- capture is 60 FPS
+- saved files are real H.264 MP4 files, not WebM files renamed to .mp4
+- FFmpeg conversion is queued so multiple Space presses cannot corrupt the
+  FFmpeg virtual filesystem
+- recording itself continues while MP4 conversion happens
+- multiple clip saves can overlap
+- ClipsScreen uses 60 FPS for frame stepping
+- downloaded files are always named .mp4
+- invalid/empty recorder output is rejected instead of being saved
 
-Do NOT rename WebM files to MP4. This package actually converts them.
+REPLACE:
+1. clipRecorder.js
+2. GlobalClipRecorder.jsx
+3. useClipRecorder.js
+4. ClipsScreen.jsx
 
-IMPORTANT
-The first clip after starting recording may need a few seconds for a complete
-recording window to become available. After the recorder has warmed up, the
-staggered windows make the wait normally no more than about 5 seconds.
+DO NOT add @ffmpeg/ffmpeg to package.json for this version.
 
-The global recorder intentionally does not stop when the Victory or Match Facts
-React component unmounts. That is what allows those screens to save the clip
-from the preceding match.
+IMPORTANT RUNTIME NOTE:
+The first time an MP4 is saved, the browser downloads the FFmpeg.wasm runtime
+from jsDelivr. This is a runtime dependency, not a build dependency. If the
+deployment blocks that CDN, MP4 conversion will fail and the app will report
+CLIP SAVE FAILED rather than creating a corrupt fake MP4.
 
-FFMPEG CORE
-The recorder loads the FFmpeg browser core from jsDelivr at runtime. The app
-therefore needs network access the first time conversion is used.
+SETTINGS:
+Enable Clips remains the player-controlled setting. It should stay false by
+default. GlobalClipRecorder checks settings.enableClips before starting.
+
+VICTORY / MATCH FACTS:
+GlobalClipRecorder does not stop merely because a gameplay child component
+unmounts. The global recorder stays alive as long as the app's global recorder
+component remains mounted, allowing the previous match's rolling recorder
+windows to be saved from Victory/Match Facts.
+
+BROWSER SUPPORT:
+The recording source uses HTMLCanvasElement.captureStream() and
+MediaRecorder. The final MP4 is encoded by FFmpeg.wasm using H.264.

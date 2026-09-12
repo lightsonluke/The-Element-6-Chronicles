@@ -1,0 +1,4 @@
+Do NOT run npm install @ffmpeg/ffmpeg for this package.
+Do NOT add @ffmpeg/ffmpeg to package.json.
+The previous Rollup error was caused by a static @ffmpeg/ffmpeg import.
+This package removes that import entirely and loads FFmpeg only at runtime.
