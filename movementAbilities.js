@@ -15,13 +15,13 @@
 export const MOVEMENT_ABILITY_CONFIG = Object.freeze({
   doubleTapWindow: 12,       // 0.20s at 60fps
   dashCooldown: 30,          // 1.0s at 60fps
-  groundDashFrames: 18,       // very short grounded burst
-  airDodgeFrames: 18,        // 0.30s
+  groundDashFrames: 10,       // very short grounded burst
+  airDodgeFrames: 15,        // 0.30s
   groundDashSpeed: 9.5,
   airDodgeSpeed: 7.0,
   wallSlideMaxFallSpeed: 1,
   wallSlideAcceleration: 0.15,
-  wallMinHeight: 15,          // > half of the ~55px fighter body
+  wallMinHeight: 10,          // > half of the ~55px fighter body
   maxWallGrants: 2,
 });
 
