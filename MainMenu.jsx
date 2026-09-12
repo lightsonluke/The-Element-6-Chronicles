@@ -55,6 +55,7 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
       { label: 'ELO', key: 'elo' },
     ]},
     { type: 'button', label: 'SPORTS', key: 'sports' },
+    { type: 'button', label: 'SHOP', key: 'shop' },
     { type: 'tab', id: 'sandbox', label: 'SANDBOX', items: [
       { label: 'Sandbox Mode', key: 'sandbox' },
       { label: 'Stage Editor', key: 'stageeditor' },
@@ -85,7 +86,6 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
     ]},
     { type: 'button', label: 'CLIPS', key: 'clips' },
     { type: 'button', label: 'CLANS', key: 'clans' },
-    { type: 'button', label: 'SHOP', key: 'shop' },
     { type: 'button', label: 'SAVE CODES', key: 'savecodes' },
   ];
 
