@@ -1,119 +1,21 @@
 import React, { useState } from 'react';
 import { HEROES } from './heroes.js';
-import { VILLAINS } from './villains.js';
-import { GUARDIANS } from './guardians.js';
-import GameIcon from "./GameIcon.jsx";
+import { calculateStoryProgress } from './storyModeOverhaul.js';
+import GameIcon from './GameIcon.jsx';
 
-const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
+function getHero(data){return HEROES.find(h=>h.id===(data?.currentHeroId||data?.selectedHeroId))||null}
+function nickname(hero){return hero?.nickname||hero?.codename||hero?.title||hero?.name||'Hero'}
 
-export default function StorySaveSlots({ slots, onSelect, onDelete, onBack }) {
-  const [confirmDelete, setConfirmDelete] = useState(null);
-
-  const formatDate = (ts) => {
-    if (!ts) return 'Unknown';
-    const d = new Date(ts);
-    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const getSlotSummary = (data) => {
-    if (!data) return null;
-    const heroId = data.currentHeroId || (data.unlockedIds || ['yellow'])[0];
-    const hero = ALL.find(c => c.id === heroId);
-    const defeated = (data.defeatedVillains || []).length;
-    const totalVillains = VILLAINS.filter(v => !v.isFinalBoss).length;
-    return {
-      heroName: hero?.name || 'Unknown',
-      heroColor: hero?.color || '#FFD700',
-      defeated,
-      totalVillains,
-      date: formatDate(data._savedAt),
-    };
-  };
-
-  return (
-    <div className="w-full max-w-3xl flex flex-col gap-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-heading text-accent tracking-wider">STORY MODE — SAVE FILES</h2>
-          <p className="text-xs text-muted-foreground font-body">Choose a save file to continue your journey</p>
-        </div>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
-      </div>
-
-      <div className="flex flex-col gap-3">
-        {slots.map((data, idx) => {
-          const summary = getSlotSummary(data);
-          const isEmpty = !summary;
-          const isConfirming = confirmDelete === idx;
-
-          return (
-            <div
-              key={idx}
-              className={`bg-card border-2 rounded-xl p-4 flex items-center gap-4 transition ${isEmpty ? 'border-border' : 'border-accent/40'}`}
-            >
-              {/* Slot number badge */}
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center font-heading text-xl ${isEmpty ? 'bg-muted text-muted-foreground' : 'bg-accent text-accent-foreground'}`}>
-                {idx + 1}
-              </div>
-
-              {/* Slot content */}
-              <div className="flex-1">
-                {isEmpty ? (
-                  <div>
-                    <p className="font-heading text-sm text-foreground">Empty Save Slot</p>
-                    <p className="text-xs text-muted-foreground font-body">Start a new adventure</p>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full border-2" style={{ backgroundColor: summary.heroColor, borderColor: summary.heroColor, boxShadow: `0 0 8px ${summary.heroColor}55` }} />
-                    <div>
-                      <p className="font-heading text-sm text-foreground">{summary.heroName}</p>
-                      <p className="text-xs text-muted-foreground font-body">
-                        Villains defeated: <span className="text-accent">{summary.defeated}/{summary.totalVillains}</span>
-                      </p>
-                      <p className="text-[10px] text-muted-foreground font-body">Last saved: {summary.date}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2">
-                {isEmpty ? (
-                  <button onClick={() => onSelect(idx)} className="px-4 py-2 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90">
-                    NEW GAME
-                  </button>
-                ) : isConfirming ? (
-                  <>
-                    <button onClick={() => { onDelete(idx); setConfirmDelete(null); }} className="px-3 py-2 bg-destructive text-destructive-foreground rounded-lg font-heading text-xs hover:opacity-90">
-                      CONFIRM
-                    </button>
-                    <button onClick={() => setConfirmDelete(null)} className="px-3 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-90">
-                      CANCEL
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={() => onSelect(idx)} className="px-4 py-2 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90">
-                      CONTINUE
-                    </button>
-                    <button onClick={() => setConfirmDelete(idx)} className="px-3 py-2 bg-secondary text-destructive rounded-lg font-heading text-xs text-destructive hover:opacity-90">
-                      DELETE
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="bg-card border border-border rounded-xl p-4">
-        <h3 className="font-heading text-sm text-accent mb-2">SAVE FILE INFO</h3>
-        <p className="text-xs text-muted-foreground font-body">• Each slot stores a separate story playthrough (villains defeated, inventory, world position)</p>
-        <p className="text-xs text-muted-foreground font-body">• Tokens, cosmetics, and character unlocks are shared across ALL saves — never reset by story mode</p>
-        <p className="text-xs text-muted-foreground font-body">• Delete a slot to permanently erase that playthrough's story progress</p>
-      </div>
-    </div>
-  );
+export default function StorySaveSlots({ slots=[null,null,null], onSelect, onDelete, onBack }) {
+  const [confirmDelete,setConfirmDelete]=useState(null);
+  return <div className="w-full max-w-4xl flex flex-col gap-5 text-white">
+    <div className="flex items-end justify-between"><div><div className="text-[10px] tracking-[.5em] text-white/30">ELEMENT 6</div><h2 className="text-3xl font-heading tracking-[.2em]">SELECT YOUR SAVE</h2><p className="text-xs text-white/45 mt-1">Choose an existing journey or create a new save file.</p></div><button onClick={onBack} className="px-4 py-2 rounded-lg bg-white/10 text-xs hover:bg-white/15"><GameIcon emoji="←" size={13}/> BACK</button></div>
+    <div className="grid gap-3">{[0,1,2].map(i=>{const data=slots[i];const h=getHero(data);const pct=calculateStoryProgress(data||{});const confirming=confirmDelete===i;return <div key={i} className={`rounded-2xl border p-4 flex items-center gap-4 ${data?'border-white/15 bg-black/45':'border-white/8 bg-black/25'}`}>
+      <div className="text-xs tracking-[.25em] text-white/25 w-14 shrink-0">SAVE {i+1}</div>
+      <div className="w-11 h-11 rounded-full border-2 shrink-0" style={{background:h?.color||'#161616',borderColor:h?.color||'rgba(255,255,255,.12)',boxShadow:h?`0 0 18px ${h.color}44`:undefined}}/>
+      <div className="flex-1 min-w-0">{data?<><div className="font-heading text-sm truncate">{nickname(h)}</div><div className="text-[11px] text-white/45 mt-0.5">Progress: {pct}%</div><div className="mt-1.5 h-1 bg-white/10 rounded overflow-hidden"><div className="h-full bg-white" style={{width:`${pct}%`}}/></div></>:<div className="text-sm text-white/25">EMPTY — + NEW SAVE</div>}</div>
+      <div className="flex gap-2">{data?<button onClick={()=>onSelect?.(i)} className="px-4 py-2 rounded-lg bg-white text-black text-[11px] font-heading">CONTINUE</button>:<button onClick={()=>onSelect?.(i)} className="px-4 py-2 rounded-lg bg-white text-black text-[11px] font-heading">CREATE</button>}{data&&!confirming&&<button onClick={()=>setConfirmDelete(i)} className="px-3 py-2 rounded-lg bg-white/8 text-[11px]">DELETE</button>}{data&&confirming&&<><button onClick={()=>{onDelete?.(i);setConfirmDelete(null)}} className="px-3 py-2 rounded-lg bg-red-500/80 text-[11px]">CONFIRM</button><button onClick={()=>setConfirmDelete(null)} className="px-3 py-2 rounded-lg bg-white/8 text-[11px]">CANCEL</button></>}</div>
+    </div>})}</div>
+    <div className="text-[10px] text-white/25 text-center">Each save stores its own story progress. Character unlocks remain shared with the main game.</div>
+  </div>
 }
