@@ -1,39 +1,40 @@
-ELEMENT 6 CLIPS — VALID MP4 / 60 FPS FIX
+ELEMENT 6 — CLIPS MP4/60FPS FIX
 
-IMPORTANT:
-The previous MP4 recorder was broken because it took arbitrary 1-second pieces
-(chunks) from one MP4 MediaRecorder session and joined those pieces into a new
-Blob. MP4 needs container-level initialization/index information, so that can
-produce a file that is labeled .mp4 but cannot be decoded by browsers, Canva,
-CapCut, etc.
+WHY THIS VERSION IS DIFFERENT
+The previous implementation tried to require a browser-native MP4 MediaRecorder.
+Chrome frequently records canvas MediaStreams as WebM instead. That made the
+"complete MP4" check fail.
 
-THIS PACKAGE FIXES THAT:
+This version:
+1. Captures the Element 6 canvas at 60 FPS.
+2. Records reliable WebM segments with MediaRecorder.
+3. Waits for a complete segment when Space is pressed.
+4. Converts that complete WebM into a real H.264 MP4 with ffmpeg.wasm.
+5. Validates the resulting MP4 before saving it.
+6. Keeps multiple staggered recording windows so the previous match remains
+   available during Victory / Match Facts transitions.
 
-1. Every saved clip is the COMPLETE output of one MediaRecorder session.
-2. Six complete 30-second MP4 sessions overlap, staggered by 5 seconds.
-3. Pressing Space saves the oldest complete/near-complete session and immediately
-   replaces it, so clipping remains seamless.
-4. Canvas capture requests 60 FPS.
-5. MP4/H.264 is required; the code never renames WebM data to .mp4.
-6. When the game changes from the match canvas to another canvas (such as a
-   Victory or Match Facts screen), one old recording window is preserved while
-   the new screen starts recording. The previous match is therefore still
-   available for the next Space press.
-7. ClipsScreen uses 60 FPS for frame stepping.
+INSTALL
+Run:
 
-REPLACE:
+npm install @ffmpeg/ffmpeg @ffmpeg/util
+
+Then replace:
 - clipRecorder.js
 - GlobalClipRecorder.jsx
 - useClipRecorder.js
-- ClipsScreen.jsx
 
-clipStorage.js does not need to change for this corruption fix.
+Do NOT rename WebM files to MP4. This package actually converts them.
 
-BROWSER NOTE:
-The browser must support MediaRecorder MP4/H.264. If it does not, this package
-fails cleanly instead of producing a fake/corrupt MP4 by renaming WebM bytes.
+IMPORTANT
+The first clip after starting recording may need a few seconds for a complete
+recording window to become available. After the recorder has warmed up, the
+staggered windows make the wait normally no more than about 5 seconds.
 
-OLD CORRUPT CLIPS:
-Clips already created by the broken recorder cannot be repaired by changing
-metadata or their file extension. Test with a newly recorded clip after this
-replacement.
+The global recorder intentionally does not stop when the Victory or Match Facts
+React component unmounts. That is what allows those screens to save the clip
+from the preceding match.
+
+FFMPEG CORE
+The recorder loads the FFmpeg browser core from jsDelivr at runtime. The app
+therefore needs network access the first time conversion is used.
