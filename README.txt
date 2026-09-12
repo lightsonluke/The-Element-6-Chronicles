@@ -1,24 +1,17 @@
-ELEMENT 6 CLIPS FIX
+ELEMENT 6 CLIPS — MP4 / 60 FPS / MATCH-TRANSITION FIX
 
-Replace these five files in the project:
-- clipRecorder.js
-- GlobalClipRecorder.jsx
-- useClipRecorder.js
-- clipStorage.js
-- ClipsScreen.jsx
+Replace these files:
+  clipRecorder.js
+  GlobalClipRecorder.jsx
+  useClipRecorder.js
 
-The two changed files are clipRecorder.js and GlobalClipRecorder.jsx.
-useClipRecorder.js was updated to use the same recorder behavior if that hook is used elsewhere.
-clipStorage.js and ClipsScreen.jsx are included unchanged so this is a self-contained replacement package.
+clipStorage.js and ClipsScreen.jsx are included as matching files and may be replaced too.
 
-What changed:
-- Clips no longer depend on settings.enableClips being present/enabled.
-- The global recorder automatically records the active game canvas.
-- Recording uses one continuous MediaRecorder with 1-second chunks instead of six simultaneous 30-second recorders.
-- The recorder keeps a rolling 30-second buffer in memory.
-- Pressing Space saves the current rolling buffer without stopping/restarting the main recorder.
-- Repeated Space presses are serialized so the rolling buffer cannot be corrupted by overlapping saves.
-- Recorder/canvas track failures trigger recovery through the existing canvas scan.
-- IndexedDB persistence, 30-clip limit, preview, frame stepping, fullscreen, download, and delete remain intact.
-
-No changes are required to App.jsx or Game.jsx. Game.jsx already mounts GlobalClipRecorder globally.
+- Records the game canvas at 60 FPS.
+- Requires MP4/H.264 MediaRecorder support; no WebM fallback.
+- Uses a 12 Mbps video bitrate.
+- Maintains a rolling 30-second buffer.
+- Space saves without stopping recording.
+- Changing to Victory / Match Facts preserves the previous match's recent recording,
+  so clips saved there can still include the end of the match.
+- Existing IndexedDB storage and Clips screen features remain compatible.

@@ -1,6 +1,6 @@
 // Element 6 native canvas clip recorder.
-// Captures ONLY the game's canvas and keeps a rolling in-memory recording.
-// The recorder starts automatically as soon as a usable game canvas is found.
+// Captures ONLY the game's canvas with a continuous rolling 30-second buffer.
+// MP4/H.264 is required; no WebM fallback is used.
 
 let stream = null;
 let recording = false;
@@ -15,10 +15,10 @@ let lastDataAt = 0;
 let restartTimer = null;
 let saveQueue = Promise.resolve();
 
-const FPS = 30;
+const FPS = 60;
 const CLIP_MS = 30000;
 const TIMESLICE_MS = 1000;
-const VIDEO_BITRATE = 4500000;
+const VIDEO_BITRATE = 12000000;
 
 function extensionForMime(mime) {
   return String(mime || '').toLowerCase().includes('mp4') ? 'mp4' : 'webm';
@@ -26,42 +26,35 @@ function extensionForMime(mime) {
 
 function candidateMimes() {
   const values = [
-    'video/webm;codecs=vp8',
-    'video/webm',
-    'video/mp4',
+    'video/mp4;codecs=avc1.42E01E',
     'video/mp4;codecs=avc1',
-    '',
+    'video/mp4',
   ];
-
   return values.filter((mime, index) => {
     if (values.indexOf(mime) !== index) return false;
-    if (!mime) return true;
-    try {
-      return MediaRecorder.isTypeSupported(mime);
-    } catch {
-      return false;
-    }
+    try { return !!window.MediaRecorder?.isTypeSupported?.(mime); } catch { return false; }
   });
 }
 
 function createRecorder() {
   if (!stream || !window.MediaRecorder) return null;
-
   for (const mime of candidateMimes()) {
     try {
-      const options = { videoBitsPerSecond: VIDEO_BITRATE };
-      if (mime) options.mimeType = mime;
-      return new MediaRecorder(stream, options);
+      return new MediaRecorder(stream, {
+        mimeType: mime,
+        videoBitsPerSecond: VIDEO_BITRATE,
+      });
     } catch {}
   }
-
   return null;
 }
 
 function publishState() {
-  window.__e6ClipRecorderActive = recording && !!recorder && recorder.state !== 'inactive';
-  window.__e6ClipRecorderReady = window.__e6ClipRecorderActive;
+  const active = recording && !!recorder && recorder.state !== 'inactive';
+  window.__e6ClipRecorderActive = active;
+  window.__e6ClipRecorderReady = active && chunks.length > 0;
   window.__e6ClipRecorderMime = clipMime;
+  window.__e6ClipRecorderFps = FPS;
 }
 
 function pruneChunks(now = performance.now()) {
@@ -69,24 +62,23 @@ function pruneChunks(now = performance.now()) {
   while (chunks.length > 1 && chunks[0].endAt < cutoff) chunks.shift();
 }
 
-function setupRecorder(generation) {
-  if (!recording || !stream || generation !== recordingGeneration) return false;
-
-  const next = createRecorder();
-  if (!next) return false;
-
+function attachRecorder(next, generation) {
   recorder = next;
   chunkStartedAt = performance.now();
   lastDataAt = chunkStartedAt;
 
   next.ondataavailable = event => {
-    if (!recording || generation !== recordingGeneration) return;
     if (!event.data || !event.data.size) return;
-
     const now = performance.now();
-    chunks.push({ blob: event.data, startAt: lastDataAt || chunkStartedAt, endAt: now });
+    chunks.push({
+      blob: event.data,
+      startAt: lastDataAt || chunkStartedAt,
+      endAt: now,
+      generation,
+    });
     lastDataAt = now;
     pruneChunks(now);
+    publishState();
   };
 
   next.onerror = event => {
@@ -94,90 +86,77 @@ function setupRecorder(generation) {
     publishState();
   };
 
-  next.onstop = () => {
-    if (!recording || generation !== recordingGeneration) return;
-    if (restartTimer) clearTimeout(restartTimer);
-    restartTimer = setTimeout(() => {
-      restartTimer = null;
-      if (recording && generation === recordingGeneration) {
-        const ok = setupRecorder(generation);
-        if (!ok) {
-          window.__e6ClipRecorderReady = false;
-          publishState();
-        }
-      }
-    }, 50);
-  };
-
   next.onstart = () => publishState();
 
   try {
-    // timeslice is important: without it MediaRecorder may hold everything
-    // until stop(), leaving no usable rolling data for an early clip request.
     next.start(TIMESLICE_MS);
   } catch (error) {
-    console.error('[Element 6 Clips] Could not start recorder:', error);
+    console.error('[Element 6 Clips] Could not start MP4 recorder:', error);
     recorder = null;
     return false;
   }
 
-  clipMime = next.mimeType || 'video/webm';
+  clipMime = next.mimeType || 'video/mp4';
   publishState();
   return true;
 }
 
-async function stopActiveRecorder() {
+function startRecorder(generation) {
+  if (!recording || !stream || generation !== recordingGeneration) return false;
+  const next = createRecorder();
+  if (!next) {
+    console.error('[Element 6 Clips] This browser does not support MP4 MediaRecorder recording.');
+    return false;
+  }
+  return attachRecorder(next, generation);
+}
+
+function stopRecorderWithoutClearingBuffer() {
   const current = recorder;
-  if (!current || current.state === 'inactive') return;
-
-  await new Promise(resolve => {
-    const oldStop = current.onstop;
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      resolve();
-    };
-
-    current.onstop = event => {
-      try { oldStop?.(event); } catch {}
-      finish();
-    };
-
-    try { current.stop(); } catch { finish(); }
-    setTimeout(finish, 2500);
-  });
+  recorder = null;
+  if (!current) return;
+  try {
+    current.onstop = null;
+    if (current.state !== 'inactive') current.stop();
+  } catch {}
 }
 
 export function initClipRecorder(canvas) {
   if (!canvas || !window.MediaRecorder) return false;
+  if (typeof canvas.captureStream !== 'function') {
+    console.error('[Element 6 Clips] canvas.captureStream() unavailable.');
+    return false;
+  }
 
   if (recording && recordingCanvas === canvas && recorder && recorder.state !== 'inactive') {
     publishState();
     return true;
   }
 
-  if (typeof canvas.captureStream !== 'function') {
-    console.error('[Element 6 Clips] canvas.captureStream() unavailable.');
-    return false;
-  }
+  // Switching canvases is intentionally NOT treated as a hard stop.
+  // The previous match remains in the rolling buffer so Victory / Match Facts
+  // clips can still contain the end of the actual match.
+  stopRecorderWithoutClearingBuffer();
+  try { stream?.getTracks?.()?.forEach(track => track.stop()); } catch {}
 
-  stopClipRecorder();
+  recordingGeneration++;
+  const generation = recordingGeneration;
 
   try {
-    recordingGeneration++;
-    const generation = recordingGeneration;
     stream = canvas.captureStream(FPS);
     if (!stream) return false;
-
     recordingCanvas = canvas;
     recording = true;
-    clipMime = '';
-    chunks = [];
 
-    const ok = setupRecorder(generation);
+    if (!chunks.length) clipMime = '';
+
+    const ok = startRecorder(generation);
     if (!ok) {
-      stopClipRecorder();
+      recording = false;
+      try { stream.getTracks().forEach(track => track.stop()); } catch {}
+      stream = null;
+      recordingCanvas = null;
+      publishState();
       return false;
     }
 
@@ -185,8 +164,13 @@ export function initClipRecorder(canvas) {
     tracks.forEach(track => {
       track.addEventListener?.('ended', () => {
         if (!recording || generation !== recordingGeneration) return;
-        console.warn('[Element 6 Clips] Canvas recording track ended; restarting recorder.');
-        stopClipRecorder();
+        console.warn('[Element 6 Clips] Canvas recording track ended.');
+        // Keep the accumulated buffer. GlobalClipRecorder will attach the next
+        // available game canvas without throwing away the previous match.
+        recorder = null;
+        stream = null;
+        recordingCanvas = null;
+        publishState();
       }, { once: true });
     });
 
@@ -194,34 +178,37 @@ export function initClipRecorder(canvas) {
     return true;
   } catch (error) {
     console.error('[Element 6 Clips] Initialization failed:', error);
-    stopClipRecorder();
+    recording = false;
+    publishState();
     return false;
   }
 }
 
 export async function saveClip() {
-  if (!recording || !recorder || recorder.state === 'inactive') return null;
+  if (!recording) return null;
 
-  // Serialize clip creation so repeated Space presses cannot mutate the rolling
-  // buffer while another clip is being assembled.
   return saveQueue = saveQueue.then(async () => {
     const now = performance.now();
     pruneChunks(now);
 
-    const usable = chunks.filter(item => item?.blob?.size > 0 && item.endAt >= now - CLIP_MS);
+    const usable = chunks
+      .filter(item => item?.blob?.size > 0 && item.endAt >= now - CLIP_MS)
+      .sort((a, b) => a.startAt - b.startAt);
+
     if (!usable.length) return null;
 
-    const blob = new Blob(usable.map(item => item.blob), { type: clipMime || 'video/webm' });
+    const mime = clipMime || 'video/mp4';
+    const blob = new Blob(usable.map(item => item.blob), { type: mime });
     if (blob.size < 1000) return null;
 
     const oldest = usable[0].startAt;
     const duration = Math.min(CLIP_MS / 1000, Math.max(0, (now - oldest) / 1000));
-
     sequence++;
+
     return {
       blob,
-      mime: clipMime || blob.type || 'video/webm',
-      extension: extensionForMime(clipMime || blob.type),
+      mime,
+      extension: 'mp4',
       duration,
       sequence,
     };
@@ -235,11 +222,12 @@ export function getClipRecordingInfo() {
   return {
     active: recording && !!recorder && recorder.state !== 'inactive',
     mime: clipMime,
-    extension: extensionForMime(clipMime),
+    extension: 'mp4',
     recorderCount: recorder && recorder.state !== 'inactive' ? 1 : 0,
     oldestSeconds: oldest ? Math.min(CLIP_MS / 1000, (now - oldest.startAt) / 1000) : 0,
     newestSeconds: chunks.length ? Math.max(0, (now - chunks[chunks.length - 1].endAt) / 1000) : 0,
     chunkCount: chunks.length,
+    fps: FPS,
   };
 }
 
@@ -256,6 +244,7 @@ export function stopClipRecorder() {
   recorder = null;
   if (current) {
     try {
+      current.ondataavailable = null;
       current.onstop = null;
       if (current.state !== 'inactive') current.stop();
     } catch {}
