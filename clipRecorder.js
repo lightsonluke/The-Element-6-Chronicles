@@ -6,6 +6,8 @@ let stream = null;
 let recording = false;
 let clipMime = '';
 let sequence = 0;
+let recordingCanvas = null;
+let recordingGeneration = 0;
 
 const FPS = 30;
 const CLIP_MS = 30000;
@@ -160,6 +162,13 @@ async function finishSlot(id, userRequested) {
 
   slots.delete(id);
 
+  // Keep the rolling recorder windows alive. Each 30s slot is replaced at the
+  // moment it ends, while the five-second stagger between slots remains intact.
+  // User-requested saves are restarted by saveClip() immediately below.
+  if (recording && !userRequested) {
+    startSlot(id);
+  }
+
   const mime =
     recorder.mimeType ||
     slot.mime ||
@@ -202,6 +211,13 @@ function oldestSlot() {
 export function initClipRecorder(canvas) {
   if (!canvas) return false;
   if (!window.MediaRecorder) return false;
+
+  // Multiple game/UI components can mount the clip hook at once. Reuse the
+  // existing recorder when it is already recording this exact game canvas;
+  // otherwise they can stop each other's recordings.
+  if (recording && recordingCanvas === canvas && slots.size > 0) {
+    return true;
+  }
   if (typeof canvas.captureStream !== 'function') {
     console.error(
       '[Element 6 Clips] canvas.captureStream() unavailable.'
@@ -212,32 +228,38 @@ export function initClipRecorder(canvas) {
   stopClipRecorder();
 
   try {
+    recordingGeneration++;
+    const generation = recordingGeneration;
+
     // ONLY the Element 6 canvas.
     stream = canvas.captureStream(FPS);
 
     if (!stream) return false;
 
+    recordingCanvas = canvas;
     recording = true;
     clipMime = '';
 
     window.__e6ClipRecorderActive = true;
     window.__e6ClipRecorderReady = false;
 
-    let started = 0;
-
-    for (let i = 0; i < SLOT_COUNT; i++) {
-      if (startSlot(i)) started++;
-    }
+    // Start ONE recorder immediately. Starting six MediaRecorder instances at
+    // exactly the same time is unreliable in some browsers (especially Safari)
+    // and was the main reason clips could be completely unavailable in-game.
+    const started = startSlot(0) ? 1 : 0;
 
     if (!started) {
       stopClipRecorder();
       return false;
     }
 
-    // Stagger replacement windows.
+    // Build the rolling 30-second window progressively. Each slot is a full
+    // standalone recording, staggered by five seconds, so there is always a
+    // recent recording ready without hammering the browser with six simultaneous
+    // recorder starts.
     for (let i = 1; i < SLOT_COUNT; i++) {
       setTimeout(() => {
-        if (recording && !slots.has(i)) {
+        if (recording && generation === recordingGeneration && !slots.has(i)) {
           startSlot(i);
         }
       }, i * SLOT_STAGGER_MS);
@@ -309,6 +331,7 @@ export function getClipRecordingInfo() {
 }
 
 export function stopClipRecorder() {
+  recordingGeneration++;
   recording = false;
 
   for (const slot of slots.values()) {
@@ -335,6 +358,7 @@ export function stopClipRecorder() {
   } catch {}
 
   stream = null;
+  recordingCanvas = null;
   clipMime = '';
 
   window.__e6ClipRecorderActive = false;
@@ -343,4 +367,8 @@ export function stopClipRecorder() {
 
 export function isClipRecorderActive() {
   return recording && slots.size > 0;
+}
+
+export function getClipRecordingCanvas() {
+  return recordingCanvas;
 }

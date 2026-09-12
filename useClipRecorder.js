@@ -1,5 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { initClipRecorder, saveClip, stopClipRecorder } from './clipRecorder.js';
+import {
+  initClipRecorder,
+  saveClip,
+  stopClipRecorder,
+  isClipRecorderActive,
+  getClipRecordingCanvas,
+} from './clipRecorder.js';
 import { saveClipBlob, trimClips } from './clipStorage.js';
 
 function showClipToast(message = 'CLIP SAVED — LAST 30 SECONDS') {
@@ -45,19 +51,38 @@ async function saveCurrentClip() {
 
 export function useClipRecorder(canvasRef) {
   const initialized = useRef(false);
+  const ownsRecorder = useRef(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (canvas && !initialized.current) {
+    if (!canvas || initialized.current) return undefined;
+
+    // If GlobalClipRecorder already owns this canvas, share it instead of
+    // stopping/restarting the recording. This prevents two React components
+    // from fighting over the same MediaRecorder singleton.
+    const alreadyRecordingSameCanvas =
+      isClipRecorderActive() && getClipRecordingCanvas() === canvas;
+
+    if (alreadyRecordingSameCanvas) {
+      initialized.current = true;
+      ownsRecorder.current = false;
+      window.__e6ClipRecorderActive = true;
+    } else {
       const ok = initClipRecorder(canvas);
       initialized.current = !!ok;
+      ownsRecorder.current = !!ok;
       if (ok) window.__e6ClipRecorderActive = true;
     }
 
     return () => {
-      if (initialized.current) stopClipRecorder();
+      if (ownsRecorder.current) stopClipRecorder();
       initialized.current = false;
-      window.__e6ClipRecorderActive = false;
+      ownsRecorder.current = false;
+      // Do not force the global flag false if another component still owns
+      // the singleton recorder.
+      if (!isClipRecorderActive()) {
+        window.__e6ClipRecorderActive = false;
+      }
     };
   }, [canvasRef]);
 

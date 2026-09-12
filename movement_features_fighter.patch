@@ -1,0 +1,140 @@
+--- /mnt/data/fighter(1).js	2026-09-12 13:25:37.939101195 +0000
++++ /mnt/data/fighter.js	2026-09-12 13:22:57.901379127 +0000
+@@ -6,6 +6,7 @@
+ import { DOWN_HEAVIES } from './downHeavies.js';
+ import { drawWhip } from './whipRenderer.js';
+ import { activateGenPower, updateGenProjectiles, onGenPowerExpire } from './genPowers.js';
++import { updateMovementAbilities, onMovementAbilityLanded, resetMovementAbilityState } from './movementAbilities.js';
+ 
+ export const GRAVITY = 0.42;
+ export const JUMP_FORCE = -14.5;
+@@ -110,6 +111,21 @@
+     dotDamage: 0,
+     moveStats: { heavy: 0, downHeavy: 0, groundPound: 0, recovery: 0, aerial: 0, sigSide: 0, sigUp: 0, sigDown: 0, super: 0, power: 0, normal: 0, signatureKOs: 0, groundPoundKOs: 0, emoteBeforeMove: 0 },
+     recoveryAirUses: 0,
++    // Universal movement abilities — shared by every non-sports fight mode.
++    _movementTapState: {
++      left: -9999, right: -9999, up: -9999, down: -9999,
++      leftHeld: false, rightHeld: false, upHeld: false, downHeld: false,
++    },
++    dashCooldown: 0,
++    dashTimer: 0,
++    dashDirection: { x: 0, y: 0 },
++    dashInvulnerable: false,
++    airDodgeUses: 2,
++    wallSlide: false,
++    wallSide: 0,
++    wallContactActive: false,
++    wallGrantsUsed: 0,
++    wallGrantPending: false,
+     platformMaterial: null,
+     powerDisabled: 0,
+     trapped: false,
+@@ -998,6 +1014,8 @@
+   if (fighter.heavyCooldown > 0) fighter.heavyCooldown--;
+   if (fighter.recoveryCooldown > 0) fighter.recoveryCooldown--;
+   if (fighter.groundPoundCooldown > 0) fighter.groundPoundCooldown--;
++  if (fighter.dashCooldown > 0) fighter.dashCooldown--;
++  if (fighter.dashTimer > 0) fighter.dashTimer--;
+   // A power cannot recharge while its animation/effect is still running.
+   // This is shared by every mode that uses updateFighter (offline, LAN,
+   // battle royale, campaign, sandbox, and the rollback fight simulation).
+@@ -1086,6 +1104,10 @@
+     fighter.coyoteTime--;
+   }
+ 
++  // Universal dash / air-dodge / wall-slide input processing.
++  // Sports modes are explicitly excluded by movementAbilities.js.
++  updateMovementAbilities(fighter, inputs, platforms, stageWidth, stageHeight);
++
+   // Track DI from inputs
+   fighter.diX = (inputs.left ? -1 : 0) + (inputs.right ? 1 : 0);
+   fighter.diY = (inputs.down ? 0.5 : 0) + (inputs.up ? -0.3 : 0);
+@@ -1104,6 +1126,7 @@
+     fighter.x += fighter.vx;
+     fighter.y += fighter.vy;
+     resolveCollisions(fighter, platforms, stageWidth, stageHeight);
++    onMovementAbilityLanded(fighter, inputs);
+     if (fighter.attackData) updateAttackProgress(fighter);
+     return fighter;
+   }
+@@ -1203,6 +1226,7 @@
+         fighter.vy = fighter.gravityInverted ? -force : force;
+         if (useGroundJump) {
+           fighter.jumps = fighter.maxJumps - 1;
++          fighter.airDodgeUses = Math.min(fighter.airDodgeUses, fighter.jumps);
+           fighter.coyoteTime = 0;
+           for (let i = 0; i < 8; i++) {
+             const angle = Math.PI + (Math.random() - 0.5) * Math.PI * 0.8;
+@@ -1219,6 +1243,7 @@
+           }
+         } else {
+           fighter.jumps--;
++          fighter.airDodgeUses = Math.min(fighter.airDodgeUses, fighter.jumps);
+           for (let i = 0; i < 14; i++) {
+             const angle = Math.PI * 0.5 + (Math.random() - 0.5) * 1.6;
+             fighter.doubleJumpParticles.push({
+@@ -1360,8 +1385,16 @@
+     if (!inputs.superMove) inputs._superConsumed = false;
+   }
+ 
++  // Universal dash motion. Ground dashes are short horizontal bursts; air dodges
++  // remain invulnerable for their full 0.3s window.
++  if (fighter.dashTimer > 0) {
++    fighter.vx = fighter.dashDirection.x * 9.5;
++    fighter.vy = fighter.dashDirection.y * 9.5;
++    if (fighter.dashDirection.x) fighter.facing = fighter.dashDirection.x;
++  }
++
+   // Gravity
+-  if (!fighter.grounded || fighter.canFly) {
++  if (fighter.dashTimer <= 0 && (!fighter.grounded || fighter.canFly)) {
+     const gravMul2 = fighter.lowGravity ? 0.45 : 1;
+     const grav = (fighter.gravityInverted ? -GRAVITY : GRAVITY) * gravMul2;
+     fighter.vy += grav;
+@@ -1380,6 +1413,7 @@
+   fighter.y += fighter.vy;
+ 
+   resolveCollisions(fighter, platforms, stageWidth, stageHeight);
++  onMovementAbilityLanded(fighter, inputs);
+ 
+   // Dash slash — damage opponents in the path, end when distance covered or blocked
+   if (fighter.powerActive === 'dash_slash' && fighter._dash) {
+@@ -1479,6 +1513,7 @@
+   fighter._conveyorDir = 0;
+ 
+   const charHalfW = 16; // half-width for platform edge tolerance
++  fighter.wallSide = 0;
+   const prevBottom = fighter.prevY;
+   const currBottom = fighter.y;
+ 
+@@ -1638,17 +1673,21 @@
+       // Push back to the side the fighter came from
+       if (fighter.prevX + charHalfW <= p.x + 2) {
+         fighter.x = p.x - charHalfW;
++        fighter.wallSide = -1;
+         if (fighter.vx > 0) fighter.vx = 0;
+       } else if (fighter.prevX - charHalfW >= p.x + p.w - 2) {
+         fighter.x = p.x + p.w + charHalfW;
++        fighter.wallSide = 1;
+         if (fighter.vx < 0) fighter.vx = 0;
+       } else {
+         // Was already inside — push to nearest side
+         if (fighter.x < p.x + p.w / 2) {
+           fighter.x = p.x - charHalfW;
++          fighter.wallSide = -1;
+           if (fighter.vx > 0) fighter.vx = 0;
+         } else {
+           fighter.x = p.x + p.w + charHalfW;
++          fighter.wallSide = 1;
+           if (fighter.vx < 0) fighter.vx = 0;
+         }
+       }
+@@ -1848,6 +1887,7 @@
+   fighter.attackData = null;
+   fighter.attackTimer = 0;
+   fighter.jumps = 2;
++  resetMovementAbilityState(fighter);
+   fighter.sigCooldown = 0;
+   fighter.normalCooldown = 0;
+   fighter.heavyCooldown = 0;

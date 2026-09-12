@@ -4,6 +4,7 @@ import {
   saveClip,
   stopClipRecorder,
   isClipRecorderActive,
+  getClipRecordingCanvas,
 } from './clipRecorder.js';
 import {
   saveClipBlob,
@@ -84,12 +85,16 @@ function findGameCanvas() {
 export default function GlobalClipRecorder() {
   const canvasRef = useRef(null);
   const scanTimer = useRef(null);
+  const ownsRecorder = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
 
     const stop = () => {
-      stopClipRecorder();
+      if (ownsRecorder.current) {
+        stopClipRecorder();
+      }
+      ownsRecorder.current = false;
       canvasRef.current = null;
     };
 
@@ -112,8 +117,10 @@ export default function GlobalClipRecorder() {
 
       if (
         isClipRecorderActive() &&
-        canvasRef.current === canvas
+        getClipRecordingCanvas() === canvas
       ) {
+        canvasRef.current = canvas;
+        ownsRecorder.current = false;
         return;
       }
 
@@ -131,6 +138,7 @@ export default function GlobalClipRecorder() {
       }
 
       canvasRef.current = canvas;
+      ownsRecorder.current = true;
 
       showToast(
         'CLIPS ENABLED — PRESS SPACE TO SAVE'
