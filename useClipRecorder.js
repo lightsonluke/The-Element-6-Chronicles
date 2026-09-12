@@ -8,7 +8,7 @@ import {
 } from './clipRecorder.js';
 import { saveClipBlob, trimClips } from './clipStorage.js';
 
-function showClipToast(message = 'CLIP SAVED — LAST 30 SECONDS') {
+function showClipToast(message = 'CLIP SAVED') {
   const existing = document.getElementById('clip-toast');
   if (existing) existing.remove();
   const toast = document.createElement('div');
@@ -41,7 +41,7 @@ async function saveCurrentClip() {
         duration: result.duration,
       },
     }));
-    showClipToast(`CLIP SAVED — LAST ${Math.max(1, Math.round(result.duration))} SECONDS`);
+    showClipToast(`CLIP SAVED — ${Math.max(1, Math.round(result.duration))} SECONDS`);
     return true;
   } catch (error) {
     console.error('[Element 6 Clips] Failed to persist native clip:', error);
@@ -57,9 +57,6 @@ export function useClipRecorder(canvasRef) {
     const canvas = canvasRef.current;
     if (!canvas || initialized.current) return undefined;
 
-    // If GlobalClipRecorder already owns this canvas, share it instead of
-    // stopping/restarting the recording. This prevents two React components
-    // from fighting over the same MediaRecorder singleton.
     const alreadyRecordingSameCanvas =
       isClipRecorderActive() && getClipRecordingCanvas() === canvas;
 
@@ -78,10 +75,9 @@ export function useClipRecorder(canvasRef) {
       if (ownsRecorder.current) stopClipRecorder();
       initialized.current = false;
       ownsRecorder.current = false;
-      // Do not force the global flag false if another component still owns
-      // the singleton recorder.
       if (!isClipRecorderActive()) {
         window.__e6ClipRecorderActive = false;
+        window.__e6ClipRecorderReady = false;
       }
     };
   }, [canvasRef]);
@@ -90,15 +86,11 @@ export function useClipRecorder(canvasRef) {
     const handler = async event => {
       if (event.code !== 'Space' && event.key !== ' ') return;
       if (event.target?.tagName === 'INPUT' || event.target?.tagName === 'TEXTAREA' || event.target?.isContentEditable) return;
-      if (!window.__e6ClipRecorderActive) return;
+      if (!isClipRecorderActive()) return;
 
       event.preventDefault();
       const saved = await saveCurrentClip();
-      if (!saved && !window.__e6ClipRecorderReady) {
-        showClipToast('CLIP RECORDING IS NOT AVAILABLE IN THIS MODE.');
-      } else if (!saved) {
-        showClipToast('NO RECORDED CLIP DATA YET.');
-      }
+      if (!saved) showClipToast('CLIP COULD NOT BE CREATED');
     };
 
     window.addEventListener('keydown', handler);
