@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { initClipRecorder, saveClip, isClipRecorderActive, getClipRecordingCanvas } from './clipRecorder.js';
+import { initClipRecorder, saveClip, stopClipRecorder, isClipRecorderActive } from './clipRecorder.js';
 import { saveClipBlob, trimClips } from './clipStorage.js';
 
 function showToast(message) {
@@ -62,12 +62,9 @@ export default function GlobalClipRecorder() {
     let cancelled = false;
 
     const start = () => {
-      if (cancelled) return;
+      if (cancelled || isClipRecorderActive()) return;
       const canvas = findGameCanvas();
       if (!canvas) return;
-      // A new match gets a new canvas. Switch the live recorder to it while
-      // preserving completed windows from the previous match for Victory/Stats clipping.
-      if (getClipRecordingCanvas() === canvas && isClipRecorderActive()) return;
       if (initClipRecorder(canvas)) {
         canvasRef.current = canvas;
         window.__e6ClipRecorderActive = true;
@@ -103,7 +100,7 @@ export default function GlobalClipRecorder() {
       window.removeEventListener('keydown', save, true);
       if (scanTimerRef.current) clearInterval(scanTimerRef.current);
       scanTimerRef.current = null;
-      // The global recorder is mounted for the app lifetime; don't kill it on screen changes.
+      stopClipRecorder();
       canvasRef.current = null;
     };
   }, []);

@@ -3,34 +3,137 @@ import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 let sourceCanvas = null;
 let sourceStream = null;
+let recorder = null;
 let recording = false;
 let generation = 0;
 let saveSequence = 0;
 let ffmpeg = null;
 let ffmpegPromise = null;
-let conversionQueue = Promise.resolve();
-let slotCounter = 0;
+let saveQueue = Promise.resolve();
+let chunks = [];
+let chunkBytes = 0;
+let recordingStartedAt = 0;
+let lastDataAt = 0;
+let recorderMime = 'video/webm';
 
 const FPS = 60;
 const CLIP_SECONDS = 30;
 const CLIP_MS = CLIP_SECONDS * 1000;
-const SLOT_COUNT = 7;
-const SLOT_INTERVAL_MS = 5000;
-const VIDEO_BITRATE = 6000000;
-const MIN_SAVE_MS = 350;
-const slots = new Map();
-const completed = new Map();
+const VIDEO_BITRATE = 8000000;
+const CHUNK_MS = 250;
+const MIN_CHUNK_BYTES = 128;
 const FFMPEG_CORE_BASE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
-const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-function err(message) { console.error(`[Element 6 Clips] ${message}`); }
+function log(message, error = null) {
+  if (error) console.error(`[Element 6 Clips] ${message}`, error);
+  else console.debug(`[Element 6 Clips] ${message}`);
+}
+
+function supportedMime() {
+  if (!window.MediaRecorder) return '';
+  const candidates = [
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+  ];
+  for (const mime of candidates) {
+    try {
+      if (!MediaRecorder.isTypeSupported || MediaRecorder.isTypeSupported(mime)) return mime;
+    } catch {}
+  }
+  return '';
+}
+
+function rebuildBlob() {
+  if (!chunks.length || chunkBytes < MIN_CHUNK_BYTES) return null;
+  const blob = new Blob(chunks, { type: recorderMime || 'video/webm' });
+  return blob.size >= MIN_CHUNK_BYTES ? blob : null;
+}
+
+function trimBuffer() {
+  const cutoff = performance.now() - CLIP_MS - 1000;
+  while (chunks.length > 1 && chunks[0].time < cutoff) {
+    chunkBytes -= chunks[0].size;
+    chunks.shift();
+  }
+}
+
+function attachRecorderHandlers(instance, myGeneration) {
+  instance.ondataavailable = event => {
+    if (myGeneration !== generation) return;
+    if (!event.data || event.data.size <= 0) return;
+    chunks.push({ data: event.data, time: performance.now(), size: event.data.size });
+    chunkBytes += event.data.size;
+    lastDataAt = performance.now();
+    trimBuffer();
+  };
+  instance.onerror = event => {
+    log(`MediaRecorder error: ${event?.error?.message || 'unknown error'}`, event?.error);
+  };
+}
+
+function startRecorder() {
+  if (!recording || !sourceStream || !window.MediaRecorder) return false;
+  if (recorder && recorder.state !== 'inactive') return true;
+
+  const mime = supportedMime();
+  try {
+    const options = { videoBitsPerSecond: VIDEO_BITRATE };
+    if (mime) options.mimeType = mime;
+    const instance = new MediaRecorder(sourceStream, options);
+    const myGeneration = generation;
+    attachRecorderHandlers(instance, myGeneration);
+    recorder = instance;
+    recorderMime = instance.mimeType || mime || 'video/webm';
+    recordingStartedAt = performance.now();
+    lastDataAt = 0;
+    chunks = [];
+    chunkBytes = 0;
+    instance.start(CHUNK_MS);
+    return true;
+  } catch (error) {
+    recorder = null;
+    log('Could not start MediaRecorder', error);
+    return false;
+  }
+}
+
+function requestRecorderData() {
+  return new Promise(resolve => {
+    if (!recorder || recorder.state !== 'recording') return resolve();
+    const before = lastDataAt;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(finish, 1200);
+    const original = recorder.ondataavailable;
+    recorder.ondataavailable = event => {
+      if (original) original(event);
+      if (lastDataAt !== before) finish();
+    };
+    try { recorder.requestData(); } catch { finish(); }
+  });
+}
+
+async function makeSnapshot() {
+  if (!recorder || recorder.state === 'inactive') return null;
+  await requestRecorderData();
+  const blob = rebuildBlob();
+  if (!blob) return null;
+  const duration = Math.min(CLIP_SECONDS, Math.max(0.25, (performance.now() - recordingStartedAt) / 1000));
+  return { blob, duration };
+}
 
 async function loadFFmpeg() {
   if (ffmpeg) return ffmpeg;
   if (ffmpegPromise) return ffmpegPromise;
   ffmpegPromise = (async () => {
     const instance = new FFmpeg();
-    instance.on('log', ({ message }) => { if (message) console.debug('[Element 6 FFmpeg]', message); });
+    instance.on('log', ({ message }) => console.debug('[Element 6 FFmpeg]', message));
     await instance.load({
       coreURL: await toBlobURL(`${FFMPEG_CORE_BASE}/ffmpeg-core.js`, 'text/javascript'),
       wasmURL: await toBlobURL(`${FFMPEG_CORE_BASE}/ffmpeg-core.wasm`, 'application/wasm'),
@@ -38,21 +141,34 @@ async function loadFFmpeg() {
     ffmpeg = instance;
     return instance;
   })();
-  try { return await ffmpegPromise; } finally { ffmpegPromise = null; }
+  try { return await ffmpegPromise; }
+  catch (error) { ffmpegPromise = null; throw error; }
+  finally { if (ffmpeg) ffmpegPromise = null; }
 }
 
 async function convertToMP4(webmBlob) {
-  if (!webmBlob || webmBlob.size < 1000) throw new Error('recording data is empty');
+  if (!webmBlob || webmBlob.size < MIN_CHUNK_BYTES) throw new Error('recording data is empty');
   const encoder = await loadFFmpeg();
-  const token = `${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
-  const input = `e6_${token}.webm`, output = `e6_${token}.mp4`;
+  const token = `e6_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const input = `${token}.webm`;
+  const output = `${token}.mp4`;
   try {
     await encoder.writeFile(input, await fetchFile(webmBlob));
-    await encoder.exec(['-i', input, '-r', String(FPS), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an', output]);
+    await encoder.exec([
+      '-i', input,
+      '-r', String(FPS),
+      '-c:v', 'libx264',
+      '-preset', 'veryfast',
+      '-crf', '20',
+      '-pix_fmt', 'yuv420p',
+      '-movflags', '+faststart',
+      '-an',
+      output,
+    ]);
     const data = await encoder.readFile(output);
     const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
     const result = new Blob([bytes], { type: 'video/mp4' });
-    if (result.size < 1000) throw new Error('FFmpeg returned an empty MP4');
+    if (result.size < 1000) throw new Error('FFmpeg produced an empty MP4');
     return result;
   } finally {
     try { await encoder.deleteFile(input); } catch {}
@@ -60,94 +176,9 @@ async function convertToMP4(webmBlob) {
   }
 }
 
-function createRecorder() {
-  if (!sourceStream || !window.MediaRecorder) return null;
-  for (const mime of ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','']) {
-    try {
-      if (mime && MediaRecorder.isTypeSupported && !MediaRecorder.isTypeSupported(mime)) continue;
-      const options = { videoBitsPerSecond: VIDEO_BITRATE };
-      if (mime) options.mimeType = mime;
-      return new MediaRecorder(sourceStream, options);
-    } catch {}
-  }
-  return null;
-}
-
-function stopRecorder(recorder) {
-  return new Promise(resolve => {
-    if (!recorder || recorder.state === 'inactive') return resolve();
-    let done = false;
-    const finish = () => { if (!done) { done = true; resolve(); } };
-    recorder.addEventListener('stop', finish, { once: true });
-    try { recorder.stop(); } catch { finish(); }
-    setTimeout(finish, 8000);
-  });
-}
-
-function buildBlob(chunks, mime) {
-  if (!chunks?.length) return null;
-  const blob = new Blob(chunks, { type: mime || 'video/webm' });
-  return blob.size >= 1000 ? blob : null;
-}
-
-function startSlot(id) {
-  if (!recording || !sourceStream || slots.has(id)) return false;
-  const recorder = createRecorder();
-  if (!recorder) return false;
-  const slot = { id, recorder, chunks: [], startedAt: performance.now(), stopped: false, finalizing: false, timer: null, mime: '' };
-  recorder.ondataavailable = e => { if (e.data?.size) slot.chunks.push(e.data); };
-  recorder.onerror = e => err(`MediaRecorder error: ${e?.error?.message || 'unknown error'}`);
-  try { recorder.start(250); slot.mime = recorder.mimeType || 'video/webm'; }
-  catch (e) { err(`MediaRecorder.start failed: ${e?.message || e}`); return false; }
-  slots.set(id, slot);
-  const myGeneration = generation;
-  slot.timer = setTimeout(() => completeSlot(id, myGeneration).catch(e => err(e?.message || e)), CLIP_MS);
-  return true;
-}
-
-async function completeSlot(id, expectedGeneration = generation) {
-  const slot = slots.get(id);
-  if (!slot || slot.finalizing || expectedGeneration !== generation) return null;
-  slot.finalizing = true;
-  if (slot.timer) clearTimeout(slot.timer);
-  slot.timer = null;
-  try { slot.recorder.requestData?.(); } catch {}
-  await wait(100);
-  await stopRecorder(slot.recorder);
-  slot.stopped = true;
-  slots.delete(id);
-  const source = buildBlob(slot.chunks, slot.mime || slot.recorder.mimeType);
-  if (!source) { if (recording && expectedGeneration === generation) startSlot(id); return null; }
-  const item = { id, blob: source, duration: Math.min(CLIP_SECONDS, Math.max(0.25, (performance.now()-slot.startedAt)/1000)), finishedAt: performance.now(), startedAt: slot.startedAt };
-  completed.set(id, item);
-  while (completed.size > SLOT_COUNT + 2) {
-    const oldest = [...completed.values()].sort((a,b) => a.finishedAt-b.finishedAt)[0];
-    if (!oldest) break;
-    completed.delete(oldest.id);
-  }
-  if (recording && expectedGeneration === generation) startSlot(id);
-  return item;
-}
-
-function snapshotActiveSlot(slot) {
-  if (!slot) return null;
-  const age = performance.now() - slot.startedAt;
-  if (age < MIN_SAVE_MS) return null;
-  const source = buildBlob(slot.chunks, slot.mime || slot.recorder.mimeType);
-  if (!source) return null;
-  return { id: `active_${slot.id}_${Date.now()}`, blob: source, duration: Math.min(CLIP_SECONDS, Math.max(0.25, age/1000)), finishedAt: performance.now() };
-}
-
-function consumeSource() {
-  const ready = [...completed.values()].sort((a,b) => b.finishedAt-a.finishedAt)[0];
-  if (ready) { completed.delete(ready.id); return ready; }
-  const active = [...slots.values()].filter(s => !s.stopped && !s.finalizing).sort((a,b) => b.startedAt-a.startedAt)[0];
-  return snapshotActiveSlot(active);
-}
-
 export function initClipRecorder(canvas) {
   if (!canvas || typeof canvas.captureStream !== 'function' || !window.MediaRecorder) return false;
-  if (recording && sourceCanvas === canvas && slots.size) return true;
+  if (recording && sourceCanvas === canvas && recorder && recorder.state !== 'inactive') return true;
   stopClipRecorder();
   try {
     sourceCanvas = canvas;
@@ -155,52 +186,71 @@ export function initClipRecorder(canvas) {
     if (!sourceStream?.getVideoTracks?.().length) throw new Error('Canvas video track unavailable');
     recording = true;
     generation += 1;
-    const myGeneration = generation;
     window.__e6ClipRecorderActive = true;
     window.__e6ClipRecorderReady = true;
     window.__e6ClipRecorderFPS = FPS;
     window.__e6ClipRecorderMime = 'video/mp4';
-    if (!startSlot(0)) throw new Error('Could not start the first clip recorder');
-    for (let i=1;i<SLOT_COUNT;i++) setTimeout(() => { if (recording && generation===myGeneration && !slots.has(i)) startSlot(i); }, i*SLOT_INTERVAL_MS);
+    if (!startRecorder()) throw new Error('Could not start MediaRecorder');
     return true;
-  } catch (e) { err(`Recorder initialization failed: ${e?.message || e}`); stopClipRecorder(); return false; }
+  } catch (error) {
+    log('Recorder initialization failed', error);
+    stopClipRecorder();
+    return false;
+  }
 }
 
 export function saveClip() {
-  return (async () => {
-    if (!recording) return null;
-    const source = consumeSource();
-    if (!source) return null;
-    try {
-      let result;
-      conversionQueue = conversionQueue.then(async () => { result = await convertToMP4(source.blob); });
-      await conversionQueue;
-      if (!result) throw new Error('MP4 conversion produced no result');
-      return { blob: result, mime: 'video/mp4', extension: 'mp4', duration: source.duration, sequence: ++saveSequence };
-    } catch (e) { err(`MP4 conversion failed: ${e?.message || e}`); return null; }
-  })();
+  const job = async () => {
+    if (!recording || !sourceCanvas || !recorder || recorder.state === 'inactive') return null;
+    const snapshot = await makeSnapshot();
+    if (!snapshot) return null;
+    const mp4 = await convertToMP4(snapshot.blob);
+    return {
+      blob: mp4,
+      mime: 'video/mp4',
+      extension: 'mp4',
+      duration: snapshot.duration,
+      sequence: ++saveSequence,
+    };
+  };
+  const result = saveQueue.then(job, job);
+  saveQueue = result.catch(error => { log('Queued clip save failed', error); });
+  return result;
 }
 
 export function getClipRecordingInfo() {
-  const ages = [...slots.values()].filter(s => !s.stopped).map(s => (performance.now()-s.startedAt)/1000);
-  return { active: recording, ready: recording && (slots.size>0 || completed.size>0), mime:'video/mp4', extension:'mp4', fps:FPS, recorderCount:slots.size, completedCount:completed.size, oldestSeconds:ages.length?Math.max(...ages):0, newestSeconds:ages.length?Math.min(...ages):0 };
+  const age = recordingStartedAt ? (performance.now() - recordingStartedAt) / 1000 : 0;
+  return {
+    active: Boolean(recording && recorder && recorder.state !== 'inactive'),
+    ready: Boolean(recording && recorder && recorder.state !== 'inactive' && chunkBytes >= MIN_CHUNK_BYTES),
+    mime: 'video/mp4',
+    extension: 'mp4',
+    fps: FPS,
+    recorderCount: recorder && recorder.state !== 'inactive' ? 1 : 0,
+    completedCount: 0,
+    oldestSeconds: Math.min(CLIP_SECONDS, age),
+    newestSeconds: Math.min(CLIP_SECONDS, age),
+  };
 }
+
 export function getClipRecordingCanvas() { return sourceCanvas; }
-export function isClipRecorderActive() { return recording && slots.size>0; }
+export function isClipRecorderActive() { return Boolean(recording && recorder && recorder.state !== 'inactive'); }
 
 export function stopClipRecorder() {
   recording = false;
   generation += 1;
-  for (const slot of slots.values()) {
-    slot.stopped = true;
-    if (slot.timer) clearTimeout(slot.timer);
-    try { if (slot.recorder.state !== 'inactive') slot.recorder.stop(); } catch {}
+  const oldRecorder = recorder;
+  recorder = null;
+  if (oldRecorder) {
+    try { if (oldRecorder.state !== 'inactive') oldRecorder.stop(); } catch {}
   }
-  slots.clear();
-  completed.clear();
   try { sourceStream?.getTracks?.().forEach(track => track.stop()); } catch {}
   sourceStream = null;
   sourceCanvas = null;
+  chunks = [];
+  chunkBytes = 0;
+  recordingStartedAt = 0;
+  lastDataAt = 0;
   window.__e6ClipRecorderActive = false;
   window.__e6ClipRecorderReady = false;
   window.__e6ClipRecorderMime = '';
