@@ -29,6 +29,35 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
 
   useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
 
+  // Keep the reset tied to local midnight, not to a 24-hour timer. This means
+  // the daily quests change at 12:00 AM every day even if the app stays open.
+  useEffect(() => {
+    const resetAtMidnight = () => {
+      const today = getTodayKey();
+      setQuestState(prev => {
+        if (prev?.dateKey === today) return prev;
+        const fresh = {
+          dateKey: today,
+          quests: generateDailyQuests(today),
+          claimed: [],
+          openedChests: [],
+          dailyStats: { _total: { sigs: 0, heavies: 0, powers: 0, supers: 0, distance: 0, wins: 0 } },
+        };
+        onClaimChest?.(fresh);
+        return fresh;
+      });
+    };
+
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(24, 0, 0, 0);
+    const timer = setTimeout(() => {
+      resetAtMidnight();
+    }, Math.max(50, next.getTime() - now.getTime() + 50));
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const stats = { ...(progress?.stats || {}), ...(questState.dailyStats || {}) };
 
   const getQuestProgress = (q) => {
@@ -83,6 +112,22 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
         if (result.coins) {
           onAddCoins?.(result.coins);
         }
+
+        // Auto-claim: show the reward for about one second, then remove the
+        // chest and persist the opened state. No OK button is needed.
+        setTimeout(() => {
+          setQuestState(prev => {
+            const next = {
+              ...prev,
+              openedChests: [...new Set([...(prev.openedChests || []), questId])],
+            };
+            onClaimChest?.(next);
+            return next;
+          });
+          setOpeningChest(null);
+          setChestResult(null);
+          setChestAnimFrame(0);
+        }, 1000);
       }
     }, 80);
   };
@@ -175,16 +220,8 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
                           {result.cosmetic.type === 'accessory' ? <GameIcon emoji="🎩" size={14} /> : result.cosmetic.type === 'skin' ? <GameIcon emoji="🎨" size={14} /> : <GameIcon emoji="💀" size={14} />} {result.cosmetic.name}!
                         </p>
                       )}
-                      <button
-                        onClick={() => {
-                          const next = { ...questState, openedChests: [...(questState.openedChests || []), questId] };
-                          setQuestState(next);
-                          onClaimChest?.(next);
-                          setOpeningChest(null);
-                          setChestResult(null);
-                        }}
-                        className="mt-1 px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-[9px] font-heading"
-                      >OK</button>
+                      {/* The reward is automatically claimed. The result stays
+                          visible for one second, then the chest disappears. */}
                     </div>
                   )}
                 </div>

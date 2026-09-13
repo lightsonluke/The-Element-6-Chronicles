@@ -1,61 +1,46 @@
-ELEMENT 6 — CLIPS + STAGE EDITOR RUNTIME FIX
+ELEMENT 6 — CLIPS + DAILY QUESTS FIX
 
-This package was made from the current full project ZIP supplied by the user.
-It is intentionally NOT a whole-project replacement.
+Replace these six files in the CURRENT project:
 
-REPLACE ONLY THESE 6 FILES:
-- clipRecorder.js
-- GlobalClipRecorder.jsx
-- useClipRecorder.js
-- movingPlatforms.js
-- sandboxHazards.js
-- fighter.js
+clipRecorder.js
+GlobalClipRecorder.jsx
+useClipRecorder.js
+dailyQuests.js
+DailyQuests.jsx
+Game.jsx
 
 CLIPS FIXES
-- Rolling recorder windows now restart immediately after every 30-second window is sealed.
-- The recorder therefore does not eventually run out of windows after a long session.
-- A clip can be saved during the first 30 seconds; the oldest partial window is converted instead of returning "CLIP IS NOT READY YET".
-- MP4 conversion happens after the recording window is restarted, so conversion does not stop recording.
-- Only GlobalClipRecorder handles Space; game-specific hooks no longer install duplicate Space listeners.
-- When a new match mounts a new canvas, the hook switches the recording source to that new match canvas.
-- During Victory/Match Facts, the old match canvas remains the active source because no new match canvas has mounted, preserving the previous match for clipping.
-- MP4 output remains H.264/yuv420p/60fps with faststart.
+- Fixed the rolling recorder eventually running out of slots because completed
+  slots were not automatically restarted.
+- A slot that is currently finalizing is no longer selected for a clip save.
+  This was the direct cause of intermittent "CLIP IS NOT READY YET" results.
+- saveClip waits briefly for the next usable recorder instead of immediately
+  returning null during a recorder rotation.
+- GlobalClipRecorder is the ONLY Space-key clip saver. useClipRecorder no
+  longer installs a second Space handler.
+- Global recorder follows the current .el6-match-canvas when React replaces it.
+- Clips remain local game-canvas recordings. No getDisplayMedia() or browser
+  screen permission is used.
+- MP4/H.264/60FPS output is preserved.
+- Overlapping saves remain supported through the FFmpeg conversion queue.
+- The player's Enable Clips setting is respected; it remains OFF by default.
 
-STAGE EDITOR → MATCH FIXES
-The current project already passes the complete custom-stage object from StageEditor through Game into PlatformFighter. The missing runtime pieces were:
+DAILY QUEST FIXES
+1. Quest chest rewards are now ordered:
+   Slot 1 = GOLD
+   Slot 2 = SILVER
+   Slot 3 = BRONZE
+   This swaps the previous Bronze and Gold positions.
 
-1. Stage Editor platform motion is stored as:
-   { mode, direction, distance, speed, loop, chain }
-   but movingPlatforms.js previously only understood the older:
-   { type: 'horizontal'/'vertical'/'oneway', ... }
-   format. movingPlatforms.js now samples the Stage Editor motion format.
+2. Daily quests reset at the user's LOCAL calendar midnight (12:00 AM), not
+   24 hours after they were generated. Game.jsx also schedules a midnight
+   reset while the app remains open.
 
-2. Stage Editor generic hazard motion uses the same motion/chain format,
-   while sandboxHazards.js previously only understood axis/range movement.
-   sandboxHazards.js now samples the Stage Editor format too.
+3. Opening a chest no longer shows an OK button.
+   The reward appears, stays visible for approximately one second, then the
+   chest is automatically marked opened, removed, and persisted.
 
-3. The Stage Editor kill perimeter was being passed into fighters, but fighter.js
-   still used hard-coded -500/+500/-600/+450 bounds for actual KO detection.
-   fighter.js now uses the supplied custom perimeter.
+The existing Settings "Enable Clips" toggle is not replaced by this package.
 
-The existing complete-stage transfer in Game.jsx remains intact for:
-- platform position and size
-- platform material
-- conveyor direction
-- destroyable platforms
-- platform motion
-- motion chains/loop settings
-- spawn points
-- all Stage Editor hazard types
-- hazard dimensions and configured properties
-- hazard motion
-- placed objects/items
-- backdrop
-- stage camera zoom
-- stage camera motion
-- KO perimeter
-- perimeter motion data
-
-IMPORTANT
-Do not add @ffmpeg/ffmpeg as a static import for this package. The current
-build-safe recorder continues to load the FFmpeg browser runtime at runtime.
+BUILD NOTE
+No new npm dependency is introduced by these files.

@@ -1,33 +1,35 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { initClipRecorder, isClipRecorderActive, getClipRecordingCanvas } from './clipRecorder.js';
 
-// The app-level GlobalClipRecorder owns the keyboard/save pipeline. Game
-// components only register their canvas here. This prevents duplicate Space
-// listeners from consuming two rolling windows for one key press.
+// The global recorder owns Space and the recording lifecycle.
+// Match components only help initialize the singleton if their canvas appears
+// before GlobalClipRecorder's polling pass. They NEVER install another save
+// handler, so one Space press can never trigger two clip saves.
 export function useClipRecorder(canvasRef) {
-  const initialized = useRef(false);
   useEffect(() => {
-    const start = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      if (isClipRecorderActive()) {
-        // A new match gets a new canvas. Switch the recording source at the
-        // match boundary; during Victory/Match Facts no game hook is mounted,
-        // so the previous match remains available for clipping.
-        if (getClipRecordingCanvas() !== canvas) {
-          initialized.current = initClipRecorder(canvas);
-        } else {
-          initialized.current = true;
-        }
+    const canvas = canvasRef?.current;
+    if (!canvas) return undefined;
+
+    let timer = null;
+    const sync = () => {
+      if (window.__e6ClipRecorderActive) return;
+      try {
+        const enabled = JSON.parse(localStorage.getItem('element6_progress') || '{}')?.settings?.enableClips === true;
+        if (!enabled) return;
+      } catch {
         return;
       }
-      initialized.current = initClipRecorder(canvas);
+      if (!isClipRecorderActive() || getClipRecordingCanvas() !== canvas) {
+        initClipRecorder(canvas);
+      }
     };
-    start();
-    const timer = setInterval(start, 500);
+
+    sync();
+    timer = setTimeout(sync, 0);
+
     return () => {
-      clearInterval(timer);
-      initialized.current = false;
+      if (timer) clearTimeout(timer);
+      // Never stop the global recorder when a match component unmounts.
     };
   }, [canvasRef]);
 }

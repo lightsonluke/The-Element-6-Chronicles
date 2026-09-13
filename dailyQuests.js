@@ -71,7 +71,7 @@ export function generateDailyQuests(seed) {
     desc: q.desc.replace('{n}', q.targets[0]),
     stat: q.stat,
     target: q.targets[0],
-    chestReward: CHEST_TYPES[Math.min(i, CHEST_TYPES.length - 1)].id,
+    chestReward: [CHEST_TYPES.find(c => c.id === 'gold'), CHEST_TYPES.find(c => c.id === 'silver'), CHEST_TYPES.find(c => c.id === 'bronze')][i]?.id || 'bronze',
     category: q.category,
   }));
 }
