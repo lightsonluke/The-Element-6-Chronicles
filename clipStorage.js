@@ -108,10 +108,32 @@ export async function getClipBlob(id) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readonly');
     const request = tx.objectStore(STORE).get(id);
+
     request.onsuccess = () => {
+      const row = request.result;
+
+      if (!row?.blob) {
+        db.close();
+        resolve(null);
+        return;
+      }
+
+      // Some browsers can return a Blob without its original MIME type after
+      // IndexedDB round-tripping. Re-wrap it using the metadata saved beside it.
+      const mime = row.mime || row.blob.type || (
+        String(row.extension).toLowerCase() === 'mp4'
+          ? 'video/mp4'
+          : 'video/webm'
+      );
+
+      const blob = row.blob.type === mime
+        ? row.blob
+        : new Blob([row.blob], { type: mime });
+
       db.close();
-      resolve(request.result?.blob || null);
+      resolve(blob);
     };
+
     request.onerror = () => {
       db.close();
       reject(request.error);

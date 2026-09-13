@@ -226,9 +226,13 @@ async function convertToMP4(webmBlob) {
       '-c:v', 'libx264',
       '-preset', 'veryfast',
       '-crf', '20',
+      '-profile:v', 'main',
+      '-level', '4.2',
       '-pix_fmt', 'yuv420p',
+      '-vf', 'scale=ceil(iw/2)*2:ceil(ih/2)*2',
       '-movflags', '+faststart',
       '-an',
+      '-f', 'mp4',
       output
     ]);
 
@@ -295,6 +299,50 @@ export function initClipRecorder(canvas) {
   }
 }
 
+
+async function validateVideoBlob(blob) {
+  if (!blob || blob.size < 1000) {
+    throw new Error('Video blob is empty');
+  }
+
+  if (typeof document === 'undefined') return true;
+
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    const url = URL.createObjectURL(blob);
+    let settled = false;
+
+    const cleanup = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      video.removeAttribute('src');
+      try { video.load(); } catch {}
+      URL.revokeObjectURL(url);
+    };
+
+    const succeed = () => {
+      cleanup();
+      resolve(true);
+    };
+
+    const fail = () => {
+      const error = new Error('Browser could not decode the generated video');
+      cleanup();
+      reject(error);
+    };
+
+    const timer = setTimeout(fail, 10000);
+
+    video.preload = 'metadata';
+    video.muted = true;
+    video.onloadedmetadata = succeed;
+    video.onerror = fail;
+    video.src = url;
+    video.load();
+  });
+}
+
 export function saveClip() {
   const job = async () => {
     if (
@@ -315,6 +363,7 @@ export function saveClip() {
 
     try {
       const mp4 = await convertToMP4(snapshot.blob);
+      await validateVideoBlob(mp4);
       blob = mp4;
       mime = 'video/mp4';
       extension = 'mp4';
