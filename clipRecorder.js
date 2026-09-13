@@ -31,25 +31,25 @@ function log(message, error = null) {
 
 function supportedMime() {
   if (!window.MediaRecorder) return '';
+
   const candidates = [
     'video/webm;codecs=vp9',
     'video/webm;codecs=vp8',
-    'video/webm',
+    'video/webm'
   ];
+
   for (const mime of candidates) {
     try {
       if (!MediaRecorder.isTypeSupported || MediaRecorder.isTypeSupported(mime)) return mime;
     } catch {}
   }
+
   return '';
 }
 
 function rebuildBlob() {
-  if (chunks.length < 2 || chunkBytes < MIN_CHUNK_BYTES) return null;
+  if (!chunks.length || chunkBytes < MIN_CHUNK_BYTES) return null;
 
-  // IMPORTANT: the first MediaRecorder chunk contains the WebM initialization
-  // segment. Keep it forever. Dropping it makes the remaining WebM fragments
-  // invalid and was the root cause of clips that could save but would not open.
   const blob = new Blob(
     chunks.map(chunk => chunk.data),
     { type: recorderMime || 'video/webm' }
@@ -60,10 +60,8 @@ function rebuildBlob() {
 
 function trimBuffer() {
   if (chunks.length <= 2) return;
-
   const cutoff = performance.now() - CLIP_MS - 1000;
-
-  // Index 0 is the WebM initialization segment and MUST remain.
+  // Keep the first WebM initialization chunk so the rolling recording remains decodable.
   while (chunks.length > 2 && chunks[1].time < cutoff) {
     chunkBytes -= chunks[1].size;
     chunks.splice(1, 1);
@@ -78,7 +76,7 @@ function attachRecorderHandlers(instance, myGeneration) {
     chunks.push({
       data: event.data,
       time: performance.now(),
-      size: event.data.size,
+      size: event.data.size
     });
 
     chunkBytes += event.data.size;
@@ -125,6 +123,7 @@ function startRecorder() {
 function requestRecorderData() {
   return new Promise(resolve => {
     const currentRecorder = recorder;
+
     if (!currentRecorder || currentRecorder.state !== 'recording') {
       resolve();
       return;
@@ -145,7 +144,8 @@ function requestRecorderData() {
       if (lastDataAt !== before) finish();
     };
 
-    const timer = setTimeout(finish, 2000);
+    const timer = setTimeout(finish, 1500);
+
     currentRecorder.addEventListener('dataavailable', onData);
 
     try {
@@ -178,7 +178,10 @@ async function loadFFmpeg() {
 
   ffmpegPromise = (async () => {
     const instance = new FFmpeg();
-    instance.on('log', ({ message }) => console.debug('[Element 6 FFmpeg]', message));
+
+    instance.on('log', ({ message }) => {
+      console.debug('[Element 6 FFmpeg]', message);
+    });
 
     await instance.load({
       coreURL: await toBlobURL(
@@ -188,7 +191,7 @@ async function loadFFmpeg() {
       wasmURL: await toBlobURL(
         `${FFMPEG_CORE_BASE}/ffmpeg-core.wasm`,
         'application/wasm'
-      ),
+      )
     });
 
     ffmpeg = instance;
@@ -205,58 +208,30 @@ async function loadFFmpeg() {
   }
 }
 
-function containsAscii(bytes, text) {
-  const wanted = new TextEncoder().encode(text);
-  outer: for (let i = 0; i <= bytes.length - wanted.length; i++) {
-    for (let j = 0; j < wanted.length; j++) {
-      if (bytes[i + j] !== wanted[j]) continue outer;
-    }
-    return true;
-  }
-  return false;
-}
-
 async function convertToMP4(webmBlob) {
-  if (!webmBlob || webmBlob.size < MIN_CHUNK_BYTES) {
-    throw new Error('recording data is empty');
-  }
-
+  if (!webmBlob || webmBlob.size < MIN_CHUNK_BYTES) throw new Error('recording data is empty');
   const encoder = await loadFFmpeg();
   const token = `e6_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   const input = `${token}.webm`;
   const output = `${token}.mp4`;
-
   try {
     await encoder.writeFile(input, await fetchFile(webmBlob));
-
-    await encoder.exec([
-      '-i', input,
-      '-an',
-      '-c:v', 'libx264',
-      '-preset', 'veryfast',
-      '-crf', '20',
-      '-profile:v', 'main',
-      '-level', '4.2',
-      '-pix_fmt', 'yuv420p',
-      '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
-      '-r', String(FPS),
-      '-movflags', '+faststart',
-      '-f', 'mp4',
-      output,
-    ]);
-
-    const data = await encoder.readFile(output);
-    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-
-    // A real MP4 must contain an ftyp box and a movie (moov) box.
-    if (!containsAscii(bytes, 'ftyp') || !containsAscii(bytes, 'moov')) {
-      throw new Error('FFmpeg output is not a complete MP4 container');
+    let lastError = null;
+    const commands = [
+      ['-i', input, '-map', '0:v:0', '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', '-r', String(FPS), '-movflags', '+faststart', '-f', 'mp4', output],
+      ['-fflags', '+genpts', '-i', input, '-map', '0:v:0', '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-f', 'mp4', output]
+    ];
+    for (const command of commands) {
+      try {
+        try { await encoder.deleteFile(output); } catch {}
+        await encoder.exec(command);
+        const data = await encoder.readFile(output);
+        const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+        if (bytes.length < 1000) throw new Error('FFmpeg produced an empty MP4');
+        return new Blob([bytes], { type: 'video/mp4' });
+      } catch (error) { lastError = error; }
     }
-
-    const result = new Blob([bytes], { type: 'video/mp4' });
-    if (result.size < 1000) throw new Error('FFmpeg produced an empty MP4');
-
-    return result;
+    throw lastError || new Error('MP4 conversion failed');
   } finally {
     try { await encoder.deleteFile(input); } catch {}
     try { await encoder.deleteFile(output); } catch {}
@@ -264,14 +239,22 @@ async function convertToMP4(webmBlob) {
 }
 
 export function initClipRecorder(canvas) {
-  if (!canvas || typeof canvas.captureStream !== 'function' || !window.MediaRecorder) return false;
+  if (
+    !canvas ||
+    typeof canvas.captureStream !== 'function' ||
+    !window.MediaRecorder
+  ) {
+    return false;
+  }
 
   if (
     recording &&
     sourceCanvas === canvas &&
     recorder &&
     recorder.state !== 'inactive'
-  ) return true;
+  ) {
+    return true;
+  }
 
   stopClipRecorder();
 
@@ -291,7 +274,10 @@ export function initClipRecorder(canvas) {
     window.__e6ClipRecorderFPS = FPS;
     window.__e6ClipRecorderMime = 'video/mp4';
 
-    if (!startRecorder()) throw new Error('Could not start MediaRecorder');
+    if (!startRecorder()) {
+      throw new Error('Could not start MediaRecorder');
+    }
+
     return true;
   } catch (error) {
     log('Recorder initialization failed', error);
@@ -302,44 +288,83 @@ export function initClipRecorder(canvas) {
 
 export function saveClip() {
   const job = async () => {
-    if (!recording || !sourceCanvas || !recorder || recorder.state === 'inactive') return null;
+    if (
+      !recording ||
+      !sourceCanvas ||
+      !recorder ||
+      recorder.state === 'inactive'
+    ) {
+      return null;
+    }
 
     const snapshot = await makeSnapshot();
     if (!snapshot) return null;
 
-    const mp4 = await convertToMP4(snapshot.blob);
+    let blob = snapshot.blob;
+    let mime = recorderMime || 'video/webm';
+    let extension = 'webm';
+
+    try {
+      const mp4 = await convertToMP4(snapshot.blob);
+      blob = mp4;
+      mime = 'video/mp4';
+      extension = 'mp4';
+    } catch (error) {
+      // Do not throw away an otherwise valid recording just because
+      // the browser could not initialize FFmpeg.
+      log('MP4 conversion failed; saving the original WebM clip instead.', error);
+    }
+
+    window.__e6ClipRecorderReady = true;
 
     return {
-      blob: mp4,
-      mime: 'video/mp4',
-      extension: 'mp4',
+      blob,
+      mime,
+      extension,
       duration: snapshot.duration,
-      sequence: ++saveSequence,
+      sequence: ++saveSequence
     };
   };
 
   const result = saveQueue.then(job, job);
-  saveQueue = result.catch(error => log('Queued clip save failed', error));
+
+  saveQueue = result.catch(error => {
+    log('Queued clip save failed', error);
+  });
+
   return result;
 }
 
 export function getClipRecordingInfo() {
-  const age = recordingStartedAt ? (performance.now() - recordingStartedAt) / 1000 : 0;
+  const age = recordingStartedAt
+    ? (performance.now() - recordingStartedAt) / 1000
+    : 0;
+
   return {
     active: Boolean(recording && recorder && recorder.state !== 'inactive'),
-    ready: Boolean(recording && recorder && recorder.state !== 'inactive' && chunkBytes >= MIN_CHUNK_BYTES),
-    mime: 'video/mp4',
-    extension: 'mp4',
+    ready: Boolean(
+      recording &&
+      recorder &&
+      recorder.state !== 'inactive' &&
+      chunkBytes >= MIN_CHUNK_BYTES
+    ),
+    mime: recorderMime || 'video/webm',
+    extension: recorderMime === 'video/mp4' ? 'mp4' : 'webm',
     fps: FPS,
     recorderCount: recorder && recorder.state !== 'inactive' ? 1 : 0,
     completedCount: 0,
     oldestSeconds: Math.min(CLIP_SECONDS, age),
-    newestSeconds: Math.min(CLIP_SECONDS, age),
+    newestSeconds: Math.min(CLIP_SECONDS, age)
   };
 }
 
-export function getClipRecordingCanvas() { return sourceCanvas; }
-export function isClipRecorderActive() { return Boolean(recording && recorder && recorder.state !== 'inactive'); }
+export function getClipRecordingCanvas() {
+  return sourceCanvas;
+}
+
+export function isClipRecorderActive() {
+  return Boolean(recording && recorder && recorder.state !== 'inactive');
+}
 
 export function stopClipRecorder() {
   recording = false;
@@ -349,10 +374,14 @@ export function stopClipRecorder() {
   recorder = null;
 
   if (oldRecorder) {
-    try { if (oldRecorder.state !== 'inactive') oldRecorder.stop(); } catch {}
+    try {
+      if (oldRecorder.state !== 'inactive') oldRecorder.stop();
+    } catch {}
   }
 
-  try { sourceStream?.getTracks?.().forEach(track => track.stop()); } catch {}
+  try {
+    sourceStream?.getTracks?.().forEach(track => track.stop());
+  } catch {}
 
   sourceStream = null;
   sourceCanvas = null;
