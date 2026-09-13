@@ -76,7 +76,8 @@ async function persistClip() {
     mime: 'video/mp4',
     extension: 'mp4',
     duration: result.duration,
-    previewBlob: result.previewBlob || null
+    previewBlob: result.previewBlob,
+    previewMime: result.previewBlob?.type || 'video/webm'
   });
 
   await trimClips(30);
@@ -86,8 +87,8 @@ async function persistClip() {
       detail: {
         id,
         created: Date.now(),
-        mime: result.mime,
-        extension: result.extension,
+        mime: 'video/mp4',
+        extension: 'mp4',
         size: result.blob.size,
         duration: result.duration
       }
@@ -95,7 +96,7 @@ async function persistClip() {
   );
 
   showToast(
-    `CLIP SAVED — ${Math.max(1, Math.round(result.duration))} SECONDS — ${result.extension.toUpperCase()}`
+    `CLIP SAVED — ${Math.max(1, Math.round(result.duration))} SECONDS — MP4 60FPS`
   );
 
   return true;

@@ -59,9 +59,10 @@ function rebuildBlob() {
 }
 
 function trimBuffer() {
-  if (chunks.length <= 2) return;
   const cutoff = performance.now() - CLIP_MS - 1000;
-  // Keep the first WebM initialization chunk so the rolling recording remains decodable.
+
+  // Never remove the first WebM chunk. It contains the initialization/header
+  // needed to decode the remaining rolling-buffer media chunks.
   while (chunks.length > 2 && chunks[1].time < cutoff) {
     chunkBytes -= chunks[1].size;
     chunks.splice(1, 1);
@@ -209,29 +210,39 @@ async function loadFFmpeg() {
 }
 
 async function convertToMP4(webmBlob) {
-  if (!webmBlob || webmBlob.size < MIN_CHUNK_BYTES) throw new Error('recording data is empty');
+  if (!webmBlob || webmBlob.size < MIN_CHUNK_BYTES) {
+    throw new Error('recording data is empty');
+  }
+
   const encoder = await loadFFmpeg();
   const token = `e6_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   const input = `${token}.webm`;
   const output = `${token}.mp4`;
+
   try {
     await encoder.writeFile(input, await fetchFile(webmBlob));
-    let lastError = null;
-    const commands = [
-      ['-i', input, '-map', '0:v:0', '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', '-r', String(FPS), '-movflags', '+faststart', '-f', 'mp4', output],
-      ['-fflags', '+genpts', '-i', input, '-map', '0:v:0', '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-f', 'mp4', output]
-    ];
-    for (const command of commands) {
-      try {
-        try { await encoder.deleteFile(output); } catch {}
-        await encoder.exec(command);
-        const data = await encoder.readFile(output);
-        const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-        if (bytes.length < 1000) throw new Error('FFmpeg produced an empty MP4');
-        return new Blob([bytes], { type: 'video/mp4' });
-      } catch (error) { lastError = error; }
+
+    await encoder.exec([
+      '-i', input,
+      '-r', String(FPS),
+      '-c:v', 'libx264',
+      '-preset', 'veryfast',
+      '-crf', '20',
+      '-pix_fmt', 'yuv420p',
+      '-movflags', '+faststart',
+      '-an',
+      output
+    ]);
+
+    const data = await encoder.readFile(output);
+    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+    const result = new Blob([bytes], { type: 'video/mp4' });
+
+    if (result.size < 1000) {
+      throw new Error('FFmpeg produced an empty MP4');
     }
-    throw lastError || new Error('MP4 conversion failed');
+
+    return result;
   } finally {
     try { await encoder.deleteFile(input); } catch {}
     try { await encoder.deleteFile(output); } catch {}
@@ -300,27 +311,15 @@ export function saveClip() {
     const snapshot = await makeSnapshot();
     if (!snapshot) return null;
 
-    let blob = snapshot.blob;
-    let mime = recorderMime || 'video/webm';
-    let extension = 'webm';
-
-    try {
-      const mp4 = await convertToMP4(snapshot.blob);
-      blob = mp4;
-      mime = 'video/mp4';
-      extension = 'mp4';
-    } catch (error) {
-      // Do not throw away an otherwise valid recording just because
-      // the browser could not initialize FFmpeg.
-      log('MP4 conversion failed; saving the original WebM clip instead.', error);
-    }
+    const mp4 = await convertToMP4(snapshot.blob);
 
     window.__e6ClipRecorderReady = true;
 
     return {
-      blob,
-      mime,
-      extension,
+      blob: mp4,
+      previewBlob: snapshot.blob,
+      mime: 'video/mp4',
+      extension: 'mp4',
       duration: snapshot.duration,
       sequence: ++saveSequence
     };
