@@ -34,9 +34,9 @@ const QUEST_POOL = [
 ];
 
 export const CHEST_TYPES = [
-  { id: 'bronze', name: 'Bronze Quest', color: '#CD7F32', minCoins: 150, maxCoins: 150, cosmeticChance: 0 },
-  { id: 'silver', name: 'Silver Quest', color: '#C0C0C0', minCoins: 175, maxCoins: 175, cosmeticChance: 0.22 },
   { id: 'gold', name: 'Gold Quest', color: '#FFD700', minCoins: 200, maxCoins: 200, cosmeticChance: 0.35 },
+  { id: 'silver', name: 'Silver Quest', color: '#C0C0C0', minCoins: 175, maxCoins: 175, cosmeticChance: 0.22 },
+  { id: 'bronze', name: 'Bronze Quest', color: '#CD7F32', minCoins: 150, maxCoins: 150, cosmeticChance: 0 },
 ];
 
 // Deterministic daily rotation: one hard, one medium, and one flexible slot.
@@ -71,7 +71,7 @@ export function generateDailyQuests(seed) {
     desc: q.desc.replace('{n}', q.targets[0]),
     stat: q.stat,
     target: q.targets[0],
-    chestReward: [CHEST_TYPES.find(c => c.id === 'bronze'), CHEST_TYPES.find(c => c.id === 'silver'), CHEST_TYPES.find(c => c.id === 'gold')][i]?.id || 'bronze',
+    chestReward: CHEST_TYPES[Math.min(i, CHEST_TYPES.length - 1)].id,
     category: q.category,
   }));
 }

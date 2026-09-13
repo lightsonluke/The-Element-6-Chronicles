@@ -11,25 +11,29 @@ const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 
 export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, onAddCoins, onBack }) {
   const todayKey = getTodayKey();
+  const normalizeQuestState = (state) => {
+    if (!state) return state;
+    return {
+      ...state,
+      quests: (state.quests || []).map((q, i) => ({
+        ...q,
+        chestReward: CHEST_TYPES[i]?.id || q.chestReward,
+      })),
+      openedChests: state.openedChests || [],
+    };
+  };
+
   const [questState, setQuestState] = useState(() => {
     if (progress?.dailyQuests?.dateKey === todayKey) {
-      const current = progress.dailyQuests;
-      return {
-        ...current,
-        quests: (current.quests || []).map((q, i) => ({
-          ...q,
-          chestReward: ['bronze', 'silver', 'gold'][i] || q.chestReward || 'bronze',
-        })),
-        openedChests: current.openedChests || [],
-      };
+      return normalizeQuestState(progress.dailyQuests);
     }
-    const fresh = {
+    return {
       dateKey: todayKey,
       quests: generateDailyQuests(todayKey),
       claimed: [],
+      openedChests: [],
       dailyStats: {},
     };
-    return fresh;
   });
   const [openingChest, setOpeningChest] = useState(null);
   const [chestResult, setChestResult] = useState(null);
@@ -37,29 +41,11 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
 
   useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
 
-  // Reset on the local calendar date. Checking periodically also handles a tab
-  // that was backgrounded/asleep when midnight passed.
   useEffect(() => {
-    const resetIfNeeded = () => {
-      const today = getTodayKey();
-      setQuestState(prev => {
-        if (prev?.dateKey === today) return prev;
-        const fresh = {
-          dateKey: today,
-          quests: generateDailyQuests(today),
-          claimed: [],
-          openedChests: [],
-          dailyStats: { _total: { sigs: 0, heavies: 0, powers: 0, supers: 0, distance: 0, wins: 0 } },
-        };
-        onClaimChest?.(fresh);
-        return fresh;
-      });
-    };
-
-    resetIfNeeded();
-    const timer = setInterval(resetIfNeeded, 30000);
-    return () => clearInterval(timer);
-  }, []);
+    if (progress?.dailyQuests?.dateKey === getTodayKey()) {
+      setQuestState(normalizeQuestState(progress.dailyQuests));
+    }
+  }, [progress?.dailyQuests?.dateKey]);
 
   const stats = { ...(progress?.stats || {}), ...(questState.dailyStats || {}) };
 
@@ -108,28 +94,20 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
       if (frame >= 30) {
         clearInterval(animInterval);
         const result = openChest(chestId, ownedItems);
+        const next = {
+          ...questState,
+          openedChests: [...new Set([...(questState.openedChests || []), questId])],
+        };
         setChestResult(result);
-        if (result.cosmetic) {
-          onCosmeticUnlock?.(result.cosmetic);
-        }
-        if (result.coins) {
-          onAddCoins?.(result.coins);
-        }
+        setQuestState(next);
+        onClaimChest?.(next);
+        if (result.cosmetic) onCosmeticUnlock?.(result.cosmetic);
+        if (result.coins) onAddCoins?.(result.coins);
 
-        // Auto-claim: show the reward for about one second, then remove the
-        // chest and persist the opened state. No OK button is needed.
+        // The reward is shown briefly, then the opened chest disappears.
         setTimeout(() => {
-          setQuestState(prev => {
-            const next = {
-              ...prev,
-              openedChests: [...new Set([...(prev.openedChests || []), questId])],
-            };
-            onClaimChest?.(next);
-            return next;
-          });
           setOpeningChest(null);
           setChestResult(null);
-          setChestAnimFrame(0);
         }, 1000);
       }
     }, 80);
@@ -223,8 +201,7 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
                           {result.cosmetic.type === 'accessory' ? <GameIcon emoji="🎩" size={14} /> : result.cosmetic.type === 'skin' ? <GameIcon emoji="🎨" size={14} /> : <GameIcon emoji="💀" size={14} />} {result.cosmetic.name}!
                         </p>
                       )}
-                      {/* The reward is automatically claimed. The result stays
-                          visible for one second, then the chest disappears. */}
+
                     </div>
                   )}
                 </div>

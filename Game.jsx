@@ -1352,14 +1352,13 @@ export default function Game() {
     return () => clearInterval(t);
   }, []);
 
-  // Reset daily quests at the user's local midnight. This is an actual
-  // calendar-day reset, not a 24-hour countdown, and it also works when the
-  // game remains open across midnight.
+  // Daily quests are calendar-day based. Check continuously so an app left open
+  // across midnight resets immediately without requiring a page reload.
   useEffect(() => {
-    const resetIfNeeded = () => {
+    const checkDailyReset = () => {
       const todayKey = getTodayKey();
       setProgress(prev => {
-        if (!needsDailyReset(prev?.dailyQuests?.dateKey)) return prev;
+        if (prev?.dailyQuests?.dateKey === todayKey) return prev;
         const next = {
           ...prev,
           dailyQuests: {
@@ -1367,22 +1366,16 @@ export default function Game() {
             quests: generateDailyQuests(todayKey),
             claimed: [],
             openedChests: [],
-            dailyStats: { _total: { sigs: 0, heavies: 0, powers: 0, supers: 0, distance: 0, wins: 0 } },
+            dailyStats: { _total: { sigs: 0, heavies: 0, powers: 0, supers: 0, distance: 0, wins: 0, matches: 0, signatureKOs: 0, groundPoundKOs: 0, emoteBeforeMove: 0 } },
           },
         };
         saveProgress(next);
         return next;
       });
     };
-
-    resetIfNeeded();
-
-    const now = new Date();
-    const nextMidnight = new Date(now);
-    nextMidnight.setHours(24, 0, 0, 0);
-    const delay = Math.max(50, nextMidnight.getTime() - now.getTime() + 50);
-    const timer = setTimeout(resetIfNeeded, delay);
-    return () => clearTimeout(timer);
+    checkDailyReset();
+    const timer = setInterval(checkDailyReset, 1000);
+    return () => clearInterval(timer);
   }, []);
 
   // Flow: mode <GameIcon emoji="→" size={14} /> fighters <GameIcon emoji="→" size={14} /> map <GameIcon emoji="→" size={14} /> fight
