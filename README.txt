@@ -1,14 +1,19 @@
-Replace these 5 files only:
-ClipsScreen.jsx
-clipRecorder.js
-GlobalClipRecorder.jsx
-clipStorage.js
-useClipRecorder.js
+ELEMENT 6 CLIP FIX — FINAL
 
-This keeps clips as MP4 downloads, encodes them as H.264/yuv420p with faststart,
-validates generated MP4s before saving them, and uses a dedicated preview modal
-that waits for the browser to decode the MP4 before attempting playback.
+Replace ONLY:
+- ClipsScreen.jsx
+- clipRecorder.js
+- clipStorage.js
+- GlobalClipRecorder.jsx
+- useClipRecorder.js
 
-Do NOT replace Game.jsx or pnpm-lock.yaml.
-Old clips that were already saved with invalid MP4 data may still be broken;
-record one new clip after installing this package.
+This version keeps the WebM initialization chunk while maintaining the rolling
+30-second buffer. The previous implementation deleted that initialization chunk,
+which could produce MP4s that saved but could not be decoded by QuickTime,
+Media Player, Canva, CapCut, or the browser.
+
+MP4 output is forced to H.264 / yuv420p with an MP4 container and faststart.
+The Clips screen uses stable Blob URLs and a dedicated preview viewer.
+Downloads are always named .mp4.
+
+IMPORTANT: delete old broken clips and record a NEW clip after installing this.

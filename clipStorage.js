@@ -39,8 +39,8 @@ export async function saveClipBlob(id, blob, meta = {}) {
       id,
       blob,
       created,
-      mime: meta.mime || blob.type || 'video/webm',
-      extension: meta.extension || (String(blob.type).includes('mp4') ? 'mp4' : 'webm'),
+      mime: 'video/mp4',
+      extension: 'mp4',
       size: blob.size,
       duration: Number(meta.duration) || 30,
     });
@@ -67,8 +67,8 @@ export async function listClipMetadata() {
         .map(row => ({
           id: row.id,
           created: row.created,
-          mime: row.mime || row.blob?.type || 'video/webm',
-          extension: row.extension || (String(row.mime || row.blob?.type).includes('mp4') ? 'mp4' : 'webm'),
+          mime: 'video/mp4',
+          extension: 'mp4',
           size: row.size || row.blob?.size || 0,
           duration: row.duration || 30,
         }))

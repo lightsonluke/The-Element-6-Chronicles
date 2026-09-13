@@ -73,8 +73,8 @@ async function persistClip() {
     .slice(2, 9)}`;
 
   await saveClipBlob(id, result.blob, {
-    mime: result.mime,
-    extension: result.extension,
+    mime: 'video/mp4',
+    extension: 'mp4',
     duration: result.duration
   });
 
@@ -85,8 +85,8 @@ async function persistClip() {
       detail: {
         id,
         created: Date.now(),
-        mime: result.mime,
-        extension: result.extension,
+        mime: 'video/mp4',
+        extension: 'mp4',
         size: result.blob.size,
         duration: result.duration
       }
@@ -94,7 +94,7 @@ async function persistClip() {
   );
 
   showToast(
-    `CLIP SAVED — ${Math.max(1, Math.round(result.duration))} SECONDS — ${result.extension.toUpperCase()}`
+    `CLIP SAVED — ${Math.max(1, Math.round(result.duration))} SECONDS — MP4`
   );
 
   return true;
