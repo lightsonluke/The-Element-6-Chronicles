@@ -13,7 +13,15 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
   const todayKey = getTodayKey();
   const [questState, setQuestState] = useState(() => {
     if (progress?.dailyQuests?.dateKey === todayKey) {
-      return progress.dailyQuests;
+      const current = progress.dailyQuests;
+      return {
+        ...current,
+        quests: (current.quests || []).map((q, i) => ({
+          ...q,
+          chestReward: ['bronze', 'silver', 'gold'][i] || q.chestReward || 'bronze',
+        })),
+        openedChests: current.openedChests || [],
+      };
     }
     const fresh = {
       dateKey: todayKey,
@@ -29,10 +37,10 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
 
   useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
 
-  // Keep the reset tied to local midnight, not to a 24-hour timer. This means
-  // the daily quests change at 12:00 AM every day even if the app stays open.
+  // Reset on the local calendar date. Checking periodically also handles a tab
+  // that was backgrounded/asleep when midnight passed.
   useEffect(() => {
-    const resetAtMidnight = () => {
+    const resetIfNeeded = () => {
       const today = getTodayKey();
       setQuestState(prev => {
         if (prev?.dateKey === today) return prev;
@@ -48,14 +56,9 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
       });
     };
 
-    const now = new Date();
-    const next = new Date(now);
-    next.setHours(24, 0, 0, 0);
-    const timer = setTimeout(() => {
-      resetAtMidnight();
-    }, Math.max(50, next.getTime() - now.getTime() + 50));
-
-    return () => clearTimeout(timer);
+    resetIfNeeded();
+    const timer = setInterval(resetIfNeeded, 30000);
+    return () => clearInterval(timer);
   }, []);
 
   const stats = { ...(progress?.stats || {}), ...(questState.dailyStats || {}) };
