@@ -136,7 +136,7 @@ const DEFAULT_PROGRESS = {
   eventProgress: {},
   dailyQuests: null,
   settings: { theme: 'default', displayMode: 'dark', defaultCPUDifficulty: 'regular', autoSelectFavorite: true, showDamageNumbers: true, screenShake: true, musicVolume: 50, sfxVolume: 70, killFXEnabled: true, disableEventBackground: false,
-    matchTime: 240, cameraZoom: 'normal', showBlastZones: true, showNametags: true, reducedMotion: false, bgParticleDensity: 30, autoPauseFocus: true, aiAggression: 50, defaultGameMode: 'regular', comboCounter: true, showFPS: false, customMusic: {}, penaltiesInsteadOfSuddenDeath: false, mobileMode: false, uiEra: 'dynamic', hideStockBoxes: false, hideStageAndMode: false, hideCountdown: false, hideTopUsername: false, mobileControls: { mode: 'arrows', joystickDynamic: false } },
+    matchTime: 240, cameraZoom: 'normal', showBlastZones: true, showNametags: true, reducedMotion: false, bgParticleDensity: 30, autoPauseFocus: true, aiAggression: 50, defaultGameMode: 'regular', comboCounter: true, showFPS: false, customMusic: {}, penaltiesInsteadOfSuddenDeath: false, mobileMode: false, controllerEnabled: true, controllerMenuNav: true, uiEra: 'dynamic', hideStockBoxes: false, hideStageAndMode: false, hideCountdown: false, hideTopUsername: false, mobileControls: { mode: 'arrows', joystickDynamic: false } },
   ownedPacks: [],
   ownedTitles: [],
   equippedTitle: null,
@@ -147,6 +147,7 @@ const DEFAULT_PROGRESS = {
   equippedCrossovers: {},
   ownedShikigami: [],
   equippedShikigami: {},
+  clanBadge: null,
   customCharSlots: 3, // starts with 3, can buy up to 10
 };
 
@@ -177,9 +178,18 @@ const STORY_FIELDS = ['defeatedVillains', 'playerX', 'playerY', 'inventory', 'ho
 // Debounce cloud saves to avoid hammering the DB on rapid updates
 let _cloudSaveTimer = null;
 let _lastProgress = null;
+let _cloudUserId = null;
+let _cloudHydrated = false;
+function setCloudSessionState(userId, hydrated) { _cloudUserId = userId || null; _cloudHydrated = !!hydrated; }
+function cancelPendingCloudSave() { if (_cloudSaveTimer) { clearTimeout(_cloudSaveTimer); _cloudSaveTimer = null; } _lastProgress = null; }
 
 async function _doCloudSave(prog) {
-  try { await saveCloudProgress(prog); } catch { /* Offline play still saves locally. */ }
+  try {
+    const ok = await saveCloudProgress(prog);
+    if (ok && _cloudUserId) {
+      try { localStorage.setItem(`element6_progress_user_${_cloudUserId}`, JSON.stringify(prog)); } catch {}
+    }
+  } catch { /* Offline play still saves locally. */ }
 }
 
 function saveProgress(prog) {
@@ -187,13 +197,17 @@ function saveProgress(prog) {
   _lastProgress = withTs;
   try {
     localStorage.setItem('element6_progress', JSON.stringify(withTs));
+    if (_cloudUserId) localStorage.setItem(`element6_progress_user_${_cloudUserId}`, JSON.stringify(withTs));
     if (_activeStorySlot != null) {
       const storyData = { _savedAt: Date.now() };
       STORY_FIELDS.forEach(f => { if (withTs[f] !== undefined) storyData[f] = withTs[f]; });
       localStorage.setItem(`element6_story_slot_${_activeStorySlot}`, JSON.stringify(storyData));
     }
   } catch {}
-  // Cloud-save (debounced, 1 second delay for faster persistence)
+  // Never send anonymous/tab-local state to an account while its cloud save is
+  // still being hydrated. This prevents an incognito tab's old local state from
+  // overwriting the account immediately after SIGNED_IN.
+  if (!_cloudUserId || !_cloudHydrated) return;
   if (_cloudSaveTimer) clearTimeout(_cloudSaveTimer);
   _cloudSaveTimer = setTimeout(() => { _cloudSaveTimer = null; _doCloudSave(_lastProgress); }, 1000);
 }
@@ -268,19 +282,49 @@ export default function Game() {
 
   useEffect(() => {
     let cancelled = false;
-    const loadSignedInProgress = () => loadCloudProgress().then(cloudProgress => {
-      if (!cancelled && cloudProgress) {
-        const merged = { ...DEFAULT_PROGRESS, ...cloudProgress };
-        localStorage.setItem('element6_progress', JSON.stringify(merged));
-        setProgress(merged);
+    const hydrate = async (user) => {
+      const userId = user?.id || null;
+      cancelPendingCloudSave();
+      setCloudSessionState(userId, false);
+      if (!userId) {
+        setCloudSessionState(null, true);
+        return;
       }
-    }).catch(() => {});
-    loadSignedInProgress();
+      try {
+        const cloudProgress = await loadCloudProgress();
+        if (cancelled) return;
+        // Account data wins over anonymous/tab-local data. If the account has no
+        // save yet, the current local progress becomes the account's first save.
+        if (cloudProgress) {
+          const merged = { ...DEFAULT_PROGRESS, ...cloudProgress, _lastSavedAt: cloudProgress._lastSavedAt || Date.now() };
+          localStorage.setItem(`element6_progress_user_${userId}`, JSON.stringify(merged));
+          localStorage.setItem('element6_progress', JSON.stringify(merged));
+          setProgress(merged);
+        } else {
+          const keyed = localStorage.getItem(`element6_progress_user_${userId}`);
+          if (keyed) {
+            const merged = { ...DEFAULT_PROGRESS, ...JSON.parse(keyed) };
+            localStorage.setItem('element6_progress', JSON.stringify(merged));
+            setProgress(merged);
+          }
+        }
+      } catch (e) {
+        console.warn('[Element 6] Cloud save hydration failed:', e);
+      } finally {
+        if (!cancelled) setCloudSessionState(userId, true);
+      }
+    };
+    supabase.auth.getSession().then(({ data }) => hydrate(data?.session?.user || null)).catch(() => hydrate(null));
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) loadSignedInProgress();
+      if (event === 'SIGNED_IN') hydrate(session?.user || null);
+      else if (event === 'SIGNED_OUT') {
+        cancelPendingCloudSave();
+        setCloudSessionState(null, true);
+      }
     });
     return () => { cancelled = true; listener.subscription.unsubscribe(); };
   }, []);
+
   const [tokenFlash, setTokenFlash] = useState(null);
   const [storyRewardToast, setStoryRewardToast] = useState(null);
   const [battleResult, setBattleResult] = useState(null);
@@ -340,7 +384,7 @@ export default function Game() {
   // Controller menu navigation — active everywhere. During active matches each
   // game component sets window.__el6GameplayActive to suppress menu-nav so the
   // gamepad drives the fighter; pausing/finishing clears it so buttons are clickable.
-  useGamepadMenuNav(progress?.settings?.controllerEnabled !== false);
+  useGamepadMenuNav(progress?.settings?.controllerEnabled !== false && progress?.settings?.controllerMenuNav !== false);
 
   // Online matchmaking must use the real Supabase session rather than the
   // browser-only local adapter, otherwise a real signed-in account appears off.
@@ -1075,38 +1119,7 @@ export default function Game() {
     };
   }, []);
 
-  // Load cloud progress on mount — merges cloud data if it's newer than local
-  useEffect(() => {
-    const loadCloud = async () => {
-      try {
-        const me = await db.auth.me();
-        if (!me) return;
-        const existing = await db.entities.UserProgress.filter({ user_id: me.id });
-        if (existing[0]?.progress_json) {
-          const cloud = JSON.parse(existing[0].progress_json);
-          const localRaw = localStorage.getItem('element6_progress');
-          const local = localRaw ? JSON.parse(localRaw) : {};
-          const cloudTime = cloud._lastSavedAt || 0;
-          const localTime = local._lastSavedAt || 0;
-          if (cloudTime > localTime) {
-            const merged = { ...DEFAULT_PROGRESS, ...cloud };
-            // Merge equipped items so local equipment is never lost when cloud overwrites
-            const localParsed = localRaw ? JSON.parse(localRaw) : {};
-            for (const field of ['equippedAccessories', 'equippedSkins', 'equippedElements', 'equippedCrossovers']) {
-              const localEq = localParsed[field] || {};
-              const cloudEq = cloud[field] || {};
-              merged[field] = { ...localEq, ...cloudEq };
-            }
-            // Merge owned crossovers into unlockedIds so they appear as playable characters
-            merged.unlockedIds = [...new Set([...(merged.unlockedIds || []), ...(merged.ownedCrossovers || [])])];
-            localStorage.setItem('element6_progress', JSON.stringify(merged));
-            setProgress(merged);
-          }
-        }
-      } catch {}
-    };
-    loadCloud();
-  }, []);
+  // Account cloud hydration is handled exclusively through Supabase auth above.
 
   const bumpTrophy = (type) => {
     setProgress(prev => {
@@ -1352,30 +1365,19 @@ export default function Game() {
     return () => clearInterval(t);
   }, []);
 
-  // Daily quests are calendar-day based. Check continuously so an app left open
-  // across midnight resets immediately without requiring a page reload.
+  // Reset daily quests if needed
   useEffect(() => {
-    const checkDailyReset = () => {
+    if (needsDailyReset(progress?.dailyQuests?.dateKey)) {
       const todayKey = getTodayKey();
       setProgress(prev => {
-        if (prev?.dailyQuests?.dateKey === todayKey) return prev;
         const next = {
           ...prev,
-          dailyQuests: {
-            dateKey: todayKey,
-            quests: generateDailyQuests(todayKey),
-            claimed: [],
-            openedChests: [],
-            dailyStats: { _total: { sigs: 0, heavies: 0, powers: 0, supers: 0, distance: 0, wins: 0, matches: 0, signatureKOs: 0, groundPoundKOs: 0, emoteBeforeMove: 0 } },
-          },
+          dailyQuests: { dateKey: todayKey, quests: generateDailyQuests(todayKey), claimed: [], dailyStats: { _total: { sigs: 0, heavies: 0, powers: 0, supers: 0, distance: 0, wins: 0 } } },
         };
         saveProgress(next);
         return next;
       });
-    };
-    checkDailyReset();
-    const timer = setInterval(checkDailyReset, 1000);
-    return () => clearInterval(timer);
+    }
   }, []);
 
   // Flow: mode <GameIcon emoji="→" size={14} /> fighters <GameIcon emoji="→" size={14} /> map <GameIcon emoji="→" size={14} /> fight
@@ -2306,6 +2308,13 @@ export default function Game() {
             onGrantClanReward={grantClanReward}
             onSyncClanMilestones={syncClanMilestoneRewards}
             currentUserId={me?.id}
+            onClanBadgeUpdate={(badge) => {
+              setProgress(prev => {
+                const next = { ...prev, clanBadge: badge || null };
+                saveProgress(next);
+                return next;
+              });
+            }}
             founderProgress={{
               wins: Object.values(progress.stats?.wins || {}).reduce((sum, value) => sum + (Number(value) || 0), 0),
               playtimeSeconds: Number(progress.playtimeSeconds || 0),

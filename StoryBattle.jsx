@@ -14,6 +14,7 @@ import {
 } from './renderer.js';
 import { getVillainStage, STORY_STAGE_PLATFORMS } from './storyStages.js';
 import { music } from './music.js';
+import { readGamepadInput } from './controllerProfiles.js';
 import { getAccessory, getEquippedAccessories, drawAccessory, isBehindAccessory, resolveAccColor } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { drawShikigamiFollower } from './shikigami.js';
@@ -192,6 +193,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
       }
 
       const k = keysRef.current;
+      const gp = settings?.controllerEnabled !== false ? readGamepadInput(0) : null;
 
       // Refresh _allOpponents each frame so multi-target powers track stock changes
       const allLive = [...pTeam, ...eTeam];
@@ -205,9 +207,9 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
         let inputs;
         if (i === 0) {
           inputs = {
-            left: k['ArrowLeft'], right: k['ArrowRight'],
-            jump: k['ArrowUp'], up: k['ArrowUp'], down: k['ArrowDown'],
-            sig: k[','], power: k['.'], superMove: k['/'], heavy: k['l'],
+            left: k['ArrowLeft'] || gp?.left, right: k['ArrowRight'] || gp?.right,
+            jump: k['ArrowUp'] || gp?.jump, up: k['ArrowUp'] || gp?.up, down: k['ArrowDown'] || gp?.down,
+            sig: k[','] || gp?.sig, power: k['.'] || gp?.power, superMove: k['/'] || gp?.superMove, heavy: k['l'] || gp?.heavy,
           };
           // Emote movement lock — if emote active, force no input
           if (fighter.emote && fighter.emote.timer > 0) inputs = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };

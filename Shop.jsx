@@ -133,7 +133,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
             return (
               <div key={a.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center cursor-pointer transition ${isTrying ? 'border-accent' : 'border-border'}`}
                 onClick={() => setTryOn(isTrying ? null : a.id)}>
-                <AccessoryIcon accessory={a} />
+                <AccessoryIcon accessory={a} char={char} />
                 <p className="font-heading text-xs text-foreground mt-1">{a.name}</p>
                 {a.exclusiveTo && <span className="text-[8px] text-primary font-heading">EXCLUSIVE</span>}
                 <p className="text-[10px] text-accent font-heading mb-2">{a.price} <GameIcon emoji="◆" size={14} /></p>
@@ -166,7 +166,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
             return (
               <div key={a.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center cursor-pointer transition ${isTrying ? 'border-accent' : 'border-border'}`}
                 onClick={() => setTryOn(isTrying ? null : a.id)}>
-                <AccessoryIcon accessory={a} />
+                <AccessoryIcon accessory={a} char={char} />
                 <p className="font-heading text-xs text-foreground mt-1">{a.name}</p>
                 <span className="text-[8px] text-primary font-heading">{kitLabel}</span>
                 <p className="text-[10px] text-accent font-heading mb-2">{a.price} <GameIcon emoji="◆" size={14} /></p>
@@ -519,7 +519,7 @@ function PreviewCanvas({ char, accessories = [], skinColor, skinParts = [] }) {
   return <canvas ref={ref} width={160} height={180} className="rounded-lg" />;
 }
 
-function AccessoryIcon({ accessory }) {
+function AccessoryIcon({ accessory, char }) {
   const ref = React.useRef(null);
   React.useEffect(() => {
     const c = ref.current; if (!c) return;
@@ -528,7 +528,7 @@ function AccessoryIcon({ accessory }) {
       if (!r) return; f++;
       ctx.clearRect(0, 0, 64, 64);
       ctx.fillStyle = '#111128'; ctx.fillRect(0, 0, 64, 64);
-      drawAccessory(ctx, 32, 44, accessory.type, accessory.color, f, 0.55, accessory.exclusiveTo || '');
+      drawAccessory(ctx, 32, 44, accessory.type, resolveAccColor(accessory, char), f, 0.55, accessory.exclusiveTo || '');
       requestAnimationFrame(loop);
     };
     loop();

@@ -45,6 +45,8 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   const [selectionDrag, setSelectionDrag] = useState(null);
   const [clipboardEntities, setClipboardEntities] = useState([]);
   const [material, setMaterial] = useState('normal');
+  const [freehandDiameter, setFreehandDiameter] = useState(36);
+  const [freehandStrokes, setFreehandStrokes] = useState([]);
   const [drag, setDrag] = useState(null);
   const [mousePos, setMousePos] = useState(null);
   const [stageName, setStageName] = useState('');
@@ -168,6 +170,29 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       // Shift to game-coordinate space: editor (ORIGIN_X, ORIGIN_Y) = game (0,0)
       // already translated into game coordinates above
       // The whole canvas is one build section — no inner play-area box.
+      // Freehand material strokes. These are rendered as continuous round-ended
+      // strokes in the editor; SAVE STAGE also converts them into collision
+      // segments so every existing match consumer can use them.
+      freehandStrokes.forEach((stroke) => {
+        if (!stroke?.points?.length) return;
+        const mat = MATERIALS.find(m => m.id === (stroke.material || 'normal')) || MATERIALS[0];
+        ctx.save();
+        ctx.strokeStyle = mat.color;
+        ctx.lineWidth = Number(stroke.diameter || freehandDiameter || 36);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalAlpha = 0.92;
+        ctx.beginPath();
+        stroke.points.forEach((pt, idx) => idx ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y));
+        if (stroke.points.length === 1) ctx.lineTo(stroke.points[0].x + 0.01, stroke.points[0].y + 0.01);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+        ctx.beginPath();
+        stroke.points.forEach((pt, idx) => idx ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y));
+        ctx.stroke(); ctx.setLineDash([]);
+        ctx.restore();
+      });
       // platforms
       platforms.forEach((p, i) => {
         const mat = MATERIALS.find(m => m.id === (p.material || 'normal')) || MATERIALS[0];
@@ -332,7 +357,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     };
     loop();
     return () => { r = false; };
-  }, [platforms, drag, mousePos, mode, backdrop, spawnPoints, spawnSelect, hazards, objects, hazardType, objectType, selectedHazardIdx, camera, perimeter]);
+  }, [platforms, freehandStrokes, freehandDiameter, drag, mousePos, mode, backdrop, spawnPoints, spawnSelect, hazards, objects, hazardType, objectType, selectedHazardIdx, camera, perimeter]);
 
   const pos = (e) => {
     const c = canvasRef.current; const rect = c.getBoundingClientRect();
@@ -384,6 +409,11 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       const defW = 160, defH = 20;
       const snap = (v) => gridLock ? Math.round(v / 40) * 40 : Math.round(v);
       setPlatforms([...platforms, { x: snap(x - defW / 2), y: snap(y - defH / 2), w: defW, h: defH, material, ...(material === 'conveyor' ? { conveyorDir } : {}) }]);
+      return;
+    }
+    if (mode === 'freehand') {
+      setDrag({ freehand: true, points: [{ x, y }] });
+      setMousePos({ x, y });
       return;
     }
     if (mode === 'select') {
@@ -534,6 +564,15 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   const onMove = (e) => {
     const mp = pos(e);
     setMousePos(mp);
+    if (drag?.freehand && mode === 'freehand') {
+      setDrag(d => {
+        const pts = d.points || [];
+        const last = pts[pts.length - 1];
+        if (!last || Math.hypot(mp.x - last.x, mp.y - last.y) >= 3) return { ...d, points: [...pts, { x: mp.x, y: mp.y }] };
+        return d;
+      });
+      return;
+    }
     if (mode === 'select' && selectionDrag && !drag) return;
     if (drag?.cameraPan) {
       const dx = e.clientX - drag.lastScreenX, dy = e.clientY - drag.lastScreenY;
@@ -589,6 +628,12 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     }
   };
   const onUp = (e) => {
+    if (drag?.freehand && mode === 'freehand') {
+      const points = drag.points || [];
+      if (points.length) setFreehandStrokes(prev => [...prev, { material, diameter: Math.max(4, Number(freehandDiameter) || 36), points }]);
+      setDrag(null); setMousePos(null);
+      return;
+    }
     if (mode === 'select' && selectionDrag && !drag) {
       const mp=pos(e); const rect={x:Math.min(selectionDrag.x,mp.x),y:Math.min(selectionDrag.y,mp.y),w:Math.abs(mp.x-selectionDrag.x),h:Math.abs(mp.y-selectionDrag.y)};
       const found=entitiesInRect(rect);
@@ -612,8 +657,10 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   // Load a saved stage into the editor for editing (tracks which slot is being edited)
   const loadStage = (stage, idx) => {
     setSelectedEntities([]); setSelectionDrag(null); setClipboardEntities([]);
-    const platforms = stage.platforms || stage;
-    setPlatforms(platforms);
+    const rawPlatforms = stage.platforms || stage;
+    const storedFreehand = Array.isArray(stage.freehandStrokes) ? stage.freehandStrokes : [];
+    setFreehandStrokes(storedFreehand);
+    setPlatforms(Array.isArray(stage.freehandStrokes) ? rawPlatforms.filter(p => !p?._freehandSegment) : rawPlatforms);
     setStageName(stage.name || 'Custom Stage');
     setStageEmoji(stage.emoji || '🎨');
     setBackdrop(stage.backdrop || 'splitcity');
@@ -722,6 +769,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
               emoji: s.emoji || stageData.emoji || '🎨',
               hazards: Array.isArray(stageData.hazards) ? stageData.hazards : [],
               objects: Array.isArray(stageData.objects) ? stageData.objects : [],
+              freehandStrokes: Array.isArray(stageData.freehandStrokes) ? stageData.freehandStrokes : [],
               downloaded: true,
               originalOwnerId: s.owner_user_id,
             };
@@ -740,6 +788,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
               emoji: s.emoji || stageData.emoji || '🎨',
               hazards: Array.isArray(stageData.hazards) ? stageData.hazards : [],
               objects: Array.isArray(stageData.objects) ? stageData.objects : [],
+              freehandStrokes: Array.isArray(stageData.freehandStrokes) ? stageData.freehandStrokes : [],
               downloaded: true,
               originalOwnerId: s.owner_user_id,
             });
@@ -788,6 +837,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         <>
         <div className="flex gap-2 flex-wrap">
           <button onClick={() => setMode('add')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'add' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>ADD (drag)</button>
+          <button onClick={() => setMode('freehand')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'freehand' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>FREEHAND</button>
           <button onClick={() => setMode('select')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'select' ? 'bg-cyan-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>SELECT</button>
           {mode === 'select' && <><button onClick={copySelection} disabled={!selectedEntities.length} className="px-3 py-1 rounded font-heading text-xs bg-secondary text-secondary-foreground disabled:opacity-40">COPY</button><button onClick={pasteSelection} disabled={!clipboardEntities.length} className="px-3 py-1 rounded font-heading text-xs bg-secondary text-secondary-foreground disabled:opacity-40">PASTE</button><span className="text-[9px] text-muted-foreground">{selectedEntities.length} selected · Shift+drag adds</span></>}
           <button onClick={() => setMode('cursor')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'cursor' ? 'bg-cyan-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>CURSOR</button>
@@ -938,7 +988,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           <button onClick={async () => {
             // Platforms/hazards/objects/spawns are stored in game coords (1280×720),
             // so no scaling is needed — they map 1:1 to the match canvas.
-            const stageData = { platforms, name: stageName || 'Custom Stage', emoji: stageEmoji, backdrop, killPerimeter: perimeter, stageCamera: { ...stageCamera, zoom: Number(stageCamera.zoom || 1), motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null }, cameraZoom: Number(stageCamera.zoom || 1), cameraMotion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null, spawnPoints, hazards, objects, _editingIndex: editingIndex, downloaded: isDownloaded, originalOwnerId };
+            const stageData = { platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)], freehandStrokes, name: stageName || 'Custom Stage', emoji: stageEmoji, backdrop, killPerimeter: perimeter, stageCamera: { ...stageCamera, zoom: Number(stageCamera.zoom || 1), motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null }, cameraZoom: Number(stageCamera.zoom || 1), cameraMotion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null, spawnPoints, hazards, objects, _editingIndex: editingIndex, downloaded: isDownloaded, originalOwnerId };
             onSave(stageData);
             // Auto-publish to world — only for stages you created (downloaded stages stay local)
             if (userId && !isDownloaded) {
@@ -1014,6 +1064,12 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
             </button>
           ))}
         </div>
+        {mode === 'freehand' && <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-heading text-muted-foreground">FREEHAND DIAMETER:</span>
+          <input type="range" min="4" max="180" step="2" value={freehandDiameter} onChange={e => setFreehandDiameter(Number(e.target.value))} className="w-32" />
+          <span className="text-[10px] font-heading w-10">{freehandDiameter}px</span>
+          <button onClick={() => setFreehandStrokes([])} className="px-2 py-1 rounded text-[10px] bg-destructive text-destructive-foreground">CLEAR FREEHAND</button>
+        </div>}
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-heading text-accent">STAGE SIZE: FIXED (2280×1770 — full KO perimeter)</span>
           <span className="text-[10px] font-heading text-muted-foreground">SLOTS: {savedStages.length}/10 (includes downloads)</span>
@@ -1031,6 +1087,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       <div className="bg-card border border-border rounded-xl p-3 text-[10px] text-muted-foreground font-body">
         <p className="font-heading text-accent text-xs mb-1">HOW TO USE</p>
         <p>• <b>ADD mode:</b> Click and drag on the canvas to draw a platform. A blue dotted line shows where the block will be placed — release to confirm.</p>
+        <p>• <b>FREEHAND mode:</b> Select a material, choose the diameter, then draw directly on the canvas. Strokes are saved and converted into many collision segments in the actual match, so complex shapes work with the existing stage physics.</p>
         <p>• <b>Right-click:</b> Right-click anywhere on the canvas to instantly place a default-sized block (160×20) using the currently selected material.</p>
         <p>• <b>Grid toggle:</b> Turn the grid on/off for easier alignment.</p>
         <p>• <b>Grid Lock:</b> When ON, platforms snap to 40px grid lines for perfect symmetry.</p>
@@ -1061,6 +1118,32 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     ]} onTool={(id) => { setPreviewOpen(false); setMode(id); }} />}
     </div>
   );
+}
+
+function expandFreehandToPlatforms(strokes = []) {
+  const out = [];
+  for (const stroke of Array.isArray(strokes) ? strokes : []) {
+    const pts = Array.isArray(stroke?.points) ? stroke.points : [];
+    const d = Math.max(4, Number(stroke?.diameter) || 36);
+    const r = d / 2;
+    const mat = stroke?.material || 'normal';
+    if (!pts.length) continue;
+    const emit = (x, y) => out.push({ x: x - r, y: y - r, w: d, h: d, material: mat, _freehandSegment: true, _freehandStroke: true });
+    if (pts.length === 1) { emit(pts[0].x, pts[0].y); continue; }
+    let last = null;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      const step = Math.max(3, d * 0.35);
+      const count = Math.max(1, Math.ceil(dist / step));
+      for (let j = 0; j <= count; j++) {
+        const t = j / count;
+        const x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
+        if (!last || Math.hypot(x - last.x, y - last.y) >= step * 0.45) { emit(x, y); last = { x, y }; }
+      }
+    }
+  }
+  return out;
 }
 
 function StageThumbnail({ stage, renderFn }) {

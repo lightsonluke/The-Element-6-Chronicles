@@ -1,51 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { generateDailyQuests, openChest, getTodayKey, needsDailyReset, CHEST_TYPES } from './dailyQuests.js';
+import { generateDailyQuests, openChest, getTodayKey, CHEST_TYPES } from './dailyQuests.js';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
-import GameIcon from "./GameIcon.jsx";
+import GameIcon from './GameIcon.jsx';
 
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 
 export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, onAddCoins, onBack }) {
   const todayKey = getTodayKey();
-  const normalizeQuestState = (state) => {
-    if (!state) return state;
-    return {
-      ...state,
-      quests: (state.quests || []).map((q, i) => ({
-        ...q,
-        chestReward: CHEST_TYPES[i]?.id || q.chestReward,
-      })),
-      openedChests: state.openedChests || [],
-    };
-  };
-
-  const [questState, setQuestState] = useState(() => {
-    if (progress?.dailyQuests?.dateKey === todayKey) {
-      return normalizeQuestState(progress.dailyQuests);
-    }
-    return {
-      dateKey: todayKey,
-      quests: generateDailyQuests(todayKey),
-      claimed: [],
-      openedChests: [],
-      dailyStats: {},
-    };
-  });
+  const makeFreshState = (key = getTodayKey()) => ({ dateKey: key, quests: generateDailyQuests(key), claimed: [], openedChests: [], dailyStats: {} });
+  const [questState, setQuestState] = useState(() => progress?.dailyQuests?.dateKey === todayKey ? progress.dailyQuests : makeFreshState(todayKey));
   const [openingChest, setOpeningChest] = useState(null);
   const [chestResult, setChestResult] = useState(null);
   const [chestAnimFrame, setChestAnimFrame] = useState(0);
-
-  useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
-
   useEffect(() => {
-    if (progress?.dailyQuests?.dateKey === getTodayKey()) {
-      setQuestState(normalizeQuestState(progress.dailyQuests));
-    }
-  }, [progress?.dailyQuests?.dateKey]);
+    const checkMidnight = () => {
+      const key = getTodayKey();
+      if (questState.dateKey !== key) {
+        const fresh = makeFreshState(key);
+        setQuestState(fresh);
+        onClaimChest?.(fresh);
+        setOpeningChest(null);
+        setChestResult(null);
+      }
+    };
+    checkMidnight();
+    const timer = setInterval(checkMidnight, 1000);
+    return () => clearInterval(timer);
+  }, [questState.dateKey]);
+  useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
 
   const stats = { ...(progress?.stats || {}), ...(questState.dailyStats || {}) };
 
@@ -94,18 +80,20 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
       if (frame >= 30) {
         clearInterval(animInterval);
         const result = openChest(chestId, ownedItems);
-        const next = {
-          ...questState,
-          openedChests: [...new Set([...(questState.openedChests || []), questId])],
-        };
         setChestResult(result);
-        setQuestState(next);
-        onClaimChest?.(next);
-        if (result.cosmetic) onCosmeticUnlock?.(result.cosmetic);
-        if (result.coins) onAddCoins?.(result.coins);
-
-        // The reward is shown briefly, then the opened chest disappears.
+        if (result.cosmetic) {
+          onCosmeticUnlock?.(result.cosmetic);
+        }
+        if (result.coins) {
+          onAddCoins?.(result.coins);
+        }
         setTimeout(() => {
+          setQuestState(prev => {
+            if ((prev.openedChests || []).includes(questId)) return prev;
+            const next = { ...prev, openedChests: [...(prev.openedChests || []), questId] };
+            onClaimChest?.(next);
+            return next;
+          });
           setOpeningChest(null);
           setChestResult(null);
         }, 1000);
@@ -201,7 +189,6 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
                           {result.cosmetic.type === 'accessory' ? <GameIcon emoji="🎩" size={14} /> : result.cosmetic.type === 'skin' ? <GameIcon emoji="🎨" size={14} /> : <GameIcon emoji="💀" size={14} />} {result.cosmetic.name}!
                         </p>
                       )}
-
                     </div>
                   )}
                 </div>

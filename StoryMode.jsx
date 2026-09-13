@@ -12,6 +12,7 @@ import StorySettingsOverlay from './StorySettingsOverlay.jsx';
 import StoryEpilogue from './StoryEpilogue.jsx';
 import { STORY_BOOKS, BOOK_ROLE_RULES, CANON_LOCKS, defaultStoryProgress, calculateStoryProgress } from './storyModeOverhaul.js';
 import { music } from './music.js';
+import { readGamepadInput } from './controllerProfiles.js';
 
 const W=960, H=560, G=0.48, J=-11, SPEED=4.1;
 const SAVE_VERSION=2;
@@ -82,7 +83,7 @@ function makeNodes(book){
 }
 
 export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVillain, onUnlockAll, onSaveProgress, onAddCoins, equippedAccessories = {}, equippedSkins = {}, equippedShikigami = {}, equippedEmotes = {} }) {
-  const canvasRef=useRef(null), fullRef=useRef(null), keysRef=useRef({}), rafRef=useRef(null), stateRef=useRef(null), saveTimer=useRef(0);
+  const canvasRef=useRef(null), fullRef=useRef(null), keysRef=useRef({}), rafRef=useRef(null), stateRef=useRef(null), saveTimer=useRef(0), gpConfirmRef=useRef(false);
   const initialHero=progress?.selectedHeroId||progress?.currentHeroId||progress?.favoriteId||progress?.unlockedIds?.[0]||'yellow';
   const [save,setSave]=useState(()=>mergeProgress(progress,initialHero));
   const [screen,setScreen]=useState('save');
@@ -143,8 +144,8 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
     let last=performance.now();
     const loop=(now)=>{
       if(!stateRef.current?.running)return;const dt=Math.min(2,(now-last)/16.67);last=now;p.frame++;
-      const k=keysRef.current;p.vx=((k.ArrowLeft||k.a)?-SPEED:(k.ArrowRight||k.d)?SPEED:0);if(p.vx)p.facing=Math.sign(p.vx);
-      if((k.ArrowUp||k.w||k[' '])&&p.grounded){p.vy=J;p.grounded=false;keysRef.current.ArrowUp=false;keysRef.current.w=false;keysRef.current[' ']=false}
+      const gp=readGamepadInput(0);if(gp?.confirm&&!gpConfirmRef.current)interact();gpConfirmRef.current=!!gp?.confirm;const k=keysRef.current;p.vx=((k.ArrowLeft||k.a||gp?.left)?-SPEED:(k.ArrowRight||k.d||gp?.right)?SPEED:0);if(p.vx)p.facing=Math.sign(p.vx);
+      if((k.ArrowUp||k.w||k[' ']||gp?.jump)&&p.grounded){p.vy=J;p.grounded=false;keysRef.current.ArrowUp=false;keysRef.current.w=false;keysRef.current[' ']=false}
       p.vy=Math.min(12,p.vy+G*dt);p.x+=p.vx*dt;p.y+=p.vy*dt;p.grounded=false;
       if(p.x<0)p.x=0;if(p.x>4720)p.x=4720;
       platforms.forEach(pl=>{if(p.x+18>pl.x&&p.x-18<pl.x+pl.w&&p.y+55<=pl.y+14&&p.y+55+p.vy*dt>=pl.y){p.y=pl.y-55;p.vy=0;p.grounded=true}});

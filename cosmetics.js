@@ -104,6 +104,31 @@ export const ACCESSORIES = [
 
   // Auto-generate exclusive accessories for every character (headband, gloves, shoes, cape)
   // Each character gets at least 5 exclusive accessories total (jersey + 4 here + any lore items)
+  // Modern everyday clothing. Each design has black, white, character-main,
+  // and character-accent variants. colorMode resolves the character colors at render time.
+  const MODERN_STYLES = [
+    ['hoodie','Hoodie','hoodie'], ['tee','Tee','tee'], ['shorts','Shorts','shorts'],
+    ['pants','Pants','pants'], ['jeans','Jeans','jeans'], ['cap','Cap','cap'],
+    ['beret','Beret','beret'], ['cardigan','Cardigan','cardigan'], ['bracelet','Bracelet','bracelet'],
+    ['necklace','Necklace','necklace'], ['jacket','Jacket','jacket'], ['beanie','Beanie','beanie'],
+    ['sweatpants','Sweatpants','sweatpants'], ['vest','Vest','vest'], ['watch','Watch','watch'],
+    ['ring','Ring','ring'], ['bucket_hat','Bucket Hat','bucket_hat'], ['tote','Tote Bag','tote'],
+  ];
+  const MODERN_COLORS = [
+    ['black','Black','#161616'], ['white','White','#F2F2F2'], ['main','Main Color',null], ['accent','Accent Color',null],
+  ];
+  for (const [styleId, label, type] of MODERN_STYLES) {
+    for (const [colorId, colorLabel, fixedColor] of MODERN_COLORS) {
+      ACCESSORIES.push({
+        id: `modern_${styleId}_${colorId}`,
+        name: `${colorLabel} ${label}`,
+        price: ['bracelet','necklace','watch','ring'].includes(type) ? 35 : 55,
+        type,
+        ...(fixedColor ? { color: fixedColor } : { colorMode: colorId }),
+      });
+    }
+  }
+
   const _ALL_CHARS_FOR_ACC = [...HEROES, ...VILLAINS, ...GUARDIANS];
   _ALL_CHARS_FOR_ACC.forEach(c => {
   ACCESSORIES.push(
@@ -126,6 +151,12 @@ export const ACCESSORIES = [
   ACCESSORIES.forEach(a => { if (a.price > 0) a.price += 50; });
 
   export function getAccessory(id) {
+  if (typeof id === 'string' && id.startsWith('clan_badge:')) {
+    const clanId = id.slice('clan_badge:'.length);
+    let logoUrl = '';
+    try { logoUrl = localStorage.getItem(`element6_clan_badge_logo_${clanId}`) || ''; } catch {}
+    return { id, name: 'Clan Badge', type: 'clan_badge', color: '#FFFFFF', logoUrl, clanId, price: 0 };
+  }
   const acc = ACCESSORIES.find(a => a.id === id);
   if (acc) return acc;
   return getEventAccessory(id) || getEventBattlePassAccessory(id);
@@ -284,6 +315,83 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
     ctx.fillRect(x - bw / 2, headY - s * 0.06, bw, s * 0.08);
     ctx.fillStyle = color + 'AA';
     ctx.fillRect(x - bw / 2 - s * 0.04, headY - s * 0.08, s * 0.06, s * 0.12);
+    ctx.restore();
+  } else if (type === 'hoodie' || type === 'tee' || type === 'cardigan' || type === 'jacket' || type === 'vest') {
+    ctx.save();
+    const top = torsoTopY - s * 0.02;
+    const h = hipY - top + s * 0.05;
+    const widths = { hoodie: 0.52, tee: 0.48, cardigan: 0.52, jacket: 0.54, vest: 0.48 };
+    const w = s * (widths[type] || 0.5);
+    ctx.fillStyle = color; ctx.globalAlpha = 0.96;
+    ctx.beginPath(); ctx.roundRect(x - w / 2, top, w, h, s * 0.08); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = Math.max(1, s * 0.018);
+    ctx.strokeRect(x - w / 2, top, w, h);
+    if (type === 'hoodie') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = Math.max(1, s * 0.025);
+      ctx.beginPath(); ctx.arc(x, top + s * 0.02, s * 0.16, Math.PI * 0.1, Math.PI * 0.9); ctx.stroke();
+      ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.beginPath(); ctx.roundRect(x - s * 0.11, hipY - s * 0.18, s * 0.22, s * 0.12, 3); ctx.fill();
+    } else if (type === 'cardigan' || type === 'jacket') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.38)'; ctx.lineWidth = Math.max(1, s * 0.018);
+      ctx.beginPath(); ctx.moveTo(x, top + s * 0.04); ctx.lineTo(x, hipY); ctx.stroke();
+      for (let i = 0; i < 3; i++) { ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(x, top + s * (0.18 + i * 0.14), s * 0.025, 0, Math.PI * 2); ctx.fill(); }
+    }
+    // sleeves follow the animated arms
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.roundRect(shoulderL.x - s * 0.07, shoulderL.y - s * 0.02, s * 0.14, s * 0.30, s * 0.04); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(shoulderR.x - s * 0.07, shoulderR.y - s * 0.02, s * 0.14, s * 0.30, s * 0.04); ctx.fill();
+    ctx.restore();
+  } else if (type === 'shorts' || type === 'pants' || type === 'jeans' || type === 'sweatpants') {
+    ctx.save(); ctx.fillStyle = color; ctx.globalAlpha = 0.98;
+    const long = type === 'pants' || type === 'jeans' || type === 'sweatpants';
+    const legH = long ? feetY - hipY : s * 0.27;
+    const legW = long ? s * 0.19 : s * 0.20;
+    const gap = s * 0.035;
+    const drawLeg = (hx, hy, angle) => { ctx.save(); ctx.translate(hx, hy); ctx.rotate(angle); ctx.beginPath(); ctx.roundRect(-legW/2, 0, legW, legH, s*0.035); ctx.fill(); ctx.restore(); };
+    drawLeg(pose.hips.left.x + x, hipY, pose.legAngleL); drawLeg(pose.hips.right.x + x, hipY, pose.legAngleR);
+    ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(x - s * 0.22, hipY - s * 0.02, s * 0.44, s * 0.07);
+    if (type === 'jeans') { ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(x - s*0.12, hipY+s*0.05, s*0.035, Math.max(2, legH-s*0.1)); ctx.fillRect(x+s*0.085, hipY+s*0.05, s*0.035, Math.max(2, legH-s*0.1)); }
+    ctx.restore();
+  } else if (type === 'cap' || type === 'beret' || type === 'beanie' || type === 'bucket_hat') {
+    ctx.save(); ctx.fillStyle = color; ctx.globalAlpha = 0.98;
+    if (type === 'cap') {
+      ctx.beginPath(); ctx.arc(x, headY - s*0.02, headR+s*0.05, Math.PI, 0); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x + facing*s*0.18, headY+s*0.03, s*0.18, s*0.055, 0, 0, Math.PI*2); ctx.fill();
+    } else if (type === 'beret') {
+      ctx.beginPath(); ctx.ellipse(x, headY - s*0.11, s*0.31, s*0.14, -0.08, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x-s*0.02, headY-s*0.2, s*0.045, 0, Math.PI*2); ctx.fill();
+    } else if (type === 'beanie') {
+      ctx.beginPath(); ctx.arc(x, headY-s*0.01, headR+s*0.08, Math.PI, 0); ctx.fill();
+      ctx.beginPath(); ctx.roundRect(x-s*0.27, headY-s*0.01, s*0.54, s*0.09, 3); ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.ellipse(x, headY-s*0.08, s*0.34, s*0.13, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillRect(x-s*0.23, headY-s*0.10, s*0.46, s*0.12);
+    }
+    ctx.restore();
+  } else if (type === 'bracelet' || type === 'watch' || type === 'ring') {
+    ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = Math.max(2, s*0.045);
+    if (type === 'ring') { ctx.beginPath(); ctx.arc(handR.x, handR.y, s*0.055, 0, Math.PI*2); ctx.stroke(); }
+    else if (type === 'watch') { ctx.beginPath(); ctx.roundRect(handL.x-s*0.08, handL.y-s*0.07, s*0.16, s*0.14, 3); ctx.fill(); ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(handL.x, handL.y, s*0.035, 0, Math.PI*2); ctx.fill(); }
+    else { ctx.beginPath(); ctx.arc(handL.x, handL.y, s*0.10, -0.5, 0.9); ctx.stroke(); ctx.beginPath(); ctx.arc(handR.x, handR.y, s*0.10, 2.2, 3.6); ctx.stroke(); }
+    ctx.restore();
+  } else if (type === 'necklace') {
+    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.5, s*0.025); ctx.beginPath(); ctx.arc(x, torsoTopY+s*0.05, s*0.20, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke(); ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, torsoTopY+s*0.23, s*0.055, 0, Math.PI*2); ctx.fill(); ctx.restore();
+  } else if (type === 'tote') {
+    ctx.save(); ctx.fillStyle = color; ctx.globalAlpha=0.95; ctx.beginPath(); ctx.roundRect(x+s*0.20, torsoCY-s*0.02, s*0.25, s*0.34, 4); ctx.fill(); ctx.strokeStyle='rgba(0,0,0,.3)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x+s*0.325, torsoCY-s*0.02, s*0.09, Math.PI, 0); ctx.stroke(); ctx.restore();
+  } else if (type === 'clan_badge') {
+    ctx.save();
+    const badgeX = x, badgeY = torsoTopY + (hipY - torsoTopY) * 0.34, r = s * 0.095;
+    ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = Math.max(1, s*0.02);
+    ctx.beginPath(); ctx.arc(badgeX, badgeY, r + s*0.025, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    // logoUrl is supplied through the dynamic accessory and cached by clan id.
+    let logo = '';
+    try { logo = localStorage.getItem(`element6_clan_badge_logo_${localStorage.getItem('element6_active_clan_id') || ''}`) || ''; } catch {}
+    // drawAccessory receives only the type string; resolve the dynamic URL from the clan id is done by getAccessory callers.
+    if (logo) {
+      const key = `__e6ClanLogo_${logo}`;
+      let img = globalThis[key];
+      if (!img) { img = new Image(); img.src = logo; globalThis[key] = img; }
+      if (img.complete && img.naturalWidth) { ctx.save(); ctx.beginPath(); ctx.arc(badgeX, badgeY, r, 0, Math.PI*2); ctx.clip(); ctx.drawImage(img, badgeX-r, badgeY-r, r*2, r*2); ctx.restore(); }
+    }
     ctx.restore();
   } else if (type === 'baton') {
     ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = s * 0.06; ctx.lineCap = 'round';

@@ -67,9 +67,11 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
     .map(id => getSkin(id))
     .filter(s => s && (s.charId === selectedChar || s.isAllChar));
 
-  const charOwnedAccessories = ownedAccessories
-    .map(id => getAccessory(id))
-    .filter(a => a && (!a.exclusiveTo || a.exclusiveTo === selectedChar));
+  const clanBadge = progress?.clanBadge?.clanId ? getAccessory(`clan_badge:${progress.clanBadge.clanId}`) : null;
+  const charOwnedAccessories = [
+    ...ownedAccessories.map(id => getAccessory(id)),
+    ...(clanBadge ? [clanBadge] : []),
+  ].filter(a => a && (!a.exclusiveTo || a.exclusiveTo === selectedChar));
 
   return (
     <div className="w-full max-w-5xl flex flex-col gap-4">
@@ -166,7 +168,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
             const slotNum = equippedIds.indexOf(a.id) + 1;
             return (
               <div key={a.id} className={`rounded-lg p-2 border-2 flex flex-col items-center ${isEquipped ? 'border-accent' : 'border-border'}`}>
-                <AccessoryPreview accessory={a} />
+                <AccessoryPreview accessory={a} char={char} />
                 <p className="text-[8px] font-heading mt-1 text-center">{a.name}</p>
                 {a.isEvent && <span className="text-[6px] text-primary font-heading">EVENT</span>}
                 <button onClick={() => onEquipAccessory?.(selectedChar, a.id)}
@@ -352,7 +354,7 @@ function EquipPreviewCanvas({ char, skinColor, skinParts = [], accessories = [],
   return <canvas ref={ref} width={120} height={140} className="rounded-lg" />;
 }
 
-function AccessoryPreview({ accessory, small }) {
+function AccessoryPreview({ accessory, small, char }) {
   const ref = useRef(null);
   useEffect(() => {
     const c = ref.current; if (!c || !accessory) return;
@@ -362,7 +364,7 @@ function AccessoryPreview({ accessory, small }) {
       if (!r) return; f++;
       ctx.clearRect(0, 0, size, size);
       ctx.fillStyle = '#111128'; ctx.fillRect(0, 0, size, size);
-      drawAccessory(ctx, size / 2, size * 0.68, accessory.type, accessory.color, f, small ? 0.4 : 0.55, accessory.exclusiveTo || '');
+      drawAccessory(ctx, size / 2, size * 0.68, accessory.type, resolveAccColor(accessory, char), f, small ? 0.4 : 0.55, accessory.exclusiveTo || '');
       requestAnimationFrame(loop);
     };
     loop();

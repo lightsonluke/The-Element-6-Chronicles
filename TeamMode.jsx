@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ALL_CHARS } from './allCharacters.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, updateProjectiles, drawProjectiles, loseStock } from './fighter.js';
 import { getKeybinds, readPlayerInput, readSinglePlayerInput } from './keybinds.js';
+import { readGamepadInput } from './controllerProfiles.js';
 import { drawStickman, drawAttackEffect, drawSuperEffect, drawHealthBar, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawSuperFlash } from './renderer.js';
 import { POWER_EFFECTS, getPowerEffect } from './powerEffects.js';
 import { withCustomChars } from './characterNumber.js';
@@ -385,6 +386,16 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
       }
 
       const k = keysRef.current;
+      const gp1 = settings?.controllerEnabled !== false ? readGamepadInput(0) : null;
+      const gp2 = settings?.controllerEnabled !== false ? readGamepadInput(1) : null;
+      const mergeController = (input, gp) => gp ? {
+        ...input,
+        left: input.left || gp.left, right: input.right || gp.right,
+        up: input.up || gp.up, down: input.down || gp.down,
+        jump: input.jump || gp.jump, sig: input.sig || gp.sig,
+        heavy: input.heavy || gp.heavy, power: input.power || gp.power,
+        superMove: input.superMove || gp.superMove,
+      } : input;
 
       // Determine player-controlled fighters based on team format
       let p1Fighter = null, p2Fighter = null;
@@ -401,10 +412,10 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
       // P1 input — single human gets both control schemes
       const singleHuman = !p2Fighter;
       const _kb = getKeybinds(settings);
-      let p1In = p1Fighter ? (singleHuman ? readSinglePlayerInput(k, _kb.p1, _kb.p2) : readPlayerInput(k, _kb.p1)) : NO_INPUT;
+      let p1In = p1Fighter ? mergeController(singleHuman ? readSinglePlayerInput(k, _kb.p1, _kb.p2) : readPlayerInput(k, _kb.p1), gp1) : NO_INPUT;
 
       // P2 input
-      let p2In = p2Fighter ? readPlayerInput(k, _kb.p2) : NO_INPUT;
+      let p2In = p2Fighter ? mergeController(readPlayerInput(k, _kb.p2), gp2) : NO_INPUT;
 
       // Emote movement lock — if emote active, force no input
       if (p1Fighter && p1Fighter.emote && p1Fighter.emote.timer > 0) p1In = NO_INPUT;
