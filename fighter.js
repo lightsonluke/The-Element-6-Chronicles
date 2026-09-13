@@ -1694,8 +1694,17 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     }
   }
 
-  // Blast zone — off-screen = lose stock (Grand Circuit prevents escapes via _gcNoBlast)
-  if (!fighter._gcNoBlast && fighter.noBlastKill <= 0 && (fighter.x < -500 || fighter.x > stageWidth + 500 || fighter.y < -600 || fighter.y > stageHeight + 450)) {
+  // Blast zone — custom Stage Editor perimeter overrides the default bounds.
+  // Grand Circuit can still disable blast KOs with _gcNoBlast.
+  const bz = fighter._customBlastZone;
+  const blastLeft = Number(bz?.left ?? -500);
+  const blastRight = Number(bz?.right ?? stageWidth + 500);
+  const blastTop = Number(bz?.top ?? -600);
+  const blastBottom = Number(bz?.bottom ?? stageHeight + 450);
+  if (!fighter._gcNoBlast && fighter.noBlastKill <= 0 && (
+    fighter.x < blastLeft || fighter.x > blastRight ||
+    fighter.y < blastTop || fighter.y > blastBottom
+  )) {
     loseStock(fighter, stageWidth, stageHeight);
   }
 }

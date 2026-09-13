@@ -4,13 +4,16 @@
 //     distance, speed, phase, pause, loop }
 // We mutate p.x / p.y each frame and carry grounded fighters standing on it.
 
+import { sampleMotion } from './StageMotionRuntime.js';
+
 const CHAR_HALF_W = 16;
 
 export function applyMovingPlatforms(platforms, timeMs, fighters) {
   if (!platforms || !platforms.length) return;
   for (const p of platforms) {
-    const mv = p.move;
-    if (!mv || mv.type === 'static' || !mv.type) continue;
+    const mv = p.move || p.motion;
+    if (!mv) continue;
+    const editorMotion = mv.mode || mv.direction || Array.isArray(mv.chain);
     if (p._deleted > 0) continue;
 
     if (p._moveBaseX === undefined) p._moveBaseX = p.x;
@@ -21,16 +24,17 @@ export function applyMovingPlatforms(platforms, timeMs, fighters) {
     const baseY = p._moveBaseY + (mv.offsetY || 0);
     const prevX = p.x, prevY = p.y;
 
-    const primary = movementOffset(mv, timeMs, p._moveStartMs);
-    let offX = primary.x;
-    let offY = primary.y;
-
-    // Optional second direction. This lets one platform combine two different
-    // movement axes/vectors (for example horizontal + vertical = diagonal).
-    if (mv.second && mv.second.type && mv.second.type !== 'static') {
-      const secondary = movementOffset(mv.second, timeMs, p._moveStartMs);
-      offX += secondary.x;
-      offY += secondary.y;
+    let offX = 0, offY = 0;
+    if (editorMotion) {
+      const sampled = sampleMotion(mv, timeMs, p._moveStartMs);
+      offX = sampled.x; offY = sampled.y;
+    } else {
+      const primary = movementOffset(mv, timeMs, p._moveStartMs);
+      offX = primary.x; offY = primary.y;
+      if (mv.second && mv.second.type && mv.second.type !== 'static') {
+        const secondary = movementOffset(mv.second, timeMs, p._moveStartMs);
+        offX += secondary.x; offY += secondary.y;
+      }
     }
 
     p.x = baseX + offX;

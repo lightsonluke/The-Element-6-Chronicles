@@ -3,6 +3,7 @@
 // regular-sized stages (1280×720). Keeps BR environment systems isolated.
 
 import { drawHazards, drawObjects } from './brRender.js';
+import { sampleMotion } from './StageMotionRuntime.js';
 
 const GRAVITY = 0.42;
 
@@ -48,8 +49,22 @@ export function buildSandboxHazards(platforms, W, H) {
 
 // Move a hazard that has a `move` config (generic motion for fire/electric/water/wind/catapult).
 function moveHazard(h) {
-  const m = h.move;
+  const m = h.move || h.motion;
   if (!m) return;
+
+  // Stage Editor motion uses {mode,direction,distance,speed,loop,chain}.
+  // Sample it deterministically instead of silently treating it as the older
+  // axis/range format.
+  if (m.mode || m.direction || Array.isArray(m.chain)) {
+    if (h._stageMotionStartMs == null) h._stageMotionStartMs = performance.now();
+    if (h._stageMotionBaseX == null) h._stageMotionBaseX = h.x;
+    if (h._stageMotionBaseY == null) h._stageMotionBaseY = h.y;
+    const sampled = sampleMotion(m, performance.now(), h._stageMotionStartMs);
+    h.x = h._stageMotionBaseX + sampled.x;
+    h.y = h._stageMotionBaseY + sampled.y;
+    return;
+  }
+
   const ax = m.axis || 'horizontal';
   const spd = m.speed || 2.5;
   const rng = m.range || 200;

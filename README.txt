@@ -1,62 +1,61 @@
-ELEMENT 6 — CLIPS + COMPLETE STAGE TRANSFER FIX
+ELEMENT 6 — CLIPS + STAGE EDITOR RUNTIME FIX
 
-REPLACE ONLY THESE 5 FILES:
+This package was made from the current full project ZIP supplied by the user.
+It is intentionally NOT a whole-project replacement.
+
+REPLACE ONLY THESE 6 FILES:
 - clipRecorder.js
 - GlobalClipRecorder.jsx
-- StageEditor.jsx
-- PlatformFighter.jsx
-- Game.jsx
+- useClipRecorder.js
+- movingPlatforms.js
+- sandboxHazards.js
+- fighter.js
 
-WHY THE CLIP BUG HAPPENED
-The recorder marked a window as stopped BEFORE MediaRecorder had delivered its
-final dataavailable event. That could discard the final data and leave the
-selected recording empty, producing the repeated "CLIP RECORDING IS STARTING"
-or "not ready" behavior.
+CLIPS FIXES
+- Rolling recorder windows now restart immediately after every 30-second window is sealed.
+- The recorder therefore does not eventually run out of windows after a long session.
+- A clip can be saved during the first 30 seconds; the oldest partial window is converted instead of returning "CLIP IS NOT READY YET".
+- MP4 conversion happens after the recording window is restarted, so conversion does not stop recording.
+- Only GlobalClipRecorder handles Space; game-specific hooks no longer install duplicate Space listeners.
+- When a new match mounts a new canvas, the hook switches the recording source to that new match canvas.
+- During Victory/Match Facts, the old match canvas remains the active source because no new match canvas has mounted, preserving the previous match for clipping.
+- MP4 output remains H.264/yuv420p/60fps with faststart.
 
-CLIP FIXES
-- MediaRecorder keeps collecting the final chunk until stop() finishes.
-- Save requests are serialized, so rapid Space presses cannot consume the same
-  recording window twice.
-- Recording continues while FFmpeg converts a completed window to MP4.
-- The global recorder prioritizes canvas.el6-match-canvas so it does not capture
-  the Stage Editor canvas as the game recording.
-- Real H.264 MP4 output remains unchanged.
-- 60 FPS capture/output remains unchanged.
+STAGE EDITOR → MATCH FIXES
+The current project already passes the complete custom-stage object from StageEditor through Game into PlatformFighter. The missing runtime pieces were:
 
-STAGE TRANSFER FIXES
-The match now receives and normalizes the COMPLETE custom stage definition.
+1. Stage Editor platform motion is stored as:
+   { mode, direction, distance, speed, loop, chain }
+   but movingPlatforms.js previously only understood the older:
+   { type: 'horizontal'/'vertical'/'oneway', ... }
+   format. movingPlatforms.js now samples the Stage Editor motion format.
 
-Transferred gameplay features:
-1. Every platform and its material.
-2. Platform conveyor direction.
-3. Platform moving motion, including chain/direction/distance/speed/loop.
-4. Platform destroyable flag. A usable DESTROY toggle was added to the Motion
-   toolbar because the editor already documented this feature and rendered the
-   flag, but did not expose a working toggle.
-5. Spawn points (P1/P2; P3/P4 remain saved for the editor/future multi-fighter
-   flows).
-6. Every placed hazard.
-7. Hazard size.
-8. Hazard-specific direction/strength/axis/range settings.
-9. Hazard motion.
-10. Every placed item/object.
-11. Selected backdrop.
-12. Stage camera zoom.
-13. Stage camera motion, including chain/loop settings.
-14. Custom KO perimeter.
-15. Perimeter motion data.
-16. Stage name/icon/metadata are retained in the saved stage object.
-17. World-stage imported data is retained because the full stage object is
-    passed through instead of reducing it to platforms.
+2. Stage Editor generic hazard motion uses the same motion/chain format,
+   while sandboxHazards.js previously only understood axis/range movement.
+   sandboxHazards.js now samples the Stage Editor format too.
 
-IMPORTANT RUNTIME SAFETY
-- Custom platforms/hazard/object data are cloned before gameplay mutates them.
-  Moving and destructible platforms therefore cannot silently modify the saved
-  stage in local progress.
-- Older custom stages stored as a raw platform array are still accepted.
-- Missing optional fields safely fall back to normal stage behavior.
+3. The Stage Editor kill perimeter was being passed into fighters, but fighter.js
+   still used hard-coded -500/+500/-600/+450 bounds for actual KO detection.
+   fighter.js now uses the supplied custom perimeter.
 
-DO NOT ADD @ffmpeg/ffmpeg TO PACKAGE.JSON FOR THIS FIX.
-The clip recorder intentionally has no static FFmpeg package import, so the
-Vite/Rollup build will not fail with the unresolved @ffmpeg/ffmpeg error from
-the previous package.
+The existing complete-stage transfer in Game.jsx remains intact for:
+- platform position and size
+- platform material
+- conveyor direction
+- destroyable platforms
+- platform motion
+- motion chains/loop settings
+- spawn points
+- all Stage Editor hazard types
+- hazard dimensions and configured properties
+- hazard motion
+- placed objects/items
+- backdrop
+- stage camera zoom
+- stage camera motion
+- KO perimeter
+- perimeter motion data
+
+IMPORTANT
+Do not add @ffmpeg/ffmpeg as a static import for this package. The current
+build-safe recorder continues to load the FFmpeg browser runtime at runtime.

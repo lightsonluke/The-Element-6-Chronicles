@@ -75,6 +75,10 @@ export default function GlobalClipRecorder() {
       if (event.code !== 'Space' && event.key !== ' ') return;
       const target = event.target;
       if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) return;
+      if (!isClipRecorderActive()) {
+        const canvas = findGameCanvas();
+        if (canvas) initClipRecorder(canvas);
+      }
       if (!isClipRecorderActive()) return;
 
       // Clips are always recording during gameplay. There is deliberately no
