@@ -126,17 +126,17 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
       <div>
         <p className="text-[10px] font-heading text-muted-foreground mb-2">ACCESSORIES{char ? ` FOR ${char.name.toUpperCase()}` : ''}</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {available.filter(a => !a.exclusiveTo || a.exclusiveTo === selected).map(a => {
+          {available.filter(a => !a.exclusiveTo || a.exclusiveTo === selected).sort((a, b) => (a.id === 'clan_badge' ? -1 : b.id === 'clan_badge' ? 1 : 0)).map(a => {
             const isOwned = owned.includes(a.id);
             const isEquipped = equipped[char?.id] === a.id;
             const isTrying = tryOn === a.id;
             return (
               <div key={a.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center cursor-pointer transition ${isTrying ? 'border-accent' : 'border-border'}`}
                 onClick={() => setTryOn(isTrying ? null : a.id)}>
-                <AccessoryIcon accessory={a} char={char} />
+                <AccessoryIcon accessory={a} />
                 <p className="font-heading text-xs text-foreground mt-1">{a.name}</p>
                 {a.exclusiveTo && <span className="text-[8px] text-primary font-heading">EXCLUSIVE</span>}
-                <p className="text-[10px] text-accent font-heading mb-2">{a.price} <GameIcon emoji="◆" size={14} /></p>
+                <p className="text-[10px] text-accent font-heading mb-2">{a.id === 'clan_badge' ? 'FREE' : <>{a.price} <GameIcon emoji="◆" size={14} /></>}</p>
                 {isOwned ? (
                   <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
                 ) : (
@@ -166,7 +166,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
             return (
               <div key={a.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center cursor-pointer transition ${isTrying ? 'border-accent' : 'border-border'}`}
                 onClick={() => setTryOn(isTrying ? null : a.id)}>
-                <AccessoryIcon accessory={a} char={char} />
+                <AccessoryIcon accessory={a} />
                 <p className="font-heading text-xs text-foreground mt-1">{a.name}</p>
                 <span className="text-[8px] text-primary font-heading">{kitLabel}</span>
                 <p className="text-[10px] text-accent font-heading mb-2">{a.price} <GameIcon emoji="◆" size={14} /></p>
@@ -519,7 +519,7 @@ function PreviewCanvas({ char, accessories = [], skinColor, skinParts = [] }) {
   return <canvas ref={ref} width={160} height={180} className="rounded-lg" />;
 }
 
-function AccessoryIcon({ accessory, char }) {
+function AccessoryIcon({ accessory }) {
   const ref = React.useRef(null);
   React.useEffect(() => {
     const c = ref.current; if (!c) return;
@@ -528,7 +528,7 @@ function AccessoryIcon({ accessory, char }) {
       if (!r) return; f++;
       ctx.clearRect(0, 0, 64, 64);
       ctx.fillStyle = '#111128'; ctx.fillRect(0, 0, 64, 64);
-      drawAccessory(ctx, 32, 44, accessory.type, resolveAccColor(accessory, char), f, 0.55, accessory.exclusiveTo || '');
+      drawAccessory(ctx, 32, 44, accessory.type, accessory.color, f, 0.55, accessory.exclusiveTo || '');
       requestAnimationFrame(loop);
     };
     loop();

@@ -1,42 +1,39 @@
-ELEMENT 6 — REAL CLIPS + DAILY QUESTS FIX
+ELEMENT 6 — CLOTHING LIMB CONNECTIONS + CLIP SAVE + CLAN BADGE FIX
 
-This package is based on the full current project supplied by the user.
+Replace these files in the CURRENT project:
+- clipRecorder.js
+- cosmetics.js
+- Shop.jsx
+- ClansScreen.jsx
+- Game.jsx
+- package.json
+- pnpm-lock.yaml
 
-CLIPS — actual bug fixed:
-The previous recorder automatically converted EVERY expired 30-second window to
-MP4. Because FFmpeg conversion can take longer than the 30-second window, the
-rolling pool eventually emptied. saveClip() then had no active recorder and the
-UI reported that the clip was not ready.
+What this fixes:
 
-This version:
-- rotates expired recorder windows immediately;
-- NEVER runs FFmpeg during automatic rotation;
-- restarts the replacement recorder before any MP4 conversion;
-- uses 60 FPS canvas capture;
-- keeps 7 staggered overlapping windows;
-- flushes MediaRecorder data correctly;
-- accepts the final dataavailable event after stop();
-- allows a clip during the first 30 seconds using the current partial window;
-- converts only the user-requested window to H.264 MP4;
-- serializes FFmpeg's virtual filesystem without stopping recording;
-- targets canvas.el6-match-canvas first;
-- preserves the existing global Space handler so one press is one save.
+1) Clothing limb connections
+- Hoodies, cardigans, jackets and tees now draw sleeves from the actual animated shoulder positions and rotate with armAngleL/armAngleR.
+- Hoodies, cardigans and jackets extend slightly beyond the animated arm length.
+- Vests, pants, jeans, shorts and sweatpants are also attached to the animated body/leg pose.
+- Caps, berets, beanies, bucket hats, bracelets, watches and necklaces are included.
+- Colorways include black, white, character main color and character accent color.
 
-DAILY QUESTS:
-- Quest chest order is now Bronze → Silver → Gold (Gold and Bronze swapped).
-- Existing same-day quest data is normalized to that order immediately when the
-  Daily Quests screen opens.
-- Daily reset is based on the local calendar date and checked every 30 seconds,
-  so it resets at 12:00 AM and also recovers if the browser was asleep at midnight.
-- Opening an earned chest automatically grants its reward, shows the reward for
-  about one second, then removes the chest. There is no OK button.
+2) Clan Badge
+- Adds a FREE "Clan Badge" accessory and puts it at the top of the accessory shop list.
+- The badge uses the player's current clan icon on the chest.
+- Clan logo is cached globally so the badge works outside the Clans screen.
+- Clan upload validation now accepts normal PNG/JPG/WEBP/GIF images from 16x16 through 1024x1024, up to 2 MB. The old 1x1 restriction is removed.
 
-REPLACE ONLY:
-clipRecorder.js
-GlobalClipRecorder.jsx
-dailyQuests.js
-DailyQuests.jsx
+3) Clips
+- Keeps the game canvas recorder continuously active at 60 FPS.
+- Finished 30-second windows are stored as raw recording data first; they are NOT sent through FFmpeg automatically when a window expires.
+- FFmpeg only runs when the player actually saves a clip.
+- New recording windows start immediately after a window finishes.
+- Save conversion no longer blocks recording.
+- Uses the bundled @ffmpeg/ffmpeg browser API and @ffmpeg/util instead of injecting the broken UMD runtime script.
+- MP4 output is H.264/yuv420p/faststart for normal editor compatibility.
 
-Do not replace the rest of the project with an older generated package.
-Do not add @ffmpeg/ffmpeg to package.json. The recorder loads the browser FFmpeg
-runtime dynamically so Vite/Rollup does not need that package as a build import.
+IMPORTANT:
+- The project must install the new package dependencies from package.json/pnpm-lock.yaml before building.
+- FFmpeg core is loaded at clip-save time from jsDelivr using toBlobURL; the recorder itself does not depend on FFmpeg to keep recording.
+- This package does NOT use browser screen capture/getDisplayMedia().

@@ -76,8 +76,7 @@
     "vaul": "^1.1.2",
     "zod": "^3.24.2",
     "@ffmpeg/ffmpeg": "^0.12.15",
-    "@ffmpeg/core": "^0.12.10",
-    "@ffmpeg/util": "^0.12.1"
+    "@ffmpeg/util": "^0.12.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",

@@ -62,7 +62,6 @@ export default function ClansScreen({
   currentUserId,
   formatElo = value => String(value ?? 1000),
   founderProgress = { wins: 0, playtimeSeconds: 0 },
-  onClanBadgeUpdate = () => {},
 }) {
   const [userId, setUserId] = useState(currentUserId || null);
   const [view, setView] = useState('browse');
@@ -79,7 +78,7 @@ export default function ClansScreen({
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const [createForm, setCreateForm] = useState({ name: '', tag: '', bio: '', iconFile: null, iconPreview: '' });
+  const [createForm, setCreateForm] = useState({ name: '', tag: '', bio: '', icon: '' });
   const [founderMethod, setFounderMethod] = useState('wealthy');
   const [communitySession, setCommunitySession] = useState(null);
   const [communityCodeInput, setCommunityCodeInput] = useState('');
@@ -125,16 +124,13 @@ export default function ClansScreen({
       setClans(clanRows || []);
       if (mine?.element6_clans) {
         setMyClan({ ...mine.element6_clans, myRole: mine.role });
-        try {
-          if (mine.element6_clans.icon_url) localStorage.setItem(`element6_clan_badge_logo_${mine.element6_clans.id}`, mine.element6_clans.icon_url);
-          localStorage.setItem('element6_active_clan_id', mine.element6_clans.id);
-        } catch {}
-        onClanBadgeUpdate?.({ clanId: mine.element6_clans.id, clanName: mine.element6_clans.name, logoUrl: mine.element6_clans.icon_url || '' });
+        window.__e6ClanBadgeLogo = mine.element6_clans?.icon_url || '';
+        try { localStorage.setItem('element6_clan_badge_logo', mine.element6_clans?.icon_url || ''); } catch {}
         await loadClan(mine.element6_clans, mine.role);
       } else {
         setMyClan(null);
-        try { localStorage.removeItem('element6_active_clan_id'); } catch {}
-        onClanBadgeUpdate?.(null);
+        window.__e6ClanBadgeLogo = '';
+        try { localStorage.removeItem('element6_clan_badge_logo'); } catch {}
         setMembers([]);
         setApplications([]);
         setMessages([]);
@@ -310,7 +306,7 @@ export default function ClansScreen({
         p_name: createForm.name,
         p_tag: createForm.tag,
         p_bio: createForm.bio,
-        p_icon_url: null,
+        p_icon_url: createForm.icon || null,
         p_creation_method: founderMethod,
         p_founder_session_id: communitySession?.session_id || null,
         p_proof_wins: wins,
@@ -321,19 +317,8 @@ export default function ClansScreen({
         throw error;
       }
 
-      let clanRow = data;
-      if (createForm.iconFile && data?.id) {
-        const ext = (createForm.iconFile.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
-        const path = `${(await getUid())}/${data.id}/${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
-        const { error: uploadError } = await supabase.storage.from('clan-logos').upload(path, createForm.iconFile, { upsert: true, contentType: createForm.iconFile.type || 'image/png', cacheControl: '31536000' });
-        if (uploadError) throw uploadError;
-        const { data: publicData } = supabase.storage.from('clan-logos').getPublicUrl(path);
-        const { data: updatedClan, error: updateError } = await supabase.rpc('element6_update_clan', { p_icon_url: publicData.publicUrl });
-        if (updateError) throw updateError;
-        clanRow = updatedClan || clanRow;
-      }
-      setNotice(`Clan ${clanRow.name} created!`);
-      setCreateForm({ name: '', tag: '', bio: '', iconFile: null, iconPreview: '' });
+      setNotice(`Clan ${data.name} created!`);
+      setCreateForm({ name: '', tag: '', bio: '', icon: '' });
       setCommunitySession(null);
       await refresh();
       setView('mine');
@@ -613,22 +598,22 @@ export default function ClansScreen({
             <input value={createForm.tag} onChange={e=>setCreateForm({...createForm,tag:e.target.value})} placeholder="Clan tag (2-6 characters)" className="w-full rounded-xl border bg-background px-4 py-3" />
             <textarea value={createForm.bio} onChange={e=>setCreateForm({...createForm,bio:e.target.value})} placeholder="Clan bio" className="w-full rounded-xl border bg-background px-4 py-3 min-h-24" />
             <div>
-              <label className="text-sm font-semibold">Clan logo</label>
+              <label className="text-sm font-semibold">Clan icon</label>
               <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="mt-2 w-full" onChange={e => {
                 const f=e.target.files?.[0]; if(!f) return;
-                if (f.size > 2 * 1024 * 1024) { setNotice('Clan logo must be 2 MB or smaller.'); return; }
-                const img=new Image(); const url=URL.createObjectURL(f);
+                if(f.size > 2 * 1024 * 1024){ setNotice('Clan icon must be 2 MB or smaller.'); return; }
+                const img=new Image();
+                const objectUrl=URL.createObjectURL(f);
                 img.onload=()=> {
-                  URL.revokeObjectURL(url);
-                  if(img.width < 16 || img.height < 16 || img.width > 2048 || img.height > 2048){ setNotice('Clan logo must be between 16×16 and 2048×2048 pixels.'); return; }
+                  URL.revokeObjectURL(objectUrl);
+                  if(img.width < 16 || img.height < 16 || img.width > 1024 || img.height > 1024){ setNotice('Clan icon must be between 16×16 and 1024×1024 pixels.'); return; }
                   const reader=new FileReader();
-                  reader.onload=()=>setCreateForm(x=>({...x,iconFile:f,iconPreview:String(reader.result)}));
+                  reader.onload=()=>setCreateForm(x=>({...x,icon:String(reader.result)}));
                   reader.readAsDataURL(f);
                 };
-                img.src=url;
+                img.onerror=()=>{ URL.revokeObjectURL(objectUrl); setNotice('That file is not a valid image.'); };
+                img.src=objectUrl;
               }} />
-              {createForm.iconPreview && <img src={createForm.iconPreview} alt="Clan logo preview" className="mt-2 h-16 w-16 rounded-xl border object-cover" />}
-              <p className="mt-1 text-xs text-muted-foreground">PNG, JPG, WEBP, or GIF · up to 2 MB.</p>
             </div>
             <button disabled={busy || (founderMethod === 'wealthy' && tokenBalance < CREATE_COST) || (founderMethod === 'community' && (tokenBalance < COMMUNITY_CREATE_COST || !communitySession?.confirmed)) || (founderMethod === 'proven' && (Number(founderProgress?.wins || 0) < PROVEN_WINS_REQUIRED || Number(founderProgress?.playtimeSeconds || 0) < PROVEN_PLAYTIME_REQUIRED))} onClick={createClan} className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground disabled:opacity-50">
               {founderMethod === 'wealthy' ? `Create for ${CREATE_COST.toLocaleString()} Tokens` : founderMethod === 'community' ? `Create for ${COMMUNITY_CREATE_COST.toLocaleString()} Tokens` : 'Create with Founder Trial'}
@@ -640,7 +625,7 @@ export default function ClansScreen({
           <section className="space-y-4">
             <div className="rounded-2xl border bg-card p-5">
               <div className="flex justify-between">
-                <div className="flex items-center gap-3">{myClan.icon_url && <img src={myClan.icon_url} alt="" className="h-14 w-14 rounded-xl border object-cover" />}<div><h2 className="font-heading text-2xl">{myClan.name}</h2><p className="text-sm text-muted-foreground">[{myClan.tag}] · Tier {myClan.tier}</p></div></div>
+                <div><h2 className="font-heading text-2xl">{myClan.name}</h2><p className="text-sm text-muted-foreground">[{myClan.tag}] · Tier {myClan.tier}</p></div>
                 <div className="text-right"><div className="font-heading text-lg">{myClan.xp.toLocaleString()} XP</div><div className="text-xs text-muted-foreground">365-day minimum to Tier 10</div></div>
               </div>
               <div className="mt-3 h-3 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary" style={{width:`${tierProgress(myClan).percent}%`}} /></div>
