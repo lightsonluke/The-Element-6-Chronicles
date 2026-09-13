@@ -1421,11 +1421,25 @@ export default function Game() {
     let resolvedMap = map;
     if (map && map.startsWith('custom_')) {
       const idx = parseInt(map.split('_')[1], 10);
-      const stage = progress.customStages?.[idx];
-      customPlatforms = stage?.platforms || progress.customStage || null;
-      customSpawnPoints = stage?.spawnPoints || null;
-      customHazards = stage?.hazards || null;
-      customObjects = stage?.objects || null;
+      const rawStage = progress.customStages?.[idx];
+      const stage = Array.isArray(rawStage)
+        ? { platforms: rawStage }
+        : (rawStage && typeof rawStage === 'object' ? rawStage : null);
+
+      // Pass the COMPLETE stage object into the match. Do not reduce a custom
+      // stage to its platform array here: materials, platform motion,
+      // destroyable flags, hazards, items, spawns, backdrop, camera settings,
+      // and KO-perimeter settings all belong to the stage definition.
+      customPlatforms = Array.isArray(stage?.platforms)
+        ? stage.platforms.map(p => ({
+            ...p,
+            move: p?.move ? { ...p.move, chain: Array.isArray(p.move.chain) ? p.move.chain.map(step => ({ ...step })) : p.move.chain } : p?.move,
+            motion: p?.motion ? { ...p.motion, chain: Array.isArray(p.motion.chain) ? p.motion.chain.map(step => ({ ...step })) : p.motion.chain } : p?.motion,
+          }))
+        : (Array.isArray(progress.customStage) ? progress.customStage.map(p => ({ ...p })) : null);
+      customSpawnPoints = Array.isArray(stage?.spawnPoints) ? stage.spawnPoints.map(sp => ({ ...sp })) : null;
+      customHazards = Array.isArray(stage?.hazards) ? stage.hazards.map(h => ({ ...h, move: h?.move ? { ...h.move } : h?.move })) : null;
+      customObjects = Array.isArray(stage?.objects) ? stage.objects.map(o => ({ ...o })) : null;
       customStageConfig = stage || null;
       resolvedMap = 'custom';
     }
@@ -1986,7 +2000,7 @@ export default function Game() {
           <PlatformFighter
             p1Char={fighters.p1} p2Char={fighters.p2} p2IsCPU={fighters.isCPU}
             selectedMap={fighters.map} cpuDifficulty={fighters.difficulty}
-            gameMode={fighters.gameMode} customPlatforms={fighters.customPlatforms} customSpawnPoints={fighters.customSpawnPoints} customHazards={fighters.customHazards} customObjects={fighters.customObjects}
+            gameMode={fighters.gameMode} customPlatforms={fighters.customPlatforms} customSpawnPoints={fighters.customSpawnPoints} customHazards={fighters.customHazards} customObjects={fighters.customObjects} customStageConfig={fighters.customStageConfig} stageCamera={fighters.stageCamera} killPerimeter={fighters.killPerimeter}
             p1Element={fighters.p1Element || 'basic'} p2Element={fighters.p2Element || 'basic'}
             onEnd={handleFightEnd} onAward={(result) => awardFightMatch(result)} musicVolume={progress.settings?.musicVolume ?? 50} sfxVolume={progress.settings?.sfxVolume ?? 70}
             equippedAccessories={fighters.rankedAccessories ? { ...(progress.equippedAccessories || {}), ...fighters.rankedAccessories } : progress.equippedAccessories}

@@ -18,6 +18,7 @@ import { sfx } from './sfx.js';
 import { getKeybinds, readPlayerInput, readSinglePlayerInput, getSchemeKeybinds, getSoloKeybinds } from './keybinds.js';
 import { useClipRecorder } from './useClipRecorder.js';
 import { drawMaterialOverlay } from './materials.js';
+import { drawStageBackground } from './stageBackgrounds.js';
 import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor, getEquippedAccessories } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { getCrossoverColor, getCrossoverAttackColor, getCrossover, getCrossoverParts } from './crossovers.js';
@@ -560,6 +561,72 @@ function getComboMoveType(attackData) {
   return null;
 }
 
+function stageMotionOffset(motion, elapsedSeconds) {
+  if (!motion || motion.enabled === false) return { x: 0, y: 0 };
+  const dirMap = {
+    left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1],
+    upLeft: [-0.7071, -0.7071], upRight: [0.7071, -0.7071],
+    downLeft: [-0.7071, 0.7071], downRight: [0.7071, 0.7071],
+  };
+  const stepOffset = (step, localTime) => {
+    const [dx, dy] = dirMap[step?.direction] || [1, 0];
+    const distance = Math.max(0, Number(step?.distance) || 0);
+    const speed = Math.max(0.001, Number(step?.speed) || 100);
+    const duration = Math.max(0.001, distance / speed);
+    return { dx, dy, distance, duration, t: Math.min(duration, Math.max(0, localTime)) };
+  };
+  const chain = Array.isArray(motion.chain) && motion.chain.length ? motion.chain : null;
+  if (motion.mode === 'chain' && chain) {
+    const total = chain.reduce((sum, step) => sum + stepOffset(step, 0).duration, 0);
+    if (!motion.loop && elapsedSeconds >= total) {
+      let x = 0, y = 0;
+      for (const step of chain) { const q = stepOffset(step, stepOffset(step, 0).duration); x += q.dx * q.distance; y += q.dy * q.distance; }
+      return { x, y };
+    }
+    let t = total > 0 ? elapsedSeconds % total : 0;
+    let x = 0, y = 0;
+    for (const step of chain) {
+      const q = stepOffset(step, 0);
+      const use = Math.min(q.duration, t);
+      x += q.dx * q.speed * use;
+      y += q.dy * q.speed * use;
+      t -= use;
+      if (t <= 0) break;
+    }
+    return { x, y };
+  }
+  const [dx, dy] = dirMap[motion.direction] || [1, 0];
+  const distance = Math.max(0, Number(motion.distance) || 0);
+  const speed = Math.max(0.001, Number(motion.speed) || 100);
+  const duration = Math.max(0.001, distance / speed);
+  if (motion.loop === false && elapsedSeconds >= duration * 2) return { x: dx * distance, y: dy * distance };
+  const phase = (elapsedSeconds % (duration * 2)) / duration;
+  const amount = phase <= 1 ? phase : 2 - phase;
+  return { x: dx * distance * amount, y: dy * distance * amount };
+}
+
+function getMovingPerimeter(perimeter, elapsedSeconds) {
+  const base = perimeter || {};
+  const motions = base.motions || {};
+  const leftO = stageMotionOffset(motions.left, elapsedSeconds);
+  const rightO = stageMotionOffset(motions.right, elapsedSeconds);
+  const topO = stageMotionOffset(motions.top, elapsedSeconds);
+  const bottomO = stageMotionOffset(motions.bottom, elapsedSeconds);
+  return {
+    enabled: base.enabled !== false,
+    left: Number(base.left ?? -500) + leftO.x,
+    right: Number(base.right ?? (W + 500)) + rightO.x,
+    top: Number(base.top ?? -600) + topO.y,
+    bottom: Number(base.bottom ?? (H + 450)) + bottomO.y,
+    // Preserve vertical/horizontal movement for every configured wall.  The
+    // editor allows all eight directions, so don't silently discard an axis.
+    leftY: leftO.y,
+    rightY: rightO.y,
+    topX: topO.x,
+    bottomX: bottomO.x,
+  };
+}
+
 export default function PlatformFighter({
   p1Char, p2Char, p2IsCPU, onEnd, onAward, onRematch, selectedMap, cpuDifficulty = 'regular',
   gameMode = 'regular', dummy = false, dummyAutoRecover = false, customPlatforms = null, customSpawnPoints = null, musicVolume = 50, sfxVolume = 70,
@@ -580,6 +647,9 @@ export default function PlatformFighter({
   shapeshiftMode = false,
   p1Team = null,
   p2Team = null,
+  customStageConfig = null,
+  stageCamera = null,
+  killPerimeter = null,
 }) {
   const canvasRef = useRef(null);
   const gameRef = useRef(null);
@@ -604,6 +674,21 @@ export default function PlatformFighter({
   botShikigamiRef.current = _mergedShik;
 
   const mapId = customPlatforms ? 'custom' : (selectedMap || 'splitcity');
+
+  // Normalize every saved custom-stage field at the match boundary.  A stage
+  // can come from local saves, older saves, or World Stages, so the runtime
+  // must not assume one exact object shape.
+  const rawStageConfig = (customStageConfig && typeof customStageConfig === 'object' && !Array.isArray(customStageConfig))
+    ? customStageConfig
+    : {};
+  const stageConfig = rawStageConfig;
+  const activeStageCamera = stageCamera || stageConfig.stageCamera || {
+    zoom: stageConfig.cameraZoom || 1,
+    motion: stageConfig.cameraMotion || null,
+  };
+  const _killPerimeterCandidate = killPerimeter || stageConfig.killPerimeter || null;
+  const activeKillPerimeter = _killPerimeterCandidate?.enabled === false ? null : _killPerimeterCandidate;
+  const activeBackdrop = stageConfig.backdrop || null;
   const activeEvent = getActiveEvent();
   // Event stage support — use event stage platforms
   let eventPlatforms = null;
@@ -611,7 +696,17 @@ export default function PlatformFighter({
     eventPlatforms = activeEvent.eventStage.platforms;
   }
   const platforms = (() => {
-    let p = customPlatforms || eventPlatforms || applyStageMaterials(MAP_PLATFORMS[mapId] || MAP_PLATFORMS.splitcity, mapId);
+    // IMPORTANT: moving/destructible platforms are mutated by the match loop.
+    // Never run a match directly against the saved stage array or the editor's
+    // saved data can be changed by gameplay.
+    let source = customPlatforms || eventPlatforms || applyStageMaterials(MAP_PLATFORMS[mapId] || MAP_PLATFORMS.splitcity, mapId);
+    let p = Array.isArray(source)
+      ? source.map(platform => ({
+          ...platform,
+          move: platform?.move ? { ...platform.move, chain: Array.isArray(platform.move.chain) ? platform.move.chain.map(step => ({ ...step })) : platform.move.chain } : platform?.move,
+          motion: platform?.motion ? { ...platform.motion, chain: Array.isArray(platform.motion.chain) ? platform.motion.chain.map(step => ({ ...step })) : platform.motion.chain } : platform?.motion,
+        }))
+      : [];
     // Sandbox: "Upside Down" — flip the stage so the floor becomes the ceiling.
     // Gravity & jumps stay normal, so all existing collision/landing logic works
     // unchanged; fighters simply stand on the (now top) platforms and fall "down".
@@ -672,6 +767,10 @@ export default function PlatformFighter({
     const p2Spawn = customSpawnPoints && customSpawnPoints[1] ? { x: customSpawnPoints[1].x, y: customSpawnPoints[1].y } : { x: 1000, y: defaultSpawnY };
     const f1 = createFighter(char1, p1Spawn.x, p1Spawn.y, 1);
     const f2 = createFighter(char2, p2Spawn.x, p2Spawn.y, -1);
+    if (activeKillPerimeter) {
+      f1._customBlastZone = { ...activeKillPerimeter };
+      f2._customBlastZone = { ...activeKillPerimeter };
+    }
     if (customSpawnPoints && customSpawnPoints[0]) f1.respawnPoint = { x: customSpawnPoints[0].x, y: customSpawnPoints[0].y };
     if (customSpawnPoints && customSpawnPoints[1]) f2.respawnPoint = { x: customSpawnPoints[1].x, y: customSpawnPoints[1].y };
     f1.grounded = true; f2.grounded = true;
@@ -722,12 +821,16 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
     // Emote state is stored on each fighter: f.emote = { id, timer, maxTimer, progress }
   // Set by the keydown handler, updated each frame in the game loop.
     // Sandbox hazard zones + knockback items — prefer stage-placed, else auto-generate from toggles
-    let sbHazards = (customHazards && customHazards.length > 0) ? buildHazardsFromStage(customHazards) : ((mods?.brHazards) ? buildSandboxHazards(platforms, W, H) : null);
-    let sbObjects = (customObjects && customObjects.length > 0) ? buildObjectsFromStage(customObjects) : ((mods?.brItems) ? buildSandboxObjects(platforms) : null);
+    let sbHazards = (Array.isArray(customHazards) && customHazards.length > 0)
+      ? buildHazardsFromStage(customHazards.map(h => ({ ...h, move: h?.move ? { ...h.move } : h?.move })))
+      : ((mods?.brHazards) ? buildSandboxHazards(platforms, W, H) : null);
+    let sbObjects = (Array.isArray(customObjects) && customObjects.length > 0)
+      ? buildObjectsFromStage(customObjects.map(o => ({ ...o })))
+      : ((mods?.brItems) ? buildSandboxObjects(platforms) : null);
     let combo1 = { count: 0, timer: 0, displayTimer: 0 }; // P1's combo on P2
     let combo2 = { count: 0, timer: 0, displayTimer: 0 }; // P2's combo on P1
 
-    gameRef.current = { f1, f2, timer, running: true, superFlash1, superFlash2, camX, camY, camZoom, shakeX, shakeY, shakeMag };
+    gameRef.current = { f1, f2, timer, running: true, superFlash1, superFlash2, camX, camY, camZoom, shakeX, shakeY, shakeMag, stageStartTime: performance.now() };
 
     const finish = (p1Won) => {
       if (!gameRef.current) return;
@@ -933,6 +1036,10 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
 
       if (hitstop > 0) { hitstop--; } else {
       applyMovingPlatforms(platforms, now, [f1, f2]);
+      if (activeKillPerimeter) {
+        const zone = getMovingPerimeter(activeKillPerimeter, (now - gameRef.current.stageStartTime) / 1000);
+        f1._customBlastZone = zone; f2._customBlastZone = zone;
+      }
       updateFighter(f1, p1In, platforms, W, H, f2);
       updateFighter(f2, p2In, platforms, W, H, f1);
       // Update emote timers — cancel if airborne, decrement timer, update progress
@@ -1237,7 +1344,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const g = gameRef.current;
       const fdx = Math.abs(f2.x - f1.x), fdy = Math.abs(f2.y - f1.y);
       const zoomMul = settings.cameraZoom === 'close' ? 1.15 : settings.cameraZoom === 'far' ? 0.85 : 1.0;
-      const stageZoom = settings.stageZoom != null ? settings.stageZoom : 1.0;
+      const stageZoom = activeStageCamera?.zoom != null ? Number(activeStageCamera.zoom) : (settings.stageZoom != null ? settings.stageZoom : 1.0);
       let targetZoom = Math.max(0.60, Math.min(0.95, 0.95 - fdx / 1200 - fdy / 1000));
       const spreadX = fdx + 280;
       const spreadY = fdy + 280;
@@ -1252,8 +1359,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const midY = ((f1.y + f2.y) / 2) - 70;
       const targetCamX = (midX - W / 2) * (1 - g.camZoom) * 0.35;
       const targetCamY = (midY - H / 2) * (1 - g.camZoom) * 0.35;
-      g.camX += (targetCamX - g.camX) * 0.07;
-      g.camY += (targetCamY - g.camY) * 0.07;
+      const stageCamMotion = stageMotionOffset(activeStageCamera?.motion, (now - g.stageStartTime) / 1000);
+      g.camX += (targetCamX + stageCamMotion.x - g.camX) * 0.07;
+      g.camY += (targetCamY + stageCamMotion.y - g.camY) * 0.07;
       if (settings.reducedMotion || settings.screenShake === false) { g.shakeX = 0; g.shakeY = 0; g.shakeMag = 0; shakeMag = 0; }
       else { g.shakeMag = Math.max(g.shakeMag, shakeMag); if (g.shakeMag > 0.3) { g.shakeX = (Math.random() - 0.5) * g.shakeMag; g.shakeY = (Math.random() - 0.5) * g.shakeMag; g.shakeMag *= 0.72; shakeMag = g.shakeMag; } else { g.shakeX = 0; g.shakeY = 0; g.shakeMag = 0; shakeMag = 0; } }
 
@@ -1262,8 +1370,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       ctx.clearRect(0, 0, W, H);
       ctx.restore();
 
-      // Backdrop fills the full canvas in screen space (no camera transform) so it never leaves gaps
-      drawBackground(ctx, W, H, f1.frame, mapId, activeEvent?.color);
+      // Backdrop fills the full canvas in screen space. Custom stages use the exact backdrop selected in Stage Editor.
+      if (activeBackdrop) drawStageBackground(ctx, W, H, f1.frame, activeBackdrop, activeEvent?.color, null);
+      else drawBackground(ctx, W, H, f1.frame, mapId, activeEvent?.color);
       drawModeTint(ctx, W, H, gameMode);
 
       if (superImpactFlash > 0) {
@@ -1292,7 +1401,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       ctx.shadowColor = '#FF0000'; ctx.shadowBlur = 8;
       const _largeMaps = new Set(['grandarena', 'skycitadel', 'colossalcoliseum', 'infiniteexpanse']);
       const _isLarge = _largeMaps.has(mapId);
-      const BLAST_L = _isLarge ? -800 : -500, BLAST_R = _isLarge ? W + 800 : W + 500, BLAST_T = _isLarge ? -800 : -600, BLAST_B = _isLarge ? H + 600 : H + 450;
+      const _defaultZone = { left: _isLarge ? -800 : -500, right: _isLarge ? W + 800 : W + 500, top: _isLarge ? -800 : -600, bottom: _isLarge ? H + 600 : H + 450 };
+      const _zone = activeKillPerimeter ? getMovingPerimeter(activeKillPerimeter, (now - g.stageStartTime) / 1000) : _defaultZone;
+      const BLAST_L = _zone.left, BLAST_R = _zone.right, BLAST_T = _zone.top, BLAST_B = _zone.bottom;
       ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_R, BLAST_T); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_B); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_L, BLAST_B); ctx.stroke();
@@ -1624,7 +1735,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       document.removeEventListener('visibilitychange', onWakeVis);
       releaseWakeLock();
     };
-  }, [gameStarted, p1Char, p2Char, p2IsCPU, mapId, cpuDifficulty, gameMode, dummy]);
+  }, [gameStarted, p1Char, p2Char, p2IsCPU, mapId, cpuDifficulty, gameMode, dummy, customStageConfig, stageCamera, killPerimeter, customPlatforms, customSpawnPoints, customHazards, customObjects]);
 
   // Suppress controller menu-nav while a match is actively running; re-enable
   // when paused or finished so the player can click buttons with the controller.

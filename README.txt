@@ -1,55 +1,62 @@
-ELEMENT 6 — FINAL BUILD-SAFE CLIPS FIX
+ELEMENT 6 — CLIPS + COMPLETE STAGE TRANSFER FIX
 
-The build failure shown in the screenshot was caused by this kind of static import:
+REPLACE ONLY THESE 5 FILES:
+- clipRecorder.js
+- GlobalClipRecorder.jsx
+- StageEditor.jsx
+- PlatformFighter.jsx
+- Game.jsx
 
-  import { FFmpeg } from '@ffmpeg/ffmpeg';
+WHY THE CLIP BUG HAPPENED
+The recorder marked a window as stopped BEFORE MediaRecorder had delivered its
+final dataavailable event. That could discard the final data and leave the
+selected recording empty, producing the repeated "CLIP RECORDING IS STARTING"
+or "not ready" behavior.
 
-Rollup/Vite could not resolve @ffmpeg/ffmpeg because the dependency was not
-present in the project's installed node_modules/lockfile.
+CLIP FIXES
+- MediaRecorder keeps collecting the final chunk until stop() finishes.
+- Save requests are serialized, so rapid Space presses cannot consume the same
+  recording window twice.
+- Recording continues while FFmpeg converts a completed window to MP4.
+- The global recorder prioritizes canvas.el6-match-canvas so it does not capture
+  the Stage Editor canvas as the game recording.
+- Real H.264 MP4 output remains unchanged.
+- 60 FPS capture/output remains unchanged.
 
-THIS PACKAGE DOES NOT USE A STATIC @ffmpeg IMPORT.
-FFmpeg.wasm is loaded at runtime from jsDelivr after the app has built.
+STAGE TRANSFER FIXES
+The match now receives and normalizes the COMPLETE custom stage definition.
 
-Therefore:
-- no @ffmpeg package is required for the Vite/Rollup build
-- no package-lock/pnpm-lock edit is required
-- no browser screen capture is used
-- no getDisplayMedia() exists in the recorder
-- capture is from the Element 6 canvas only
-- capture is 60 FPS
-- saved files are real H.264 MP4 files, not WebM files renamed to .mp4
-- FFmpeg conversion is queued so multiple Space presses cannot corrupt the
-  FFmpeg virtual filesystem
-- recording itself continues while MP4 conversion happens
-- multiple clip saves can overlap
-- ClipsScreen uses 60 FPS for frame stepping
-- downloaded files are always named .mp4
-- invalid/empty recorder output is rejected instead of being saved
+Transferred gameplay features:
+1. Every platform and its material.
+2. Platform conveyor direction.
+3. Platform moving motion, including chain/direction/distance/speed/loop.
+4. Platform destroyable flag. A usable DESTROY toggle was added to the Motion
+   toolbar because the editor already documented this feature and rendered the
+   flag, but did not expose a working toggle.
+5. Spawn points (P1/P2; P3/P4 remain saved for the editor/future multi-fighter
+   flows).
+6. Every placed hazard.
+7. Hazard size.
+8. Hazard-specific direction/strength/axis/range settings.
+9. Hazard motion.
+10. Every placed item/object.
+11. Selected backdrop.
+12. Stage camera zoom.
+13. Stage camera motion, including chain/loop settings.
+14. Custom KO perimeter.
+15. Perimeter motion data.
+16. Stage name/icon/metadata are retained in the saved stage object.
+17. World-stage imported data is retained because the full stage object is
+    passed through instead of reducing it to platforms.
 
-REPLACE:
-1. clipRecorder.js
-2. GlobalClipRecorder.jsx
-3. useClipRecorder.js
-4. ClipsScreen.jsx
+IMPORTANT RUNTIME SAFETY
+- Custom platforms/hazard/object data are cloned before gameplay mutates them.
+  Moving and destructible platforms therefore cannot silently modify the saved
+  stage in local progress.
+- Older custom stages stored as a raw platform array are still accepted.
+- Missing optional fields safely fall back to normal stage behavior.
 
-DO NOT add @ffmpeg/ffmpeg to package.json for this version.
-
-IMPORTANT RUNTIME NOTE:
-The first time an MP4 is saved, the browser downloads the FFmpeg.wasm runtime
-from jsDelivr. This is a runtime dependency, not a build dependency. If the
-deployment blocks that CDN, MP4 conversion will fail and the app will report
-CLIP SAVE FAILED rather than creating a corrupt fake MP4.
-
-SETTINGS:
-Enable Clips remains the player-controlled setting. It should stay false by
-default. GlobalClipRecorder checks settings.enableClips before starting.
-
-VICTORY / MATCH FACTS:
-GlobalClipRecorder does not stop merely because a gameplay child component
-unmounts. The global recorder stays alive as long as the app's global recorder
-component remains mounted, allowing the previous match's rolling recorder
-windows to be saved from Victory/Match Facts.
-
-BROWSER SUPPORT:
-The recording source uses HTMLCanvasElement.captureStream() and
-MediaRecorder. The final MP4 is encoded by FFmpeg.wasm using H.264.
+DO NOT ADD @ffmpeg/ffmpeg TO PACKAGE.JSON FOR THIS FIX.
+The clip recorder intentionally has no static FFmpeg package import, so the
+Vite/Rollup build will not fail with the unresolved @ffmpeg/ffmpeg error from
+the previous package.
