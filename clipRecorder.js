@@ -220,18 +220,22 @@ async function convertToMP4(webmBlob) {
   try {
     await encoder.writeFile(input, await fetchFile(webmBlob));
 
+    // Produce a broadly compatible MP4: H.264 video, yuv420p, AAC audio
+    // when available, even dimensions, and the MP4 header moved to the front.
+    // The canvas recorder currently contains video only, so audio is disabled
+    // explicitly rather than creating an empty audio track.
     await encoder.exec([
       '-i', input,
+      '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
       '-r', String(FPS),
       '-c:v', 'libx264',
       '-preset', 'veryfast',
-      '-crf', '20',
       '-profile:v', 'main',
-      '-level', '4.2',
+      '-level', '4.1',
+      '-crf', '20',
       '-pix_fmt', 'yuv420p',
-      '-vf', 'scale=ceil(iw/2)*2:ceil(ih/2)*2',
-      '-movflags', '+faststart',
       '-an',
+      '-movflags', '+faststart',
       '-f', 'mp4',
       output
     ]);
@@ -242,6 +246,35 @@ async function convertToMP4(webmBlob) {
 
     if (result.size < 1000) {
       throw new Error('FFmpeg produced an empty MP4');
+    }
+
+    // Verify that the browser can actually parse the generated MP4 before it
+    // is written to IndexedDB. This prevents broken files from appearing as
+    // clips that can neither preview nor open in media players.
+    const testUrl = URL.createObjectURL(result);
+    try {
+      await new Promise((resolve, reject) => {
+        const testVideo = document.createElement('video');
+        let settled = false;
+        const finish = (error) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          testVideo.removeAttribute('src');
+          testVideo.load();
+          if (error) reject(error); else resolve();
+        };
+        const timer = setTimeout(() => finish(new Error('Generated MP4 could not be decoded by the browser')), 8000);
+        testVideo.preload = 'metadata';
+        testVideo.muted = true;
+        testVideo.playsInline = true;
+        testVideo.onloadedmetadata = () => finish();
+        testVideo.onerror = () => finish(new Error('Generated MP4 failed browser validation'));
+        testVideo.src = testUrl;
+        testVideo.load();
+      });
+    } finally {
+      URL.revokeObjectURL(testUrl);
     }
 
     return result;
@@ -299,50 +332,6 @@ export function initClipRecorder(canvas) {
   }
 }
 
-
-async function validateVideoBlob(blob) {
-  if (!blob || blob.size < 1000) {
-    throw new Error('Video blob is empty');
-  }
-
-  if (typeof document === 'undefined') return true;
-
-  return new Promise((resolve, reject) => {
-    const video = document.createElement('video');
-    const url = URL.createObjectURL(blob);
-    let settled = false;
-
-    const cleanup = () => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      video.removeAttribute('src');
-      try { video.load(); } catch {}
-      URL.revokeObjectURL(url);
-    };
-
-    const succeed = () => {
-      cleanup();
-      resolve(true);
-    };
-
-    const fail = () => {
-      const error = new Error('Browser could not decode the generated video');
-      cleanup();
-      reject(error);
-    };
-
-    const timer = setTimeout(fail, 10000);
-
-    video.preload = 'metadata';
-    video.muted = true;
-    video.onloadedmetadata = succeed;
-    video.onerror = fail;
-    video.src = url;
-    video.load();
-  });
-}
-
 export function saveClip() {
   const job = async () => {
     if (
@@ -363,7 +352,6 @@ export function saveClip() {
 
     try {
       const mp4 = await convertToMP4(snapshot.blob);
-      await validateVideoBlob(mp4);
       blob = mp4;
       mime = 'video/mp4';
       extension = 'mp4';

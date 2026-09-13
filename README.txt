@@ -1,21 +1,14 @@
-# Clip preview + file compatibility replacement
+Replace these 5 files only:
+ClipsScreen.jsx
+clipRecorder.js
+GlobalClipRecorder.jsx
+clipStorage.js
+useClipRecorder.js
 
-Replace these 5 files:
+This keeps clips as MP4 downloads, encodes them as H.264/yuv420p with faststart,
+validates generated MP4s before saving them, and uses a dedicated preview modal
+that waits for the browser to decode the MP4 before attempting playback.
 
-- ClipsScreen.jsx
-- clipRecorder.js
-- clipStorage.js
-- GlobalClipRecorder.jsx
-- useClipRecorder.js
-
-Fixes:
-- Downloaded files now use the ACTUAL extension of the stored video. A WebM fallback is never renamed to .mp4.
-- MP4 encoding is made more broadly compatible with H.264 Main + yuv420p + even dimensions + faststart.
-- The generated MP4 is tested by the browser before it is accepted as an MP4.
-- Clips Screen waits for actual media metadata/canplay before enabling Preview.
-- Video object URLs are created/cleaned up in a safer lifecycle.
-- IndexedDB blobs whose MIME type is missing are restored with the stored MIME metadata.
-- Preview retries muted playback if browser autoplay blocks the first attempt.
-
-IMPORTANT:
-Existing clips that are already genuinely damaged cannot be repaired by code after the fact. Delete those old damaged clips and record new ones after installing this package.
+Do NOT replace Game.jsx or pnpm-lock.yaml.
+Old clips that were already saved with invalid MP4 data may still be broken;
+record one new clip after installing this package.
