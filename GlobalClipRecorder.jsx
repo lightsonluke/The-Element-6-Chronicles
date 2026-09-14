@@ -76,8 +76,7 @@ async function persistClip() {
     mime: 'video/mp4',
     extension: 'mp4',
     duration: result.duration,
-    previewBlob: result.previewBlob,
-    previewMime: result.previewBlob?.type || 'video/webm'
+    previewBlob: result.previewBlob || null
   });
 
   await trimClips(30);

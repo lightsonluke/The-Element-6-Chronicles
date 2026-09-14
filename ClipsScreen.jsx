@@ -64,18 +64,14 @@ export default function ClipsScreen({
       for (const clip of metadata) {
         try {
           const blob = await getClipBlob(clip.id);
+          const previewBlob = await getClipPreviewBlob(clip.id).catch(() => blob);
           if (!blob || blob.size < 1000) continue;
-
-          // Preview the original browser-native WebM recording. The downloadable
-          // file remains the MP4 stored as `blob`. This avoids depending on the
-          // browser's MP4 decoder for the in-app preview.
-          const previewBlob = await getClipPreviewBlob(clip.id).catch(() => null);
 
           next[clip.id] = {
             blob,
-            previewBlob: previewBlob && previewBlob.size >= 1000 ? previewBlob : null,
-            mime: 'video/mp4',
-            extension: 'mp4',
+            previewBlob,
+            mime: blob.type || clip.mime || 'video/mp4',
+            extension: extensionForMime(blob.type || clip.mime),
           };
         } catch (error) {
           console.error('[Element 6 Clips] Could not load clip:', error);
@@ -145,10 +141,7 @@ export default function ClipsScreen({
     const source = sources[clip.id];
     if (!source?.blob) return;
 
-    const downloadBlob = source.blob.type === 'video/mp4'
-      ? source.blob
-      : new Blob([source.blob], { type: 'video/mp4' });
-    const url = URL.createObjectURL(downloadBlob);
+    const url = URL.createObjectURL(source.blob);
     const a = document.createElement('a');
     a.href = url;
     a.download =
@@ -157,7 +150,7 @@ export default function ClipsScreen({
     a.click();
     a.remove();
 
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
   };
 
   const remove = async id => {
@@ -217,7 +210,7 @@ export default function ClipsScreen({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {clips.slice(0, 30).map(clip => {
               const source = sources[clip.id];
-              const videoReady = !!(source?.previewBlob || source?.blob);
+              const videoReady = !!source?.blob;
 
               return (
                 <div
@@ -236,8 +229,7 @@ export default function ClipsScreen({
                           if (
                             node &&
                             source &&
-                            sourceRefs.current[clip.id]?.blob !== source.blob ||
-                            sourceRefs.current[clip.id]?.previewBlob !== source.previewBlob
+                            sourceRefs.current[clip.id]?.blob !== source.blob
                           ) {
                             const old = sourceRefs.current[clip.id];
                             if (old?.url) {
@@ -248,7 +240,6 @@ export default function ClipsScreen({
                             sourceRefs.current[clip.id] = {
                               ...made,
                               blob: source.blob,
-                              previewBlob: source.previewBlob,
                             };
                           }
                         }}
@@ -304,7 +295,7 @@ export default function ClipsScreen({
 
                   {failed[clip.id] && (
                     <div className="mt-2 p-2 rounded bg-destructive/10 text-destructive text-[10px]">
-                      This clip could not be previewed in the browser. The MP4 download is still available.
+                      This MP4 could not be decoded by the browser.
                     </div>
                   )}
 
@@ -324,7 +315,7 @@ export default function ClipsScreen({
                     </button>
 
                     <button
-                      disabled={!source?.blob}
+                      disabled={!videoReady}
                       onClick={() => download(clip)}
                       className="px-2 py-1 bg-primary/30 text-primary rounded text-[10px] font-heading disabled:opacity-40"
                     >

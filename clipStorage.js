@@ -41,10 +41,9 @@ export async function saveClipBlob(id, blob, meta = {}) {
       created,
       mime: meta.mime || blob.type || 'video/webm',
       extension: meta.extension || (String(blob.type).includes('mp4') ? 'mp4' : 'webm'),
-      previewBlob: meta.previewBlob || null,
-      previewMime: meta.previewMime || (meta.previewBlob?.type || 'video/webm'),
       size: blob.size,
       duration: Number(meta.duration) || 30,
+      previewBlob: meta.previewBlob || null,
     });
     tx.oncomplete = () => {
       db.close();
@@ -121,23 +120,6 @@ export async function getClipBlob(id) {
   });
 }
 
-
-export async function getClipPreviewBlob(id) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readonly');
-    const request = tx.objectStore(STORE).get(id);
-    request.onsuccess = () => {
-      db.close();
-      resolve(request.result?.previewBlob || null);
-    };
-    request.onerror = () => {
-      db.close();
-      reject(request.error);
-    };
-  });
-}
-
 export async function deleteClipBlob(id) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -157,4 +139,20 @@ export async function deleteClipBlob(id) {
 
 export async function refreshClipMetadata() {
   return listClipMetadata();
+}
+
+export async function getClipPreviewBlob(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const request = tx.objectStore(STORE).get(id);
+    request.onsuccess = () => {
+      db.close();
+      resolve(request.result?.previewBlob || request.result?.blob || null);
+    };
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+  });
 }

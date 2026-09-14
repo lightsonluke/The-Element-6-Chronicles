@@ -61,8 +61,6 @@ function rebuildBlob() {
 function trimBuffer() {
   const cutoff = performance.now() - CLIP_MS - 1000;
 
-  // Never remove the first WebM chunk. It contains the initialization/header
-  // needed to decode the remaining rolling-buffer media chunks.
   while (chunks.length > 2 && chunks[1].time < cutoff) {
     chunkBytes -= chunks[1].size;
     chunks.splice(1, 1);
@@ -222,17 +220,33 @@ async function convertToMP4(webmBlob) {
   try {
     await encoder.writeFile(input, await fetchFile(webmBlob));
 
-    await encoder.exec([
-      '-i', input,
-      '-r', String(FPS),
+    let exitCode = await encoder.exec([
+      '-y', '-i', input,
+      '-an',
       '-c:v', 'libx264',
       '-preset', 'veryfast',
-      '-crf', '20',
+      '-crf', '21',
       '-pix_fmt', 'yuv420p',
       '-movflags', '+faststart',
-      '-an',
       output
     ]);
+
+    if (exitCode !== 0) {
+      try { await encoder.deleteFile(output); } catch {}
+      exitCode = await encoder.exec([
+        '-y', '-i', input,
+        '-an',
+        '-c:v', 'mpeg4',
+        '-q:v', '5',
+        '-pix_fmt', 'yuv420p',
+        '-movflags', '+faststart',
+        output
+      ]);
+    }
+
+    if (exitCode !== 0) {
+      throw new Error(`FFmpeg MP4 encode failed (exit ${exitCode})`);
+    }
 
     const data = await encoder.readFile(output);
     const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);

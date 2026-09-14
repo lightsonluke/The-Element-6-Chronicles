@@ -1,19 +1,18 @@
-ELEMENT 6 CLIPS - FINAL TARGETED FIX
+TARGETED CLIP FIX
 
-Replace ONLY:
+Replace only:
 - clipRecorder.js
 - GlobalClipRecorder.jsx
-- ClipsScreen.jsx
 - clipStorage.js
+- ClipsScreen.jsx
 - useClipRecorder.js
 
-What this fixes:
-- Keeps the first WebM initialization chunk in the rolling buffer.
-- Converts the clip to MP4 for the stored/downloaded file.
-- Stores the original WebM snapshot separately for in-game preview.
-- Clips Screen previews the WebM snapshot instead of requiring the browser to decode the MP4.
-- SAVE MP4 always downloads the MP4 file.
+Fixes:
+- Keeps the WebM initialization/header chunk in the rolling buffer.
+- MP4 encoding tries H.264 first, then MPEG-4 Part 2 if the FFmpeg build does not contain libx264.
+- The saved/downloaded file is ALWAYS MP4.
+- The Clips screen uses the original browser-native WebM as an internal preview copy, so preview does not depend on MP4 browser decoding.
+- IndexedDB stores both: MP4 for download and WebM for in-app preview.
+- No Game.jsx or package.json changes.
 
-IMPORTANT:
-New clips created after this update get both an MP4 download and a browser-compatible preview copy.
-Existing clips do not have the new preview copy, so delete/re-record them if their preview was already broken.
+After replacing, create a NEW clip. Old clips cannot gain the previewBlob field.
