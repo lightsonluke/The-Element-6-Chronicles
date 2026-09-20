@@ -1757,6 +1757,7 @@ export default function Game() {
     const backdrop = stageData.backdrop || null;
     const hazards = stageData.hazards || null;
     const objects = stageData.objects || null;
+    const freehandStrokes = Array.isArray(stageData.freehandStrokes) ? stageData.freehandStrokes : [];
     const killPerimeter = stageData.killPerimeter || null;
     const stageCamera = stageData.stageCamera || null;
     const cameraZoom = stageData.cameraZoom || stageCamera?.zoom || 1;
@@ -1768,10 +1769,10 @@ export default function Game() {
       const list = [...(prev.customStages || [])];
       if (editIdx != null && editIdx >= 0 && editIdx < list.length) {
         // Editing an existing stage — update in place (no duplicate)
-        list[editIdx] = { platforms, name, emoji, spawnPoints, backdrop, hazards, objects, killPerimeter, stageCamera, cameraZoom, cameraMotion, downloaded, originalOwnerId };
+        list[editIdx] = { platforms, freehandStrokes, name, emoji, spawnPoints, backdrop, hazards, objects, killPerimeter, stageCamera, cameraZoom, cameraMotion, downloaded, originalOwnerId };
       } else {
         if (list.length >= 10) list.shift(); // max 10 stages (includes downloads)
-        list.push({ platforms, name, emoji, spawnPoints, backdrop, hazards, objects, killPerimeter, stageCamera, cameraZoom, cameraMotion, downloaded, originalOwnerId });
+        list.push({ platforms, freehandStrokes, name, emoji, spawnPoints, backdrop, hazards, objects, killPerimeter, stageCamera, cameraZoom, cameraMotion, downloaded, originalOwnerId });
       }
       const next = { ...prev, customStages: list, customStage: platforms };
       saveProgress(next);

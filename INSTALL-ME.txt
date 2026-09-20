@@ -1,0 +1,50 @@
+ELEMENT 6 — SHIKIGAMI + FREEHAND REPLACEMENT PACKAGE
+
+Files in this package:
+- shikigami.js
+  Replaces the existing Shikigami file. Keeps the original 30 and adds 50
+  completely new designs for exactly 80 total. Every Shikigami has its own
+  name, description, drawing function, and +0.5 stat assignment.
+
+- renderer.js
+  Fixes Freehand rendering in actual matches. Freehand paths are drawn as
+  clean continuous rounded strokes while their expanded collision pieces are
+  still used by the physics engine.
+
+- PlatformFighter.jsx
+  Passes saved Freehand paths to the match renderer.
+
+- CustomBattle.jsx
+  Passes saved Freehand paths into Custom Battle too.
+
+- Game.jsx
+  IMPORTANT: preserves freehandStrokes when a custom stage is saved locally,
+  so the game does not throw away the path after leaving the editor.
+
+- MyStages.jsx
+  Includes freehandStrokes when a custom stage is uploaded to World Stages.
+
+INSTALL:
+1. Replace each matching file in the project with the file from this folder.
+2. Do NOT delete the other project files.
+3. If you already have custom stages saved, re-open/save them once in the
+   Stage Editor after installing this package. Newly saved stages will retain
+   their Freehand path data.
+4. Existing stages that only contain expanded Freehand collision pieces still
+   render using the normal platform renderer, so this change does not require
+   a database migration.
+
+SHIKIGAMI:
+- Total: 80
+- Original: 30
+- Added: 50
+- Each added Shikigami has a unique visual renderer and a unique memorable
+  Japanese-culture-based name/description.
+- Each gives exactly +0.5 to one of: power, speed, defense, control, utility.
+
+FREEHAND:
+- Physics still uses expanded collision segments.
+- The player-facing renderer uses the original stroke path so it looks like
+  one continuous piece rather than many visible boxes.
+- Freehand is now preserved through local custom-stage saves and World Stage
+  uploads/downloads.

@@ -280,7 +280,7 @@ export default function CustomBattle({ onBack, unlockedIds, favoriteId, equipped
   return (
     <CustomFight
       key={rematchNonce}
-      fighters={activeFighters} mapId={resolvedMapId} customPlatforms={customPlatforms}
+      fighters={activeFighters} mapId={resolvedMapId} customPlatforms={customPlatforms} customFreehandStrokes={useCustomStage !== null ? (customStages[useCustomStage]?.freehandStrokes || null) : null}
       customSpawnPoints={customSpawnPoints} customHazards={customHazards} customObjects={customObjects}
       matchTime={matchTime} onEnd={() => { onBack(); }} onRematch={() => setRematchNonce(n => n + 1)}
       musicVolume={musicVolume} sfxVolume={sfxVolume}
@@ -293,7 +293,7 @@ export default function CustomBattle({ onBack, unlockedIds, favoriteId, equipped
   );
 }
 
-function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = null, customHazards = null, customObjects = null, matchTime = 240, onEnd, onRematch, musicVolume, sfxVolume = 70, equippedAccessories, equippedSkins, equippedShikigami = {}, settings = {}, teamBattle = false, teamAssignments = [], teamDamage = true, elements = [], customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
+function CustomFight({ fighters, mapId, customPlatforms, customFreehandStrokes = null, customSpawnPoints = null, customHazards = null, customObjects = null, matchTime = 240, onEnd, onRematch, musicVolume, sfxVolume = 70, equippedAccessories, equippedSkins, equippedShikigami = {}, settings = {}, teamBattle = false, teamAssignments = [], teamDamage = true, elements = [], customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
   const canvasRef = useRef(null);
   const gameRef = useRef(null);
   const keysRef = useRef({});
@@ -559,7 +559,7 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
       ctx.scale(g.camZoom, g.camZoom);
       ctx.translate(-W / 2 - g.camX, -H / 2 - g.camY);
 
-      drawPlatforms(ctx, platforms, fs[0].frame, mapId);
+      drawPlatforms(ctx, platforms, fs[0].frame, mapId, customFreehandStrokes);
       // Stage-placed hazard zones + knockback items
       if (sbHazards) drawSBHazards(ctx, sbHazards, fs[0].frame);
       if (sbObjects) drawSBObjects(ctx, sbObjects, fs[0].frame);

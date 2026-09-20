@@ -42,7 +42,7 @@ export default function MyStages({ progress, onBack, onEditStage, onDeleteStage,
         owner_user_id: userId,
         owner_username: username,
         name, description: desc, emoji: stage.emoji || <GameIcon emoji="🎨" size={14} />, backdrop: stage.backdrop || 'city',
-        stage_data: { platforms: stage.platforms, spawnPoints: stage.spawnPoints, backdrop: stage.backdrop || 'city' },
+        stage_data: { platforms: stage.platforms, freehandStrokes: Array.isArray(stage.freehandStrokes) ? stage.freehandStrokes : [], spawnPoints: stage.spawnPoints, backdrop: stage.backdrop || 'city' },
         is_private: false,
       });
       sfx.purchaseSuccess();
