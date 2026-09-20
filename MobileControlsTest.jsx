@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import GameIcon from './GameIcon.jsx';
 import { MOBILE_CONTROL_DEFAULTS, normalizeMobileControls } from './mobileControls.js';
 
+const SHAPES = ['circle','square','rounded','pill','diamond','hexagon','triangle'];
 const LABELS = { left: '←', right: '→', jump: '↑', down: '↓', power: 'PWR', sig: 'SIG', heavy: 'HVY', superMove: 'SUP' };
 
 export default function MobileControlsTest({ settings = {}, onSave, onBack }) {
@@ -74,8 +75,8 @@ export default function MobileControlsTest({ settings = {}, onSave, onBack }) {
             </div>
           ) : buttonEntries.map(([id, item]) => (
             <button key={id} onPointerDown={e => beginDrag('buttons', id, e)}
-              className={`absolute flex items-center justify-center rounded-full border-2 border-white/30 text-white font-heading select-none touch-none cursor-grab active:cursor-grabbing ${['left','right','jump','down'].includes(id) ? 'bg-white/15 text-2xl' : 'bg-accent/55 text-[10px]'}`}
-              style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.size, transform: 'translate(-50%,-50%)', opacity: item.opacity }}>
+              className={`absolute flex items-center justify-center border-2 border-white/30 text-white font-heading select-none touch-none cursor-grab active:cursor-grabbing ${item.shape === 'circle' ? 'rounded-full' : item.shape === 'rounded' ? 'rounded-xl' : item.shape === 'pill' ? 'rounded-full' : ''} ${['left','right','jump','down'].includes(id) ? 'text-2xl' : 'text-[10px]'}`}
+              style={{ left: `${item.x}%`, top: `${item.y}%`, width: item.size, height: item.shape === 'pill' ? item.size * 0.65 : item.size, transform: 'translate(-50%,-50%)', opacity: item.opacity, backgroundColor: item.color, clipPath: item.shape === 'diamond' ? 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)' : item.shape === 'hexagon' ? 'polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%)' : item.shape === 'triangle' ? 'polygon(50% 0%,100% 100%,0% 100%)' : undefined }}>
               {LABELS[id]}
             </button>
           ))}
@@ -103,6 +104,8 @@ export default function MobileControlsTest({ settings = {}, onSave, onBack }) {
               <div className="grid grid-cols-4 gap-1">{buttonEntries.map(([id]) => <button key={id} onClick={() => setSelected(id)} className={`px-1.5 py-1.5 rounded text-[9px] font-heading ${selected === id ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>{LABELS[id]}</button>)}</div>
               <ControlSlider label="Size" value={current.size} min={36} max={120} step={1} onChange={v => updateItem('buttons', selected, { size: v })} />
               <ControlSlider label="Opacity" value={current.opacity} min={0.15} max={1} step={0.05} onChange={v => updateItem('buttons', selected, { opacity: v })} />
+              <label className="block text-xs font-body">Shape<select className="w-full mt-1 bg-secondary rounded px-2 py-2" value={current.shape || 'circle'} onChange={e => updateItem('buttons', selected, { shape: e.target.value })}>{SHAPES.map(x => <option key={x} value={x}>{x.toUpperCase()}</option>)}</select></label>
+              <label className="block text-xs font-body">Color<input className="w-full mt-1 h-9" type="color" value={current.color || '#FFFFFF'} onChange={e => updateItem('buttons', selected, { color: e.target.value })} /></label>
             </>
           )}
           <button onClick={reset} className="w-full px-3 py-2 rounded bg-secondary text-secondary-foreground border border-border text-xs font-heading">RESET MOBILE LAYOUT</button>

@@ -34,7 +34,7 @@ export function randomBotCosmeticsForChar(charId) {
   // All accessories available to this character:
   // - Exclusive to this character (their own color)
   // - Generic accessories (no exclusiveTo set)
-  const ownAccs = ACCESSORIES.filter(a => !a.exclusiveTo || a.exclusiveTo === charId);
+  const ownAccs = ACCESSORIES.filter(a => a.id !== 'clan_badge' && a.type !== 'clan_badge' && (!a.exclusiveTo || a.exclusiveTo === charId));
 
   // Split into kits and non-kits
   const kits = ownAccs.filter(a => KIT_TYPES.has(a.type));

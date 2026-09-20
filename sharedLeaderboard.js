@@ -14,6 +14,8 @@ export async function syncSharedLeaderboard(localEntry) {
 }
 
 export async function loadSharedLeaderboard() {
+  const rpc = await supabase.rpc('element6_get_global_leaderboard', { p_limit: 200 });
+  if (!rpc.error && Array.isArray(rpc.data)) return rpc.data.map(row => ({ ...row, user_name: row.username, ranked_elo: row.ranked_rating ?? 1000 }));
   const [{ data, error }, ratingsResult] = await Promise.all([
     supabase.from('shared_leaderboard').select('*').order('total_xp', { ascending: false }).limit(200),
     supabase.from('ranked_ratings').select('user_id,rating'),

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import ClanTournamentPanel from './ClanTournamentPanel.jsx';
 
 /**
  * Element 6 Clans
@@ -23,15 +24,15 @@ const COMMUNITY_FOUNDERS_REQUIRED = 3;
 const TIERS = [
   { tier: 0, xp: 0, days: 0, reward: 0 },
   { tier: 1, xp: 1, days: 0, reward: 500 },
-  { tier: 2, xp: 75, days: 7, reward: 1000 },
-  { tier: 3, xp: 250, days: 21, reward: 1500 },
-  { tier: 4, xp: 550, days: 45, reward: 2500 },
-  { tier: 5, xp: 1000, days: 75, reward: 3500 },
-  { tier: 6, xp: 1600, days: 110, reward: 5000 },
-  { tier: 7, xp: 2400, days: 150, reward: 7000 },
-  { tier: 8, xp: 3400, days: 200, reward: 9000 },
-  { tier: 9, xp: 4700, days: 270, reward: 12000 },
-  { tier: 10, xp: 6500, days: 365, reward: 20000 },
+  { tier: 2, xp: 225, days: 7, reward: 1000 },
+  { tier: 3, xp: 750, days: 21, reward: 1500 },
+  { tier: 4, xp: 1650, days: 45, reward: 2500 },
+  { tier: 5, xp: 3000, days: 75, reward: 3500 },
+  { tier: 6, xp: 4800, days: 110, reward: 5000 },
+  { tier: 7, xp: 7200, days: 150, reward: 7000 },
+  { tier: 8, xp: 10200, days: 200, reward: 9000 },
+  { tier: 9, xp: 14100, days: 270, reward: 12000 },
+  { tier: 10, xp: 19500, days: 365, reward: 20000 },
 ];
 
 const ROLE_ORDER = { member: 1, officer: 2, lieutenant: 3, leader: 4 };
@@ -479,6 +480,7 @@ export default function ClansScreen({
         <nav className="grid grid-cols-2 gap-2 md:grid-cols-6">
           {[
             ['browse','Browse Clans'],
+            ['tournaments','Clan Tournaments'],
             ['mine','My Clan'],
             ...(myClan ? [['members','Members']] : []),
             ...(canReviewApplications ? [['applications','Applications']] : []),
@@ -490,6 +492,11 @@ export default function ClansScreen({
             </button>
           ))}
         </nav>
+
+
+        {view === 'tournaments' && (
+          <ClanTournamentPanel supabase={supabase} currentUserId={userId} myClan={myClan} onGrantTokens={onGrantTokens} />
+        )}
 
         {view === 'browse' && (
           <section className="space-y-3">

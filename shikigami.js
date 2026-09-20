@@ -43,6 +43,21 @@ const ORB = (ctx, cx, cy, frame, radius, i, speed, r, color, phase = 0) => {
   CIR(ctx, cx + Math.cos(a) * radius, cy + Math.sin(a) * radius * 0.7, r, color);
 };
 
+
+const drawCulturalSpirit = (ctx, x, y, frame, scale, palette = {}) => {
+  const main = palette.main || '#E8E8F0';
+  const accent = palette.accent || '#88AAFF';
+  const r = 8 * scale;
+  const bob = Math.sin(frame * 0.08) * 1.5 * scale;
+  GLOW(ctx, x, y + bob, 18 * scale, accent, 0.22);
+  SHADE(ctx, x, y + bob, r * 1.05, r * 0.78, 0, main, '#FFFFFF');
+  ELL(ctx, x - r * 0.45, y + bob - r * 0.25, r * 0.16, r * 0.55, -0.35, accent);
+  ELL(ctx, x + r * 0.45, y + bob - r * 0.25, r * 0.16, r * 0.55, 0.35, accent);
+  EYE(ctx, x - r * 0.32, y + bob - r * 0.08, r * 0.14, accent);
+  EYE(ctx, x + r * 0.32, y + bob - r * 0.08, r * 0.14, accent);
+  ORB(ctx, x, y + bob, frame, 13 * scale, 0, 0.035, 1.2 * scale, accent);
+};
+
 export const SHIKIGAMI = [
   { id: 'kitsune', name: 'Kitsune', desc: 'White fox spirit with red markings and two glowing tails.', price: 220, color: '#FFFFFF', accent: '#FF3322', draw: drawKitsune },
   { id: 'kuro', name: 'Kuro', desc: 'Tiny black wolf with faint purple eyes and smoky fur.', price: 200, color: '#1A1A22', accent: '#AA66FF', draw: drawKuro },
@@ -74,6 +89,56 @@ export const SHIKIGAMI = [
   { id: 'sakura', name: 'Sakura', desc: 'Pink fox spirit surrounded by falling cherry-blossom petals.', price: 210, color: '#FFAADD', accent: '#FF77BB', draw: drawSakura },
   { id: 'hotaru', name: 'Hotaru', desc: 'Firefly spirit with a glowing yellow-green body and light particles.', price: 200, color: '#CCFF44', accent: '#FFFFAA', draw: drawHotaru },
   { id: 'shiro', name: 'Shiro', desc: 'Completely white wolf spirit with a faint silver aura and blue eyes.', price: 240, color: '#FFFFFF', accent: '#AABBFF', draw: drawShiro },
+  { id: 'inari', name: 'Inari', desc: 'Japanese folklore-inspired Inari companion.', price: 2000, color: '#EDE7F6', accent: '#FFB74D', stat: 'PROSPERITY', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFB74D'}) },
+  { id: 'tenjin', name: 'Tenjin', desc: 'Japanese folklore-inspired Tenjin companion.', price: 2000, color: '#EDE7F6', accent: '#81D4FA', stat: 'LEARNING', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#81D4FA'}) },
+  { id: 'raijin', name: 'Raijin', desc: 'Japanese folklore-inspired Raijin companion.', price: 2000, color: '#EDE7F6', accent: '#FFF176', stat: 'POWER', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFF176'}) },
+  { id: 'fujin', name: 'Fujin', desc: 'Japanese folklore-inspired Fujin companion.', price: 2000, color: '#EDE7F6', accent: '#A5D6A7', stat: 'SPEED', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#A5D6A7'}) },
+  { id: 'suijin', name: 'Suijin', desc: 'Japanese folklore-inspired Suijin companion.', price: 2000, color: '#EDE7F6', accent: '#CE93D8', stat: 'DEFENSE', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#CE93D8'}) },
+  { id: 'ryujin', name: 'Ryujin', desc: 'Japanese folklore-inspired Ryujin companion.', price: 2000, color: '#EDE7F6', accent: '#90CAF9', stat: 'HEALTH', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#90CAF9'}) },
+  { id: 'bakeneko', name: 'Bakeneko', desc: 'Japanese folklore-inspired Bakeneko companion.', price: 2000, color: '#EDE7F6', accent: '#FFB74D', stat: 'CRIT', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFB74D'}) },
+  { id: 'nekomata', name: 'Nekomata', desc: 'Japanese folklore-inspired Nekomata companion.', price: 2000, color: '#EDE7F6', accent: '#81D4FA', stat: 'DODGE', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#81D4FA'}) },
+  { id: 'okami', name: 'Okami', desc: 'Japanese folklore-inspired Okami companion.', price: 2000, color: '#EDE7F6', accent: '#FFF176', stat: 'ATTACK', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFF176'}) },
+  { id: 'shisa', name: 'Shisa', desc: 'Japanese folklore-inspired Shisa companion.', price: 2000, color: '#EDE7F6', accent: '#A5D6A7', stat: 'DEFENSE', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#A5D6A7'}) },
+  { id: 'kodama', name: 'Kodama', desc: 'Japanese folklore-inspired Kodama companion.', price: 2000, color: '#EDE7F6', accent: '#CE93D8', stat: 'REGEN', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#CE93D8'}) },
+  { id: 'yurei', name: 'Yurei', desc: 'Japanese folklore-inspired Yurei companion.', price: 2000, color: '#EDE7F6', accent: '#90CAF9', stat: 'ENERGY', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#90CAF9'}) },
+  { id: 'jikininki', name: 'Jikininki', desc: 'Japanese folklore-inspired Jikininki companion.', price: 2000, color: '#EDE7F6', accent: '#FFB74D', stat: 'LIFESTEAL', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFB74D'}) },
+  { id: 'rokurokubi', name: 'Rokurokubi', desc: 'Japanese folklore-inspired Rokurokubi companion.', price: 2000, color: '#EDE7F6', accent: '#81D4FA', stat: 'RANGE', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#81D4FA'}) },
+  { id: 'nue', name: 'Nue', desc: 'Japanese folklore-inspired Nue companion.', price: 2000, color: '#EDE7F6', accent: '#FFF176', stat: 'RESISTANCE', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFF176'}) },
+  { id: 'kappa', name: 'Kappa', desc: 'Japanese folklore-inspired Kappa companion.', price: 2000, color: '#EDE7F6', accent: '#A5D6A7', stat: 'WATER', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#A5D6A7'}) },
+  { id: 'tsukumogami', name: 'Tsukumogami', desc: 'Japanese folklore-inspired Tsukumogami companion.', price: 2000, color: '#EDE7F6', accent: '#CE93D8', stat: 'LUCK', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#CE93D8'}) },
+  { id: 'karakasa', name: 'Karakasa', desc: 'Japanese folklore-inspired Karakasa companion.', price: 2000, color: '#EDE7F6', accent: '#90CAF9', stat: 'JUMP', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#90CAF9'}) },
+  { id: 'chochin', name: 'Chochin', desc: 'Japanese folklore-inspired Chochin companion.', price: 2000, color: '#EDE7F6', accent: '#FFB74D', stat: 'VISION', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFB74D'}) },
+  { id: 'biwa', name: 'Biwa', desc: 'Japanese folklore-inspired Biwa companion.', price: 2000, color: '#EDE7F6', accent: '#81D4FA', stat: 'FOCUS', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#81D4FA'}) },
+  { id: 'shamisen', name: 'Shamisen', desc: 'Japanese folklore-inspired Shamisen companion.', price: 2000, color: '#EDE7F6', accent: '#FFF176', stat: 'COMBO', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFF176'}) },
+  { id: 'kitsunebi', name: 'Kitsunebi', desc: 'Japanese folklore-inspired Kitsunebi companion.', price: 2000, color: '#EDE7F6', accent: '#A5D6A7', stat: 'FIRE', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#A5D6A7'}) },
+  { id: 'hitodama', name: 'Hitodama', desc: 'Japanese folklore-inspired Hitodama companion.', price: 2000, color: '#EDE7F6', accent: '#CE93D8', stat: 'ENERGY', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#CE93D8'}) },
+  { id: 'jorogumo', name: 'Jorogumo', desc: 'Japanese folklore-inspired Jorogumo companion.', price: 2000, color: '#EDE7F6', accent: '#90CAF9', stat: 'TRAP', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#90CAF9'}) },
+  { id: 'kamaitachi', name: 'Kamaitachi', desc: 'Japanese folklore-inspired Kamaitachi companion.', price: 2000, color: '#EDE7F6', accent: '#FFB74D', stat: 'SPEED', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFB74D'}) },
+  { id: 'mujina', name: 'Mujina', desc: 'Japanese folklore-inspired Mujina companion.', price: 2000, color: '#EDE7F6', accent: '#81D4FA', stat: 'ADAPT', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#81D4FA'}) },
+  { id: 'tanuki_yokai', name: 'Tanuki Yokai', desc: 'Japanese folklore-inspired Tanuki Yokai companion.', price: 2000, color: '#EDE7F6', accent: '#FFF176', stat: 'LUCK', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFF176'}) },
+  { id: 'amabie', name: 'Amabie', desc: 'Japanese folklore-inspired Amabie companion.', price: 2000, color: '#EDE7F6', accent: '#A5D6A7', stat: 'HEALTH', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#A5D6A7'}) },
+  { id: 'akaname', name: 'Akaname', desc: 'Japanese folklore-inspired Akaname companion.', price: 2000, color: '#EDE7F6', accent: '#CE93D8', stat: 'CLEANSE', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#CE93D8'}) },
+  { id: 'azukiarai', name: 'Azukiarai', desc: 'Japanese folklore-inspired Azukiarai companion.', price: 2000, color: '#EDE7F6', accent: '#90CAF9', stat: 'XP', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#90CAF9'}) },
+  { id: 'sunekosuri', name: 'Sunekosuri', desc: 'Japanese folklore-inspired Sunekosuri companion.', price: 2000, color: '#EDE7F6', accent: '#FFB74D', stat: 'STAMINA', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFB74D'}) },
+  { id: 'nurarihyon', name: 'Nurarihyon', desc: 'Japanese folklore-inspired Nurarihyon companion.', price: 2000, color: '#EDE7F6', accent: '#81D4FA', stat: 'COOLDOWN', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#81D4FA'}) },
+  { id: 'tengu', name: 'Tengu', desc: 'Japanese folklore-inspired Tengu companion.', price: 2000, color: '#EDE7F6', accent: '#FFF176', stat: 'ATTACK', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFF176'}) },
+  { id: 'karura', name: 'Karura', desc: 'Japanese folklore-inspired Karura companion.', price: 2000, color: '#EDE7F6', accent: '#A5D6A7', stat: 'AIR', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#A5D6A7'}) },
+  { id: 'baku', name: 'Baku', desc: 'Japanese folklore-inspired Baku companion.', price: 2000, color: '#EDE7F6', accent: '#CE93D8', stat: 'RECOVERY', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#CE93D8'}) },
+  { id: 'shinigami', name: 'Shinigami', desc: 'Japanese folklore-inspired Shinigami companion.', price: 2000, color: '#EDE7F6', accent: '#90CAF9', stat: 'DAMAGE', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#90CAF9'}) },
+  { id: 'onryo', name: 'Onryo', desc: 'Japanese folklore-inspired Onryo companion.', price: 2000, color: '#EDE7F6', accent: '#FFB74D', stat: 'RAGE', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFB74D'}) },
+  { id: 'komainu', name: 'Komainu', desc: 'Japanese folklore-inspired Komainu companion.', price: 2000, color: '#EDE7F6', accent: '#81D4FA', stat: 'ARMOR', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#81D4FA'}) },
+  { id: 'omukade', name: 'Omukade', desc: 'Japanese folklore-inspired Omukade companion.', price: 2000, color: '#EDE7F6', accent: '#FFF176', stat: 'POISON', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFF176'}) },
+  { id: 'mononoke', name: 'Mononoke', desc: 'Japanese folklore-inspired Mononoke companion.', price: 2000, color: '#EDE7F6', accent: '#A5D6A7', stat: 'MYSTERY', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#A5D6A7'}) },
+  { id: 'ubume', name: 'Ubume', desc: 'Japanese folklore-inspired Ubume companion.', price: 2000, color: '#EDE7F6', accent: '#CE93D8', stat: 'AERIAL', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#CE93D8'}) },
+  { id: 'yuki_onna', name: 'Yuki Onna', desc: 'Japanese folklore-inspired Yuki Onna companion.', price: 2000, color: '#EDE7F6', accent: '#90CAF9', stat: 'ICE', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#90CAF9'}) },
+  { id: 'hakutaku', name: 'Hakutaku', desc: 'Japanese folklore-inspired Hakutaku companion.', price: 2000, color: '#EDE7F6', accent: '#FFB74D', stat: 'KNOWLEDGE', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFB74D'}) },
+  { id: 'shiranui', name: 'Shiranui', desc: 'Japanese folklore-inspired Shiranui companion.', price: 2000, color: '#EDE7F6', accent: '#81D4FA', stat: 'LUCK', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#81D4FA'}) },
+  { id: 'kamimusubi', name: 'Kamimusubi', desc: 'Japanese folklore-inspired Kamimusubi companion.', price: 2000, color: '#EDE7F6', accent: '#FFF176', stat: 'REGEN', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFF176'}) },
+  { id: 'konohanasakuya', name: 'Konohanasakuya', desc: 'Japanese folklore-inspired Konohanasakuya companion.', price: 2000, color: '#EDE7F6', accent: '#A5D6A7', stat: 'HEALING', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#A5D6A7'}) },
+  { id: 'sukunabikona', name: 'Sukunabikona', desc: 'Japanese folklore-inspired Sukunabikona companion.', price: 2000, color: '#EDE7F6', accent: '#CE93D8', stat: 'HEALING', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#CE93D8'}) },
+  { id: 'takemikazuchi', name: 'Takemikazuchi', desc: 'Japanese folklore-inspired Takemikazuchi companion.', price: 2000, color: '#EDE7F6', accent: '#90CAF9', stat: 'ATTACK', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#90CAF9'}) },
+  { id: 'amaterasu', name: 'Amaterasu', desc: 'Japanese folklore-inspired Amaterasu companion.', price: 2000, color: '#EDE7F6', accent: '#FFB74D', stat: 'LIGHT', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#FFB74D'}) },
+  { id: 'tsukuyomi', name: 'Tsukuyomi', desc: 'Japanese folklore-inspired Tsukuyomi companion.', price: 2000, color: '#EDE7F6', accent: '#81D4FA', stat: 'CRIT', statBoost: 0.5, draw: (ctx,x,y,frame,scale) => drawCulturalSpirit(ctx,x,y,frame,scale,{main:'#EDE7F6',accent:'#81D4FA'}) },
 ];
 
 // All Shikigami cost the same price
@@ -573,6 +638,8 @@ function drawShiro(ctx, x, y, f, s = 1) {
 // ── Follower: smooth follow + idle bob. Purely visual, no gameplay state. ──
 // Caches the smoothed position on fighter._shikigamiState so it persists
 // across frames. Draws the shikigami behind & slightly above the fighter.
+export const SHIKIGAMI_STAT_BOOST = 0.5;
+
 export function drawShikigamiFollower(ctx, fighter, shikigamiId, frame, scale = 1) {
   const def = shikigamiId ? getShikigami(shikigamiId) : null;
   if (!def || !fighter) return;

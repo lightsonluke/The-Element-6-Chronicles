@@ -29,13 +29,11 @@ export default function HubServerSelect({ onBack, onJoin }) {
         const all = await db.entities.Presence.filter({}, '-last_active', 200);
         const cutoff = Date.now() - STALE_MS;
         const active = (all || []).filter(p => p.hub_server && p.last_active && new Date(p.last_active).getTime() > cutoff);
-        // Only show servers in the client's broad matchmaking region. Older
-        // presence rows without a region are ignored until they refresh.
-        const regional = active.filter(p => p.hub_region === region);
-        // Group by hub_server code and keep every server that has >= 1 active player.
+        // Community Hub server discovery is global: any active player makes their
+        // server visible regardless of the viewer's region.
         const map = {};
-        regional.forEach(p => {
-          if (!map[p.hub_server]) map[p.hub_server] = { code: p.hub_server, region, players: [], count: 0 };
+        active.forEach(p => {
+          if (!map[p.hub_server]) map[p.hub_server] = { code: p.hub_server, region: p.hub_region || 'global', players: [], count: 0 };
           map[p.hub_server].players.push({ id: p.user_id, name: p.username, color: p.hub_color, charId: p.hub_char_id });
           map[p.hub_server].count++;
         });
@@ -76,7 +74,7 @@ export default function HubServerSelect({ onBack, onJoin }) {
   return (
     <div className="w-full max-w-3xl flex flex-col gap-3">
       <div className="flex justify-between items-center">
-        <div><h2 className="text-xl font-heading text-accent tracking-wider"><GameIcon emoji="🌐" size={14} /> SELECT A COMMUNITY SERVER</h2><p className="text-[10px] text-muted-foreground font-body mt-1">Showing every active server in {region}, sorted by players online.</p></div>
+        <div><h2 className="text-xl font-heading text-accent tracking-wider"><GameIcon emoji="🌐" size={14} /> SELECT A COMMUNITY SERVER</h2><p className="text-[10px] text-muted-foreground font-body mt-1">Showing every active server with at least one player, sorted by players online.</p></div>
         <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
       </div>
 

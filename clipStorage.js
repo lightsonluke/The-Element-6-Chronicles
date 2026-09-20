@@ -2,9 +2,9 @@
 // Native browser recording only. No cloud upload and no media-processing library.
 // v3 intentionally uses a fresh store so previously malformed native recordings
 // cannot be mistaken for clips produced by the fixed recorder.
-const DB_NAME = 'element6_clips_native_v3';
+const DB_NAME = 'element6_clips_native_v4';
 const STORE = 'clips';
-const VERSION = 2;
+const VERSION = 1;
 const MAX_CLIPS = 30;
 
 function openDB() {
@@ -39,8 +39,8 @@ export async function saveClipBlob(id, blob, meta = {}) {
       id,
       blob,
       created,
-      mime: meta.mime || blob.type || 'video/webm',
-      extension: meta.extension || (String(blob.type).includes('mp4') ? 'mp4' : 'webm'),
+      mime: 'video/mp4',
+      extension: 'mp4',
       size: blob.size,
       duration: Number(meta.duration) || 30,
       previewBlob: meta.previewBlob || null,

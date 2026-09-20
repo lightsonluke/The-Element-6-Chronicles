@@ -36,6 +36,15 @@ import { mergeBotCosmetics } from './botCosmetics.js';
 import { readGamepadInput } from './controllerProfiles.js';
 import GameIcon from "./GameIcon.jsx";
 
+function drawMergedFreehand(ctx, strokes = []) {
+  for (const stroke of Array.isArray(strokes) ? strokes : []) {
+    const pts = Array.isArray(stroke?.points) ? stroke.points : [];
+    if (!pts.length) continue;
+    ctx.save(); ctx.strokeStyle = stroke.color || '#777777'; ctx.lineWidth = Math.max(4, Number(stroke.diameter) || 36); ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath(); pts.forEach((pt,i)=>i?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y)); if(pts.length===1) ctx.lineTo(pts[0].x+.01,pts[0].y+.01); ctx.stroke(); ctx.restore();
+  }
+}
+
 // Bigger stages — 1280x720 internal resolution (canvas scales to fill the screen via CSS)
 const W = 1280;
 const H = 720;
@@ -1389,7 +1398,8 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       ctx.scale(g.camZoom, g.camZoom);
       ctx.translate(-W / 2 - g.camX, -H / 2 - g.camY);
 
-      drawPlatforms(ctx, platforms, f1.frame, mapId);
+      drawPlatforms(ctx, platforms.filter(p => !p._freehandSegment), f1.frame, mapId);
+      drawMergedFreehand(ctx, stageConfig.freehandStrokes);
       // Sandbox hazard zones + knockback items
       if (sbHazards) drawSBHazards(ctx, sbHazards, f1.frame);
       if (sbObjects) drawSBObjects(ctx, sbObjects, f1.frame);
@@ -1411,9 +1421,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       ctx.setLineDash([]); ctx.shadowBlur = 0; ctx.restore();
       }
 
-      platforms.forEach(p => drawMaterialOverlay(ctx, p, f1.frame));
+      platforms.filter(p => !p._freehandSegment).forEach(p => drawMaterialOverlay(ctx, p, f1.frame));
       // Visual indicator for erased platforms
-      platforms.forEach(p => {
+      platforms.filter(p => !p._freehandSegment).forEach(p => {
         if (p._deleted > 0) {
           ctx.save();
           ctx.globalAlpha = 0.5 + Math.sin(f1.frame * 0.3) * 0.3;

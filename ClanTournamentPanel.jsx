@@ -1,0 +1,23 @@
+import React, { useEffect, useState } from 'react';
+
+export default function ClanTournamentPanel({ supabase, currentUserId, myClan, onGrantTokens }) {
+  const [reward, setReward] = useState(null); const [week, setWeek] = useState(null); const [monthly, setMonthly] = useState([]); const [notice, setNotice] = useState(''); const [loading, setLoading] = useState(true);
+  const refresh = async () => { if (!supabase) return; setLoading(true); try {
+    await supabase.rpc('element6_ensure_clan_tournament_current_period');
+    const [{data:w,error:we},{data:m,error:me}] = await Promise.all([
+      supabase.from('element6_clan_tournament_weekly').select('*,clan_a:element6_clans!clan_a_id(id,name,tag,icon_url),clan_b:element6_clans!clan_b_id(id,name,tag,icon_url)').eq('user_clan_id', currentUserId || '00000000-0000-0000-0000-000000000000').maybeSingle(),
+      supabase.from('element6_clan_tournament_monthly').select('rank,clan_id,clan_name,clan_tag,tournament_points,monthly_xp,qualified').order('rank',{ascending:true}).limit(100)
+    ]); if(we) throw we; if(me) throw me; setWeek(w||null); setMonthly(m||[]);
+  } catch(e){ setNotice(e?.message||'Tournament data could not be loaded.'); } finally { setLoading(false); } };
+  const claimReward = async () => { try { const {data,error}=await supabase.rpc('element6_claim_clan_tournament_reward'); if(error) throw error; if(data?.claimed){ await onGrantTokens?.(Number(data.tokens||0)); setReward(data); setNotice(`Monthly championship reward claimed: ${Number(data.tokens||0).toLocaleString()} tokens.`); } else if(data?.reason==='already_claimed') setNotice('This month’s championship reward was already claimed.'); } catch(e){ setNotice(e?.message||'Reward could not be claimed.'); } };
+  useEffect(()=>{ refresh(); const t=setInterval(refresh,30000); return()=>clearInterval(t); },[supabase,currentUserId]);
+  return <section className="space-y-4">
+    <div className="rounded-2xl border bg-card p-5"><div className="flex justify-between items-start gap-3"><div><h2 className="font-heading text-xl">CLAN TOURNAMENTS</h2><p className="text-xs text-muted-foreground mt-1">Every week, clans are randomly paired. The clan that earns more XP during that week wins the matchup.</p></div><button onClick={refresh} className="rounded-lg bg-secondary px-3 py-2 text-xs">REFRESH</button></div>
+      {loading ? <p className="mt-4 text-sm text-muted-foreground">Loading tournament…</p> : week ? <div className="mt-4 rounded-xl bg-secondary/50 p-4"><div className="text-xs text-muted-foreground">WEEK {week.week_key}</div><div className="mt-2 grid grid-cols-2 gap-3"><div className={`rounded-xl border p-3 ${week.winner_clan_id===week.clan_a_id?'border-accent':''}`}><b>{week.clan_a?.name||'Clan A'}</b><div className="text-xs">{Number(week.clan_a_xp||0).toLocaleString()} XP</div></div><div className={`rounded-xl border p-3 ${week.winner_clan_id===week.clan_b_id?'border-accent':''}`}><b>{week.clan_b?.name||'Clan B'}</b><div className="text-xs">{Number(week.clan_b_xp||0).toLocaleString()} XP</div></div></div><div className="mt-3 text-xs text-muted-foreground">{week.status==='complete' ? `Winner: ${week.winner_clan_id===week.clan_a_id?week.clan_a?.name:week.clan_b?.name}` : 'Matchup is active.'}</div></div> : <p className="mt-4 text-sm text-muted-foreground">Join a clan to participate.</p>}
+    </div>
+    <div className="rounded-2xl border bg-card p-5"><h3 className="font-heading">MONTHLY TOP 100</h3><p className="text-xs text-muted-foreground mt-1">The top 100 clans by tournament performance qualify for the monthly championship table.</p><div className="mt-3 overflow-auto"><table className="w-full text-xs"><thead><tr className="text-left text-muted-foreground"><th className="p-2">#</th><th className="p-2">Clan</th><th className="p-2">Points</th><th className="p-2">Monthly XP</th></tr></thead><tbody>{monthly.map(r=><tr key={r.clan_id} className="border-t"><td className="p-2">{r.rank}</td><td className="p-2 font-semibold">{r.clan_name} <span className="text-muted-foreground">[{r.clan_tag}]</span></td><td className="p-2">{r.tournament_points}</td><td className="p-2">{Number(r.monthly_xp||0).toLocaleString()}</td></tr>)}</tbody></table></div></div>
+    {myClan && <button onClick={claimReward} className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">CLAIM MONTHLY CHAMPIONSHIP REWARD</button>}
+    {reward && <p className="text-xs text-accent">Reward claimed: {Number(reward.tokens||0).toLocaleString()} tokens.</p>}
+    {notice && <p className="text-xs text-destructive">{notice}</p>}
+  </section>;
+}

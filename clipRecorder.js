@@ -22,7 +22,10 @@ const CLIP_MS = CLIP_SECONDS * 1000;
 const VIDEO_BITRATE = 8000000;
 const CHUNK_MS = 250;
 const MIN_CHUNK_BYTES = 128;
-const FFMPEG_CORE_BASE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
+const FFMPEG_CORE_BASES = [
+  'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd',
+  'https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd'
+];
 
 function log(message, error = null) {
   if (error) console.error(`[Element 6 Clips] ${message}`, error);
@@ -182,19 +185,18 @@ async function loadFFmpeg() {
       console.debug('[Element 6 FFmpeg]', message);
     });
 
-    await instance.load({
-      coreURL: await toBlobURL(
-        `${FFMPEG_CORE_BASE}/ffmpeg-core.js`,
-        'text/javascript'
-      ),
-      wasmURL: await toBlobURL(
-        `${FFMPEG_CORE_BASE}/ffmpeg-core.wasm`,
-        'application/wasm'
-      )
-    });
-
-    ffmpeg = instance;
-    return instance;
+    let lastError = null;
+    for (const base of FFMPEG_CORE_BASES) {
+      try {
+        await instance.load({
+          coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript'),
+          wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm')
+        });
+        ffmpeg = instance;
+        return instance;
+      } catch (error) { lastError = error; }
+    }
+    throw lastError || new Error('FFmpeg core could not be loaded');
   })();
 
   try {
@@ -245,7 +247,7 @@ async function convertToMP4(webmBlob) {
     }
 
     if (exitCode !== 0) {
-      throw new Error(`FFmpeg MP4 encode failed (exit ${exitCode})`);
+      throw new Error(`FFmpeg MP4 encode failed (exit ${exitCode}); browser could not encode the rolling clip to MP4`);
     }
 
     const data = await encoder.readFile(output);

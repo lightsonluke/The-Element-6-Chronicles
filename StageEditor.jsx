@@ -193,6 +193,11 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         ctx.stroke(); ctx.setLineDash([]);
         ctx.restore();
       });
+      if (drag?.freehand && mode === 'freehand' && drag.points?.length) {
+        const mat = MATERIALS.find(m => m.id === (material || 'normal')) || MATERIALS[0];
+        ctx.save(); ctx.strokeStyle = mat.color; ctx.lineWidth = Number(freehandDiameter || 36); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.globalAlpha=.92;
+        ctx.beginPath(); drag.points.forEach((pt,idx)=>idx?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y)); if(drag.points.length===1) ctx.lineTo(drag.points[0].x+.01,drag.points[0].y+.01); ctx.stroke(); ctx.restore();
+      }
       // platforms
       platforms.forEach((p, i) => {
         const mat = MATERIALS.find(m => m.id === (p.material || 'normal')) || MATERIALS[0];
@@ -491,6 +496,8 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     }
     if (mode === 'move') {
       const snap = (v) => gridLock ? Math.round(v / 40) * 40 : Math.round(v);
+      const freeIdx = freehandStrokes.findIndex(st => (st.points||[]).some(pt => Math.hypot(x-pt.x,y-pt.y) <= Math.max(10,(Number(st.diameter)||36)/2+8)));
+      if (freeIdx >= 0) { setDrag({ x, y, freehandIdx: freeIdx, lastX:x, lastY:y }); return; }
       // hazard?
       const hzIdx = hazards.findIndex(h => x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h);
       if (hzIdx >= 0) {
@@ -593,6 +600,11 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     }
     if (!drag) return;
     const snap = (v) => gridLock ? Math.round(v / 40) * 40 : Math.round(v);
+    if (drag.freehandIdx >= 0) {
+      const dx=mp.x-(drag.lastX??mp.x), dy=mp.y-(drag.lastY??mp.y);
+      if(dx||dy){ setFreehandStrokes(prev=>prev.map((st,i)=>i===drag.freehandIdx?{...st,points:(st.points||[]).map(pt=>({x:pt.x+dx,y:pt.y+dy}))}:st)); drag.lastX=mp.x; drag.lastY=mp.y; }
+      return;
+    }
     if (drag.group) {
       const dx=mp.x-(drag.lastX??mp.x), dy=mp.y-(drag.lastY??mp.y);
       const snapDelta=(v)=>gridLock ? Math.round(v/40)*40 : v;
