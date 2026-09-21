@@ -101,21 +101,30 @@ async function persistClip() {
   return true;
 }
 
-export default function GlobalClipRecorder({ enabled = false }) {
+export default function GlobalClipRecorder() {
   const canvasRef = useRef(null);
   const scanTimerRef = useRef(null);
   const savingRef = useRef(false);
+  const enabledRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
-    if (!enabled) {
-      stopClipRecorder();
-      window.__e6ClipRecorderActive = false;
-      return () => {};
-    }
+
+    const readEnabled = () => {
+      try {
+        const raw = localStorage.getItem('element6_progress');
+        const parsed = raw ? JSON.parse(raw) : null;
+        enabledRef.current = parsed?.settings?.enableClips === true;
+      } catch { enabledRef.current = false; }
+      if (!enabledRef.current) {
+        stopClipRecorder();
+        canvasRef.current = null;
+      }
+      return enabledRef.current;
+    };
 
     const start = () => {
-      if (cancelled || isClipRecorderActive()) return;
+      if (cancelled || !readEnabled() || isClipRecorderActive()) return;
 
       const canvas = findGameCanvas();
       if (!canvas) return;
@@ -156,7 +165,15 @@ export default function GlobalClipRecorder({ enabled = false }) {
       }
     };
 
+    const onSettings = event => {
+      const enabled = event?.detail?.enableClips === true;
+      enabledRef.current = enabled;
+      if (!enabled) { stopClipRecorder(); canvasRef.current = null; }
+      else start();
+    };
+
     window.addEventListener('keydown', save, true);
+    window.addEventListener('element6-settings-changed', onSettings);
 
     start();
     scanTimerRef.current = setInterval(start, 750);
@@ -164,6 +181,7 @@ export default function GlobalClipRecorder({ enabled = false }) {
     return () => {
       cancelled = true;
       window.removeEventListener('keydown', save, true);
+      window.removeEventListener('element6-settings-changed', onSettings);
 
       if (scanTimerRef.current) {
         clearInterval(scanTimerRef.current);
@@ -174,7 +192,7 @@ export default function GlobalClipRecorder({ enabled = false }) {
       canvasRef.current = null;
       savingRef.current = false;
     };
-  }, [enabled]);
+  }, []);
 
   return null;
 }

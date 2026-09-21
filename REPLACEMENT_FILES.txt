@@ -1,31 +1,16 @@
+TARGETED REPLACEMENT FILES
+
 clipRecorder.js
 clipStorage.js
+ClipsScreen.jsx
 GlobalClipRecorder.jsx
-GlobalNotifications.jsx
-Leaderboard.jsx
-HonoredBotTracking.jsx
-worldLeaderboard.js
-StageMotionRuntime.js
-movingPlatforms.js
-fighter.js
-sandboxHazards.js
-stageHazards.js
+music.js
+sfx.js
 StageEditor.jsx
-StagePreview.jsx
-PlatformFighter.jsx
-ParkourLeaderboard.jsx
-RockClimbLeaderboard.jsx
-ZiplineLeaderboard.jsx
-CaptureTheFlag.jsx
-SportsHub.jsx
-ClansScreen.jsx
-HubServerBrowser.jsx
-Settings.jsx
-Game.jsx
-dailyQuests.js
+materials.js
+freehandPhysics.js
+VolleyballGame.jsx
 
-SQL:
-Supabase-Element6-Complete-Feature-Fixes.sql
-Supabase-all-leaderboards-fix.sql
-Supabase-elo-leaderboard-fix.sql
-Supabase-world-scores-fix.sql
+Do not replace the whole project with this package.
+Apply these files over the existing project after the previous Element 6 feature-fix package.
+Camera code was intentionally left alone.

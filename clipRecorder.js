@@ -1,5 +1,6 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { music } from './music.js';
 
 let sourceCanvas = null;
 let sourceStream = null;
@@ -15,6 +16,7 @@ let chunkBytes = 0;
 let recordingStartedAt = 0;
 let lastDataAt = 0;
 let recorderMime = 'video/webm';
+let captureAudioAttached = false;
 
 const FPS = 60;
 const CLIP_SECONDS = 30;
@@ -224,12 +226,20 @@ async function convertToMP4(webmBlob) {
 
     let exitCode = await encoder.exec([
       '-y', '-i', input,
-      '-an',
+      '-map', '0:v:0',
+      '-map', '0:a:0?',
       '-c:v', 'libx264',
       '-preset', 'veryfast',
-      '-crf', '21',
+      '-crf', '20',
+      '-profile:v', 'high',
+      '-level', '4.1',
       '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac',
+      '-b:a', '160k',
+      '-ar', '48000',
+      '-ac', '2',
       '-movflags', '+faststart',
+      '-f', 'mp4',
       output
     ]);
 
@@ -237,11 +247,17 @@ async function convertToMP4(webmBlob) {
       try { await encoder.deleteFile(output); } catch {}
       exitCode = await encoder.exec([
         '-y', '-i', input,
-        '-an',
+        '-map', '0:v:0',
+        '-map', '0:a:0?',
         '-c:v', 'mpeg4',
-        '-q:v', '5',
+        '-q:v', '4',
         '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac',
+        '-b:a', '160k',
+        '-ar', '48000',
+        '-ac', '2',
         '-movflags', '+faststart',
+        '-f', 'mp4',
         output
       ]);
     }
@@ -293,6 +309,18 @@ export function initClipRecorder(canvas) {
       throw new Error('Canvas video track unavailable');
     }
 
+    captureAudioAttached = false;
+    try {
+      const audioDestination = music.getCaptureDestination?.();
+      const audioTrack = audioDestination?.stream?.getAudioTracks?.()[0];
+      if (audioTrack) {
+        sourceStream.addTrack(audioTrack);
+        captureAudioAttached = true;
+      }
+    } catch (error) {
+      log('Game-audio capture unavailable; recording video only', error);
+    }
+
     recording = true;
     generation += 1;
 
@@ -300,6 +328,7 @@ export function initClipRecorder(canvas) {
     window.__e6ClipRecorderReady = false;
     window.__e6ClipRecorderFPS = FPS;
     window.__e6ClipRecorderMime = 'video/mp4';
+    window.__e6ClipRecorderAudio = captureAudioAttached;
 
     if (!startRecorder()) {
       throw new Error('Could not start MediaRecorder');
@@ -423,4 +452,6 @@ export function stopClipRecorder() {
   window.__e6ClipRecorderActive = false;
   window.__e6ClipRecorderReady = false;
   window.__e6ClipRecorderMime = '';
+  window.__e6ClipRecorderAudio = false;
+  captureAudioAttached = false;
 }

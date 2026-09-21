@@ -185,11 +185,8 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
         p.actionState = 'set'; p.actionTimer = 15;
         sfx.power();
       } else if (type === 'spike') {
-        // A spike is an aerial contact. Older code used jump>0 as the sole
-        // guard; that could reject valid airborne contacts and leave the ball
-        // in a bad state. Treat the actual onGround flag as authoritative.
-        if (!p || p.onGround || p.jump <= 0) return;
-        const power = Number(c?.stats?.power || 5);
+        if (p.jump <= 0) return;
+        const power = c?.stats?.power || 5;
         b.vx = dir * (10 + power * 0.3); b.vy = 2;
         b.last = side; b.spike = true; b.setter = null; b.isSet = false;
         p.actionState = 'spike'; p.actionTimer = 15;
@@ -580,7 +577,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
           const isSame = touchKey === b.lastTouchKey;
           if (!(isSame && b.consecTouches >= 2)) {
             const dir = side === 1 ? 1 : -1;
-            const c = charFor(chars?.[slot], (side === 1 ? p1Elements : p2Elements)?.[slot]) || { stats: { power: 5 } };
+            const c = charFor(chars[slot], (side === 1 ? p1Elements : p2Elements)?.[slot]);
             const ctrl = c?.stats?.control || 5;
             recordHit(s, side, slot, 'dig', b);
             b.vx = dir * (7 + ctrl * 0.15); b.vy = -14;
@@ -683,7 +680,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
     const mateReceiving = Math.abs(b.x - teammate.x) < 75 && Math.abs(b.y - (teammate.y - 40)) < 170 && b.last !== side;
 
     // SPIKE MODE: active player set the ball up for us — run to the ball, jump, and spike
-    const ballWasSet = b.isSet && b.last === side && !b.spike && b.y < FLOOR - 45 && b.vy > -6;
+    const ballWasSet = b.isSet && b.last === side && !b.spike && b.y < FLOOR - 60 && b.vy > -4;
     if (ballWasSet && !mateReceiving) {
       let spikeX = b.x;
       if (b.vy > 0) {
@@ -709,7 +706,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
         const touchKey = `${side}-${botSlot}`;
         const isSame = touchKey === b.lastTouchKey;
         if (!(isSame && b.consecTouches >= 2)) {
-          const c = charFor(chars?.[botSlot], (side === 1 ? p1Elements : p2Elements)?.[botSlot]) || { stats: { power: 5 } };
+          const c = charFor(chars[botSlot], (side === 1 ? p1Elements : p2Elements)?.[botSlot]);
           const dir = side === 1 ? 1 : -1;
           const power = c?.stats?.power || 5;
           b.vx = dir * (10 + power * 0.3); b.vy = 2;
@@ -855,11 +852,11 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
       else if (p.x > target + 6) p.vx = Math.max(p.vx - 0.5 * mult, -4 * mult);
       else p.vx *= 0.7;
       p.x += p.vx; p.x = Math.max(lo, Math.min(hi, p.x));
-      // Offline opponent bots intentionally use only bump returns. This keeps
-      // their behavior readable and makes every offline volleyball mode follow
-      // the same rule.
-      const ballSetUp = b.isSet && b.last === 2 && !b.spike && b.y < FLOOR - 45 && b.vy > -6;
-      if (p.onGround && ballSetUp && Math.abs(b.x - p.x) < 65) { p.vy = -15; p.onGround = false; p.jump = 30; }
+      // Preserve the original movement/positioning logic. The bot now also
+      // recognizes its own set and deliberately finishes the play instead of
+      // being limited to bump returns.
+      const ballSetUp = b.isSet && b.last === 2 && !b.spike && b.y < FLOOR - 60 && b.vy > -4;
+      if (p.onGround && ballSetUp && Math.abs(b.x - p.x) < 50) { p.vy = -15; p.onGround = false; p.jump = 30; }
       if (!p.onGround) { p.vy += 0.5; p.y += p.vy; if (p.y >= FLOOR) { p.y = FLOOR; p.vy = 0; p.onGround = true; p.jump = 0; p.doubleJumped = false; } }
       else if (p.jump > 0) p.jump--;
       if (p.diving) return; // dive handles its own hit
@@ -868,13 +865,13 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
         const isSame = touchKey === b.lastTouchKey;
         if (isSame && b.consecTouches >= 2) return;
         if (b.spike && b.last !== 2) return;
-        const c = charFor(p2Chars?.[0], p2Elements?.[0]) || { stats: { power: 5 } };
+        const c = charFor(p2Chars[0], p2Elements?.[0]);
         const ballHighAboveNet = b.y < NET_TOP - 20;
         const ballNearNet = Math.abs(b.x - NET_X) < 150;
         // 1v1: only set if the CPU set it themselves and will bump it after.
         // If the CPU already set (isSet, last=2), the NEXT touch must be a bump over.
         const cpuAlreadySet = b.isSet && b.last === 2 && b.setter === 2;
-        if (!p.onGround && ballHighAboveNet && ballNearNet && Math.abs(b.x - p.x) < HIT_R) {
+        if (!p.onGround && ballHighAboveNet && ballNearNet && b.y < p.y - 20) {
           // Spike in the air (rare in 1v1 — only if ball is perfectly set near net)
           recordHit(s, 2, 0, 'spike', b);
           const Hvel = 10 + (c?.stats?.power || 5) * 0.3;
@@ -886,7 +883,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
           recordHit(s, 2, 0, 'bump', b);
           b.vx = -5; b.vy = -16; b.last = 2; b.setter = 2; b.spike = false; b.isSet = false;
           p.actionState = 'bump'; p.actionTimer = 15; sfx.hit();
-        } else if (!(s.serveFirstCross && !s.serveReturned) && p.onGround && b.y < FLOOR - 110 && Math.abs(b.x - NET_X) > 100 && Math.random() < (0.22 + (s.s2 < s.s1 ? 0.12 : 0.18)) * Math.min(1.6, mult)) {
+        } else if (!(s.serveFirstCross && !s.serveReturned) && p.onGround && !b.spike && b.y < FLOOR - 130 && Math.abs(b.x - NET_X) > 100 && Math.random() < Math.min(0.85, 0.35 + 0.22 * mult)) {
           // Set the ball up — will bump it over when it comes down
           recordHit(s, 2, 0, 'set', b);
           b.vx = 1.5; b.vy = -14; b.last = 2; b.setter = 2; b.spike = false; b.isSet = true;
@@ -904,7 +901,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
     }
 
     // ── 2v2: handler chases the ball, supporter maintains spacing ──
-    const ballSet = b.isSet && b.last === 2 && !b.spike;
+    const ballSet = false;
     let predictX = b.x;
     if (b.vy > 0) { const t = (FLOOR - b.y) / Math.max(0.1, b.vy); predictX = b.x + b.vx * t * 0.8; }
     const refX = ballSet ? b.x : predictX;
@@ -937,8 +934,10 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
     const mateDist = Math.abs(b.x - teammate.x);
     const mateReceiving = mateDist < 75 && Math.abs(b.y - (teammate.y - 40)) < 170 && b.last !== 2;
 
-    // SPIKE MODE: ball is set by our team — the closer bot goes to spike
-    const ballWasSet = b.isSet && b.last === 2 && !b.spike && b.y < FLOOR - 45 && b.vy > -6;
+    // SPIKE MODE: ball is set by our team — the closer bot goes to spike.
+    // This restores the strong existing movement and only adds the missing
+    // finishing action at the contact point.
+    const ballWasSet = b.isSet && b.last === 2 && !b.spike && b.y < FLOOR - 60 && b.vy > -4;
     if (ballWasSet && !mateReceiving && myDist <= mateDist) {
       let spikeX = b.x;
       if (b.vy > 0) {
@@ -1015,8 +1014,8 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
       if (b.spike && b.last !== 2) return;
       const distToNet = Math.abs(b.x - NET_X);
       const losing = s.s2 < s.s1;
-      const setChance = 0.30 + Math.max(0, mult - 1) * 0.15;
-      const ciWillSet = !b.spike && b.y > FLOOR - 210 && Math.abs(b.x - NET_X) > 100 && Math.random() < Math.min(0.75, setChance);
+      const setChance = Math.min(0.9, 0.38 + 0.20 * mult);
+      const ciWillSet = !b.spike && b.y < FLOOR - 120 && Math.abs(b.x - NET_X) > 70 && mateDist > 45 && Math.random() < setChance;
       recordHit(s, 2, botIdx, ciWillSet ? 'set' : 'bump', b);
       if (b.spike || b.y < FLOOR - 100) {
         // Receive a spike — bump it up toward the teammate
