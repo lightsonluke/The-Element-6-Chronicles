@@ -12,7 +12,6 @@ import StagePreview from './StagePreview.jsx';
 import { directionVector, makeMotionStep, normalizeMotion, sampleMotion } from './StageMotionRuntime.js';
 import GameIcon from "./GameIcon.jsx";
 import { HAZARD_TYPES, OBJECT_TYPES, makeHazard, makeObject } from './stageHazards.js';
-import { buildFreehandCollisionSegments, sanitizeFreehandStrokes } from './freehandPhysics.js';
 
 const BACKDROPS = STAGE_BACKDROPS;
 
@@ -176,7 +175,8 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       // strokes in the editor; SAVE STAGE also converts them into collision
       // segments so every existing match consumer can use them.
       freehandStrokes.forEach((stroke, strokeIdx) => {
-        if (!stroke?.points?.length) return;
+        const safePoints = sanitizeFreehandPoints(stroke?.points, 2500);
+        if (!safePoints.length) return;
         const mat = MATERIALS.find(m => m.id === (stroke.material || 'normal')) || MATERIALS[0];
         let ox = 0, oy = 0;
         if (stroke.motion) {
@@ -190,25 +190,25 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         ctx.lineJoin = 'round';
         ctx.globalAlpha = 0.92;
         ctx.beginPath();
-        stroke.points.forEach((pt, idx) => idx ? ctx.lineTo(pt.x + ox, pt.y + oy) : ctx.moveTo(pt.x + ox, pt.y + oy));
-        if (stroke.points.length === 1) ctx.lineTo(stroke.points[0].x + ox + 0.01, stroke.points[0].y + oy + 0.01);
+        safePoints.forEach((pt, idx) => idx ? ctx.lineTo(pt.x + ox, pt.y + oy) : ctx.moveTo(pt.x + ox, pt.y + oy));
+        if (safePoints.length === 1) ctx.lineTo(safePoints[0].x + ox + 0.01, safePoints[0].y + oy + 0.01);
         ctx.stroke();
         ctx.globalAlpha = 1;
         ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
         ctx.beginPath();
-        stroke.points.forEach((pt, idx) => idx ? ctx.lineTo(pt.x + ox, pt.y + oy) : ctx.moveTo(pt.x + ox, pt.y + oy));
+        safePoints.forEach((pt, idx) => idx ? ctx.lineTo(pt.x + ox, pt.y + oy) : ctx.moveTo(pt.x + ox, pt.y + oy));
         ctx.stroke(); ctx.setLineDash([]);
         if (selectedFreehandIdx === strokeIdx || mode === 'remove') {
           ctx.strokeStyle = selectedFreehandIdx === strokeIdx ? '#FFD700' : '#FF4444';
           ctx.lineWidth = 3; ctx.globalAlpha = 0.9;
           ctx.beginPath();
-          stroke.points.forEach((pt, idx) => idx ? ctx.lineTo(pt.x + ox, pt.y + oy) : ctx.moveTo(pt.x + ox, pt.y + oy));
+          safePoints.forEach((pt, idx) => idx ? ctx.lineTo(pt.x + ox, pt.y + oy) : ctx.moveTo(pt.x + ox, pt.y + oy));
           ctx.stroke();
         }
         if (stroke.motion && mode === 'motion') {
           const d = Number(stroke.motion.distance || 0) / 2;
           ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1.5; ctx.setLineDash([6,4]);
-          const anchor = stroke.points[0];
+          const anchor = safePoints[0];
           const dir = stroke.motion.direction || stroke.motion.chain?.[0]?.direction || 'right';
           ctx.beginPath();
           if (dir === 'up' || dir === 'down') { ctx.moveTo(anchor.x + ox, anchor.y - d); ctx.lineTo(anchor.x + ox, anchor.y + d); }
@@ -690,7 +690,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   const onUp = (e) => {
     if (drag?.freehand && mode === 'freehand') {
       const points = drag.points || [];
-      if (points.length) setFreehandStrokes(prev => [...prev, { material, diameter: Math.max(4, Number(freehandDiameter) || 36), points }]);
+      if (points.length) setFreehandStrokes(prev => [...prev, { material, diameter: Math.max(4, Number(freehandDiameter) || 36), points: sanitizeFreehandPoints(points, 2500) }]);
       setDrag(null); setMousePos(null);
       return;
     }
@@ -719,11 +719,9 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   const loadStage = (stage, idx) => {
     setSelectedEntities([]); setSelectionDrag(null); setClipboardEntities([]);
     const rawPlatforms = stage.platforms || stage;
-    const storedFreehand = sanitizeFreehandStrokes(stage.freehandStrokes);
+    const storedFreehand = Array.isArray(stage.freehandStrokes) ? stage.freehandStrokes : [];
     setFreehandStrokes(storedFreehand);
-    // Older saves may contain generated freehand pieces in platforms. Keep
-    // only real editor platforms; collision geometry is regenerated safely.
-    setPlatforms(rawPlatforms.filter(p => !p?._freehandSegment));
+    setPlatforms(Array.isArray(stage.freehandStrokes) ? rawPlatforms.filter(p => !p?._freehandSegment) : rawPlatforms);
     setStageName(stage.name || 'Custom Stage');
     setStageEmoji(stage.emoji || '🎨');
     setBackdrop(stage.backdrop || 'splitcity');
@@ -788,15 +786,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     if (motionTarget.kind === 'hazard') setHazards(prev => prev.map((h,i) => i === motionTarget.index ? { ...h, move: motion, motion } : h));
     if (motionTarget.kind === 'freehand') setFreehandStrokes(prev => prev.map((st,i) => i === motionTarget.index ? { ...st, motion } : st));
   };
-  const stagePreviewData = {
-    platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)],
-    freehandStrokes, hazards, objects, spawnPoints, backdrop, killPerimeter: perimeter,
-    stageCamera: {
-      ...stageCamera,
-      zoom: Number(stageCamera.zoom || 1),
-      motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null
-    }
-  };
+  const stagePreviewData = { platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)], freehandStrokes, hazards, objects, backdrop, killPerimeter: perimeter, stageCamera: { ...stageCamera, motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null } };
 
   return (
     <div className="w-full max-w-5xl flex flex-col gap-3">
@@ -1060,7 +1050,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           <button onClick={async () => {
             // Platforms/hazards/objects/spawns are stored in game coords (1280×720),
             // so no scaling is needed — they map 1:1 to the match canvas.
-            const stageData = { platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)], freehandStrokes: sanitizeFreehandStrokes(freehandStrokes), name: stageName || 'Custom Stage', emoji: stageEmoji, backdrop, killPerimeter: perimeter, stageCamera: { ...stageCamera, zoom: Number(stageCamera.zoom || 1), motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null }, cameraZoom: Number(stageCamera.zoom || 1), cameraMotion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null, spawnPoints, hazards, objects, _editingIndex: editingIndex, downloaded: isDownloaded, originalOwnerId };
+            const stageData = { platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)], freehandStrokes, name: stageName || 'Custom Stage', emoji: stageEmoji, backdrop, killPerimeter: perimeter, stageCamera: { ...stageCamera, zoom: Number(stageCamera.zoom || 1), motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null }, cameraZoom: Number(stageCamera.zoom || 1), cameraMotion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null, spawnPoints, hazards, objects, _editingIndex: editingIndex, downloaded: isDownloaded, originalOwnerId };
             onSave(stageData);
             // Auto-publish to world — only for stages you created (downloaded stages stay local)
             if (userId && !isDownloaded) {
@@ -1208,7 +1198,32 @@ function pointNearFreehand(x, y, stroke) {
 }
 
 function expandFreehandToPlatforms(strokes = []) {
-  return buildFreehandCollisionSegments(strokes);
+  const out = [];
+  const safeStrokes = sanitizeFreehandStrokes(strokes, 2500);
+  for (const stroke of safeStrokes) {
+    const pts = stroke.points;
+    const d = Math.max(4, Math.min(180, Number(stroke.diameter) || 36));
+    const r = d / 2;
+    const mat = stroke.material || 'normal';
+    if (!pts.length) continue;
+    const emit = (x, y) => out.push({ x: x - r, y: y - r, w: d, h: d, material: mat, _freehandSegment: true, _freehandStroke: true, collision: true, itemCollision: true, ...(stroke.motion ? { move: { ...stroke.motion }, motion: { ...stroke.motion } } : {}) });
+    if (pts.length === 1) { emit(pts[0].x, pts[0].y); continue; }
+    let last = null;
+    let strokeSegments = 0;
+    const maxSegments = 1200;
+    const step = Math.max(6, d * 0.55);
+    for (let i = 1; i < pts.length && strokeSegments < maxSegments; i++) {
+      const a = pts[i - 1], b = pts[i];
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      const count = Math.max(1, Math.ceil(dist / step));
+      for (let j = 0; j <= count && strokeSegments < maxSegments; j++) {
+        const t = j / count;
+        const x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
+        if (!last || Math.hypot(x - last.x, y - last.y) >= step * 0.45) { emit(x, y); last = { x, y }; strokeSegments++; }
+      }
+    }
+  }
+  return out;
 }
 
 function StageThumbnail({ stage, renderFn }) {

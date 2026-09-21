@@ -1,4 +1,5 @@
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
+import { sanitizeFreehandPlatforms } from './freehandSafety.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
@@ -682,10 +683,9 @@ export default function PlatformFighter({
     ? customStageConfig
     : {};
   const stageConfig = rawStageConfig;
-  const _rawStageCamera = stageCamera || stageConfig.stageCamera || { zoom: stageConfig.cameraZoom || 1, motion: stageConfig.cameraMotion || null };
-  const activeStageCamera = {
-    zoom: Number.isFinite(Number(_rawStageCamera?.zoom)) ? Math.max(0.35, Math.min(3, Number(_rawStageCamera.zoom))) : 1,
-    motion: (_rawStageCamera && typeof _rawStageCamera.motion === 'object') ? _rawStageCamera.motion : null,
+  const activeStageCamera = stageCamera || stageConfig.stageCamera || {
+    zoom: stageConfig.cameraZoom || 1,
+    motion: stageConfig.cameraMotion || null,
   };
   const _killPerimeterCandidate = killPerimeter || stageConfig.killPerimeter || null;
   const activeKillPerimeter = _killPerimeterCandidate?.enabled === false ? null : _killPerimeterCandidate;
@@ -702,7 +702,7 @@ export default function PlatformFighter({
     // saved data can be changed by gameplay.
     let source = customPlatforms || eventPlatforms || applyStageMaterials(MAP_PLATFORMS[mapId] || MAP_PLATFORMS.splitcity, mapId);
     let p = Array.isArray(source)
-      ? source.map(platform => ({
+      ? sanitizeFreehandPlatforms(source).map(platform => ({
           ...platform,
           move: platform?.move ? { ...platform.move, chain: Array.isArray(platform.move.chain) ? platform.move.chain.map(step => ({ ...step })) : platform.move.chain } : platform?.move,
           motion: platform?.motion ? { ...platform.motion, chain: Array.isArray(platform.motion.chain) ? platform.motion.chain.map(step => ({ ...step })) : platform.motion.chain } : platform?.motion,
@@ -771,11 +771,6 @@ export default function PlatformFighter({
     if (activeKillPerimeter) {
       f1._customBlastZone = { ...activeKillPerimeter };
       f2._customBlastZone = { ...activeKillPerimeter };
-      f1._customBlastZoneDisabled = false;
-      f2._customBlastZoneDisabled = false;
-    } else if (_killPerimeterCandidate?.enabled === false) {
-      f1._customBlastZoneDisabled = true;
-      f2._customBlastZoneDisabled = true;
     }
     if (customSpawnPoints && customSpawnPoints[0]) f1.respawnPoint = { x: customSpawnPoints[0].x, y: customSpawnPoints[0].y };
     if (customSpawnPoints && customSpawnPoints[1]) f2.respawnPoint = { x: customSpawnPoints[1].x, y: customSpawnPoints[1].y };
@@ -1350,8 +1345,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const g = gameRef.current;
       const fdx = Math.abs(f2.x - f1.x), fdy = Math.abs(f2.y - f1.y);
       const zoomMul = settings.cameraZoom === 'close' ? 1.15 : settings.cameraZoom === 'far' ? 0.85 : 1.0;
-      const stageZoomRaw = activeStageCamera?.zoom != null ? Number(activeStageCamera.zoom) : (settings.stageZoom != null ? Number(settings.stageZoom) : 1.0);
-      const stageZoom = Number.isFinite(stageZoomRaw) ? Math.max(0.35, Math.min(3, stageZoomRaw)) : 1.0;
+      const stageZoom = activeStageCamera?.zoom != null ? Number(activeStageCamera.zoom) : (settings.stageZoom != null ? settings.stageZoom : 1.0);
       let targetZoom = Math.max(0.60, Math.min(0.95, 0.95 - fdx / 1200 - fdy / 1000));
       const spreadX = fdx + 280;
       const spreadY = fdy + 280;
@@ -1366,10 +1360,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const midY = ((f1.y + f2.y) / 2) - 70;
       const targetCamX = (midX - W / 2) * (1 - g.camZoom) * 0.35;
       const targetCamY = (midY - H / 2) * (1 - g.camZoom) * 0.35;
-      let stageCamMotion = { x: 0, y: 0 };
-      try { stageCamMotion = stageMotionOffset(activeStageCamera?.motion, (now - g.stageStartTime) / 1000) || stageCamMotion; } catch { stageCamMotion = { x: 0, y: 0 }; }
-      if (!Number.isFinite(stageCamMotion.x)) stageCamMotion.x = 0;
-      if (!Number.isFinite(stageCamMotion.y)) stageCamMotion.y = 0;
+      const stageCamMotion = stageMotionOffset(activeStageCamera?.motion, (now - g.stageStartTime) / 1000);
       g.camX += (targetCamX + stageCamMotion.x - g.camX) * 0.07;
       g.camY += (targetCamY + stageCamMotion.y - g.camY) * 0.07;
       if (settings.reducedMotion || settings.screenShake === false) { g.shakeX = 0; g.shakeY = 0; g.shakeMag = 0; shakeMag = 0; }
@@ -1401,9 +1392,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
 
       drawPlatforms(ctx, platforms, f1.frame, mapId);
       if (Array.isArray(stageConfig.freehandStrokes)) {
-        for (const stroke of stageConfig.freehandStrokes) {
-          try { drawMaterialStroke(ctx, stroke, f1.frame); } catch (error) { console.warn('[Element 6] Ignored malformed freehand stroke', error); }
-        }
+        stageConfig.freehandStrokes.forEach(stroke => drawMaterialStroke(ctx, stroke, f1.frame));
       }
       // Sandbox hazard zones + knockback items
       if (sbHazards) drawSBHazards(ctx, sbHazards, f1.frame);
@@ -1417,16 +1406,12 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const _largeMaps = new Set(['grandarena', 'skycitadel', 'colossalcoliseum', 'infiniteexpanse']);
       const _isLarge = _largeMaps.has(mapId);
       const _defaultZone = { left: _isLarge ? -800 : -500, right: _isLarge ? W + 800 : W + 500, top: _isLarge ? -800 : -600, bottom: _isLarge ? H + 600 : H + 450 };
-      const _zone = activeKillPerimeter
-        ? getMovingPerimeter(activeKillPerimeter, (now - g.stageStartTime) / 1000)
-        : (_killPerimeterCandidate?.enabled === false ? null : _defaultZone);
-      if (_zone) {
-        const BLAST_L = _zone.left, BLAST_R = _zone.right, BLAST_T = _zone.top, BLAST_B = _zone.bottom;
-        ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_R, BLAST_T); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_B); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_L, BLAST_B); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(BLAST_R, BLAST_T); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
-      }
+      const _zone = activeKillPerimeter ? getMovingPerimeter(activeKillPerimeter, (now - g.stageStartTime) / 1000) : _defaultZone;
+      const BLAST_L = _zone.left, BLAST_R = _zone.right, BLAST_T = _zone.top, BLAST_B = _zone.bottom;
+      ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_R, BLAST_T); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_B); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_L, BLAST_B); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(BLAST_R, BLAST_T); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
       ctx.setLineDash([]); ctx.shadowBlur = 0; ctx.restore();
       }
 

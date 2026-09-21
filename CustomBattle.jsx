@@ -1,4 +1,5 @@
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
+import { sanitizeFreehandPlatforms } from './freehandSafety.js';
 import React, { useState, useEffect, useRef } from 'react';
 import { ALL_CHARS } from './allCharacters.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, updateProjectiles, drawProjectiles, loseStock } from './fighter.js';
@@ -472,7 +473,7 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
             const d = Math.abs(other.x - f.x) + Math.abs(other.y - f.y);
             if (d < minDist) { minDist = d; nearest = other; }
           });
-          f._strategicBot = true; input = nearest ? updateAI(f, nearest, f.cpuDifficulty, platforms, 1 + ((settings.aiAggression ?? 50) - 50) / 100, settings.botPersonality || 'balanced') : NO_INPUT;
+          input = nearest ? updateAI(f, nearest, f.cpuDifficulty, platforms, 1 + ((settings.aiAggression ?? 50) - 50) / 100, settings.botPersonality || 'balanced') : NO_INPUT;
         }
         const wasSuper = f.state === 'superAttack';
         const _isEnemy = (o) => o !== f && o.stocks > 0 && (!teamBattle || teamAssignments[o.playerIndex] !== teamAssignments[f.playerIndex]);
