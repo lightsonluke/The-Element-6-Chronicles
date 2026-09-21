@@ -52,24 +52,24 @@ export default function TitleArt() {
       ctx.fillStyle = '#2e3b5e';
       ctx.beginPath(); ctx.roundRect(50, platY, W - 100, 5, 2); ctx.fill();
       ctx.strokeStyle = '#3e4b7e88'; ctx.lineWidth = 1; ctx.stroke();
+      
+      // Left character (yellow)
+const b1 = Math.abs(Math.sin(frame * 0.05)) * 4;
+ctx.save();
+ctx.translate(110, floorY - 28 - b1);
+ctx.scale(1.15, 1.15);
+ctx.shadowColor = '#ffff00'; ctx.shadowBlur = 12;
+drawStickman(ctx, 0, 0, '#ffff00', 1, frame, 1.0, false, 'idle');
+ctx.restore();
 
-      // Left character (blue)
-      const b1 = Math.abs(Math.sin(frame * 0.05)) * 4;
-      ctx.save();
-      ctx.translate(110, floorY - 28 - b1);
-      ctx.scale(1.15, 1.15);
-      ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 12;
-      drawStickman(ctx, 0, 0, '#0088ff', 1, frame, 1.0, false, 'idle');
-      ctx.restore();
-
-      // Right character (turquoise)
-      const b2 = Math.abs(Math.sin(frame * 0.05 + 1.2)) * 4;
-      ctx.save();
-      ctx.translate(310, floorY - 28 - b2);
-      ctx.scale(1.15, 1.15);
-      ctx.shadowColor = '#00ffcc'; ctx.shadowBlur = 12;
-      drawStickman(ctx, 0, 0, '#00ccaa', 1, frame, 1.0, false, 'idle');
-      ctx.restore();
+// Right character (indigo)
+const b2 = Math.abs(Math.sin(frame * 0.05 + 1.2)) * 4;
+ctx.save();
+ctx.translate(310, floorY - 28 - b2);
+ctx.scale(1.15, 1.15);
+ctx.shadowColor = '#4b0082'; ctx.shadowBlur = 12;
+drawStickman(ctx, 0, 0, '#4b0082', 1, frame, 1.0, false, 'idle');
+ctx.restore();
 
       // Star/spark in center
       const cx = W / 2, cy = floorY - 55;
@@ -90,14 +90,14 @@ export default function TitleArt() {
       ctx.closePath(); ctx.fill();
       ctx.restore();
 
-      // Character name labels
-      ctx.font = 'bold 9px Orbitron';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#ffff00';
-      ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
-      ctx.fillText('★ Cable', 110, floorY + 22);
-      ctx.fillText('★ Turquoise', 310, floorY + 22);
-      ctx.shadowBlur = 0;
+// Character name labels
+ctx.font = 'bold 9px Orbitron';
+ctx.textAlign = 'center';
+ctx.fillStyle = '#ffff00';
+ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
+ctx.fillText('★ Yellow', 110, floorY + 22);
+ctx.fillText('★ Indigo', 310, floorY + 22);
+ctx.shadowBlur = 0;
 
       raf = requestAnimationFrame(loop);
     };
