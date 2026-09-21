@@ -47,11 +47,16 @@ function drawScene(ctx, stage, now, playing) {
   (data.freehandStrokes || []).forEach((stroke, idx) => {
     try {
       let rendered = stroke;
-      if (playing && stroke?.motion && Array.isArray(stroke.points)) {
+      const rawPoints = Array.isArray(stroke?.points) ? stroke.points : [];
+      const points = safePreviewPoints(rawPoints, 3000);
+      if (!points.length) return;
+      if (playing && stroke?.motion) {
         const m = normalizeMotion(stroke.motion);
         const sampled = m ? sampleMotion(m, now, started, stroke.__previewMotionState || {}) : { x: 0, y: 0, state: {} };
         stroke.__previewMotionState = sampled.state;
-        rendered = { ...stroke, points: stroke.points.map(pt => ({ x: pt.x + sampled.x, y: pt.y + sampled.y })) };
+        rendered = { ...stroke, points: points.map(pt => ({ x: pt.x + sampled.x, y: pt.y + sampled.y })) };
+      } else {
+        rendered = { ...stroke, points };
       }
       drawMaterialStroke(ctx, rendered, Math.floor(now / 16));
     } catch {}
@@ -88,6 +93,19 @@ function drawScene(ctx, stage, now, playing) {
   });
   ctx.restore();
 }
+
+function safePreviewPoints(points, maxPoints = 3000) {
+  const clean=[];
+  for (const p of Array.isArray(points) ? points : []) {
+    const x=Number(p?.x), y=Number(p?.y);
+    if (Number.isFinite(x) && Number.isFinite(y)) clean.push({x,y});
+  }
+  if (clean.length <= maxPoints) return clean;
+  const out=[], step=(clean.length-1)/(maxPoints-1);
+  for(let i=0;i<maxPoints;i++) out.push(clean[Math.round(i*step)]);
+  return out;
+}
+
 
 export default function StagePreview({ stage, onClose, onEdit, onTool, tools = [] }) {
   const canvasRef = useRef(null);

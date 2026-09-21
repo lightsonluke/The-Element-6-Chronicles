@@ -1,15 +1,12 @@
-# Element 6 Clips — Download-Time Real MP4 Fix
+# Element 6 Freehand Stage Editor Crash Fix
 
-This is intentionally a **clips-only** replacement.
+Targeted fix only for the freehand-stage/editor crash.
 
-Files:
-- `clipRecorder.js`
-- `ClipsScreen.jsx`
+- Preserves the existing camera zoom/motion implementation unchanged.
+- Prevents huge/invalid freehand point arrays from freezing or crashing the Stage Editor.
+- Safely decimates only the render/collision representation of extremely large strokes; the saved original stroke data is not rewritten here.
+- Keeps freehand collision as continuous slope segments (`x1/y1/x2/y2`), not square blocks.
+- Prevents `Math.min(...points)` / `Math.max(...points)` argument-stack crashes during freehand rendering.
+- Stage preview also bounds only its rendered point list.
 
-What changed:
-- The existing rolling recorder behavior is left intact.
-- The WebM recording used for the clip remains available as the source for download conversion.
-- When the player clicks **SAVE MP4**, the WebM is converted with FFmpeg to a real H.264 MP4 before the download is handed to the browser.
-- The filename is only `.mp4` after the blob itself has been encoded as MP4; this is not a file-extension rename.
-- The Clips preview now plays the stored MP4 instead of deliberately preferring the WebM preview blob.
-- No camera, freehand, stage, volleyball, bot, leaderboard, clan, or other game systems are changed by this package.
+Replace the three files at the project root.

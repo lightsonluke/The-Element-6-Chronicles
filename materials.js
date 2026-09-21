@@ -1,5 +1,4 @@
 // Element 6 — stage material visual system.
-import { sanitizeFreehandPoints } from './freehandSafety.js';
 // One renderer is shared by Stage Editor, thumbnails, previews, normal matches,
 // and Freehand strokes so a material never changes appearance between contexts.
 //
@@ -395,7 +394,7 @@ function drawMaterialOverlay(ctx,p,frame=0) {
 // The center line remains a collision-friendly shape; material details are
 // stamped along it so Freehand never looks like a chain of unrelated squares.
 export function drawMaterialStroke(ctx, stroke, frame=0) {
-  const pts=sanitizeFreehandPoints(stroke?.points, 2500);
+  const pts=Array.isArray(stroke?.points)?stroke.points:[];
   if(!pts.length) return;
   const diameter=Math.max(4,Number(stroke?.diameter)||36);
   const color=getMaterial(stroke.material).color;
@@ -411,8 +410,16 @@ export function drawMaterialStroke(ctx, stroke, frame=0) {
   ctx.shadowBlur=0;
 
   // A compact material-specific surface pass, scaled to the stroke width.
-  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
-  for (const q of pts) { if (q.x < minX) minX=q.x; if (q.x > maxX) maxX=q.x; if (q.y < minY) minY=q.y; if (q.y > maxY) maxY=q.y; }
+  // Avoid Math.min/Math.max spread on very large strokes: spreading a huge
+  // point array can overflow the JS argument stack and crash the game.
+  let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+  for (const q of pts) {
+    const x=Number(q?.x), y=Number(q?.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    if (x<minX) minX=x; if (x>maxX) maxX=x;
+    if (y<minY) minY=y; if (y>maxY) maxY=y;
+  }
+  if (!Number.isFinite(minX)) { ctx.restore(); return; }
   const box={x:minX-diameter/2,y:minY-diameter/2,w:Math.max(diameter,maxX-minX+diameter),h:Math.max(diameter,maxY-minY+diameter),material:stroke.material};
   ctx.save();
   ctx.globalAlpha=.75;
