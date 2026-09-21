@@ -209,7 +209,7 @@ async function loadFFmpeg() {
   }
 }
 
-export async function convertToMP4(webmBlob) {
+async function convertToMP4(webmBlob) {
   if (!webmBlob || webmBlob.size < MIN_CHUNK_BYTES) {
     throw new Error('recording data is empty');
   }
@@ -299,7 +299,7 @@ export function initClipRecorder(canvas) {
     window.__e6ClipRecorderActive = true;
     window.__e6ClipRecorderReady = false;
     window.__e6ClipRecorderFPS = FPS;
-    window.__e6ClipRecorderMime = 'video/mp4';
+    window.__e6ClipRecorderMime = 'video/webm';
 
     if (!startRecorder()) {
       throw new Error('Could not start MediaRecorder');
@@ -325,17 +325,18 @@ export function saveClip() {
     }
 
     const snapshot = await makeSnapshot();
-    if (!snapshot) return null;
+    if (!snapshot?.blob || snapshot.blob.size < MIN_CHUNK_BYTES) return null;
 
-    const mp4 = await convertToMP4(snapshot.blob);
-
+    // IMPORTANT: clips stay in their native WebM format for the entire
+    // recording and storage lifecycle. MP4 conversion happens only when the
+    // player explicitly downloads a clip from ClipsScreen.
     window.__e6ClipRecorderReady = true;
 
     return {
-      blob: mp4,
+      blob: snapshot.blob,
       previewBlob: snapshot.blob,
-      mime: 'video/mp4',
-      extension: 'mp4',
+      mime: snapshot.blob.type || recorderMime || 'video/webm',
+      extension: 'webm',
       duration: snapshot.duration,
       sequence: ++saveSequence
     };
@@ -349,6 +350,8 @@ export function saveClip() {
 
   return result;
 }
+
+export { convertToMP4 };
 
 export function getClipRecordingInfo() {
   const age = recordingStartedAt

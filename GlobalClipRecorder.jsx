@@ -73,8 +73,8 @@ async function persistClip() {
     .slice(2, 9)}`;
 
   await saveClipBlob(id, result.blob, {
-    mime: result.mime || result.blob.type || 'video/webm',
-    extension: result.extension || 'webm',
+    mime: 'video/webm',
+    extension: 'webm',
     duration: result.duration,
     previewBlob: result.previewBlob || null
   });
@@ -86,8 +86,8 @@ async function persistClip() {
       detail: {
         id,
         created: Date.now(),
-        mime: result.mime || result.blob.type || 'video/webm',
-        extension: result.extension || 'webm',
+        mime: 'video/webm',
+        extension: 'webm',
         size: result.blob.size,
         duration: result.duration
       }
@@ -95,7 +95,7 @@ async function persistClip() {
   );
 
   showToast(
-    `CLIP SAVED — ${Math.max(1, Math.round(result.duration))} SECONDS — ${String(result.extension || 'webm').toUpperCase()} 60FPS`
+    `CLIP SAVED — ${Math.max(1, Math.round(result.duration))} SECONDS — 60FPS`
   );
 
   return true;
@@ -105,26 +105,12 @@ export default function GlobalClipRecorder() {
   const canvasRef = useRef(null);
   const scanTimerRef = useRef(null);
   const savingRef = useRef(false);
-  const enabledRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    const readEnabled = () => {
-      try {
-        const raw = localStorage.getItem('element6_progress');
-        const parsed = raw ? JSON.parse(raw) : null;
-        enabledRef.current = parsed?.settings?.enableClips === true;
-      } catch { enabledRef.current = false; }
-      if (!enabledRef.current) {
-        stopClipRecorder();
-        canvasRef.current = null;
-      }
-      return enabledRef.current;
-    };
-
     const start = () => {
-      if (cancelled || !readEnabled() || isClipRecorderActive()) return;
+      if (cancelled || isClipRecorderActive()) return;
 
       const canvas = findGameCanvas();
       if (!canvas) return;
@@ -165,15 +151,7 @@ export default function GlobalClipRecorder() {
       }
     };
 
-    const onSettings = event => {
-      const enabled = event?.detail?.enableClips === true;
-      enabledRef.current = enabled;
-      if (!enabled) { stopClipRecorder(); canvasRef.current = null; }
-      else start();
-    };
-
     window.addEventListener('keydown', save, true);
-    window.addEventListener('element6-settings-changed', onSettings);
 
     start();
     scanTimerRef.current = setInterval(start, 750);
@@ -181,7 +159,6 @@ export default function GlobalClipRecorder() {
     return () => {
       cancelled = true;
       window.removeEventListener('keydown', save, true);
-      window.removeEventListener('element6-settings-changed', onSettings);
 
       if (scanTimerRef.current) {
         clearInterval(scanTimerRef.current);

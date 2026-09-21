@@ -29,8 +29,6 @@ export default function ClipsScreen({
   const [sources, setSources] = useState({});
   const [failed, setFailed] = useState({});
   const [activeViewer, setActiveViewer] = useState(null);
-  const [downloading, setDownloading] = useState({});
-  const [downloadError, setDownloadError] = useState({});
   const videoRefs = useRef({});
   const sourceRefs = useRef({});
 
@@ -142,29 +140,19 @@ export default function ClipsScreen({
 
   const download = async clip => {
     const source = sources[clip.id];
-    if (!source?.blob || downloading[clip.id]) return;
+    if (!source?.blob) return;
 
-    const webm = source.previewBlob && String(source.previewBlob.type || '').includes('webm')
-      ? source.previewBlob
-      : null;
-
-    setDownloading(prev => ({ ...prev, [clip.id]: true }));
-    setDownloadError(prev => {
-      const next = { ...prev };
-      delete next[clip.id];
-      return next;
-    });
-
+    const buttonKey = clip.id;
     try {
-      // The recorder still prepares the rolling WebM exactly as before.
-      // Conversion happens only at the moment the player requests the file,
-      // so the downloaded file is a real MP4 rather than a renamed WebM.
-      const mp4 = webm
-        ? await convertToMP4(webm)
-        : (String(source.blob.type || '').includes('mp4') ? source.blob : await convertToMP4(source.blob));
+      // Stored clips remain WebM. Convert only at the exact moment the user
+      // asks for a download, then hand the real MP4 bytes to the browser.
+      const inputBlob = source.blob;
+      const mp4 = String(inputBlob.type || clip.mime || '').toLowerCase().includes('mp4')
+        ? inputBlob
+        : await convertToMP4(inputBlob);
 
-      if (!mp4 || mp4.size < 1000 || !String(mp4.type).includes('mp4')) {
-        throw new Error('MP4 conversion produced an invalid file');
+      if (!mp4 || mp4.size < 1000) {
+        throw new Error('MP4 conversion produced no usable video');
       }
 
       const url = URL.createObjectURL(mp4);
@@ -175,19 +163,11 @@ export default function ClipsScreen({
       document.body.appendChild(a);
       a.click();
       a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (error) {
       console.error('[Element 6 Clips] MP4 download conversion failed:', error);
-      setDownloadError(prev => ({
-        ...prev,
-        [clip.id]: 'MP4 conversion failed. The original recording was not renamed or corrupted.'
-      }));
-    } finally {
-      setDownloading(prev => {
-        const next = { ...prev };
-        delete next[clip.id];
-        return next;
-      });
+      setFailed(prev => ({ ...prev, [buttonKey]: true }));
     }
   };
 
@@ -237,7 +217,7 @@ export default function ClipsScreen({
         </div>
 
         <p className="text-xs text-muted-foreground font-body mb-5">
-          MP4 · 60 FPS · saved locally in your browser.
+          WEBM internally · MP4 download · 60 FPS · saved locally in your browser.
         </p>
 
         {clips.length === 0 ? (
@@ -274,7 +254,7 @@ export default function ClipsScreen({
                               try { URL.revokeObjectURL(old.url); } catch {}
                             }
 
-                            const made = makeVideoSource(node, source.blob);
+                            const made = makeVideoSource(node, source.previewBlob || source.blob);
                             sourceRefs.current[clip.id] = {
                               ...made,
                               blob: source.blob,
@@ -336,16 +316,11 @@ export default function ClipsScreen({
                       This MP4 could not be decoded by the browser.
                     </div>
                   )}
-                  {downloadError[clip.id] && (
-                    <div className="mt-2 p-2 rounded bg-destructive/10 text-destructive text-[10px]">
-                      {downloadError[clip.id]}
-                    </div>
-                  )}
 
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span className="text-[10px] text-muted-foreground font-body flex-1 min-w-[180px]">
                       {new Date(clip.created || Date.now()).toLocaleString()}
-                      {' · MP4 · '}
+                      {' · WEBM · '}
                       {Math.round(clip.duration || 30)}s
                     </span>
 
@@ -358,11 +333,11 @@ export default function ClipsScreen({
                     </button>
 
                     <button
-                      disabled={!videoReady || !!downloading[clip.id]}
+                      disabled={!videoReady}
                       onClick={() => download(clip)}
                       className="px-2 py-1 bg-primary/30 text-primary rounded text-[10px] font-heading disabled:opacity-40"
                     >
-                      <GameIcon emoji="⬇" size={14} /> {downloading[clip.id] ? 'CONVERTING MP4…' : 'SAVE MP4'}
+                      <GameIcon emoji="⬇" size={14} /> SAVE MP4
                     </button>
 
                     <button

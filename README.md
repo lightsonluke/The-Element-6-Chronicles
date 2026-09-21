@@ -1,12 +1,31 @@
-# Element 6 Freehand Stage Editor Crash Fix
+# Element 6 — Clip WebM Storage / MP4-at-Download Fix
 
-Targeted fix only for the freehand-stage/editor crash.
+This is a targeted clips-only replacement.
 
-- Preserves the existing camera zoom/motion implementation unchanged.
-- Prevents huge/invalid freehand point arrays from freezing or crashing the Stage Editor.
-- Safely decimates only the render/collision representation of extremely large strokes; the saved original stroke data is not rewritten here.
-- Keeps freehand collision as continuous slope segments (`x1/y1/x2/y2`), not square blocks.
-- Prevents `Math.min(...points)` / `Math.max(...points)` argument-stack crashes during freehand rendering.
-- Stage preview also bounds only its rendered point list.
+## Behavior
 
-Replace the three files at the project root.
+- The game records the rolling clip as native WebM.
+- The clip is saved to IndexedDB as WebM.
+- The Clips tab previews the stored WebM directly.
+- **No FFmpeg conversion occurs when saving a clip.** This prevents MP4/FFmpeg failures from producing `CLIP SAVE FAILED`.
+- When the player presses **SAVE MP4**, the stored WebM is converted to a real MP4 with FFmpeg in the browser.
+- The downloaded file contains actual MP4 bytes; this is NOT a filename-extension change.
+- Camera/game behavior and all non-clip features are untouched by this package.
+
+## Replace
+
+Copy these four files over the corresponding files in the project:
+
+- `clipRecorder.js`
+- `clipStorage.js`
+- `GlobalClipRecorder.jsx`
+- `ClipsScreen.jsx`
+
+No SQL migration is required.
+
+## Validation
+
+- `clipRecorder.js`: Node syntax check passed.
+- `clipStorage.js`: Node syntax check passed.
+- `GlobalClipRecorder.jsx`: TypeScript JSX parser check passed.
+- `ClipsScreen.jsx`: TypeScript JSX parser check passed.
