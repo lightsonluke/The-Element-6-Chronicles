@@ -1,3 +1,4 @@
+import { strategicSoccer } from './botStrategicBrain.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { HEROES } from './heroes.js';
 import { ALL_CHARS } from './allCharacters.js';
@@ -475,6 +476,12 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
       let p1In, p2In;
       let _rawP1 = null, _rawP2 = null; // raw per-frame inputs (for low/high shot detection)
       const _gameCtx = { p1Score: scoreRef.current.p1, p2Score: scoreRef.current.p2, timer: (gameRef.current.maxTime || baseTime) - gameRef.current.timer, suddenDeath: suddenDeathRef.current };
+      const strategicSoccerAI = (fighter, opp) => {
+        const base = soccerAI(fighter, ball, opp, cpuDifficulty, _bp, _gameCtx);
+        const nearestOpponent = opp;
+        const role = (teamMode && fighter === f1b) ? 'support' : (teamMode && fighter === f2b) ? 'support' : 'attacker';
+        return strategicSoccer(fighter, { ball, opponents: nearestOpponent ? [nearestOpponent] : [], teammates: [], nearestOpponent, role, ownGoal: fighter === f1 || fighter === f1b ? { x: 70, y: 620 } : { x: 1210, y: 620 }, enemyGoal: fighter === f1 || fighter === f1b ? { x: 1210, y: 620 } : { x: 70, y: 620 }, possession: ball?.lastTeam === (fighter === f1 || fighter === f1b ? 1 : 2) ? 'own' : 'enemy', score: { for: fighter === f1 || fighter === f1b ? scoreRef.current.p1 : scoreRef.current.p2, against: fighter === f1 || fighter === f1b ? scoreRef.current.p2 : scoreRef.current.p1 }, time: _gameCtx.timer }, cpuDifficulty, base);
+      };
       // Botvbot: assign different personalities so one plays aggressive, the other defensive —
       // creates dynamic matches instead of both bots chasing the ball identically
       if (p1IsCPU && p2IsCPU && !f1._aiPersonality) {
@@ -514,22 +521,22 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         _rawP1 = localPlayer === 1 ? localRaw : remoteRaw;
         _rawP2 = localPlayer === 2 ? localRaw : remoteRaw;
         // Respect CPU slots (used by LAN Tournament): a CPU side runs AI, never local/remote human input.
-        p1In = p1IsCPU ? soccerAI(f1, ball, f2, cpuDifficulty, _bp, _gameCtx) : { ..._rawP1, superMove: false, heavy: false };
-        p2In = p2IsCPU ? soccerAI(f2, ball, f1, cpuDifficulty, _bp, _gameCtx) : { ..._rawP2, superMove: false, heavy: false };
+        p1In = p1IsCPU ? strategicSoccerAI(f1, f2) : { ..._rawP1, superMove: false, heavy: false };
+        p2In = p2IsCPU ? strategicSoccerAI(f2, f1) : { ..._rawP2, superMove: false, heavy: false };
         lanConnection.sendMessage({ type: 'input', input: localRaw });
       } else {
         const soloPlay = p2IsCPU && !p1IsCPU;
         _rawP1 = p1IsCPU ? null : mergeGp(soloPlay && _soloKb ? readPlayerInput(k, _soloKb) : (p2IsCPU ? readSinglePlayerInput(k, _kb.p1, _kb.p2) : readPlayerInput(k, _kb.p1)), _gp1);
         _rawP2 = p2IsCPU ? null : mergeGp(readPlayerInput(k, _kb.p2), _gp2);
-        p1In = p1IsCPU ? soccerAI(f1, ball, f2, cpuDifficulty, _bp, _gameCtx) : { ..._rawP1, superMove: false, heavy: false };
-        p2In = p2IsCPU ? soccerAI(f2, ball, f1, cpuDifficulty, _bp, _gameCtx) : { ..._rawP2, superMove: false, heavy: false };
+        p1In = p1IsCPU ? strategicSoccerAI(f1, f2) : { ..._rawP1, superMove: false, heavy: false };
+        p2In = p2IsCPU ? strategicSoccerAI(f2, f1) : { ..._rawP2, superMove: false, heavy: false };
       }
 
       // 2v2: AI inputs for extra teammates (penalties are disabled in team mode)
       let f1bIn = null, f2bIn = null;
       if (teamMode && !penPhaseRef.current) {
-        f1bIn = soccerAI(f1b, ball, f2, cpuDifficulty, _bp, _gameCtx);
-        f2bIn = soccerAI(f2b, ball, f1, cpuDifficulty, _bp, _gameCtx);
+        f1bIn = strategicSoccerAI(f1b, f2);
+        f2bIn = strategicSoccerAI(f2b, f1);
       }
       // Freeze all inputs during post-goal countdown
       if (resetCountdownRef.current > 0) { p1In = noInput; p2In = noInput; if (f1bIn) f1bIn = noInput; if (f2bIn) f2bIn = noInput; }

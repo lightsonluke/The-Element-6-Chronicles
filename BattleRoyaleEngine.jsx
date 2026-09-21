@@ -33,6 +33,7 @@ import { buildMovementItems, updateMovementItems, serializeItems } from './brIte
 import { buildHazards, updateHazards, serializeHazards } from './brHazards.js';
 import { buildObjects, updateObjects, processObjectHits, serializeObjects } from './brObjects.js';
 import { updateBRAI } from './brBotAI.js';
+import { strategicBR } from './botStrategicBrain.js';
 import { drawDestructiblePlatforms, drawMovementItems, drawHazards, drawObjects } from './brRender.js';
 import PauseMenu from './PauseMenu.jsx';
 import GameIcon from './GameIcon.jsx';
@@ -310,6 +311,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           // Environment-aware BR bot AI — handles target selection, platform
           // destruction, hazards, items, and objects internally.
           inp = updateBRAI(f, alive, brSections, brEnv, botDifficulty, dt);
+          inp = strategicBR(f, { alive, opponents: alive.filter(x => x !== f), zone, targetEngaged: false }, botDifficulty, inp);
           // Zone awareness: proactively avoid the zone edge, and fully override
           // inputs when outside the safe zone to get back to center.
           {

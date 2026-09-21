@@ -1,3 +1,4 @@
+import { strategicBaseball } from './botStrategicBrain.js';
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { drawSportChar } from './sportDraw.jsx';
@@ -490,6 +491,7 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
     }
 
     if (s.phase === 'fielding') { updateFielding(s, dt, mult); }
+    if (p2IsCPU || p1IsCPU) strategicBaseball(s, difficulty);
     if (s.phase === 'resolve') { s.phaseTimer -= dt; if (s.phaseTimer <= 0) afterResolve(s); }
     if (s.phase === 'change') { s.phaseTimer -= dt; if (s.phaseTimer <= 0) finishChangeSides(s); }
   }

@@ -1,3 +1,4 @@
+import { strategicVolleyball } from './botStrategicBrain.js';
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { drawSportChar } from './sportDraw.jsx';
@@ -494,6 +495,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
         // Process CPU team dives before AI logic
         s.t2.forEach((p) => { if (p && p.diving) updateDive(s, p, 2, p2Chars, is1v1); });
         cpuTeam(s, difficulty, is1v1);
+        strategicVolleyball(s, difficulty);
       } else {
         const p2Main = s.t2[s.active2];
         const p2Frozen = s.phase === 'serve' && s.serverSide === 2 && !s.serveTossed && s.active2 === s.serverSlot2;

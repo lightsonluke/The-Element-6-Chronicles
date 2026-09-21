@@ -1,6 +1,7 @@
 // botAI.js — CPU AI logic extracted from fighter.js for maintainability.
 import { COMBOS, comboMoveReady as comboMoveReadyUtil, comboMoveToInput } from './combos.js';
 import { selectTarget, navigateToward, platformNavigate as navPlatformNavigate } from './botNavigation.js';
+import { strategicFight, strategicTeam } from './botStrategicBrain.js';
 import { honoredFightTactics } from './botIntelligence.js';
 
 export const CPU_DIFFICULTY = {
@@ -357,6 +358,26 @@ export function updateAI(fighter, opponent, difficultyKey = 'regular', platforms
     for (const p of platforms) { if (p.w > 200) { centerX = p.x + p.w / 2; break; } }
     const inputs = { left: fighter.x > centerX + 20, right: fighter.x < centerX - 20, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
     fighter.aiAction = inputs; return inputs;
+  }
+
+  // Strategic layer: persistent opponent model + plan + predicted positioning.
+  // It overlays the mechanical AI rather than replacing its character-specific moves.
+  if (difficultyKey === 'honored' || difficultyKey === 'insane' || difficultyKey === 'hard' || fighter._strategicBot) {
+    const allOpp = (fighter._allOpponents && fighter._allOpponents.length) ? fighter._allOpponents.filter(o => o && o !== fighter && o.stocks > 0 && !o._eliminated) : [opponent];
+    const teammates = (fighter._allTeammates && fighter._allTeammates.length) ? fighter._allTeammates.filter(o => o && o !== fighter && o.stocks > 0 && !o._eliminated) : [];
+    const world = {
+      target: opponent, opponents: allOpp, teammates,
+      winning: (fighter.damage || 0) < (opponent.damage || 0),
+      losing: (fighter.damage || 0) > (opponent.damage || 0) + 25,
+      bounds: { left: fighter._isBR ? 50 : 80, right: fighter._isBR ? 5600 : 880 },
+      mustEngage: fighter._isBR && fighter._brMustEngage,
+    };
+    const strategic = fighter._teamId != null || teammates.length ? strategicTeam(fighter, world, difficultyKey, {}) : strategicFight(fighter, world, difficultyKey, {});
+    if (strategic && (strategic.left || strategic.right || strategic.jump || strategic.up || strategic.down || strategic.sig || strategic.power || strategic.superMove || strategic.heavy)) {
+      fighter._strategicBot = true;
+      fighter.aiAction = strategic;
+      return strategic;
+    }
   }
 
   if (fighter.aiTimer > 0 && !alwaysUpdate) return fighter.aiAction || {};

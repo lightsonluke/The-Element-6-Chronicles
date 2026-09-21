@@ -215,7 +215,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
           if (fighter.emote && fighter.emote.timer > 0) inputs = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
         } else {
           const target = findNearestEnemy(fighter);
-          inputs = updateAI(fighter, target, difficulty, platforms);
+          fighter._strategicBot = true; inputs = updateAI(fighter, target, difficulty, platforms);
         }
         const target = findNearestEnemy(fighter);
         updateFighter(fighter, inputs, platforms, W, H, target);
@@ -223,7 +223,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
       eTeam.forEach(fighter => {
         if (fighter.stocks <= 0) return;
         const target = findNearestEnemy(fighter);
-        const inputs = updateAI(fighter, target, difficulty, platforms);
+        const fighter._strategicBot = true; inputs = updateAI(fighter, target, difficulty, platforms);
         updateFighter(fighter, inputs, platforms, W, H, target);
       });
 

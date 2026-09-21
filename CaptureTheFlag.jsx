@@ -3,6 +3,7 @@ import { ALL_CHARS } from './sports.js';
 import { applyElement, getCharLevelData, getUnlockedElements } from './elements.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, loseStock, updateProjectiles, drawProjectiles } from './fighter.js';
 import { navigateToward, selectTarget } from './botNavigation.js';
+import { strategicCTF } from './botStrategicBrain.js';
 import { drawStickman, drawPlatforms, drawAttackEffect } from './renderer.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
@@ -289,6 +290,17 @@ export default function CaptureTheFlag({
           if (nav.jump) aiInput.jump = true;
           if (nav.down) aiInput.down = true;
         }
+      }
+
+      // Strategic CTF layer: persistent carrier/threat memory and score/time planning.
+      {
+        const strategicWorld = {
+          role, objectiveTarget: target, enemyCarrier, teammateCarrier, enemyBase, homeBase: myBase,
+          defendPoint: myFlag, score: { for: myScore, against: enemyScore }, time: matchTime,
+          carrierDanger: enemyCarrier ? Math.max(0, 1 - nearestEnemyDist / 500) : 0,
+          opponents: nearestEnemy ? [nearestEnemy] : [],
+        };
+        aiInput = strategicCTF(f, strategicWorld, f.cpuDifficulty || 'regular', aiInput);
       }
 
       // ── Anti-stuck tracking ──

@@ -448,7 +448,7 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
         if (f.stocks <= 0 || updated.has(f)) return;
         const opp = firstEnemy(f.team);
         if (!opp) return;
-        updateFighter(f, updateAI(f, opp, cpuDifficulty, TEAM_PLATFORMS, 1 + ((settings.aiAggression ?? 50) - 50) / 100, settings.botPersonality || 'balanced'), TEAM_PLATFORMS, W, H, opp);
+        f._strategicBot = true; updateFighter(f, updateAI(f, opp, cpuDifficulty, TEAM_PLATFORMS, 1 + ((settings.aiAggression ?? 50) - 50) / 100, settings.botPersonality || 'balanced'), TEAM_PLATFORMS, W, H, opp);
       });
 
       // Update power projectiles

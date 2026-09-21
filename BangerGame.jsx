@@ -1,3 +1,4 @@
+import { strategicBanger } from './botStrategicBrain.js';
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { drawCourt } from './VolleyballGame.jsx';

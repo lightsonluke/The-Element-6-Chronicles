@@ -1,3 +1,4 @@
+import { strategicDodgeball } from './botStrategicBrain.js';
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { ALL_CHARS, TEAM_COLOR_P1, TEAM_COLOR_P2 } from './sports.js';
@@ -189,6 +190,11 @@ export default function DodgeballGame({
     const r = { left: false, right: false, up: false, down: false, sig: false, superMove: false, power: false };
     const smartDodge = universalDodgeballDecision(p, opp, s, side, difficulty);
     if (smartDodge) return { ...r, ...smartDodge };
+    const strategicBase = strategicDodgeball(p, { balls: s.balls || [], side, holdingBall: p.holding, bestTarget: opp }, difficulty, r);
+    if ((difficulty === 'honored' || difficulty === 'insane') && strategicBase) {
+      const incomingThreat = (s.balls || []).some(b => b && b.heldBy === null && b.lastThrower !== side && b.lastThrower !== 0 && Math.abs(b.vx || 0) > 2);
+      if (incomingThreat || p.holding) return strategicBase;
+    }
     // dodge an incoming airborne throw aimed at us
     const incoming = s.balls.find(b => b.heldBy === null && b.lastThrower !== side && b.lastThrower !== 0 &&
       Math.abs(b.vx) > 2 && ((side === 1 && b.vx < 0) || (side === 2 && b.vx > 0)) &&
