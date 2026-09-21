@@ -408,9 +408,9 @@ export default function ClansScreen({
     try {
       const { data, error } = await supabase.rpc('element6_update_clan_badge', { p_icon_url: icon || null });
       if (error) throw error;
-      setMyClan(prev => ({ ...prev, icon_url: data?.icon_url ?? icon || null }));
-      window.__e6ClanBadgeLogo = data?.icon_url ?? icon || '';
-      try { localStorage.setItem('element6_clan_badge_logo', data?.icon_url ?? icon || ''); } catch {}
+      setMyClan(prev => ({ ...prev, icon_url: (data?.icon_url ?? icon) || null }));
+      window.__e6ClanBadgeLogo = (data?.icon_url ?? icon) || '';
+      try { localStorage.setItem('element6_clan_badge_logo', (data?.icon_url ?? icon) || ''); } catch {}
       setBadgeInput('');
       setNotice('Clan badge updated.');
     } catch (e) {
