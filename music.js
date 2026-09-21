@@ -50,8 +50,8 @@ export const FIGHT_TRACK_LIBRARY = [
   { id: 'pixel-health', name: 'Pixel Health', url: A('pixel-health.mp3') },
   { id: 'open-pixel', name: 'Open Pixel', url: A('open-pixel.mp3') },
   { id: '16-pixels', name: '16 Pixels', url: A('16-pixels.mp3') },
-  { id: 'racing-circuit', name: 'Racing Circuit', url: A('Racing Circuit(1).mp3') },
-  { id: 'showdown', name: 'Showdown', url: A('showdown(1).mp3') },
+  { id: 'racing-circuit', name: 'Racing Circuit', url: A('racing-circuit.mp3') },
+  { id: 'showdown', name: 'Showdown', url: A('showdown.mp3') },
 ];
 const FIGHT_TRACKS = FIGHT_TRACK_LIBRARY.map(t => t.url);
 const FIGHT_SCENES = new Set(['fight','story','battleroyale','soccer','volleyball','baseball','banger','dodgeball','ctf','team','custombattle','tournament','grandcircuit']);
