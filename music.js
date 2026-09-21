@@ -118,7 +118,6 @@ class MusicManager {
     this._allAudioEls = []; // track every Audio element so stop() can kill them all
     this.captureDestination = null;
     this._captureSources = new WeakMap();
-    this._captureNodes = new Set();
 
     // Browsers reject audio started before a click/tap. Retry the already chosen
     // track on that first interaction instead of leaving the homescreen silent.
@@ -160,45 +159,25 @@ class MusicManager {
 
   init() {
     if (this.ctx) return;
-    try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { }
-  }
-
-  getCaptureDestination() {
-    this.init();
-    if (!this.ctx) return null;
-    if (!this.captureDestination) {
-      try {
-        this.captureDestination = this.ctx.createMediaStreamDestination();
-        for (const node of this._captureNodes) { try { node.connect(this.captureDestination); } catch {} }
-        if (this.audioEl) this._routeAudioElement(this.audioEl);
-      } catch {}
-    }
-    return this.captureDestination;
-  }
-
-  registerCaptureNode(node) {
-    if (!node) return;
-    this._captureNodes.add(node);
-    const destination = this.getCaptureDestination();
-    if (destination) { try { node.connect(destination); } catch {} }
-  }
-
-  _routeAudioElement(audio) {
-    if (!audio || !this.ctx) return;
-    const existing = this._captureSources.get(audio);
-    if (existing) {
-      if (this.captureDestination) { try { existing.connect(this.captureDestination); } catch {} }
-      return;
-    }
     try {
-      audio.crossOrigin = 'anonymous';
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.captureDestination = this.ctx.createMediaStreamDestination();
+    } catch (e) { }
+  }
+
+  _attachCaptureAudio(audio) {
+    if (!audio || !this.ctx || !this.captureDestination) return;
+    if (this._captureSources.has(audio)) return;
+    try {
       const source = this.ctx.createMediaElementSource(audio);
-      source.connect(this.ctx.destination);
-      if (this.captureDestination) source.connect(this.captureDestination);
+      source.connect(this.captureDestination);
       this._captureSources.set(audio, source);
-    } catch (error) {
-      console.debug('[Element 6 Audio] Capture routing unavailable', error);
-    }
+    } catch (e) { /* A media element can only have one MediaElementSource. */ }
+  }
+
+  getCaptureAudioStream() {
+    this.init();
+    return this.captureDestination?.stream || null;
   }
 
   setCustomTracks(tracks) { this.customTracks = tracks || {}; }
@@ -249,12 +228,10 @@ class MusicManager {
     this._stopInternal();
     this.currentScene = 'custom';
     this.currentUrl = url;
-    this.audioEl = new Audio();
-    this.audioEl.crossOrigin = 'anonymous';
-    this.audioEl.src = url;
+    this.audioEl = new Audio(url);
     this.audioEl.preload = 'auto';
-    this._routeAudioElement(this.audioEl);
     this._allAudioEls.push(this.audioEl);
+    this._attachCaptureAudio(this.audioEl);
     this.audioEl.loop = true;
     this.audioEl.volume = this.muted ? 0 : this.volume;
     this.audioEl.load();
@@ -296,12 +273,10 @@ class MusicManager {
     this.currentUrl = url;
 
 
-    this.audioEl = new Audio();
-    this.audioEl.crossOrigin = 'anonymous';
-    this.audioEl.src = url;
+    this.audioEl = new Audio(url);
     this.audioEl.preload = 'auto';
-    this._routeAudioElement(this.audioEl);
     this._allAudioEls.push(this.audioEl);
+    this._attachCaptureAudio(this.audioEl);
     this.audioEl.loop = true;
     this.audioEl.volume = this.muted ? 0 : this.volume;
     this.audioEl.load();

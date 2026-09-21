@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getClipBlob, getClipPreviewBlob, deleteClipBlob, listClipMetadata } from './clipStorage.js';
-import { convertToMP4 } from './clipRecorder.js';
 import GameIcon from './GameIcon.jsx';
 
 const DEFAULT_FPS = 60;
@@ -15,6 +14,9 @@ function makeVideoSource(video, blob) {
   video.preload = 'auto';
   video.setAttribute('playsinline', '');
   video.setAttribute('webkit-playsinline', '');
+  // The global music manager intentionally silences foreign media elements.
+  // Clip videos are explicitly trusted local media and must be left alone.
+  video.dataset.ekKeep = 'true';
   video.load();
   return { url, video };
 }
@@ -29,7 +31,6 @@ export default function ClipsScreen({
   const [sources, setSources] = useState({});
   const [failed, setFailed] = useState({});
   const [activeViewer, setActiveViewer] = useState(null);
-  const [converting, setConverting] = useState({});
   const videoRefs = useRef({});
   const sourceRefs = useRef({});
 
@@ -139,44 +140,20 @@ export default function ClipsScreen({
     } catch {}
   };
 
-  const download = async clip => {
+  const download = clip => {
     const source = sources[clip.id];
-    if (!source?.blob || converting[clip.id]) return;
+    if (!source?.blob) return;
 
-    // Clips stay stored and previewed as WebM. Conversion happens only after
-    // the player requests SAVE MP4. The resulting Blob is a real MP4 produced
-    // by FFmpeg; the WebM is never merely renamed to .mp4.
-    setConverting(prev => ({ ...prev, [clip.id]: 1 }));
+    const url = URL.createObjectURL(source.blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download =
+      `Element6_Clip_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.mp4`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
 
-    try {
-      const mp4 = await convertToMP4(source.blob, progress => {
-        setConverting(prev => ({ ...prev, [clip.id]: Math.max(1, Math.round(progress)) }));
-      });
-
-      if (!mp4 || mp4.size < 1000 || mp4.type !== 'video/mp4') {
-        throw new Error('MP4 conversion returned an invalid file');
-      }
-
-      const url = URL.createObjectURL(mp4);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download =
-        `Element6_Clip_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.mp4`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-    } catch (error) {
-      console.error('[Element 6 Clips] MP4 conversion/download failed:', error);
-      window.alert('MP4 CONVERSION FAILED — THE ORIGINAL WEBM CLIP IS STILL SAVED. PLEASE TRY THE DOWNLOAD AGAIN.');
-    } finally {
-      setConverting(prev => {
-        const next = { ...prev };
-        delete next[clip.id];
-        return next;
-      });
-    }
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
   };
 
   const remove = async id => {
@@ -225,7 +202,7 @@ export default function ClipsScreen({
         </div>
 
         <p className="text-xs text-muted-foreground font-body mb-5">
-          Clips are saved locally as WebM for reliability. SAVE MP4 converts the WebM to a real MP4 before the download starts.
+          MP4 · 60 FPS · saved locally in your browser.
         </p>
 
         {clips.length === 0 ? (
@@ -341,12 +318,11 @@ export default function ClipsScreen({
                     </button>
 
                     <button
-                      disabled={!videoReady || !!converting[clip.id]}
+                      disabled={!videoReady}
                       onClick={() => download(clip)}
                       className="px-2 py-1 bg-primary/30 text-primary rounded text-[10px] font-heading disabled:opacity-40"
                     >
-                      <GameIcon emoji={converting[clip.id] ? '⏳' : '⬇'} size={14} />{' '}
-                      {converting[clip.id] ? `CONVERTING ${converting[clip.id]}%` : 'SAVE MP4'}
+                      <GameIcon emoji="⬇" size={14} /> SAVE MP4
                     </button>
 
                     <button

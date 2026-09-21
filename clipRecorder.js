@@ -1,5 +1,6 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { music } from './music.js';
 
 let sourceCanvas = null;
 let sourceStream = null;
@@ -19,8 +20,8 @@ let recorderMime = 'video/webm';
 const FPS = 60;
 const CLIP_SECONDS = 30;
 const CLIP_MS = CLIP_SECONDS * 1000;
-const VIDEO_BITRATE = 8000000;
-const CHUNK_MS = 250;
+const VIDEO_BITRATE = 5000000;
+const CHUNK_MS = 500;
 const MIN_CHUNK_BYTES = 128;
 const FFMPEG_CORE_BASES = [
   'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd',
@@ -209,62 +210,37 @@ async function loadFFmpeg() {
   }
 }
 
-export async function convertToMP4(webmBlob, onProgress = null) {
-  if (!webmBlob || webmBlob.size < MIN_CHUNK_BYTES) {
-    throw new Error('recording data is empty');
-  }
-
-  if (typeof onProgress === 'function') onProgress(8);
+async function convertToMP4(webmBlob) {
+  if (!webmBlob || webmBlob.size < MIN_CHUNK_BYTES) throw new Error('recording data is empty');
   const encoder = await loadFFmpeg();
-  if (typeof onProgress === 'function') onProgress(22);
   const token = `e6_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   const input = `${token}.webm`;
   const output = `${token}.mp4`;
-
   try {
+    // Write the complete WebM once, then encode with conservative settings so
+    // the browser's WASM memory is not exhausted around the old ~8% failure.
     await encoder.writeFile(input, await fetchFile(webmBlob));
-    if (typeof onProgress === 'function') onProgress(32);
-
     let exitCode = await encoder.exec([
       '-y', '-i', input,
-      '-an',
-      '-c:v', 'libx264',
-      '-preset', 'veryfast',
-      '-crf', '21',
-      '-pix_fmt', 'yuv420p',
-      '-movflags', '+faststart',
-      output
+      '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '24',
+      '-pix_fmt', 'yuv420p', '-r', String(FPS),
+      '-c:a', 'aac', '-b:a', '96k', '-ar', '48000', '-ac', '2',
+      '-movflags', '+faststart', output
     ]);
-
-    if (typeof onProgress === 'function') onProgress(88);
-
     if (exitCode !== 0) {
       try { await encoder.deleteFile(output); } catch {}
       exitCode = await encoder.exec([
         '-y', '-i', input,
-        '-an',
-        '-c:v', 'mpeg4',
-        '-q:v', '5',
-        '-pix_fmt', 'yuv420p',
-        '-movflags', '+faststart',
-        output
+        '-c:v', 'mpeg4', '-q:v', '6', '-pix_fmt', 'yuv420p', '-r', String(FPS),
+        '-c:a', 'aac', '-b:a', '96k', '-ar', '48000', '-ac', '2',
+        '-movflags', '+faststart', output
       ]);
     }
-
-    if (exitCode !== 0) {
-      throw new Error(`FFmpeg MP4 encode failed (exit ${exitCode}); browser could not encode the rolling clip to MP4`);
-    }
-
-    if (typeof onProgress === 'function') onProgress(96);
+    if (exitCode !== 0) throw new Error(`MP4 encode failed (exit ${exitCode})`);
     const data = await encoder.readFile(output);
     const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
     const result = new Blob([bytes], { type: 'video/mp4' });
-
-    if (result.size < 1000) {
-      throw new Error('FFmpeg produced an empty MP4');
-    }
-
-    if (typeof onProgress === 'function') onProgress(100);
+    if (result.size < 1000) throw new Error('FFmpeg produced an empty MP4');
     return result;
   } finally {
     try { await encoder.deleteFile(input); } catch {}
@@ -300,13 +276,20 @@ export function initClipRecorder(canvas) {
       throw new Error('Canvas video track unavailable');
     }
 
+    // The canvas only supplies video. Mix the game's Web Audio bus into the
+    // recording stream so music and SFX are present in the final MP4.
+    const audioStream = music.getCaptureAudioStream?.();
+    if (audioStream?.getAudioTracks?.().length) {
+      for (const track of audioStream.getAudioTracks()) sourceStream.addTrack(track.clone());
+    }
+
     recording = true;
     generation += 1;
 
     window.__e6ClipRecorderActive = true;
     window.__e6ClipRecorderReady = false;
     window.__e6ClipRecorderFPS = FPS;
-    window.__e6ClipRecorderMime = 'video/webm';
+    window.__e6ClipRecorderMime = 'video/mp4';
 
     if (!startRecorder()) {
       throw new Error('Could not start MediaRecorder');
@@ -334,20 +317,15 @@ export function saveClip() {
     const snapshot = await makeSnapshot();
     if (!snapshot) return null;
 
-    // Always persist the native WebM recording. MP4 conversion is intentionally
-    // deferred until the player explicitly downloads a clip, so recording and
-    // saving can never be blocked by the converter.
-    const outputBlob = snapshot.blob;
-    const outputMime = snapshot.blob.type || recorderMime || 'video/webm';
-    const outputExtension = 'webm';
+    const mp4 = await convertToMP4(snapshot.blob);
 
     window.__e6ClipRecorderReady = true;
 
     return {
-      blob: outputBlob,
+      blob: mp4,
       previewBlob: snapshot.blob,
-      mime: outputMime,
-      extension: outputExtension,
+      mime: 'video/mp4',
+      extension: 'mp4',
       duration: snapshot.duration,
       sequence: ++saveSequence
     };
@@ -376,7 +354,7 @@ export function getClipRecordingInfo() {
       chunkBytes >= MIN_CHUNK_BYTES
     ),
     mime: recorderMime || 'video/webm',
-    extension: 'webm',
+    extension: recorderMime === 'video/mp4' ? 'mp4' : 'webm',
     fps: FPS,
     recorderCount: recorder && recorder.state !== 'inactive' ? 1 : 0,
     completedCount: 0,

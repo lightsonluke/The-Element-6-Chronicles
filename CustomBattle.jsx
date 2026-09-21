@@ -1,5 +1,4 @@
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
-import { sanitizeFreehandPlatforms } from './freehandSafety.js';
 import React, { useState, useEffect, useRef } from 'react';
 import { ALL_CHARS } from './allCharacters.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, updateProjectiles, drawProjectiles, loseStock } from './fighter.js';
@@ -321,7 +320,33 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
   equippedAccessoriesRef.current = mergedAccessories;
   equippedShikigamiRef.current = mergedShikigami;
 
-  const platforms = customPlatforms || applyStageMaterials(MAP_PLATFORMS[mapId] || MAP_PLATFORMS.splitcity, mapId);
+  // Never let legacy editor-generated freehand platform explosions enter the
+  // physics loop. Rebuild a small bounded collision set from the source strokes.
+  const basePlatforms = (customPlatforms || applyStageMaterials(MAP_PLATFORMS[mapId] || MAP_PLATFORMS.splitcity, mapId));
+  const cleanPlatforms = Array.isArray(basePlatforms) ? basePlatforms.filter(p => !p?._freehandSegment) : [];
+  const freehandCollision = [];
+  const strokes = Array.isArray(customFreehandStrokes || customStageConfig?.freehandStrokes) ? (customFreehandStrokes || customStageConfig.freehandStrokes) : [];
+  let freehandCount = 0;
+  for (const stroke of strokes) {
+    if (freehandCount >= 900) break;
+    const raw = Array.isArray(stroke?.points) ? stroke.points : [];
+    const pts = raw.filter(q => Number.isFinite(Number(q?.x)) && Number.isFinite(Number(q?.y)));
+    if (pts.length < 2) continue;
+    const sampled = pts.length <= 121 ? pts : Array.from({ length: 121 }, (_, i) => pts[Math.min(pts.length - 1, Math.round(i * (pts.length - 1) / 120))]);
+    const d = Math.max(4, Number(stroke?.diameter) || 36);
+    for (let i = 1; i < sampled.length && freehandCount < 900; i++) {
+      const a = sampled[i - 1], b = sampled[i];
+      freehandCollision.push({
+        x: Math.min(a.x, b.x) - d / 2, y: Math.min(a.y, b.y) - d / 2,
+        w: Math.max(d, Math.abs(b.x - a.x) + d), h: Math.max(d, Math.abs(b.y - a.y) + d),
+        material: stroke?.material || 'normal', _freehandSegment: true, _freehandStroke: true,
+        _freehandLine: { ax: a.x, ay: a.y, bx: b.x, by: b.y, diameter: d },
+        ...(stroke?.motion ? { move: { ...stroke.motion }, motion: { ...stroke.motion } } : {})
+      });
+      freehandCount++;
+    }
+  }
+  const platforms = cleanPlatforms.concat(freehandCollision);
   const isLarge = LARGE_MAPS.has(mapId);
   const mapObj = STAGE_MAPS.find(m => m.id === mapId);
   const ALL = withCustomChars(BASE_ALL, customCharsData, customNumberMap);

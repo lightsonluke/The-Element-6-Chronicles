@@ -182,11 +182,6 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           const sampled = sampleMotion(stroke.motion, f * 16.6667, 0, {});
           ox = sampled.x || 0; oy = sampled.y || 0;
         }
-        // Never feed an unbounded user stroke directly into a canvas path.
-        // A large freehand stroke can contain tens of thousands of points and
-        // can otherwise make the editor fail before it even becomes usable.
-        const pts = getSafeFreehandPoints(stroke.points, 3000);
-        if (!pts.length) return;
         ctx.save();
         ctx.strokeStyle = mat.color;
         ctx.lineWidth = Number(stroke.diameter || freehandDiameter || 36);
@@ -194,8 +189,8 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         ctx.lineJoin = 'round';
         ctx.globalAlpha = 0.92;
         ctx.beginPath();
-        pts.forEach((pt, idx) => idx ? ctx.lineTo(pt.x + ox, pt.y + oy) : ctx.moveTo(pt.x + ox, pt.y + oy));
-        if (pts.length === 1) ctx.lineTo(pts[0].x + ox + 0.01, pts[0].y + oy + 0.01);
+        stroke.points.forEach((pt, idx) => idx ? ctx.lineTo(pt.x + ox, pt.y + oy) : ctx.moveTo(pt.x + ox, pt.y + oy));
+        if (stroke.points.length === 1) ctx.lineTo(stroke.points[0].x + ox + 0.01, stroke.points[0].y + oy + 0.01);
         ctx.stroke();
         ctx.globalAlpha = 1;
         ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
@@ -790,15 +785,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     if (motionTarget.kind === 'hazard') setHazards(prev => prev.map((h,i) => i === motionTarget.index ? { ...h, move: motion, motion } : h));
     if (motionTarget.kind === 'freehand') setFreehandStrokes(prev => prev.map((st,i) => i === motionTarget.index ? { ...st, motion } : st));
   };
-  const stagePreviewData = {
-    platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)],
-    freehandStrokes, hazards, objects, spawnPoints, backdrop, killPerimeter: perimeter,
-    stageCamera: {
-      ...stageCamera,
-      zoom: Number(stageCamera.zoom || 1),
-      motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null
-    }
-  };
+  const stagePreviewData = { platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)], freehandStrokes, hazards, objects, backdrop, killPerimeter: perimeter, stageCamera: { ...stageCamera, motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null } };
 
   return (
     <div className="w-full max-w-5xl flex flex-col gap-3">
@@ -1209,43 +1196,36 @@ function pointNearFreehand(x, y, stroke) {
   return false;
 }
 
-function getSafeFreehandPoints(points, maxPoints = 3000) {
-  if (!Array.isArray(points) || !points.length) return [];
-  const clean = [];
-  for (const p of points) {
-    const x = Number(p?.x), y = Number(p?.y);
-    if (Number.isFinite(x) && Number.isFinite(y)) clean.push({ x, y });
-  }
-  if (clean.length <= maxPoints) return clean;
-  const out = [];
-  const step = (clean.length - 1) / (maxPoints - 1);
-  for (let i = 0; i < maxPoints; i++) out.push(clean[Math.round(i * step)]);
-  return out;
-}
-
 function expandFreehandToPlatforms(strokes = []) {
   const out = [];
+  const MAX_SEGMENTS_PER_STROKE = 180;
+  const MAX_TOTAL_SEGMENTS = 900;
   for (const stroke of Array.isArray(strokes) ? strokes : []) {
-    const pts = getSafeFreehandPoints(stroke?.points, 3000);
-    const radius = Math.max(2, Math.min(250, (Number(stroke?.diameter) || 36) / 2));
+    if (out.length >= MAX_TOTAL_SEGMENTS) break;
+    const raw = Array.isArray(stroke?.points) ? stroke.points : [];
+    const pts = raw.filter(p => Number.isFinite(Number(p?.x)) && Number.isFinite(Number(p?.y)));
+    const d = Math.max(4, Number(stroke?.diameter) || 36);
+    const r = d / 2;
     const mat = stroke?.material || 'normal';
     if (!pts.length) continue;
-    if (pts.length === 1) {
-      const p = pts[0];
-      out.push({ x:p.x-radius, y:p.y-radius, w:radius*2, h:radius*2, material:mat, _freehandSegment:true, _freehandStroke:true, _freehandPoint:true, collision:true, itemCollision:true, ...(stroke.motion ? { move:{...stroke.motion}, motion:{...stroke.motion} } : {}) });
-      continue;
+    const sampled = [];
+    if (pts.length <= MAX_SEGMENTS_PER_STROKE + 1) {
+      sampled.push(...pts);
+    } else {
+      const stride = (pts.length - 1) / MAX_SEGMENTS_PER_STROKE;
+      for (let i = 0; i <= MAX_SEGMENTS_PER_STROKE; i++) {
+        sampled.push(pts[Math.min(pts.length - 1, Math.round(i * stride))]);
+      }
     }
-    for (let i=1; i<pts.length; i++) {
-      const a=pts[i-1], b=pts[i], dx=b.x-a.x, dy=b.y-a.y;
-      if (!Number.isFinite(dx) || !Number.isFinite(dy) || Math.hypot(dx,dy)<0.5) continue;
-      out.push({
-        x:Math.min(a.x,b.x)-radius, y:Math.min(a.y,b.y)-radius,
-        w:Math.abs(dx)+radius*2, h:Math.abs(dy)+radius*2,
-        x1:a.x, y1:a.y, x2:b.x, y2:b.y, radius, material:mat,
-        _freehandSegment:true, _freehandStroke:true, _freehandSlope:true,
-        collision:true, itemCollision:true,
-        ...(stroke.motion ? { move:{...stroke.motion}, motion:{...stroke.motion} } : {})
-      });
+    const emit = (x, y) => {
+      if (out.length >= MAX_TOTAL_SEGMENTS) return;
+      out.push({ x: x - r, y: y - r, w: d, h: d, material: mat, _freehandSegment: true, _freehandStroke: true, collision: true, itemCollision: true,
+        ...(stroke.motion ? { move: { ...stroke.motion }, motion: { ...stroke.motion } } : {}) });
+    };
+    if (sampled.length === 1) { emit(sampled[0].x, sampled[0].y); continue; }
+    for (let i = 1; i < sampled.length && out.length < MAX_TOTAL_SEGMENTS; i++) {
+      const a = sampled[i - 1], b = sampled[i];
+      emit((a.x + b.x) * 0.5, (a.y + b.y) * 0.5);
     }
   }
   return out;
