@@ -394,7 +394,10 @@ function drawMaterialOverlay(ctx,p,frame=0) {
 // The center line remains a collision-friendly shape; material details are
 // stamped along it so Freehand never looks like a chain of unrelated squares.
 export function drawMaterialStroke(ctx, stroke, frame=0) {
-  const pts=Array.isArray(stroke?.points)?stroke.points:[];
+  const rawPts=Array.isArray(stroke?.points)?stroke.points:[];
+  // Downloaded/custom stages can contain malformed or extremely dense pointer
+  // samples. Normalize them here so one bad point can never crash the match.
+  const pts=rawPts.filter(pt => pt && Number.isFinite(Number(pt.x)) && Number.isFinite(Number(pt.y))).map(pt => ({ x:Number(pt.x), y:Number(pt.y) }));
   if(!pts.length) return;
   const diameter=Math.max(4,Number(stroke?.diameter)||36);
   const color=getMaterial(stroke.material).color;
@@ -410,8 +413,8 @@ export function drawMaterialStroke(ctx, stroke, frame=0) {
   ctx.shadowBlur=0;
 
   // A compact material-specific surface pass, scaled to the stroke width.
-  const minX=Math.min(...pts.map(q=>q.x)), maxX=Math.max(...pts.map(q=>q.x));
-  const minY=Math.min(...pts.map(q=>q.y)), maxY=Math.max(...pts.map(q=>q.y));
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  for(const q of pts){ if(q.x<minX)minX=q.x; if(q.x>maxX)maxX=q.x; if(q.y<minY)minY=q.y; if(q.y>maxY)maxY=q.y; }
   const box={x:minX-diameter/2,y:minY-diameter/2,w:Math.max(diameter,maxX-minX+diameter),h:Math.max(diameter,maxY-minY+diameter),material:stroke.material};
   ctx.save();
   ctx.globalAlpha=.75;

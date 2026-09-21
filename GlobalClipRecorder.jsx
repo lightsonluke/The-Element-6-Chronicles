@@ -101,13 +101,18 @@ async function persistClip() {
   return true;
 }
 
-export default function GlobalClipRecorder() {
+export default function GlobalClipRecorder({ enabled = false }) {
   const canvasRef = useRef(null);
   const scanTimerRef = useRef(null);
   const savingRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
+    if (!enabled) {
+      stopClipRecorder();
+      window.__e6ClipRecorderActive = false;
+      return () => {};
+    }
 
     const start = () => {
       if (cancelled || isClipRecorderActive()) return;
@@ -169,7 +174,7 @@ export default function GlobalClipRecorder() {
       canvasRef.current = null;
       savingRef.current = false;
     };
-  }, []);
+  }, [enabled]);
 
   return null;
 }

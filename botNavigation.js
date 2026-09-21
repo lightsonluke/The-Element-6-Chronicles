@@ -36,7 +36,7 @@ const pCx = (p) => p.x + p.w / 2;
 function platformBelow(ent, platforms) {
   let best = null, bestD = Infinity;
   for (const p of platforms) {
-    if (!SOLID(p)) continue;
+    if (!SOLID(p) || p._freehandSegment) continue;
     if (ent.x < p.x - 16 || ent.x > p.x + p.w + 16) continue;
     const d = p.y - ent.y; // positive = platform top is below the feet
     if (d > -8 && d < bestD) { bestD = d; best = p; }
@@ -145,7 +145,11 @@ function solidCount(platforms) {
 }
 
 function buildGraph(platforms) {
-  const sol = platforms.filter(SOLID);
+  // Freehand strokes are continuous collision surfaces and can contain hundreds
+  // of tiny generated segments. They are deliberately excluded from the
+  // platform graph so pathfinding stays O(platforms²) over the real stage
+  // platforms instead of exploding on a long hand-drawn line.
+  const sol = platforms.filter(p => SOLID(p) && !p._freehandSegment);
   const adj = new Map();
   for (const p of sol) adj.set(p, []);
   for (let i = 0; i < sol.length; i++) {
@@ -221,12 +225,12 @@ function findRoute(start, goal, platforms) {
 
 // ── Per-fighter nav state ───────────────────────────────────────────────────
 function navState(fighter) {
-  if (!fighter._navSt) fighter._navSt = { route: null, wpIdx: 0, stuck: 0, lastPos: null, targetRef: null, targetLock: 0, doubleUsed: false, holdJump: false, releasedForDouble: false };
+  if (!fighter._navSt) fighter._navSt = { route: null, routeOrigin: null, wpIdx: 0, stuck: 0, lastPos: null, targetRef: null, targetLock: 0, doubleUsed: false, holdJump: false, releasedForDouble: false };
   return fighter._navSt;
 }
 
 export function resetBotNav(fighter) {
-  fighter._navSt = { route: null, wpIdx: 0, stuck: 0, lastPos: null, targetRef: null, targetLock: 0, doubleUsed: false, holdJump: false, releasedForDouble: false };
+  fighter._navSt = { route: null, routeOrigin: null, wpIdx: 0, stuck: 0, lastPos: null, targetRef: null, targetLock: 0, doubleUsed: false, holdJump: false, releasedForDouble: false };
 }
 
 // ── Dynamic target selection ────────────────────────────────────────────────
@@ -336,9 +340,16 @@ export function navigateToward(fighter, target, platforms) {
   }
 
   // Different platform → build/follow a route.
-  if (!st.route || st.routeTarget !== tgtPlat) {
+  // Rebuild whenever the bot lands on a platform that is not the platform
+  // the current route expected. This is critical for vertical navigation:
+  // falling through/onto an intermediate platform must immediately turn that
+  // platform into the new route origin instead of trying to finish a stale
+  // route from the old platform.
+  const routeContainsCurrent = Array.isArray(st.route) && (st.route.length === 0 || st.route.includes(myPlat));
+  if (!st.route || st.routeTarget !== tgtPlat || st.routeOrigin !== myPlat || !routeContainsCurrent) {
     st.route = findRoute(myPlat, tgtPlat, platforms);
     st.routeTarget = tgtPlat;
+    st.routeOrigin = myPlat;
     st.wpIdx = 0;
   }
   const route = st.route;
@@ -348,13 +359,22 @@ export function navigateToward(fighter, target, platforms) {
     if (Math.abs(dx) > 6) { inputs.left = dx < 0; inputs.right = dx > 0; }
     if (dy < -60 && fighter.grounded) inputs.jump = true;
     if (dy > 60 && !fighter.grounded) inputs.down = true;
+    if (dy > 60 && fighter.grounded && myPlat && tgtPlat && tgtPlat.y > myPlat.y + 40) {
+      // Walk toward the nearest edge and drop; this is safer than blindly
+      // running toward the lower target through an intermediate platform.
+      const edgeL = Math.abs(fighter.x - myPlat.x);
+      const edgeR = Math.abs((myPlat.x + myPlat.w) - fighter.x);
+      if (Math.abs(dx) > 20) { inputs.left = dx < 0; inputs.right = dx > 0; }
+      else if (edgeL < edgeR) inputs.left = true;
+      else inputs.right = true;
+    }
     return applyStuck(inputs, fighter, st, dx);
   }
 
   // Already standing on the current waypoint → advance to the next one.
   if (fighter.grounded && myPlat === wp) {
     st.wpIdx++;
-    if (st.wpIdx >= route.length) { st.route = null; st.routeTarget = null; }
+    if (st.wpIdx >= route.length) { st.route = null; st.routeTarget = null; st.routeOrigin = null; }
     return navigateToward(fighter, target, platforms);
   }
 

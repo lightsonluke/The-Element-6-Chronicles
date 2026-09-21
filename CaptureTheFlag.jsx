@@ -382,9 +382,10 @@ export default function CaptureTheFlag({
         if (f.hp <= 0) { f.respawnTimer -= dt; if (f.respawnTimer <= 0) respawnFighter(f); return; }
         if (f.invincible > 0) f.invincible--;
         let input;
-        if (f.isAI) { input = ctfAI(f); }
-        else {
-          if (combo === 'pp_cc') {
+        try {
+          if (f.isAI) { input = ctfAI(f); }
+          else {
+            if (combo === 'pp_cc') {
             if (f.slot === 'p1') input = stripPowers(mergeGp(readPlayerInput(k, _kb.p1), gp1));
             else if (f.slot === 'p2') input = stripPowers(mergeGp(readPlayerInput(k, _kb.p2), gp2));
             else input = ctfAI(f);
@@ -395,13 +396,32 @@ export default function CaptureTheFlag({
           } else {
             if (f.slot === 'p1') input = stripPowers(mergeGp(readSinglePlayerInput(k, _kb.p1, _kb.p2), gp1));
             else input = ctfAI(f);
+            }
           }
+        } catch (error) {
+          console.warn('[Element 6 CTF] Recovered from bot/input error', error);
+          input = { left:false,right:false,jump:false,up:false,down:false,sig:false,power:false,superMove:false,heavy:false };
         }
+        // Always normalize the input object before it reaches the shared fighter engine.
+        input = input || {};
+        input.left = !!input.left; input.right = !!input.right; input.jump = !!input.jump;
+        input.up = !!input.up; input.down = !!input.down; input.sig = !!input.sig;
+        input.power = false; input.superMove = !!input.superMove; input.heavy = !!input.heavy;
 
         if (f.emote && f.emote.timer > 0) {
           input = { left:false,right:false,jump:false,up:false,down:false,sig:false,power:false,superMove:false,heavy:false };
         }
-        updateFighter(f, input, platforms, WORLD_W, WORLD_H, null);
+        try {
+          updateFighter(f, input, platforms, WORLD_W, WORLD_H, null);
+        } catch (error) {
+          // A malformed custom character/stage object must never take down the CTF match.
+          console.warn('[Element 6 CTF] Recovered from fighter update error', error);
+          f.attackData = null; f.attackTimer = 0; f.state = 'idle';
+          f.vx = Number.isFinite(f.vx) ? f.vx * 0.25 : 0;
+          f.vy = Number.isFinite(f.vy) ? f.vy * 0.25 : 0;
+          f.x = Number.isFinite(f.x) ? Math.max(20, Math.min(WORLD_W - 20, f.x)) : f.spawnPoint.x;
+          f.y = Number.isFinite(f.y) ? Math.max(30, Math.min(WORLD_H - 40, f.y)) : f.spawnPoint.y;
+        }
         if (f.emote && f.emote.timer > 0) {
           if (!f.grounded) f.emote = null;
           else {
@@ -454,7 +474,7 @@ export default function CaptureTheFlag({
           }
         }
       }
-      fighters.forEach(f => { updateProjectiles(f, fighters.find(o => o !== f && o.team !== f.team)); });
+      fighters.forEach(f => { try { updateProjectiles(f, fighters.find(o => o !== f && o.team !== f.team)); } catch (error) { console.warn('[Element 6 CTF] Projectile update recovered', error); } });
 
       // ── Camera + Render — split screen for 2 human players ──
       const humans = fighters.filter(f => !f.isAI);

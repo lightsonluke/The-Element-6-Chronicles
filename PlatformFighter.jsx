@@ -682,9 +682,10 @@ export default function PlatformFighter({
     ? customStageConfig
     : {};
   const stageConfig = rawStageConfig;
-  const activeStageCamera = stageCamera || stageConfig.stageCamera || {
-    zoom: stageConfig.cameraZoom || 1,
-    motion: stageConfig.cameraMotion || null,
+  const _rawStageCamera = stageCamera || stageConfig.stageCamera || { zoom: stageConfig.cameraZoom || 1, motion: stageConfig.cameraMotion || null };
+  const activeStageCamera = {
+    zoom: Number.isFinite(Number(_rawStageCamera?.zoom)) ? Math.max(0.35, Math.min(3, Number(_rawStageCamera.zoom))) : 1,
+    motion: (_rawStageCamera && typeof _rawStageCamera.motion === 'object') ? _rawStageCamera.motion : null,
   };
   const _killPerimeterCandidate = killPerimeter || stageConfig.killPerimeter || null;
   const activeKillPerimeter = _killPerimeterCandidate?.enabled === false ? null : _killPerimeterCandidate;
@@ -1349,7 +1350,8 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const g = gameRef.current;
       const fdx = Math.abs(f2.x - f1.x), fdy = Math.abs(f2.y - f1.y);
       const zoomMul = settings.cameraZoom === 'close' ? 1.15 : settings.cameraZoom === 'far' ? 0.85 : 1.0;
-      const stageZoom = activeStageCamera?.zoom != null ? Number(activeStageCamera.zoom) : (settings.stageZoom != null ? settings.stageZoom : 1.0);
+      const stageZoomRaw = activeStageCamera?.zoom != null ? Number(activeStageCamera.zoom) : (settings.stageZoom != null ? Number(settings.stageZoom) : 1.0);
+      const stageZoom = Number.isFinite(stageZoomRaw) ? Math.max(0.35, Math.min(3, stageZoomRaw)) : 1.0;
       let targetZoom = Math.max(0.60, Math.min(0.95, 0.95 - fdx / 1200 - fdy / 1000));
       const spreadX = fdx + 280;
       const spreadY = fdy + 280;
@@ -1364,7 +1366,10 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const midY = ((f1.y + f2.y) / 2) - 70;
       const targetCamX = (midX - W / 2) * (1 - g.camZoom) * 0.35;
       const targetCamY = (midY - H / 2) * (1 - g.camZoom) * 0.35;
-      const stageCamMotion = stageMotionOffset(activeStageCamera?.motion, (now - g.stageStartTime) / 1000);
+      let stageCamMotion = { x: 0, y: 0 };
+      try { stageCamMotion = stageMotionOffset(activeStageCamera?.motion, (now - g.stageStartTime) / 1000) || stageCamMotion; } catch { stageCamMotion = { x: 0, y: 0 }; }
+      if (!Number.isFinite(stageCamMotion.x)) stageCamMotion.x = 0;
+      if (!Number.isFinite(stageCamMotion.y)) stageCamMotion.y = 0;
       g.camX += (targetCamX + stageCamMotion.x - g.camX) * 0.07;
       g.camY += (targetCamY + stageCamMotion.y - g.camY) * 0.07;
       if (settings.reducedMotion || settings.screenShake === false) { g.shakeX = 0; g.shakeY = 0; g.shakeMag = 0; shakeMag = 0; }
@@ -1396,7 +1401,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
 
       drawPlatforms(ctx, platforms, f1.frame, mapId);
       if (Array.isArray(stageConfig.freehandStrokes)) {
-        stageConfig.freehandStrokes.forEach(stroke => drawMaterialStroke(ctx, stroke, f1.frame));
+        for (const stroke of stageConfig.freehandStrokes) {
+          try { drawMaterialStroke(ctx, stroke, f1.frame); } catch (error) { console.warn('[Element 6] Ignored malformed freehand stroke', error); }
+        }
       }
       // Sandbox hazard zones + knockback items
       if (sbHazards) drawSBHazards(ctx, sbHazards, f1.frame);

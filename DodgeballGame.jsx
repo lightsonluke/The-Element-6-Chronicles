@@ -1,4 +1,3 @@
-import { strategicDodgeball } from './botStrategicBrain.js';
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { ALL_CHARS, TEAM_COLOR_P1, TEAM_COLOR_P2 } from './sports.js';
@@ -9,7 +8,6 @@ import { drawSportChar } from './sportDraw.jsx';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
-import { universalDodgeballDecision, botSkill } from './botIntelligence.js';
 import GameIcon from "./GameIcon.jsx";
 
 // ── Dodgeball court (2D side-view, eye-level) ──
@@ -21,7 +19,7 @@ const BALL_R = 13;
 const GRAV = 0.9;
 const P_W = 32, P_H = 96;
 const BALL_COUNT = 10;
-const DIFF_MUL = { newcomer: 0.45, beginner: 0.55, easy: 0.65, amateur: 0.75, regular: 0.9, pro: 1.0, hard: 1.12, insane: 1.25, honored: 1.55 };
+const DIFF_MUL = { newcomer: 0.45, beginner: 0.55, easy: 0.65, amateur: 0.75, regular: 0.9, pro: 1.0, hard: 1.12, insane: 1.25, honored: 1.4 };
 
 const charFor = (id, element, custom) => {
   const c = (custom && custom[id]) || ALL_CHARS.find(c => c.id === id) || ALL_CHARS[0];
@@ -188,13 +186,6 @@ export default function DodgeballGame({
   const cpuInput = (p, opp, s, side) => {
     const D = DIFF_MUL[difficulty] || 1;
     const r = { left: false, right: false, up: false, down: false, sig: false, superMove: false, power: false };
-    const smartDodge = universalDodgeballDecision(p, opp, s, side, difficulty);
-    if (smartDodge) return { ...r, ...smartDodge };
-    const strategicBase = strategicDodgeball(p, { balls: s.balls || [], side, holdingBall: p.holding, bestTarget: opp }, difficulty, r);
-    if ((difficulty === 'honored' || difficulty === 'insane') && strategicBase) {
-      const incomingThreat = (s.balls || []).some(b => b && b.heldBy === null && b.lastThrower !== side && b.lastThrower !== 0 && Math.abs(b.vx || 0) > 2);
-      if (incomingThreat || p.holding) return strategicBase;
-    }
     // dodge an incoming airborne throw aimed at us
     const incoming = s.balls.find(b => b.heldBy === null && b.lastThrower !== side && b.lastThrower !== 0 &&
       Math.abs(b.vx) > 2 && ((side === 1 && b.vx < 0) || (side === 2 && b.vx > 0)) &&
@@ -222,15 +213,17 @@ export default function DodgeballGame({
       if (p.x < edge - 12) r.right = true; else if (p.x > edge + 12) r.left = true;
       const aligned = Math.abs(p.x - edge) < 70;
       p.aiThrow = (p.aiThrow || 0) + 1;
-      const willThrow = p.aiThrow > (40 + (1 - D) * 50) && Math.random() < 0.4 + D * 0.5;
+      const willThrow = p.aiThrow > (24 + (1 - D) * 45) && Math.random() < 0.55 + D * 0.4;
       if (willThrow) {
+        // Lead the opponent by the estimated flight time. Lower tiers add a
+        // small controlled error; high tiers deliberately aim for the body.
+        const speed = p.ds.throwPower;
+        const rawFrames = Math.max(1, Math.abs(opp.x - p.x) / Math.max(1, speed));
+        const lead = Math.max(0, Math.min(18, rawFrames)) * (0.35 + D * 0.45);
+        const aimError = (1 - D) * 70 * (Math.random() - 0.5);
+        p.aiAimX = opp.x + opp.vx * lead + aimError;
+        p.aiAimY = (opp.y - P_H * 0.5) + opp.vy * lead * 0.35 + (1 - D) * 45 * (Math.random() - 0.5);
         r.sig = true;
-        const oppUp = opp.y < p.y - P_H * 0.4;
-        const oppDown = opp.y > p.y - 20;
-        if (oppUp) r.up = Math.random() < 0.6;
-        else if (oppDown && Math.random() < 0.3) r.down = true;
-        // inaccuracy: random misaim at low difficulty
-        if (Math.random() < (1 - D) * 0.5) { r.up = Math.random() < 0.5; r.down = !r.up && Math.random() < 0.5; }
         p.aiThrow = 0;
       }
       if (p.superTimer <= 0 && Math.random() < 0.006 + D * 0.012) { r.superMove = true; r.up = opp.y < p.y - P_H * 0.4; r.down = opp.y > p.y - 20 && Math.random() < 0.3; }
@@ -332,11 +325,27 @@ export default function DodgeballGame({
     const b = p.holding; if (!b) return;
     p.holding = null; b.heldBy = null; b.lastThrower = side; b.hitCd = 10;
     s.stats[side - 1].throws++; if (isSuper) s.stats[side - 1].superThrows++;
-    const dir = inp.up ? 1 : inp.down ? -1 : 0; // 1 high, 0 straight, -1 low
     const speed = isSuper ? p.ds.superPower : p.ds.throwPower;
-    const toward = side === 1 ? 1 : -1;
-    b.vx = toward * speed;
-    b.vy = dir === 1 ? -(isSuper ? 11.5 : 9.2) : dir === -1 ? (isSuper ? 7.0 : 5.4) : 0;
+    // CPU throws carry an explicit target so the throw is actually aimed at
+    // the opponent instead of always being a straight horizontal projectile.
+    const aimX = Number.isFinite(p.aiAimX) ? p.aiAimX : null;
+    const aimY = Number.isFinite(p.aiAimY) ? p.aiAimY : null;
+    if (aimX != null) {
+      const dx = aimX - p.x;
+      const toward = dx >= 0 ? 1 : -1;
+      const travelFrames = Math.max(1, Math.abs(dx) / Math.max(1, speed));
+      const startY = p.y - P_H * 0.55;
+      const targetY = aimY != null ? aimY : startY;
+      const desiredVy = (targetY - startY - 0.5 * GRAV * travelFrames * travelFrames) / travelFrames;
+      b.vx = toward * speed;
+      b.vy = Math.max(-12, Math.min(12, desiredVy));
+    } else {
+      const dir = inp.up ? 1 : inp.down ? -1 : 0;
+      const toward = side === 1 ? 1 : -1;
+      b.vx = toward * speed;
+      b.vy = dir === 1 ? -(isSuper ? 11.5 : 9.2) : dir === -1 ? (isSuper ? 7.0 : 5.4) : 0;
+    }
+    p.aiAimX = null; p.aiAimY = null;
     b.trail = []; b._dodged = false;
     sfx.power();
   }

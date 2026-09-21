@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { getClipBlob, getClipPreviewBlob, deleteClipBlob, listClipMetadata } from './clipStorage.js';
+import { getClipBlob, getClipPreviewBlob, deleteClipBlob, listClipMetadata, saveClipBlob, trimClips } from './clipStorage.js';
 import GameIcon from './GameIcon.jsx';
+import { startBrowserScreenRecording } from './clipScreenRecorder.js';
 
 const DEFAULT_FPS = 60;
 
@@ -22,12 +23,18 @@ export default function ClipsScreen({
   clips: externalClips = null,
   onDeleteClip = () => {},
   onBack = () => {},
+  clipsEnabled = true,
 }) {
   const [storedClips, setStoredClips] = useState([]);
   const clips = Array.isArray(externalClips) ? externalClips : storedClips;
   const [sources, setSources] = useState({});
   const [failed, setFailed] = useState({});
   const [activeViewer, setActiveViewer] = useState(null);
+  const [localFile, setLocalFile] = useState(null);
+  const [screenRecording, setScreenRecording] = useState(false);
+  const [screenRecorderApi, setScreenRecorderApi] = useState(null);
+  const [screenError, setScreenError] = useState('');
+  useEffect(() => () => { if (localFile?.url) { try { URL.revokeObjectURL(localFile.url); } catch {} } }, [localFile]);
   const videoRefs = useRef({});
   const sourceRefs = useRef({});
 
@@ -144,8 +151,9 @@ export default function ClipsScreen({
     const url = URL.createObjectURL(source.blob);
     const a = document.createElement('a');
     a.href = url;
+    const ext = source.extension || extensionForMime(source.mime || source.blob.type);
     a.download =
-      `Element6_Clip_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.mp4`;
+      `Element6_Clip_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.${ext}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -183,6 +191,42 @@ export default function ClipsScreen({
     }
   };
 
+  const handleLocalFile = event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!String(file.type || '').startsWith('video/')) {
+      setScreenError('That file is not a browser-playable video.');
+      return;
+    }
+    if (localFile?.url) URL.revokeObjectURL(localFile.url);
+    setLocalFile({ file, url: URL.createObjectURL(file) });
+    setScreenError('');
+  };
+
+  const startScreenRecording = async () => {
+    if (!clipsEnabled || screenRecording) return;
+    setScreenError('');
+    try {
+      const api = await startBrowserScreenRecording();
+      setScreenRecorderApi(api);
+      setScreenRecording(true);
+      const result = await api.done;
+      setScreenRecording(false);
+      setScreenRecorderApi(null);
+      if (!result?.blob || result.blob.size < 128) throw new Error('No screen recording data was produced.');
+      const id = `clip_screen_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      await saveClipBlob(id, result.blob, { mime: result.mime, extension: 'webm', duration: result.duration, previewBlob: result.blob });
+      await trimClips(30);
+      window.dispatchEvent(new CustomEvent('clipSaved', { detail: { id, created: Date.now(), mime: result.mime, extension: 'webm', size: result.blob.size, duration: result.duration } }));
+      setStoredClips(prev => [{ id, created: Date.now(), mime: result.mime, extension: 'webm', size: result.blob.size, duration: result.duration }, ...prev].slice(0, 30));
+    } catch (error) {
+      setScreenRecording(false);
+      setScreenRecorderApi(null);
+      if (error?.name === 'NotAllowedError') setScreenError('Screen recording was cancelled.');
+      else setScreenError(error?.message || 'Browser screen recording failed.');
+    }
+  };
+
   return (
     <div className="min-h-screen w-full overflow-y-auto p-6 bg-background">
       <div className="max-w-5xl mx-auto">
@@ -201,6 +245,27 @@ export default function ClipsScreen({
         <p className="text-xs text-muted-foreground font-body mb-5">
           MP4 · 60 FPS · saved locally in your browser.
         </p>
+
+        {clipsEnabled && (
+          <div className="mb-5 rounded-xl border border-border bg-card p-3 flex flex-wrap items-center gap-2">
+            <label className="px-3 py-2 rounded bg-secondary text-secondary-foreground font-heading text-[10px] cursor-pointer">
+              OPEN VIDEO FILE
+              <input type="file" accept="video/*,.webm,.mp4,.mov,.mkv" className="hidden" onChange={handleLocalFile} />
+            </label>
+            <button onClick={startScreenRecording} disabled={screenRecording} className="px-3 py-2 rounded bg-accent text-accent-foreground font-heading text-[10px] disabled:opacity-50">
+              {screenRecording ? 'RECORDING SCREEN…' : 'RECORD SCREEN IN BROWSER'}
+            </button>
+            {screenRecording && screenRecorderApi && <button onClick={() => screenRecorderApi.stop()} className="px-3 py-2 rounded bg-destructive text-destructive-foreground font-heading text-[10px]">STOP RECORDING</button>}
+            {localFile?.url && <button onClick={() => { URL.revokeObjectURL(localFile.url); setLocalFile(null); }} className="px-3 py-2 rounded bg-secondary text-secondary-foreground font-heading text-[10px]">CLOSE FILE</button>}
+            {screenError && <span className="w-full text-[10px] text-destructive">{screenError}</span>}
+          </div>
+        )}
+        {localFile?.url && (
+          <div className="mb-5 bg-card border border-border rounded-xl p-3">
+            <div className="text-xs font-heading text-accent mb-2">LOCAL VIDEO: {localFile.file.name}</div>
+            <video src={localFile.url} controls playsInline className="w-full max-h-[70vh] rounded-lg bg-black" />
+          </div>
+        )}
 
         {clips.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground font-body">

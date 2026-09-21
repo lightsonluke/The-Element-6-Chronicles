@@ -1,8 +1,6 @@
 // botAI.js — CPU AI logic extracted from fighter.js for maintainability.
 import { COMBOS, comboMoveReady as comboMoveReadyUtil, comboMoveToInput } from './combos.js';
 import { selectTarget, navigateToward, platformNavigate as navPlatformNavigate } from './botNavigation.js';
-import { strategicFight, strategicTeam } from './botStrategicBrain.js';
-import { honoredFightTactics } from './botIntelligence.js';
 
 export const CPU_DIFFICULTY = {
   newcomer: { reactionTime: 200, skillChance: 0.03, jumpChance: 0.03, attackChance: 0.05, edgeGuard: false, combo: false, superUse: false, heavyChance: 0.02 },
@@ -63,7 +61,7 @@ function honoredDecide(fighter, opponent, platforms, dx, dy, dist) {
   }
   if (!botOffstage || !oppOffstage) fighter._honoredOffstageCombo = null;
 
-  if (fighter.grounded && opponent.grounded && dist < 200 && Math.abs(dy) < 55) {
+  if (fighter.grounded && opponent.grounded && dist < 205 && Math.abs(dy) < 60) {
     if (!fighter._honoredAlt) fighter._honoredAlt = 'sig';
     if (fighter._honoredAlt === 'sig' && fighter.sigCooldown <= 0) {
       inputs.sig = true;
@@ -109,6 +107,12 @@ function honoredDecide(fighter, opponent, platforms, dx, dy, dist) {
 
 function _mvAway(fighter, px) { return fighter.x < px ? { left: true, right: false } : { left: false, right: true }; }
 const _NO_INPUT = { left:false, right:false, jump:false, up:false, down:false, sig:false, power:false, superMove:false, heavy:false };
+function faceTarget(inputs, dx) {
+  inputs.left = dx < 0;
+  inputs.right = dx > 0;
+  return inputs;
+}
+
 
 // ── Homing projectile flee logic ──
 // Bots only panic-flee homing projectiles when within 50% of the mode's auto-KO threshold.
@@ -360,26 +364,6 @@ export function updateAI(fighter, opponent, difficultyKey = 'regular', platforms
     fighter.aiAction = inputs; return inputs;
   }
 
-  // Strategic layer: persistent opponent model + plan + predicted positioning.
-  // It overlays the mechanical AI rather than replacing its character-specific moves.
-  if (difficultyKey === 'honored' || difficultyKey === 'insane' || difficultyKey === 'hard' || fighter._strategicBot) {
-    const allOpp = (fighter._allOpponents && fighter._allOpponents.length) ? fighter._allOpponents.filter(o => o && o !== fighter && o.stocks > 0 && !o._eliminated) : [opponent];
-    const teammates = (fighter._allTeammates && fighter._allTeammates.length) ? fighter._allTeammates.filter(o => o && o !== fighter && o.stocks > 0 && !o._eliminated) : [];
-    const world = {
-      target: opponent, opponents: allOpp, teammates,
-      winning: (fighter.damage || 0) < (opponent.damage || 0),
-      losing: (fighter.damage || 0) > (opponent.damage || 0) + 25,
-      bounds: { left: fighter._isBR ? 50 : 80, right: fighter._isBR ? 5600 : 880 },
-      mustEngage: fighter._isBR && fighter._brMustEngage,
-    };
-    const strategic = fighter._teamId != null || teammates.length ? strategicTeam(fighter, world, difficultyKey, {}) : strategicFight(fighter, world, difficultyKey, {});
-    if (strategic && (strategic.left || strategic.right || strategic.jump || strategic.up || strategic.down || strategic.sig || strategic.power || strategic.superMove || strategic.heavy)) {
-      fighter._strategicBot = true;
-      fighter.aiAction = strategic;
-      return strategic;
-    }
-  }
-
   if (fighter.aiTimer > 0 && !alwaysUpdate) return fighter.aiAction || {};
   if (fighter.aiTimer > diff.reactionTime * 0.2 && alwaysUpdate) {
     const nav = navigateToward(fighter, opponent, platforms);
@@ -398,26 +382,33 @@ export function updateAI(fighter, opponent, difficultyKey = 'regular', platforms
   const doAttack = Math.random() < Math.min(1, diff.attackChance * _agMul * pm.attackMul);
   const doJump = Math.random() < Math.min(1, diff.jumpChance * _agMul * pm.jumpMul);
   const doHeavy = Math.random() < Math.min(1, (diff.heavyChance || 0.3) * _agMul);
+  // Hitting the opponent is the primary objective. Once a bot is genuinely
+  // inside a reliable attack window, don't let random chance make it simply
+  // walk past the opponent. Lower tiers still make mistakes, while the top
+  // tiers attack almost every viable opening.
+  const reliableAttackRange = Math.max(70, Math.min(185, Number(fighter.char?.signatures?.side?.range || 170)));
+  const closeAttackWindow = dist <= reliableAttackRange && Math.abs(dy) < 62;
+  const attackNow = doAttack || (closeAttackWindow && difficultyKey !== 'newcomer' && difficultyKey !== 'beginner' && Math.random() < diff.attackChance * 0.9);
 
   if (fighter._comboFollowUp > 0) {
     fighter._comboFollowUp--;
     if (fighter.hitstun <= 0 && fighter.heavyCooldown <= 0 && dist < 200 && Math.abs(dy) < 55 && skill) {
-      inputs.heavy = true; inputs.left = dx > 0; inputs.right = dx < 0;
+      inputs.heavy = true; inputs.left = dx < 0; inputs.right = dx > 0;
       fighter.aiAction = inputs; return inputs;
     }
   }
   if (fighter._wasInHitstun > 0 && fighter.hitstun <= 0 && fighter.heavyCooldown <= 0 && dist < 250 && Math.abs(dy) < 55 && (difficultyKey === 'honored' || difficultyKey === 'insane' || difficultyKey === 'hard') && skill) {
-    inputs.heavy = true; inputs.left = dx > 0; inputs.right = dx < 0;
+    inputs.heavy = true; inputs.left = dx < 0; inputs.right = dx > 0;
     fighter.aiAction = inputs; return inputs;
   }
 
   const retreatThreshold = fighter._isBR ? 450 : 1200;
   const oppWeaker = !opponent || (opponent.damage || 0) <= (fighter.damage || 0);
   if (fighter.damage > retreatThreshold && dist < 400 && oppWeaker && !fighter._gcNoRetreat) {
-    inputs.left = dx > 0; inputs.right = dx < 0;
+    inputs.left = dx < 0; inputs.right = dx > 0;
     if (fighter.superMeter >= fighter.maxSuper && skill) inputs.superMove = true;
     else if (fighter.powerCooldown <= 0 && skill) inputs.power = true;
-    else if (fighter.sigCooldown <= 0 && dist > 120 && Math.abs(dy) < 55 && skill) { inputs.sig = true; inputs.left = dx > 0; inputs.right = dx < 0; }
+    else if (fighter.sigCooldown <= 0 && dist > 120 && Math.abs(dy) < 55 && skill) { inputs.sig = true; inputs.left = dx < 0; inputs.right = dx > 0; }
     if (doJump && fighter.grounded) inputs.jump = true;
     fighter.aiAction = inputs; return inputs;
   }
@@ -458,11 +449,6 @@ export function updateAI(fighter, opponent, difficultyKey = 'regular', platforms
     fighter.aiAction = inputs; return inputs;
   }
 
-  if ((difficultyKey === 'honored' || difficultyKey === 'insane') && opponent && opponent.stocks > 0) {
-    const strategicInputs = honoredFightTactics(fighter, opponent, platforms, difficultyKey, { opponents: fighter._allOpponents || [opponent] });
-    if (strategicInputs) { avoidHazards(fighter, strategicInputs, platforms, opponent); fighter.aiAction = strategicInputs; return strategicInputs; }
-  }
-
   if (difficultyKey === 'honored' && opponent && opponent.stocks > 0) {
     const honoredInputs = honoredDecide(fighter, opponent, platforms, dx, dy, dist);
     if (honoredInputs) { avoidHazards(fighter, honoredInputs, platforms, opponent); fighter.aiAction = honoredInputs; return honoredInputs; }
@@ -473,8 +459,8 @@ export function updateAI(fighter, opponent, difficultyKey = 'regular', platforms
     if (dy < -60 && doJump) inputs.jump = true;
     if (dist < 220 && skill) {
       if (diff.superUse && fighter.superMeter >= fighter.maxSuper && opponent.damage > 35 && Math.abs(dy) < 120) inputs.superMove = true;
-      else if (fighter.heavyCooldown <= 0 && Math.abs(dy) < 55) { inputs.heavy = true; inputs.left = dx > 0; inputs.right = dx < 0; }
-      else if (fighter.powerCooldown <= 0 && Math.abs(dy) < 150) { inputs.power = true; inputs.left = dx > 0; inputs.right = dx < 0; }
+      else if (fighter.heavyCooldown <= 0 && Math.abs(dy) < 55) { inputs.heavy = true; inputs.left = dx < 0; inputs.right = dx > 0; }
+      else if (fighter.powerCooldown <= 0 && Math.abs(dy) < 150) { inputs.power = true; inputs.left = dx < 0; inputs.right = dx > 0; }
     }
     fighter.aiAction = inputs; return inputs;
   }
@@ -489,9 +475,9 @@ export function updateAI(fighter, opponent, difficultyKey = 'regular', platforms
     if (nav.jump) inputs.jump = true; if (nav.down) inputs.down = true;
     if (skill && doAttack && Math.abs(dy) < 150) {
       if (diff.superUse && fighter.superMeter >= fighter.maxSuper && dist < 240 && Math.abs(dy) < 120) inputs.superMove = true;
-      else if (fighter.powerCooldown <= 0 && fighter.powerDisabled <= 0 && dist < 350) { inputs.power = true; inputs.left = dx > 0; inputs.right = dx < 0; }
+      else if (fighter.powerCooldown <= 0 && fighter.powerDisabled <= 0 && dist < 350) { inputs.power = true; inputs.left = dx < 0; inputs.right = dx > 0; }
     }
-  } else if (skill && doAttack) {
+  } else if ((skill && doAttack) || (closeAttackWindow && difficultyKey !== 'newcomer' && difficultyKey !== 'beginner')) {
     const r = Math.random();
     const ady = Math.abs(dy);
     if (pushTowardHazard && fighter.heavyCooldown <= 0) {
@@ -499,22 +485,24 @@ export function updateAI(fighter, opponent, difficultyKey = 'regular', platforms
       const hazardX = hazardNearOpponent.x + hazardNearOpponent.w / 2;
       inputs.left = hazardX < fighter.x; inputs.right = hazardX > fighter.x;
     }
+    else if (closeAttackWindow && fighter.sigCooldown <= 0 && ady < 60) { inputs.sig = true; inputs.left = dx < 0; inputs.right = dx > 0; }
+    else if (closeAttackWindow && fighter.heavyCooldown <= 0 && ady < 60) { inputs.heavy = true; inputs.left = dx < 0; inputs.right = dx > 0; }
     else if (diff.superUse && fighter.superMeter >= fighter.maxSuper && ady < 120 && (opponent.damage > 45 || fighter.damage > 80 || Math.random() < 0.25)) inputs.superMove = true;
     else if (fighter.powerCooldown <= 0 && fighter.powerDisabled <= 0 && ady < 150) inputs.power = true;
-    else if (doHeavy && fighter.heavyCooldown <= 0 && r > 0.45 && ady < 55) { inputs.heavy = true; if (dx > 0) { inputs.left = false; inputs.right = true; } else { inputs.left = true; inputs.right = false; } }
+    else if (doHeavy && fighter.heavyCooldown <= 0 && r > 0.25 && ady < 55) { inputs.heavy = true; inputs.left = dx < 0; inputs.right = dx > 0; }
     else if (doHeavy && fighter.heavyCooldown <= 0 && fighter.grounded && (difficultyKey === 'hard' || difficultyKey === 'insane' || difficultyKey === 'honored') && r > 0.2 && ady < 55) { inputs.heavy = true; inputs.down = true; }
     else if (doHeavy && fighter.heavyCooldown <= 0 && !fighter.grounded && opponent.y > fighter.y + 40 && (difficultyKey === 'pro' || difficultyKey === 'hard' || difficultyKey === 'insane' || difficultyKey === 'honored')) { inputs.heavy = true; inputs.down = true; }
     else if (diff.combo && fighter.sigCooldown <= 0 && r > 0.3 && ady < 55) {
       if (opponent.hitstun > 3 && fighter.heavyCooldown <= 0 && opponent.damage > 40) inputs.heavy = true;
       else { inputs.sig = true; if (opponent.hitstun > 0) fighter._comboFollowUp = 3; }
-      inputs.left = dx > 0; inputs.right = dx < 0;
+      inputs.left = dx < 0; inputs.right = dx > 0;
     }
     else if (r > 0.35 && fighter.sigCooldown <= 0 && fighter.grounded) {
       if (dy < -55) inputs.sig = true;
       else if (dy > 55) { inputs.sig = true; inputs.down = true; }
-      else if (ady < 55) { inputs.sig = true; inputs.left = dx > 0; inputs.right = dx < 0; }
+      else if (ady < 55) { inputs.sig = true; inputs.left = dx < 0; inputs.right = dx > 0; }
     }
-    else if (fighter.normalCooldown <= 0 && ady < 40) { inputs.normal = true; inputs.left = dx > 0; inputs.right = dx < 0; }
+    else if (fighter.normalCooldown <= 0 && ady < 50) { inputs.sig = true; inputs.left = dx < 0; inputs.right = dx > 0; }
     else { inputs.left = dx < 0; inputs.right = dx > 0; if (doJump && fighter.grounded) inputs.jump = true; }
   } else {
     const nav = navigateToward(fighter, opponent, platforms);

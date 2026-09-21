@@ -786,11 +786,15 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     if (motionTarget.kind === 'freehand') setFreehandStrokes(prev => prev.map((st,i) => i === motionTarget.index ? { ...st, motion } : st));
   };
   const stagePreviewData = {
-    platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)],
-    freehandStrokes, hazards, objects, spawnPoints, backdrop, killPerimeter: perimeter,
+    platforms: [...platforms.filter(p => !p?._freehandSegment).map(p => ({ ...p })), ...expandFreehandToPlatforms(freehandStrokes)],
+    freehandStrokes: freehandStrokes.map(st => ({ ...st, points: (Array.isArray(st?.points) ? st.points : []).filter(pt => pt && Number.isFinite(Number(pt.x)) && Number.isFinite(Number(pt.y))).map(pt => ({ x:Number(pt.x), y:Number(pt.y) })) })),
+    hazards: (Array.isArray(hazards) ? hazards : []).map(h => ({ ...h })),
+    objects: (Array.isArray(objects) ? objects : []).map(o => ({ ...o })),
+    spawnPoints: (Array.isArray(spawnPoints) ? spawnPoints : []).map(sp => ({ ...sp })),
+    backdrop, killPerimeter: perimeter ? JSON.parse(JSON.stringify(perimeter)) : null,
     stageCamera: {
       ...stageCamera,
-      zoom: Number(stageCamera.zoom || 1),
+      zoom: Math.max(0.35, Math.min(3, Number(stageCamera?.zoom) || 1)),
       motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null
     }
   };
@@ -1207,7 +1211,22 @@ function pointNearFreehand(x, y, stroke) {
 function expandFreehandToPlatforms(strokes = []) {
   const out = [];
   for (const stroke of Array.isArray(strokes) ? strokes : []) {
-    const pts = Array.isArray(stroke?.points) ? stroke.points : [];
+    const rawPts = Array.isArray(stroke?.points) ? stroke.points : [];
+    const pts = [];
+    for (const pt of rawPts) {
+      if (!pt || !Number.isFinite(Number(pt.x)) || !Number.isFinite(Number(pt.y))) continue;
+      const q = { x: Number(pt.x), y: Number(pt.y) };
+      const last = pts[pts.length - 1];
+      if (!last || Math.hypot(q.x - last.x, q.y - last.y) >= 1.5) pts.push(q);
+    }
+    // Keep very long strokes responsive without changing their overall shape.
+    if (pts.length > 2000) {
+      const stride = Math.ceil(pts.length / 2000);
+      const reduced = [];
+      for (let i = 0; i < pts.length; i += stride) reduced.push(pts[i]);
+      if (reduced[reduced.length - 1] !== pts[pts.length - 1]) reduced.push(pts[pts.length - 1]);
+      pts.length = 0; pts.push(...reduced);
+    }
     const radius = Math.max(2, (Number(stroke?.diameter) || 36) / 2);
     const mat = stroke?.material || 'normal';
     if (pts.length === 1) {

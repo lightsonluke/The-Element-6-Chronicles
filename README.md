@@ -1,100 +1,58 @@
-# Element 6 — Clips / Stage Physics / Social / Leaderboard / Clan Fix Package
+# Element 6 — Gameplay / Stage / Clips / Bot Fix Package
 
-This is a TARGETED replacement package. Copy the files at the package root over the
-same-named files in the root of The Element 6 Chronicles project.
+This is a targeted replacement package. It is intended to be applied over the current Element 6 project after the previously supplied complete-fix package and bot packages.
 
-## Included fixes
+## Fixed in this package
 
 ### Clips
-- Stops an FFmpeg/CDN failure from turning a valid recording into "CLIP SAVE FAILED".
-- Saves the native WebM recording when MP4 conversion is unavailable.
-- Preserves MP4 when conversion succeeds.
-- IndexedDB now stores the actual MIME type/extension.
-- Clip downloads use the real saved extension.
+- Clips recording only initializes when `settings.enableClips === true`.
+- Downloaded WebM clips are no longer mislabeled as `.mp4`.
+- Clips screen can open a local video file directly in the browser.
+- Clips screen can start/stop browser-native screen recording when Clips are enabled.
+- Browser screen recording uses `getDisplayMedia` and saves a native WebM clip to the existing local clip store.
 
-### Stage Editor / stage runtime
-- Freehand collision is now continuous slope collision instead of hundreds of tiny
-  square collision blobs.
-- Players smoothly roll downhill on freehand slopes.
-- Physics objects roll substantially faster downhill.
-- Moving freehand slopes carry their actual endpoints with the motion.
-- Looping motion chains no longer accumulate displacement and teleport/jump at cycle
-  boundaries.
-- Stage preview shows moving freehand strokes, moving objects, moving KO perimeter,
-  camera motion/zoom, hazards, materials, spawn points and other saved stage data.
-- Explicitly disabled KO perimeters remain disabled in the actual match.
-- Custom stage camera zoom/motion and KO-perimeter settings continue through the
-  custom-stage runtime.
+### Stage / Freehand / Camera
+- Freehand rendering sanitizes malformed points and avoids `Math.min(...hugeArray)` argument-limit crashes.
+- Very dense freehand input is de-duplicated/capped when converted to collision segments.
+- Bot pathfinding ignores generated freehand micro-segments so a large drawing cannot create an O(n²) navigation explosion.
+- Match camera zoom is normalized and stage-camera motion is guarded against malformed motion data.
+- Freehand rendering errors are isolated instead of crashing the match.
+- Stage preview payload is sanitized before rendering.
 
-### Leaderboards
-The main Leaderboard now has:
-- Overall
-- Soccer
-- Combat
-- Ranked
-- Parkour
-- Rock Climbing
-- Ziplining
-- Honored Bot Tracking
+### Capture the Flag
+- AI/input and fighter/projectile updates are guarded so malformed state cannot take down the match loop.
+- CTF inputs are normalized before entering the shared fighter engine.
 
-Parkour/Rock Climbing/Ziplining screens prefer the Supabase world-score table and
-fall back to their existing local entities.
+### Volleyball
+- Spike contact validation is safer and uses the actual airborne state.
+- CPU 1v1 and 2v2 bots can actually execute spikes after sets.
+- CPU set decisions are enabled again.
+- Bot aerial spike timing and contact are retained.
+- Character/element lookups have safe fallbacks.
 
-Honored Bot matches are additionally written to a global Supabase table.
+### Dodgeball
+- CPU throws now calculate a predicted opponent position and aim at it.
+- Throw trajectories use the predicted target position instead of always firing horizontally.
+- Higher difficulty produces tighter aim while lower difficulty retains controlled inaccuracy.
 
-### Clan
-- Clan tournament monthly view exposes `clan_tag`, fixing:
-  `column element6_clan_tournament_monthly.clan_tag does not exist`
-- Clan leader can change/remove the clan badge at any time.
-- Badge can be entered by URL or uploaded as an image <=150 KB.
+### Fight bots
+- Corrected multiple reversed attack-facing directions.
+- Close-range attack openings are no longer discarded by random attack rolls.
+- Close-range bots prioritize actual attacks before optional power usage.
+- Normal-attack fallback now maps to a real signature attack instead of an unused `normal` input.
 
-### Social notifications
-Global top-left notifications are added for:
-- Incoming chat from any player, not just friends
-- Incoming friend request
-- Friend request accepted
-- Friend coming online
+### Soccer
+- Bot attack/defense direction is now based on the fighter's assigned team, not its current x-position.
+- Crossing midfield no longer causes the bot to suddenly switch which goal it considers its own.
+- Defensive and offensive positioning therefore remain consistent after side switches.
 
-Notifications can be disabled in Settings -> Social notifications.
-
-The SQL migration also allows DMs to be sent to players who are not friends.
-
-### Private Community Hub servers
-- Creating a private server requires an exactly 4-digit passcode.
-- Joining a private server requires that passcode.
-- Public servers do not require a passcode.
-
-### Fight emotes
-Capture the Flag now supports equipped emotes using the normal number-key slots.
-
-### Daily quests
-- Daily generation is deterministic by calendar date.
-- Exactly 3 different quests are generated per day.
-- The existing midnight reset path now also tracks matches, signature KOs,
-  ground-pound KOs and emote-before-move progress correctly.
-
-## SQL
-
-Run:
-`sql/Supabase-Element6-Complete-Feature-Fixes.sql`
-
-after your existing Element 6 Supabase setup/migrations.
-
-If the ELO leaderboard SQL has not already been run, also run:
-`sql/Supabase-elo-leaderboard-fix.sql`
-
-If the shared leaderboard hardening migration has not already been run, also run:
-`sql/Supabase-all-leaderboards-fix.sql`
-
-If your world-score setup is missing, run:
-`sql/Supabase-world-scores-fix.sql`
-
-Do not replace the entire database with these files; they are migrations.
+### Vertical bot navigation
+- Navigation replans when a bot lands on an intermediate platform.
+- Stale routes no longer keep a bot trying to reach a target from the wrong platform.
+- Downward navigation has a safer edge/drop fallback.
+- Up/down pathfinding remains physics-aware.
 
 ## Validation
-
-The changed JavaScript files passed Node syntax parsing and the changed JSX files passed
-TypeScript/JSX parser validation.
-
-A full Vite production build was not run in this environment because the uploaded
-project did not contain its installed `node_modules`.
+- JavaScript files were checked with `node --check`.
+- Modified JSX files passed delimiter/balance validation.
+- A full Vite build was not run because the source package does not include installed `node_modules` in this environment.

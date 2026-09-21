@@ -2319,7 +2319,7 @@ export default function Game() {
         )}
 
         {screen === 'clips' && (
-          <ClipsScreen onBack={goBack} />
+          <ClipsScreen onBack={goBack} clipsEnabled={progress?.settings?.enableClips === true} />
         )}
 
         {screen === 'clans' && (
@@ -2637,7 +2637,7 @@ export default function Game() {
         <TouchControls keybinds={getKeybinds(progress.settings).p1} settings={progress.settings || {}} />
       )}
       <GlobalNotifications settings={progress?.settings || {}} />
-      <GlobalClipRecorder />
+      <GlobalClipRecorder enabled={progress?.settings?.enableClips === true} />
       <VirtualKeyboard />
 
       {showDailyReward && (
