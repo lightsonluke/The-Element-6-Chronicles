@@ -222,7 +222,7 @@ export function resetMovementAbilityState(fighter) {
   fighter.dashCooldown = 0;
   fighter.dashTimer = 0;
   fighter.dashDirection = { x: 0, y: 0 };
-  fighter.airDodgeUses = fighter.maxJumps || 3;
+  fighter.airDodgeUses = 3;
   fighter.wallSlide = false;
   fighter.wallSide = 0;
   fighter.wallContactActive = false;
