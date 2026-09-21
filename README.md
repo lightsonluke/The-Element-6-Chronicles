@@ -1,16 +1,22 @@
-# Element 6 Clips — Real MP4 Download Fix
+# Element 6 — Freehand + Clips Final Fix
 
-This is a targeted clips-only replacement.
+This is a targeted replacement package for the current Element 6 project.
 
-## What it changes
-- Leaves the existing recording and IndexedDB storage behavior alone.
-- Clips continue to be captured/stored as WebM.
-- The Clips tab's **SAVE MP4** button now converts that WebM blob to a genuine MP4 using FFmpeg/WASM before downloading it.
-- It does **not** merely rename `.webm` to `.mp4`.
-- The existing clip preview and recorder behavior are otherwise untouched.
+## Freehand
+- Reverts freehand collision generation to the original stable point/segment collision representation.
+- Removes the experimental continuous-slope collision runtime from `fighter.js`.
+- Removes freehand-slope motion bookkeeping from `movingPlatforms.js`.
+- Keeps the current Stage Editor camera implementation untouched.
 
-## Replace
-- `ClipsScreen.jsx`
-- Add `clipMp4Download.js`
+## Clips
+- Removes FFmpeg usage completely from the clip recorder.
+- Uses Mediabunny for real WebM -> MP4 conversion in the browser.
+- MP4 conversion uses H.264/AVC video and AAC audio when the browser can encode them.
+- Keeps the original WebM as the preview/fallback source so an encoding limitation cannot turn a valid recording into `CLIP SAVE FAILED`.
+- Routes Element 6 music and SFX through a MediaStream recording destination so saved clips include game audio.
+- Downloads use the actual stored file extension rather than renaming WebM to `.mp4`.
 
-The project already uses `@ffmpeg/ffmpeg` and `@ffmpeg/util`, so no new npm dependency is required.
+## Install
+The GitHub workflow uses `pnpm install --no-frozen-lockfile`, so the new `mediabunny` dependency in `package.json` will be resolved automatically.
+
+No camera zoom/motion code was changed for this fix.

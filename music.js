@@ -116,8 +116,9 @@ class MusicManager {
     this.menuIndex = 0;
     this.muted = false;
     this._allAudioEls = []; // track every Audio element so stop() can kill them all
-    this.captureDestination = null;
-    this._captureSources = new WeakMap();
+    this.recordDestination = null;
+    this.mixBus = null;
+    this._mediaSources = new WeakMap();
 
     // Browsers reject audio started before a click/tap. Retry the already chosen
     // track on that first interaction instead of leaving the homescreen silent.
@@ -158,26 +159,58 @@ class MusicManager {
   }
 
   init() {
-    if (this.ctx) return;
+    if (this.ctx) {
+      this._ensureRecordingBus();
+      return;
+    }
     try {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-      this.captureDestination = this.ctx.createMediaStreamDestination();
+      this._ensureRecordingBus();
     } catch (e) { }
   }
 
-  _attachCaptureAudio(audio) {
-    if (!audio || !this.ctx || !this.captureDestination) return;
-    if (this._captureSources.has(audio)) return;
-    try {
-      const source = this.ctx.createMediaElementSource(audio);
-      source.connect(this.captureDestination);
-      this._captureSources.set(audio, source);
-    } catch (e) { /* A media element can only have one MediaElementSource. */ }
+  _ensureRecordingBus() {
+    if (!this.ctx) return;
+    if (!this.recordDestination) {
+      try { this.recordDestination = this.ctx.createMediaStreamDestination(); } catch {}
+    }
+    if (!this.mixBus) {
+      try {
+        this.mixBus = this.ctx.createGain();
+        this.mixBus.connect(this.ctx.destination);
+        if (this.recordDestination) this.mixBus.connect(this.recordDestination);
+      } catch {}
+    }
   }
 
-  getCaptureAudioStream() {
+  connectNodeToRecording(node) {
     this.init();
-    return this.captureDestination?.stream || null;
+    if (!node || !this.recordDestination) return;
+    try {
+      if (!node.__e6RecordingConnected) {
+        node.connect(this.recordDestination);
+        node.__e6RecordingConnected = true;
+      }
+    } catch {}
+  }
+
+  getRecordingAudioStream() {
+    this.init();
+    return this.recordDestination?.stream || null;
+  }
+
+  _routeAudioElement(el) {
+    this.init();
+    if (!this.ctx || !el || !this.mixBus) return;
+    if (this._mediaSources.has(el)) return;
+    try {
+      el.crossOrigin = el.crossOrigin || 'anonymous';
+      const source = this.ctx.createMediaElementSource(el);
+      source.connect(this.mixBus);
+      this._mediaSources.set(el, source);
+    } catch (error) {
+      console.debug('[Element 6 Audio] Could not route music into recording bus', error);
+    }
   }
 
   setCustomTracks(tracks) { this.customTracks = tracks || {}; }
@@ -230,8 +263,8 @@ class MusicManager {
     this.currentUrl = url;
     this.audioEl = new Audio(url);
     this.audioEl.preload = 'auto';
+    this._routeAudioElement(this.audioEl);
     this._allAudioEls.push(this.audioEl);
-    this._attachCaptureAudio(this.audioEl);
     this.audioEl.loop = true;
     this.audioEl.volume = this.muted ? 0 : this.volume;
     this.audioEl.load();
@@ -275,8 +308,8 @@ class MusicManager {
 
     this.audioEl = new Audio(url);
     this.audioEl.preload = 'auto';
+    this._routeAudioElement(this.audioEl);
     this._allAudioEls.push(this.audioEl);
-    this._attachCaptureAudio(this.audioEl);
     this.audioEl.loop = true;
     this.audioEl.volume = this.muted ? 0 : this.volume;
     this.audioEl.load();

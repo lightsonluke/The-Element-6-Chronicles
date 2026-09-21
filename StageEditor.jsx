@@ -785,7 +785,15 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     if (motionTarget.kind === 'hazard') setHazards(prev => prev.map((h,i) => i === motionTarget.index ? { ...h, move: motion, motion } : h));
     if (motionTarget.kind === 'freehand') setFreehandStrokes(prev => prev.map((st,i) => i === motionTarget.index ? { ...st, motion } : st));
   };
-  const stagePreviewData = { platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)], freehandStrokes, hazards, objects, backdrop, killPerimeter: perimeter, stageCamera: { ...stageCamera, motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null } };
+  const stagePreviewData = {
+    platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)],
+    freehandStrokes, hazards, objects, spawnPoints, backdrop, killPerimeter: perimeter,
+    stageCamera: {
+      ...stageCamera,
+      zoom: Number(stageCamera.zoom || 1),
+      motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null
+    }
+  };
 
   return (
     <div className="w-full max-w-5xl flex flex-col gap-3">
@@ -1198,34 +1206,33 @@ function pointNearFreehand(x, y, stroke) {
 
 function expandFreehandToPlatforms(strokes = []) {
   const out = [];
-  const MAX_SEGMENTS_PER_STROKE = 180;
-  const MAX_TOTAL_SEGMENTS = 900;
   for (const stroke of Array.isArray(strokes) ? strokes : []) {
-    if (out.length >= MAX_TOTAL_SEGMENTS) break;
-    const raw = Array.isArray(stroke?.points) ? stroke.points : [];
-    const pts = raw.filter(p => Number.isFinite(Number(p?.x)) && Number.isFinite(Number(p?.y)));
+    const pts = Array.isArray(stroke?.points) ? stroke.points : [];
     const d = Math.max(4, Number(stroke?.diameter) || 36);
     const r = d / 2;
     const mat = stroke?.material || 'normal';
     if (!pts.length) continue;
-    const sampled = [];
-    if (pts.length <= MAX_SEGMENTS_PER_STROKE + 1) {
-      sampled.push(...pts);
-    } else {
-      const stride = (pts.length - 1) / MAX_SEGMENTS_PER_STROKE;
-      for (let i = 0; i <= MAX_SEGMENTS_PER_STROKE; i++) {
-        sampled.push(pts[Math.min(pts.length - 1, Math.round(i * stride))]);
+    const emit = (x, y) => out.push({
+      x: x - r, y: y - r, w: d, h: d, material: mat,
+      _freehandSegment: true, _freehandStroke: true, collision: true, itemCollision: true,
+      ...(stroke.motion ? { move: { ...stroke.motion }, motion: { ...stroke.motion } } : {})
+    });
+    if (pts.length === 1) { emit(pts[0].x, pts[0].y); continue; }
+    let last = null;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      const step = Math.max(3, d * 0.35);
+      const count = Math.max(1, Math.ceil(dist / step));
+      for (let j = 0; j <= count; j++) {
+        const t = j / count;
+        const x = a.x + (b.x - a.x) * t;
+        const y = a.y + (b.y - a.y) * t;
+        if (!last || Math.hypot(x - last.x, y - last.y) >= step * 0.45) {
+          emit(x, y);
+          last = { x, y };
+        }
       }
-    }
-    const emit = (x, y) => {
-      if (out.length >= MAX_TOTAL_SEGMENTS) return;
-      out.push({ x: x - r, y: y - r, w: d, h: d, material: mat, _freehandSegment: true, _freehandStroke: true, collision: true, itemCollision: true,
-        ...(stroke.motion ? { move: { ...stroke.motion }, motion: { ...stroke.motion } } : {}) });
-    };
-    if (sampled.length === 1) { emit(sampled[0].x, sampled[0].y); continue; }
-    for (let i = 1; i < sampled.length && out.length < MAX_TOTAL_SEGMENTS; i++) {
-      const a = sampled[i - 1], b = sampled[i];
-      emit((a.x + b.x) * 0.5, (a.y + b.y) * 0.5);
     }
   }
   return out;

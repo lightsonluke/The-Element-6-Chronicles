@@ -73,8 +73,8 @@ async function persistClip() {
     .slice(2, 9)}`;
 
   await saveClipBlob(id, result.blob, {
-    mime: 'video/webm',
-    extension: 'webm',
+    mime: result.mime || result.blob.type || 'video/webm',
+    extension: result.extension || 'webm',
     duration: result.duration,
     previewBlob: result.previewBlob || null
   });
@@ -86,8 +86,8 @@ async function persistClip() {
       detail: {
         id,
         created: Date.now(),
-        mime: 'video/webm',
-        extension: 'webm',
+        mime: result.mime || result.blob.type || 'video/webm',
+        extension: result.extension || 'webm',
         size: result.blob.size,
         duration: result.duration
       }
@@ -95,7 +95,7 @@ async function persistClip() {
   );
 
   showToast(
-    `CLIP SAVED — ${Math.max(1, Math.round(result.duration))} SECONDS — 60FPS`
+    `CLIP SAVED — ${Math.max(1, Math.round(result.duration))} SECONDS — ${String(result.extension || 'webm').toUpperCase()} 60FPS`
   );
 
   return true;

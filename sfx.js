@@ -16,7 +16,7 @@ class SfxManager {
     this.gainNode = music.ctx.createGain();
     this.gainNode.gain.value = this.volume;
     this.gainNode.connect(music.ctx.destination);
-    if (music.captureDestination) this.gainNode.connect(music.captureDestination);
+    music.connectNodeToRecording(this.gainNode);
   }
 
   setVolume(vol) {

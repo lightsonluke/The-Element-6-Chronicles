@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getClipBlob, getClipPreviewBlob, deleteClipBlob, listClipMetadata } from './clipStorage.js';
 import GameIcon from './GameIcon.jsx';
-import { convertWebMBlobToMP4 } from './clipMp4Download.js';
 
 const DEFAULT_FPS = 60;
 
@@ -138,33 +137,20 @@ export default function ClipsScreen({
     } catch {}
   };
 
-  const download = async clip => {
+  const download = clip => {
     const source = sources[clip.id];
     if (!source?.blob) return;
 
-    const buttonKey = clip.id;
-    setFailed(prev => ({ ...prev, [buttonKey]: false }));
+    const url = URL.createObjectURL(source.blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download =
+      `Element6_Clip_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.${source.extension || extensionForMime(source.mime)}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
 
-    try {
-      // Clips are intentionally stored exactly as the recorder produces them
-      // (WebM). Only the final download is converted to a real MP4.
-      const mp4Blob = String(source.blob.type || source.mime || '').includes('mp4')
-        ? source.blob
-        : await convertWebMBlobToMP4(source.blob);
-
-      const url = URL.createObjectURL(mp4Blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download =
-        `Element6_Clip_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.mp4`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
-    } catch (error) {
-      console.error('[Element 6 Clips] MP4 download conversion failed:', error);
-      window.alert('The clip could not be converted to MP4. Please try the download again.');
-    }
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
   };
 
   const remove = async id => {
