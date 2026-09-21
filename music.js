@@ -59,6 +59,33 @@ export const GRAND_CIRCUIT_TRACKS = [
   A('pixel-boss-showdown.mp3'),
   A('turbo-cartridge-three.mp3'),
   A('neon-glitch.mp3'),
+  A('element-6-track.mp3'),
+  A('pixel-launch.mp3'),
+A('pixel-create.mp3'),
+A('pixel-king.mp3'),
+A('pixel-king.mp3'),
+  A('blade-of-dawn-one.mp3'),
+  A('blade-of-dawn.mp3'),
+  A('pixel-drift-one.mp3'),
+    A('pixel-heart-rush.mp3'),
+  A('pixel-quest-loop.mp3'),
+  A('pixel-rebound-one.mp3'),
+  A('pixel-rebound.mp3'),
+  A('pixel-rush-one.mp3'),
+  A('pixel-rush.mp3'),
+  A('pixelated-skyline.mp3'),
+  A('turbo-cartridge-one.mp3'),
+  A('turbo-cartridge.mp3'),
+  A('victory-pixel-parade.mp3'),
+  A('final.mp3'),
+  A('glitch-drift-quest-one.mp3'),
+  A('glitch-drift-quest.mp3'),
+  A('turbo-cartridge-two.mp3'),
+  A('turbo-cartridge-three.mp3'),
+  A('pixel-quest.mp3'),
+  A('coin-op-reaper.mp3'),
+  A('neon-glitch.mp3')
+  
 ];
 export const GRAND_CIRCUIT_FINAL_TRACK = A('final.mp3');
 
