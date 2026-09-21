@@ -103,7 +103,6 @@ import GameIcon from "./GameIcon.jsx";
 import ClipsScreen from './ClipsScreen.jsx';
 import ClansScreen from './ClansScreen.jsx';
 import GlobalClipRecorder from './GlobalClipRecorder.jsx';
-import GlobalNotifications from './GlobalNotifications.jsx';
 import { recordClanMatchActivity } from './clanActivity.js';
 
 // Screens where a canvas game is actively running and the gamepad is used
@@ -137,7 +136,7 @@ const DEFAULT_PROGRESS = {
   eventProgress: {},
   dailyQuests: null,
   settings: { theme: 'default', displayMode: 'dark', defaultCPUDifficulty: 'regular', autoSelectFavorite: true, showDamageNumbers: true, screenShake: true, musicVolume: 50, sfxVolume: 70, killFXEnabled: true, disableEventBackground: false,
-    matchTime: 240, cameraZoom: 'normal', showBlastZones: true, showNametags: true, reducedMotion: false, bgParticleDensity: 30, autoPauseFocus: true, socialNotifications: true, aiAggression: 50, defaultGameMode: 'regular', comboCounter: true, showFPS: false, customMusic: {}, penaltiesInsteadOfSuddenDeath: false, mobileMode: false, uiEra: 'dynamic', hideStockBoxes: false, hideStageAndMode: false, hideCountdown: false, hideTopUsername: false, mobileControls: { mode: 'arrows', joystickDynamic: false } },
+    matchTime: 240, cameraZoom: 'normal', showBlastZones: true, showNametags: true, reducedMotion: false, bgParticleDensity: 30, autoPauseFocus: true, aiAggression: 50, defaultGameMode: 'regular', comboCounter: true, showFPS: false, customMusic: {}, penaltiesInsteadOfSuddenDeath: false, mobileMode: false, uiEra: 'dynamic', hideStockBoxes: false, hideStageAndMode: false, hideCountdown: false, hideTopUsername: false, mobileControls: { mode: 'arrows', joystickDynamic: false } },
   ownedPacks: [],
   ownedTitles: [],
   equippedTitle: null,
@@ -476,7 +475,7 @@ export default function Game() {
   const activeStorySlotRef = useRef(null);
   const [storySlots, setStorySlots] = useState(() => {
     const slots = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 5; i++) {
       try { const d = localStorage.getItem(`element6_story_slot_${i}`); slots.push(d ? JSON.parse(d) : null); } catch { slots.push(null); }
     }
     return slots;
@@ -484,7 +483,7 @@ export default function Game() {
 
   const refreshStorySlots = () => {
     const slots = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 5; i++) {
       try { const d = localStorage.getItem(`element6_story_slot_${i}`); slots.push(d ? JSON.parse(d) : null); } catch { slots.push(null); }
     }
     setStorySlots(slots);
@@ -967,7 +966,7 @@ export default function Game() {
     if (dest === 'hub') { setScreen('hubserverselect'); sfx.click(); }
     else if (dest === 'sandbox') { setScreen('sandbox'); sfx.click(); }
     else if (dest === 'creatormode') { setPlayCampaign(null); setScreen('creatormode'); sfx.click(); }
-    else if (dest === 'story') { refreshStorySlots(); setScreen('storySaves'); }
+    else if (dest === 'story') { refreshStorySlots(); setScreen('story'); }
     else if (dest === 'fight') setScreen('modeSelect');
     else if (dest === 'creator') setScreen('creator');
     else if (dest === 'mobilecontrols') { setScreen('mobilecontrols'); sfx.click(); }
@@ -1387,7 +1386,7 @@ export default function Game() {
       setProgress(prev => {
         const next = {
           ...prev,
-          dailyQuests: { dateKey: todayKey, quests: generateDailyQuests(todayKey), claimed: [], dailyStats: { _total: { sigs: 0, signatureKOs: 0, groundPoundKOs: 0, emoteBeforeMove: 0, heavies: 0, powers: 0, supers: 0, distance: 0, wins: 0, matches: 0 } } },
+          dailyQuests: { dateKey: todayKey, quests: generateDailyQuests(todayKey), claimed: [], dailyStats: { _total: { sigs: 0, heavies: 0, powers: 0, supers: 0, distance: 0, wins: 0 } } },
         };
         saveProgress(next);
         return next;
@@ -1553,19 +1552,15 @@ export default function Game() {
       if (!prev.dailyQuests) return prev;
       const dq = { ...prev.dailyQuests };
       dq.dailyStats = dq.dailyStats || {};
-      dq.dailyStats._total = dq.dailyStats._total || { sigs: 0, signatureKOs: 0, groundPoundKOs: 0, emoteBeforeMove: 0, heavies: 0, powers: 0, supers: 0, distance: 0, wins: 0, matches: 0 };
+      dq.dailyStats._total = dq.dailyStats._total || { sigs: 0, heavies: 0, powers: 0, supers: 0, distance: 0, wins: 0 };
       dq.dailyStats._total.heavies += stats.heavies || 0;
       dq.dailyStats._total.powers += stats.powers || 0;
       dq.dailyStats._total.supers += stats.supers || 0;
       dq.dailyStats._total.distance += stats.distance || 0;
-      dq.dailyStats._total.matches += 1;
       if (won) dq.dailyStats._total.wins += 1;
       if (m.moveStats) {
         for (const v of Object.values(m.moveStats)) {
           dq.dailyStats._total.sigs = (dq.dailyStats._total.sigs || 0) + (v.sig || 0) + (v.recovery || 0);
-          dq.dailyStats._total.signatureKOs += v.signatureKOs || 0;
-          dq.dailyStats._total.groundPoundKOs += v.groundPoundKOs || 0;
-          dq.dailyStats._total.emoteBeforeMove += v.emoteBeforeMove || 0;
         }
       }
       const next = { ...prev, dailyQuests: dq };
@@ -1718,7 +1713,7 @@ export default function Game() {
         const p1Char = ALL.find(c => c.id === fighters.p1);
         const p2Char = ALL.find(c => c.id === fighters.p2);
         matches.forEach(m => {
-          const honoredRow = {
+          db.entities.HonoredBotMatch.create({
             user_id: user.id,
             username: userProfile.username || (user.full_name || 'Player'),
             char_id: fighters.p1,
@@ -1729,11 +1724,7 @@ export default function Game() {
             player_stocks: m.stats?.p1Stocks ?? m.p1Stocks ?? (m.p1Won === true ? 1 : 0),
             bot_stocks: m.stats?.p2Stocks ?? m.p2Stocks ?? (m.p1Won === false ? 1 : 0),
             match_duration_seconds: m.stats?.duration ?? m.duration ?? 0,
-          };
-          db.entities.HonoredBotMatch.create(honoredRow).catch(() => {});
-          import('./supabaseClient.js').then(({ supabase }) =>
-            supabase.from('element6_honored_bot_matches').insert(honoredRow).then(() => {}).catch(() => {})
-          );
+          }).catch(() => {});
         });
       }).catch(() => {});
     }
@@ -2125,7 +2116,7 @@ export default function Game() {
           <Settings onBack={goBack} settings={progress.settings} onSave={(s) => update({ settings: s })} onUsernameChange={handleUsernameChange} onOpenController={() => setScreen('controller')} onOpenMobileControls={() => setScreen('mobilecontrols')} onReset={() => {
             try {
               localStorage.removeItem('element6_progress');
-              for (let i = 0; i < 3; i++) localStorage.removeItem(`element6_story_slot_${i}`);
+              for (let i = 0; i < 5; i++) localStorage.removeItem(`element6_story_slot_${i}`);
             } catch {}
             window.location.reload();
           }} />
@@ -2319,7 +2310,7 @@ export default function Game() {
         )}
 
         {screen === 'clips' && (
-          <ClipsScreen onBack={goBack} clipsEnabled={progress?.settings?.enableClips === true} />
+          <ClipsScreen onBack={goBack} />
         )}
 
         {screen === 'clans' && (
@@ -2636,8 +2627,7 @@ export default function Game() {
       {progress?.settings?.mobileMode === true && TOUCH_SCREENS.includes(screen) && (
         <TouchControls keybinds={getKeybinds(progress.settings).p1} settings={progress.settings || {}} />
       )}
-      <GlobalNotifications settings={progress?.settings || {}} />
-      <GlobalClipRecorder enabled={progress?.settings?.enableClips === true} />
+      <GlobalClipRecorder />
       <VirtualKeyboard />
 
       {showDailyReward && (

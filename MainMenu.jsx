@@ -54,6 +54,7 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
       { label: 'Chat', key: 'chat' },
       { label: 'ELO', key: 'elo' },
     ]},
+    { type: 'button', label: 'STORY MODE', key: 'story' },
     { type: 'button', label: 'SPORTS', key: 'sports' },
     { type: 'button', label: 'SHOP', key: 'shop' },
     { type: 'tab', id: 'sandbox', label: 'SANDBOX', items: [

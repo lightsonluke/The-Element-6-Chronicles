@@ -20,13 +20,13 @@ export const STORY_BOOKS = [
     gimmick: 'Corps Roll Call',
     beats: ['corps_rollcall','itto_first','itto_rematch','foxes','puppeteer','ibuki','utsuro_phase1','utsuro_final'],
     matches: [
-      { id:'b2_itto_first', title:'Ittō — First Encounter', stage:'crimsonarena', kind:'narrative-loss', stocks:2, time:120, difficulty:'hard' },
-      { id:'b2_itto_rematch', title:'Ittō — Eastern Castle', stage:'midnighttower', kind:'rival', stocks:3, time:180, difficulty:'hard' },
+      { id:'b2_itto_first', title:'Ittō — First Encounter', villainId:'story_itto', stage:'crimsonarena', kind:'narrative-loss', stocks:2, time:120, difficulty:'hard' },
+      { id:'b2_itto_rematch', title:'Ittō — Eastern Castle', villainId:'story_itto', stage:'midnighttower', kind:'rival', stocks:3, time:180, difficulty:'hard' },
       { id:'b2_foxes', title:'Twin Foxes', stage:'shadowrealm', kind:'handicap', enemyIds:['reiko','ren'], stocks:2, time:150, difficulty:'hard' },
       { id:'b2_puppeteer', title:"Nishikawa's Possessed Villagers", stage:'toxicmarsh', kind:'waves', stocks:3, time:180, difficulty:'hard' },
-      { id:'b2_ibuki', title:'Hollow Monk Ibuki', stage:'emberforge', kind:'boss', stocks:3, time:180, difficulty:'hard' },
-      { id:'b2_utsuro1', title:'Utsuro — Phase I', stage:'splitcity', kind:'boss', stocks:3, time:180, difficulty:'hard' },
-      { id:'b2_utsuro2', title:'Utsuro — Final Form', stage:'voidplane', kind:'boss', stocks:4, time:210, difficulty:'very-hard' },
+      { id:'b2_ibuki', title:'Hollow Monk Ibuki', villainId:'story_ibuki', stage:'emberforge', kind:'boss', stocks:3, time:180, difficulty:'hard' },
+      { id:'b2_utsuro1', title:'Utsuro — Phase I', villainId:'story_utsuro', stage:'splitcity', kind:'boss', stocks:3, time:180, difficulty:'hard' },
+      { id:'b2_utsuro2', title:'Utsuro — Final Form', villainId:'story_utsuro', stage:'voidplane', kind:'boss', stocks:4, time:210, difficulty:'very-hard' },
     ]
   },
   {
@@ -35,10 +35,10 @@ export const STORY_BOOKS = [
     stages:['thunderdome','grandarena','toxicmarsh','lavafalls','shadowrealm','basic','underworld'], gimmick:'Tournament Circuit + Blight Containment',
     beats:['tournament','blight','extraction_ring','ogata','yokai_spider','yokai_oni','yokai_fox','fake_arm'],
     matches:[
-      {id:'b3_enforcer',title:"Merchant's Enforcer",stage:'toxicmarsh',kind:'rival',stocks:2,time:150,difficulty:'normal'},
+      {id:'b3_enforcer',title:"Merchant's Enforcer", villainId:'story_ogata',stage:'toxicmarsh',kind:'rival',stocks:2,time:150,difficulty:'normal'},
       {id:'b3_tournament',title:'Tournament Circuit',stage:'grandarena',kind:'tournament',stocks:2,time:150,difficulty:'normal'},
-      {id:'b3_extraction',title:'Extraction Ring Enforcers',stage:'basic',kind:'waves',stocks:2,time:120,difficulty:'normal'},
-      {id:'b3_ogata',title:'Ogata',stage:'underworld',kind:'boss',stocks:3,time:180,difficulty:'hard'},
+      {id:'b3_extraction',title:'Extraction Ring Enforcers', villainId:'story_ogata',stage:'basic',kind:'waves',stocks:2,time:120,difficulty:'normal'},
+      {id:'b3_ogata',title:'Ogata', villainId:'story_ogata',stage:'underworld',kind:'boss',stocks:3,time:180,difficulty:'hard'},
       {id:'b3_spider',title:'Blight-Born Spider Yokai',stage:'toxicmarsh',kind:'boss',stocks:3,time:180,difficulty:'hard'},
       {id:'b3_oni',title:'Blight-Born Oni',stage:'lavafalls',kind:'boss',stocks:3,time:180,difficulty:'hard'},
       {id:'b3_fox',title:'Blight-Born Nine-Tail',stage:'shadowrealm',kind:'boss',stocks:3,time:180,difficulty:'hard'},
@@ -49,8 +49,8 @@ export const STORY_BOOKS = [
     stages:['cobaltmines','neonspire','midnighttower'], gimmick:'Two Names + Resonance Tech',
     beats:['charter','two_names','safehouse_sweep','controller_chase','renko','tower_siege','source','gold_sacrifice'],
     matches:[
-      {id:'b4_enforcers',title:'Ring Enforcer Ambush',stage:'cobaltmines',kind:'waves',stocks:2,time:150,difficulty:'normal'},
-      {id:'b4_renko',title:'Renko Kurenai',stage:'neonspire',kind:'boss',stocks:3,time:180,difficulty:'hard'},
+      {id:'b4_enforcers',title:'Ring Enforcer Ambush', villainId:'story_renko',stage:'cobaltmines',kind:'waves',stocks:2,time:150,difficulty:'normal'},
+      {id:'b4_renko',title:'Renko Kurenai', villainId:'story_renko',stage:'neonspire',kind:'boss',stocks:3,time:180,difficulty:'hard'},
       {id:'b4_siege',title:'Hero Corps Tower Siege',stage:'midnighttower',kind:'waves',stocks:3,time:210,difficulty:'hard'},
     ]
   },

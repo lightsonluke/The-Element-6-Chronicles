@@ -2,6 +2,7 @@ import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './in
 import React, { useRef, useEffect, useState } from 'react';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
+import { STORY_TEMP_CHARACTERS } from './storyCampaignDetail.js';
 import { GUARDIANS } from './guardians.js';
 import { POWER_EFFECTS } from './powerEffects.js';
 import {
@@ -40,7 +41,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
   equippedShikigamiRef.current = mergedShikigami;
 
   const isMulti = !!(enemyIds && enemyIds.length > 0);
-  const getCharData = (id) => HEROES.find(h => h.id === id) || VILLAINS.find(v => v.id === id) || GUARDIANS.find(g => g.id === id);
+  const getCharData = (id) => HEROES.find(h => h.id === id) || VILLAINS.find(v => v.id === id) || GUARDIANS.find(g => g.id === id) || STORY_TEMP_CHARACTERS[id] || null;
 
   useEffect(() => {
     music.play('fight');
@@ -215,7 +216,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
           if (fighter.emote && fighter.emote.timer > 0) inputs = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
         } else {
           const target = findNearestEnemy(fighter);
-          fighter._strategicBot = true; inputs = updateAI(fighter, target, difficulty, platforms);
+          inputs = updateAI(fighter, target, difficulty, platforms);
         }
         const target = findNearestEnemy(fighter);
         updateFighter(fighter, inputs, platforms, W, H, target);
@@ -223,7 +224,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
       eTeam.forEach(fighter => {
         if (fighter.stocks <= 0) return;
         const target = findNearestEnemy(fighter);
-        fighter._strategicBot = true; inputs = updateAI(fighter, target, difficulty, platforms);
+        const inputs = updateAI(fighter, target, difficulty, platforms);
         updateFighter(fighter, inputs, platforms, W, H, target);
       });
 

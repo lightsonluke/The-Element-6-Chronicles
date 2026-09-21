@@ -45,6 +45,8 @@ function findCharacterByTitle(title){
   const pool=[...HEROES,...VILLAINS];
   const exact=pool.find(c=>tokenize(c.id)===t||tokenize(c.name)===t||tokenize(c.title)===t);
   if(exact)return exact.id;
+  const tempKey=Object.keys(STORY_BOSS_CHARACTER_MAP).find(k=>t.includes(tokenize(k)));
+  if(tempKey&&STORY_TEMP_CHARACTERS[STORY_BOSS_CHARACTER_MAP[tempKey]])return STORY_BOSS_CHARACTER_MAP[tempKey];
   const words=t.split(/(?=[A-Z])/).filter(Boolean);
   const hit=pool.find(c=>{const id=tokenize(c.id), n=tokenize(c.name), ct=tokenize(c.title); return id&&t.includes(id)||n&&t.includes(n)||ct&&t.includes(ct) || words.some(w=>w.length>3&&(id.includes(w)||n.includes(w)))})
   return hit?.id || VILLAINS.find(v=>!v.isFinalBoss)?.id || HEROES[0]?.id || 'yellow';
@@ -116,7 +118,7 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
   useEffect(()=>{ if(screen!=='game')return; music.play('story'); return()=>music.stop() },[screen]);
 
   const beginMatch=useCallback((m, isBounty=false)=>{
-    const opponent=m.enemyIds?.[0]||findCharacterByTitle(m.title);
+    const opponent=m.enemyIds?.[0]||m.villainId||findCharacterByTitle(m.title);
     const multi=m.enemyIds?.length>1 ? m.enemyIds : undefined;
     setBattle({ ...m, opponent, enemyIds:multi, isBounty });
   },[]);
