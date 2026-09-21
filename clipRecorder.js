@@ -1,6 +1,5 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
-import { music } from './music.js';
 
 let sourceCanvas = null;
 let sourceStream = null;
@@ -16,7 +15,6 @@ let chunkBytes = 0;
 let recordingStartedAt = 0;
 let lastDataAt = 0;
 let recorderMime = 'video/webm';
-let captureAudioAttached = false;
 
 const FPS = 60;
 const CLIP_SECONDS = 30;
@@ -211,7 +209,7 @@ async function loadFFmpeg() {
   }
 }
 
-async function convertToMP4(webmBlob) {
+export async function convertToMP4(webmBlob) {
   if (!webmBlob || webmBlob.size < MIN_CHUNK_BYTES) {
     throw new Error('recording data is empty');
   }
@@ -226,20 +224,12 @@ async function convertToMP4(webmBlob) {
 
     let exitCode = await encoder.exec([
       '-y', '-i', input,
-      '-map', '0:v:0',
-      '-map', '0:a:0?',
+      '-an',
       '-c:v', 'libx264',
       '-preset', 'veryfast',
-      '-crf', '20',
-      '-profile:v', 'high',
-      '-level', '4.1',
+      '-crf', '21',
       '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac',
-      '-b:a', '160k',
-      '-ar', '48000',
-      '-ac', '2',
       '-movflags', '+faststart',
-      '-f', 'mp4',
       output
     ]);
 
@@ -247,17 +237,11 @@ async function convertToMP4(webmBlob) {
       try { await encoder.deleteFile(output); } catch {}
       exitCode = await encoder.exec([
         '-y', '-i', input,
-        '-map', '0:v:0',
-        '-map', '0:a:0?',
+        '-an',
         '-c:v', 'mpeg4',
-        '-q:v', '4',
+        '-q:v', '5',
         '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        '-b:a', '160k',
-        '-ar', '48000',
-        '-ac', '2',
         '-movflags', '+faststart',
-        '-f', 'mp4',
         output
       ]);
     }
@@ -309,18 +293,6 @@ export function initClipRecorder(canvas) {
       throw new Error('Canvas video track unavailable');
     }
 
-    captureAudioAttached = false;
-    try {
-      const audioDestination = music.getCaptureDestination?.();
-      const audioTrack = audioDestination?.stream?.getAudioTracks?.()[0];
-      if (audioTrack) {
-        sourceStream.addTrack(audioTrack);
-        captureAudioAttached = true;
-      }
-    } catch (error) {
-      log('Game-audio capture unavailable; recording video only', error);
-    }
-
     recording = true;
     generation += 1;
 
@@ -328,7 +300,6 @@ export function initClipRecorder(canvas) {
     window.__e6ClipRecorderReady = false;
     window.__e6ClipRecorderFPS = FPS;
     window.__e6ClipRecorderMime = 'video/mp4';
-    window.__e6ClipRecorderAudio = captureAudioAttached;
 
     if (!startRecorder()) {
       throw new Error('Could not start MediaRecorder');
@@ -356,30 +327,15 @@ export function saveClip() {
     const snapshot = await makeSnapshot();
     if (!snapshot) return null;
 
-    // MP4 conversion is optional. Browser MediaRecorder WebM is the reliable
-    // capture format; a CDN/FFmpeg failure must never turn a valid recording
-    // into "clip save failure".
-    let outputBlob = snapshot.blob;
-    let outputMime = snapshot.blob.type || recorderMime || 'video/webm';
-    let outputExtension = 'webm';
-    try {
-      const mp4 = await convertToMP4(snapshot.blob);
-      if (mp4 && mp4.size >= 1000) {
-        outputBlob = mp4;
-        outputMime = 'video/mp4';
-        outputExtension = 'mp4';
-      }
-    } catch (error) {
-      log('MP4 conversion unavailable; saving native WebM instead', error);
-    }
+    const mp4 = await convertToMP4(snapshot.blob);
 
     window.__e6ClipRecorderReady = true;
 
     return {
-      blob: outputBlob,
+      blob: mp4,
       previewBlob: snapshot.blob,
-      mime: outputMime,
-      extension: outputExtension,
+      mime: 'video/mp4',
+      extension: 'mp4',
       duration: snapshot.duration,
       sequence: ++saveSequence
     };
@@ -452,6 +408,4 @@ export function stopClipRecorder() {
   window.__e6ClipRecorderActive = false;
   window.__e6ClipRecorderReady = false;
   window.__e6ClipRecorderMime = '';
-  window.__e6ClipRecorderAudio = false;
-  captureAudioAttached = false;
 }

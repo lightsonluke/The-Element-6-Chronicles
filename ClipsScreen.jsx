@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getClipBlob, getClipPreviewBlob, deleteClipBlob, listClipMetadata } from './clipStorage.js';
+import { convertToMP4 } from './clipRecorder.js';
 import GameIcon from './GameIcon.jsx';
 
 const DEFAULT_FPS = 60;
@@ -9,7 +10,6 @@ function extensionForMime(mime) {
 }
 
 function makeVideoSource(video, blob) {
-  if (!video || !blob) return { url: null, video, blob };
   const url = URL.createObjectURL(blob);
   video.src = url;
   video.preload = 'auto';
@@ -29,6 +29,8 @@ export default function ClipsScreen({
   const [sources, setSources] = useState({});
   const [failed, setFailed] = useState({});
   const [activeViewer, setActiveViewer] = useState(null);
+  const [downloading, setDownloading] = useState({});
+  const [downloadError, setDownloadError] = useState({});
   const videoRefs = useRef({});
   const sourceRefs = useRef({});
 
@@ -138,21 +140,55 @@ export default function ClipsScreen({
     } catch {}
   };
 
-  const download = clip => {
+  const download = async clip => {
     const source = sources[clip.id];
-    if (!source?.blob) return;
+    if (!source?.blob || downloading[clip.id]) return;
 
-    const url = URL.createObjectURL(source.blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const extension = source.extension || extensionForMime(source.mime);
-    a.download =
-      `Element6_Clip_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.${extension}`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    const webm = source.previewBlob && String(source.previewBlob.type || '').includes('webm')
+      ? source.previewBlob
+      : null;
 
-    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    setDownloading(prev => ({ ...prev, [clip.id]: true }));
+    setDownloadError(prev => {
+      const next = { ...prev };
+      delete next[clip.id];
+      return next;
+    });
+
+    try {
+      // The recorder still prepares the rolling WebM exactly as before.
+      // Conversion happens only at the moment the player requests the file,
+      // so the downloaded file is a real MP4 rather than a renamed WebM.
+      const mp4 = webm
+        ? await convertToMP4(webm)
+        : (String(source.blob.type || '').includes('mp4') ? source.blob : await convertToMP4(source.blob));
+
+      if (!mp4 || mp4.size < 1000 || !String(mp4.type).includes('mp4')) {
+        throw new Error('MP4 conversion produced an invalid file');
+      }
+
+      const url = URL.createObjectURL(mp4);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download =
+        `Element6_Clip_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (error) {
+      console.error('[Element 6 Clips] MP4 download conversion failed:', error);
+      setDownloadError(prev => ({
+        ...prev,
+        [clip.id]: 'MP4 conversion failed. The original recording was not renamed or corrupted.'
+      }));
+    } finally {
+      setDownloading(prev => {
+        const next = { ...prev };
+        delete next[clip.id];
+        return next;
+      });
+    }
   };
 
   const remove = async id => {
@@ -238,11 +274,10 @@ export default function ClipsScreen({
                               try { URL.revokeObjectURL(old.url); } catch {}
                             }
 
-                            const made = makeVideoSource(node, source.previewBlob || source.blob);
+                            const made = makeVideoSource(node, source.blob);
                             sourceRefs.current[clip.id] = {
                               ...made,
-                              blob: source.previewBlob || source.blob,
-                              fullBlob: source.blob,
+                              blob: source.blob,
                             };
                           }
                         }}
@@ -252,17 +287,10 @@ export default function ClipsScreen({
                         className="w-full rounded-lg bg-black block"
                         style={{ aspectRatio: '16 / 9' }}
                         onError={() => {
-                          const current = sourceRefs.current[clip.id];
-                          const fallbackBlob = source?.blob;
-                          const alreadyUsingFull = current?.blob === fallbackBlob;
-                          if (!alreadyUsingFull && fallbackBlob) {
-                            try { if (current?.url) URL.revokeObjectURL(current.url); } catch {}
-                            const made = makeVideoSource(videoRefs.current[clip.id], fallbackBlob);
-                            sourceRefs.current[clip.id] = { ...made, blob: fallbackBlob, fullBlob: fallbackBlob };
-                            setFailed(prev => ({ ...prev, [clip.id]: false }));
-                          } else {
-                            setFailed(prev => ({ ...prev, [clip.id]: true }));
-                          }
+                          setFailed(prev => ({
+                            ...prev,
+                            [clip.id]: true,
+                          }));
                         }}
                       />
 
@@ -308,11 +336,16 @@ export default function ClipsScreen({
                       This MP4 could not be decoded by the browser.
                     </div>
                   )}
+                  {downloadError[clip.id] && (
+                    <div className="mt-2 p-2 rounded bg-destructive/10 text-destructive text-[10px]">
+                      {downloadError[clip.id]}
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span className="text-[10px] text-muted-foreground font-body flex-1 min-w-[180px]">
                       {new Date(clip.created || Date.now()).toLocaleString()}
-                      {' · '}{(source?.extension || clip.extension || 'mp4').toUpperCase()}{' · '}
+                      {' · MP4 · '}
                       {Math.round(clip.duration || 30)}s
                     </span>
 
@@ -325,11 +358,11 @@ export default function ClipsScreen({
                     </button>
 
                     <button
-                      disabled={!videoReady}
+                      disabled={!videoReady || !!downloading[clip.id]}
                       onClick={() => download(clip)}
                       className="px-2 py-1 bg-primary/30 text-primary rounded text-[10px] font-heading disabled:opacity-40"
                     >
-                      <GameIcon emoji="⬇" size={14} /> SAVE {(source?.extension || 'mp4').toUpperCase()}
+                      <GameIcon emoji="⬇" size={14} /> {downloading[clip.id] ? 'CONVERTING MP4…' : 'SAVE MP4'}
                     </button>
 
                     <button
