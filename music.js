@@ -8,7 +8,8 @@ const A = (name) => `${import.meta.env.BASE_URL}audio/${name}`;
 // Homescreen music is intentionally separate from battle music. The selected
 // track changes every two hours, never while the player is already on a match.
 const MENU_TRACKS = [
-  A('pixelated-skyline.mp3'),
+  A('home.mp3'),
+  A('home-2.mp3'),
 ];
 const HOME_ROTATION_MS = 2 * 60 * 60 * 1000;
 const PARKOUR_TRACK = A('parkour.mp3');
@@ -46,6 +47,11 @@ export const FIGHT_TRACK_LIBRARY = [
   { id: 'pixel-quest', name: 'Pixel Quest', url: A('pixel-quest.mp3') },
   { id: 'coin-op-reaper', name: 'Coin Op Reaper', url: A('coin-op-reaper.mp3') },
   { id: 'neon-glitch', name: 'Neon Glitch', url: A('neon-glitch.mp3') },
+  { id: 'pixel-health', name: 'Pixel Health', url: A('pixel-health.mp3') },
+  { id: 'open-pixel', name: 'Open Pixel', url: A('open-pixel.mp3') },
+  { id: '16-pixels', name: '16 Pixels', url: A('16-pixels.mp3') },
+  { id: 'racing-circuit', name: 'Racing Circuit', url: A('Racing Circuit(1).mp3') },
+  { id: 'showdown', name: 'Showdown', url: A('showdown(1).mp3') },
 ];
 const FIGHT_TRACKS = FIGHT_TRACK_LIBRARY.map(t => t.url);
 const FIGHT_SCENES = new Set(['fight','story','battleroyale','soccer','volleyball','baseball','banger','dodgeball','ctf','team','custombattle','tournament','grandcircuit']);
@@ -59,33 +65,6 @@ export const GRAND_CIRCUIT_TRACKS = [
   A('pixel-boss-showdown.mp3'),
   A('turbo-cartridge-three.mp3'),
   A('neon-glitch.mp3'),
-  A('element-6-track.mp3'),
-  A('pixel-launch.mp3'),
-A('pixel-create.mp3'),
-A('pixel-king.mp3'),
-A('pixel-king.mp3'),
-  A('blade-of-dawn-one.mp3'),
-  A('blade-of-dawn.mp3'),
-  A('pixel-drift-one.mp3'),
-    A('pixel-heart-rush.mp3'),
-  A('pixel-quest-loop.mp3'),
-  A('pixel-rebound-one.mp3'),
-  A('pixel-rebound.mp3'),
-  A('pixel-rush-one.mp3'),
-  A('pixel-rush.mp3'),
-  A('pixelated-skyline.mp3'),
-  A('turbo-cartridge-one.mp3'),
-  A('turbo-cartridge.mp3'),
-  A('victory-pixel-parade.mp3'),
-  A('final.mp3'),
-  A('glitch-drift-quest-one.mp3'),
-  A('glitch-drift-quest.mp3'),
-  A('turbo-cartridge-two.mp3'),
-  A('turbo-cartridge-three.mp3'),
-  A('pixel-quest.mp3'),
-  A('coin-op-reaper.mp3'),
-  A('neon-glitch.mp3')
-  
 ];
 export const GRAND_CIRCUIT_FINAL_TRACK = A('final.mp3');
 
