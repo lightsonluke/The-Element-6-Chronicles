@@ -1,22 +1,16 @@
-# Element 6 — Freehand + Clips Final Fix
+# Element 6 — Freehand Crash Fix ONLY
 
-This is a targeted replacement package for the current Element 6 project.
+This replacement is intentionally limited to freehand-stage stability.
 
-## Freehand
-- Reverts freehand collision generation to the original stable point/segment collision representation.
-- Removes the experimental continuous-slope collision runtime from `fighter.js`.
-- Removes freehand-slope motion bookkeeping from `movingPlatforms.js`.
-- Keeps the current Stage Editor camera implementation untouched.
+Files: StageEditor.jsx, PlatformFighter.jsx, fighter.js, StagePreview.jsx
 
-## Clips
-- Removes FFmpeg usage completely from the clip recorder.
-- Uses Mediabunny for real WebM -> MP4 conversion in the browser.
-- MP4 conversion uses H.264/AVC video and AAC audio when the browser can encode them.
-- Keeps the original WebM as the preview/fallback source so an encoding limitation cannot turn a valid recording into `CLIP SAVE FAILED`.
-- Routes Element 6 music and SFX through a MediaStream recording destination so saved clips include game audio.
-- Downloads use the actual stored file extension rather than renaming WebM to `.mp4`.
+It does NOT modify clips, clip recording/downloading, camera editor settings, camera runtime, leaderboards, bots, CTF, volleyball, soccer, or any other feature.
 
-## Install
-The GitHub workflow uses `pnpm install --no-frozen-lockfile`, so the new `mediabunny` dependency in `package.json` will be resolved automatically.
-
-No camera zoom/motion code was changed for this fix.
+Fixes:
+- Sanitizes malformed/non-finite freehand points.
+- Bounds freehand point counts while preserving endpoints.
+- Bounds generated freehand slope collision segments.
+- Keeps x1/y1/x2/y2 continuous slope collision.
+- Prevents giant strokes from producing thousands of per-frame collision checks.
+- Bounds freehand rendering in matches and preview so a giant saved stroke cannot lock/crash the renderer.
+- Preserves existing slope/rolling behavior.

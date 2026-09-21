@@ -1180,7 +1180,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       let friction = fighter.grounded ? GROUND_FRICTION : AIR_FRICTION;
       if (fighter.grounded && fighter.platformMaterial === 'ice') friction = 0.995;
       fighter.vx *= friction;
-      if (Math.abs(fighter.vx) < 0.15 && fighter.platformMaterial !== 'ice') fighter.vx = 0;
+      if (Math.abs(fighter.vx) < 0.15 && fighter.platformMaterial !== 'ice' && !fighter._slopeDownhill) fighter.vx = 0;
       if (fighter.grounded && fighter.state === 'moving') fighter.state = 'idle';
     }
 
@@ -1196,6 +1196,11 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       } else if (fighter.platformMaterial === 'acid') {
         fighter.damage += 0.5;
         fighter.powerDisabled = 180;
+      }
+      if (fighter._slopeDownhill && Math.abs(fighter._slope || 0) > 0.035) {
+        // Gentle continuous roll. Objects use a much stronger acceleration.
+        fighter.vx += fighter._slopeDownhill * Math.min(0.08, Math.abs(fighter._slope) * 0.04);
+        fighter.vx = Math.max(-MOVE_SPEED * 1.1, Math.min(MOVE_SPEED * 1.1, fighter.vx));
       }
     }
 
@@ -1504,6 +1509,20 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
   return fighter;
 }
 
+function freehandSlopeSample(p, x) {
+  if (!p?._freehandSlope) return null;
+  const x1 = Number(p.x1), y1 = Number(p.y1), x2 = Number(p.x2), y2 = Number(p.y2);
+  if (![x1,y1,x2,y2].every(Number.isFinite)) return null;
+  const r = Math.max(1, Math.min(90, Number(p.radius) || 1));
+  const minX = Math.min(x1, x2) - r - 2;
+  const maxX = Math.max(x1, x2) + r + 2;
+  if (x < minX || x > maxX) return null;
+  const dx = x2 - x1;
+  const t = Math.max(0, Math.min(1, dx ? (x - x1) / dx : 0));
+  const lineY = y1 + (y2 - y1) * t;
+  const slope = dx ? (y2 - y1) / dx : 0;
+  return { surfaceY: lineY - r, slope, downhill: Math.sign(slope) || 0 };
+}
 
 // ── Smooth swept AABB collision (Brawlhalla-style) ──
 function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
@@ -1512,6 +1531,8 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
   fighter.platformMaterial = null;
   fighter.trapped = false;
   fighter._conveyorDir = 0;
+  fighter._slope = 0;
+  fighter._slopeDownhill = 0;
 
   const charHalfW = 16; // half-width for platform edge tolerance
   fighter.wallSide = 0;
@@ -1545,6 +1566,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
   if (wallPlatforms.length > 0) platforms = [...platforms, ...wallPlatforms];
 
   for (const p of platforms) {
+    if (p._freehandSlope) continue;
     const mat = p.material || 'normal';
     if (PASS_THROUGH.includes(mat)) continue;
     if (p._deleted > 0) continue;
@@ -1632,7 +1654,44 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     }
   }
 
-
+  // ── Smooth freehand/slope collision ──
+  // Freehand strokes are continuous sloped surfaces, not hundreds of tiny
+  // AABBs. This prevents the old "random stop" behavior and lets fighters
+  // naturally roll down a line.
+  let freehandSlopeChecks = 0;
+  for (const p of platforms) {
+    if (!p?._freehandSlope || p._deleted > 0) continue;
+    if (++freehandSlopeChecks > 512) break;
+    const sample = freehandSlopeSample(p, fighter.x);
+    if (!sample) continue;
+    const surfaceY = sample.surfaceY;
+    if (fighter.vy >= 0 && fighter.prevY <= surfaceY + 5 && fighter.y >= surfaceY - 1) {
+      fighter.y = surfaceY;
+      fighter.vy = 0;
+      fighter.grounded = true;
+      fighter.platformMaterial = p.material || 'normal';
+      fighter.jumps = fighter.maxJumps;
+      fighter.gravityInverted = false;
+      fighter.recoveryAirUses = 0;
+      fighter._slope = sample.slope;
+      fighter._slopeDownhill = sample.downhill;
+      if (Math.abs(sample.slope) > 0.035 && !fighter.trapped) {
+        // Players roll gently; direct input can still overcome the slope.
+        const inputOpposes = (sample.downhill > 0 && fighter.vx < -0.1) || (sample.downhill < 0 && fighter.vx > 0.1);
+        if (!inputOpposes) fighter.vx += sample.downhill * Math.min(0.11, Math.abs(sample.slope) * 0.055);
+      }
+      break;
+    }
+    if (Math.abs(fighter.y - surfaceY) <= 3 && fighter.vy >= -1) {
+      fighter.y = surfaceY;
+      fighter.vy = 0;
+      fighter.grounded = true;
+      fighter.platformMaterial = p.material || 'normal';
+      fighter._slope = sample.slope;
+      fighter._slopeDownhill = sample.downhill;
+      break;
+    }
+  }
 
   // ── Ceiling collision — hitting the bottom of a solid platform from below ──
   // Resolved BEFORE side walls so the head stops naturally instead of being
@@ -1641,7 +1700,8 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
   const ceilingHits = new Set();
   if (fighter.vy < 0) {
     for (const p of platforms) {
-        const mat = p.material || 'normal';
+      if (p._freehandSlope) continue;
+      const mat = p.material || 'normal';
       if (PASS_THROUGH.includes(mat)) continue;
       if (p._deleted > 0) continue;
       if (p.h < 18) continue;
@@ -1659,6 +1719,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
 
   // ── Side wall collisions for solid platforms — prevent walking through sides ──
   for (const p of platforms) {
+    if (p._freehandSlope) continue;
     const mat = p.material || 'normal';
     if (PASS_THROUGH.includes(mat)) continue;
     if (p._deleted > 0) continue;
