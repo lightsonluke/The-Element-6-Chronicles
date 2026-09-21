@@ -31,26 +31,73 @@ export default function EditControls({ settings, onSave, onReset }) {
 
   const editSet = getEditSet();
 
+  // Capture keyboard input at the window level while rebinding.  Use the
+  // capture phase so gameplay/menu keyboard listeners cannot consume the event
+  // before the custom-control editor sees it.  The previous bubble-phase
+  // listener could be defeated by another global key handler.
   useEffect(() => {
-    if (!listening) return;
-    const handler = (e) => {
-      e.preventDefault();
-      if (e.key === 'Escape') { setListening(null); return; }
-      let key = e.key;
+    if (!listening || typeof window === 'undefined') return;
+
+    let finished = false;
+
+    const normalizeKey = (event) => {
+      // e.key is the correct value to store because the game input system
+      // indexes its key state with KeyboardEvent.key.  Keep a small fallback
+      // for browsers/devices that expose only code for unusual keys.
+      let key = event.key;
+      if (!key || key === 'Unidentified') {
+        const code = event.code || '';
+        if (code === 'Space') key = ' ';
+        else if (code.startsWith('Key')) key = code.slice(3).toLowerCase();
+        else if (code.startsWith('Digit')) key = code.slice(5);
+        else key = code;
+      }
+      if (key === 'Esc') key = 'Escape';
       if (key.length === 1) key = key.toLowerCase();
-      // Save to the custom control slot
+      return key;
+    };
+
+    const handler = (e) => {
+      if (finished) return;
+      // Ignore auto-repeat; one physical press should create one binding.
+      if (e.repeat) return;
+
+      const key = normalizeKey(e);
+      if (!key) return;
+
+      // Always consume the binding keystroke so it cannot also trigger the
+      // game's current controls or browser shortcuts.
+      e.preventDefault();
+      e.stopPropagation();
+      finished = true;
+
+      if (key === 'Escape') {
+        setListening(null);
+        return;
+      }
+
       if (typeof editing === 'number' && editSet.isCustom) {
         const next = [...customControls];
-        const slot = next[editing] || { name: `Custom ${editing + 1}`, p1: { ...DEFAULT_KEYBINDS.p1 }, p2: { ...DEFAULT_KEYBINDS.p2 } };
-        slot[listening.player] = { ...slot[listening.player], [listening.action]: key };
+        const slot = next[editing] || {
+          name: `Custom ${editing + 1}`,
+          p1: { ...DEFAULT_KEYBINDS.p1 },
+          p2: { ...DEFAULT_KEYBINDS.p2 },
+        };
+        slot[listening.player] = {
+          ...slot[listening.player],
+          [listening.action]: key,
+        };
         next[editing] = slot;
         onSave?.({ customControls: next });
       }
       setListening(null);
+      sfx.click();
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [listening, editing, customControls, onSave]);
+
+    // Capture phase is the important part of this fix.
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
+  }, [listening, editing, editSet.isCustom, customControls, onSave]);
 
   const renderKeyButton = (player, action) => {
     if (editSet.readOnly) {
