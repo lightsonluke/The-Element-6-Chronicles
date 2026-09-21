@@ -29,7 +29,7 @@ export default function ClipsScreen({
   const [sources, setSources] = useState({});
   const [failed, setFailed] = useState({});
   const [activeViewer, setActiveViewer] = useState(null);
-  const [downloading, setDownloading] = useState({});
+  const [converting, setConverting] = useState({});
   const videoRefs = useRef({});
   const sourceRefs = useRef({});
 
@@ -141,53 +141,41 @@ export default function ClipsScreen({
 
   const download = async clip => {
     const source = sources[clip.id];
-    if (!source?.blob || downloading[clip.id]) return;
+    if (!source?.blob || converting[clip.id]) return;
 
-    setDownloading(prev => ({ ...prev, [clip.id]: true }));
+    // Clips stay stored and previewed as WebM. Conversion happens only after
+    // the player requests SAVE MP4. The resulting Blob is a real MP4 produced
+    // by FFmpeg; the WebM is never merely renamed to .mp4.
+    setConverting(prev => ({ ...prev, [clip.id]: 1 }));
+
     try {
-      let output = source.blob;
-      const isMP4 = String(output.type || clip.mime || '').toLowerCase().includes('mp4');
+      const mp4 = await convertToMP4(source.blob, progress => {
+        setConverting(prev => ({ ...prev, [clip.id]: Math.max(1, Math.round(progress)) }));
+      });
 
-      // Clips are captured/stored in the reliable browser WebM format.  When
-      // the player asks for a download, convert that actual file to MP4 first
-      // instead of merely changing the filename extension.
-      if (!isMP4) {
-        output = await convertToMP4(output);
+      if (!mp4 || mp4.size < 1000 || mp4.type !== 'video/mp4') {
+        throw new Error('MP4 conversion returned an invalid file');
       }
 
-      if (!output || output.size < 1000) throw new Error('The clip file is empty');
-
-      const url = URL.createObjectURL(output);
-      const filename = `Element6_Clip_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.mp4`;
+      const url = URL.createObjectURL(mp4);
       const a = document.createElement('a');
       a.href = url;
-      a.download = filename;
-      a.rel = 'noopener';
+      a.download =
+        `Element6_Clip_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.mp4`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
     } catch (error) {
-      console.error('[Element 6 Clips] MP4 download failed:', error);
-      // Never silently do nothing.  If conversion fails, offer the original
-      // valid WebM rather than losing the user's clip.
-      try {
-        const fallback = source.blob;
-        if (fallback?.size >= 1000) {
-          const url = URL.createObjectURL(fallback);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `Element6_Clip_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.webm`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 10000);
-        }
-      } catch (fallbackError) {
-        console.error('[Element 6 Clips] WebM fallback download failed:', fallbackError);
-      }
+      console.error('[Element 6 Clips] MP4 conversion/download failed:', error);
+      window.alert('MP4 CONVERSION FAILED — THE ORIGINAL WEBM CLIP IS STILL SAVED. PLEASE TRY THE DOWNLOAD AGAIN.');
     } finally {
-      setDownloading(prev => { const next = { ...prev }; delete next[clip.id]; return next; });
+      setConverting(prev => {
+        const next = { ...prev };
+        delete next[clip.id];
+        return next;
+      });
     }
   };
 
@@ -237,7 +225,7 @@ export default function ClipsScreen({
         </div>
 
         <p className="text-xs text-muted-foreground font-body mb-5">
-          MP4 · 60 FPS · saved locally in your browser.
+          Clips are saved locally as WebM for reliability. SAVE MP4 converts the WebM to a real MP4 before the download starts.
         </p>
 
         {clips.length === 0 ? (
@@ -353,11 +341,12 @@ export default function ClipsScreen({
                     </button>
 
                     <button
-                      disabled={!videoReady || !!downloading[clip.id]}
+                      disabled={!videoReady || !!converting[clip.id]}
                       onClick={() => download(clip)}
                       className="px-2 py-1 bg-primary/30 text-primary rounded text-[10px] font-heading disabled:opacity-40"
                     >
-                      <GameIcon emoji="⬇" size={14} /> {downloading[clip.id] ? 'CONVERTING…' : 'SAVE MP4'}
+                      <GameIcon emoji={converting[clip.id] ? '⏳' : '⬇'} size={14} />{' '}
+                      {converting[clip.id] ? `CONVERTING ${converting[clip.id]}%` : 'SAVE MP4'}
                     </button>
 
                     <button
