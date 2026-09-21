@@ -218,7 +218,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
       eTeam.forEach(fighter => {
         if (fighter.stocks <= 0) return;
         const target = findNearestEnemy(fighter);
-        const fighter._strategicBot = true; inputs = updateAI(fighter, target, difficulty, platforms);
+        fighter._strategicBot = true; inputs = updateAI(fighter, target, difficulty, platforms);
         updateFighter(fighter, inputs, platforms, W, H, target);
       });
 
