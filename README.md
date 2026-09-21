@@ -1,31 +1,20 @@
-# Element 6 — Clip WebM Storage / MP4-at-Download Fix
+# Element 6 — Clip Download + Freehand Runtime Fix
 
-This is a targeted clips-only replacement.
+Targeted replacement only. This package does not modify stage camera logic or other systems.
 
-## Behavior
+## Clips
+- The Clips tab now converts stored WebM to a real MP4 before download.
+- It no longer merely changes `.webm` to `.mp4`.
+- Existing MP4 clips download directly.
+- If MP4 conversion fails, the original WebM is downloaded as a real fallback instead of silently doing nothing.
+- `convertToMP4` is exported from `clipRecorder.js` for the Clips tab.
 
-- The game records the rolling clip as native WebM.
-- The clip is saved to IndexedDB as WebM.
-- The Clips tab previews the stored WebM directly.
-- **No FFmpeg conversion occurs when saving a clip.** This prevents MP4/FFmpeg failures from producing `CLIP SAVE FAILED`.
-- When the player presses **SAVE MP4**, the stored WebM is converted to a real MP4 with FFmpeg in the browser.
-- The downloaded file contains actual MP4 bytes; this is NOT a filename-extension change.
-- Camera/game behavior and all non-clip features are untouched by this package.
-
-## Replace
-
-Copy these four files over the corresponding files in the project:
-
-- `clipRecorder.js`
-- `clipStorage.js`
-- `GlobalClipRecorder.jsx`
-- `ClipsScreen.jsx`
-
-No SQL migration is required.
+## Freehand stages
+- Large freehand strokes no longer use `Math.min(...points)` / `Math.max(...points)`, avoiding call-stack crashes.
+- Canvas rendering is bounded to a smooth 2400-point visual path for extremely detailed strokes.
+- Match collision rebuilds freehand strokes into at most 320 continuous slope segments per stroke.
+- Existing `_freehandSegment` collision entries are discarded and safely rebuilt to prevent duplicated/huge collision arrays.
+- Freehand slope collision, rolling behavior, item rolling, and existing camera zoom/motion code are otherwise untouched.
 
 ## Validation
-
-- `clipRecorder.js`: Node syntax check passed.
-- `clipStorage.js`: Node syntax check passed.
-- `GlobalClipRecorder.jsx`: TypeScript JSX parser check passed.
-- `ClipsScreen.jsx`: TypeScript JSX parser check passed.
+Source files were checked for balanced delimiters. A full Vite build cannot be claimed in this environment because the project dependencies are not installed here.

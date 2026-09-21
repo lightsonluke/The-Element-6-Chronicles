@@ -1,5 +1,4 @@
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
-import { sanitizeFreehandPlatforms } from './freehandSafety.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
@@ -698,11 +697,79 @@ export default function PlatformFighter({
   }
   const platforms = (() => {
     // IMPORTANT: moving/destructible platforms are mutated by the match loop.
+    // Freehand editor strokes are converted here at the match boundary into a
+    // bounded set of continuous slope segments. Older saves may already contain
+    // _freehandSegment entries; those are discarded and rebuilt safely so a huge
+    // stroke can never create a massive collision array or crash the match.
+    const buildRuntimeFreehand = (strokes = []) => {
+      const result = [];
+      for (const stroke of Array.isArray(strokes) ? strokes : []) {
+        const raw = Array.isArray(stroke?.points) ? stroke.points : [];
+        const pts = raw
+          .map(q => ({ x: Number(q?.x), y: Number(q?.y) }))
+          .filter(q => Number.isFinite(q.x) && Number.isFinite(q.y));
+        if (!pts.length) continue;
+        const radius = Math.max(2, Math.min(180, Number(stroke?.diameter) || 36) / 2);
+        const material = stroke?.material || 'normal';
+        const motion = stroke?.motion || stroke?.move || null;
+
+        // Keep the slope continuous while bounding collision work. Preserve
+        // every point for short strokes and evenly resample very long strokes.
+        const maxSegments = 320;
+        let sampled = pts;
+        if (pts.length > maxSegments + 1) {
+          sampled = [];
+          const step = (pts.length - 1) / maxSegments;
+          for (let i = 0; i <= maxSegments; i++) {
+            const at = i * step;
+            const lo = Math.floor(at);
+            const hi = Math.min(pts.length - 1, Math.ceil(at));
+            const t = at - lo;
+            sampled.push({
+              x: pts[lo].x + (pts[hi].x - pts[lo].x) * t,
+              y: pts[lo].y + (pts[hi].y - pts[lo].y) * t,
+            });
+          }
+        }
+
+        if (sampled.length === 1) {
+          const q = sampled[0];
+          result.push({
+            x: q.x - radius, y: q.y - radius, w: radius * 2, h: radius * 2,
+            material, collision: true, itemCollision: true,
+            _freehandSegment: true, _freehandPoint: true,
+            ...(motion ? { move: { ...motion }, motion: { ...motion } } : {}),
+          });
+          continue;
+        }
+
+        for (let i = 1; i < sampled.length; i++) {
+          const a = sampled[i - 1];
+          const b = sampled[i];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          if (Math.hypot(dx, dy) < 0.5) continue;
+          result.push({
+            x: Math.min(a.x, b.x) - radius,
+            y: Math.min(a.y, b.y) - radius,
+            w: Math.abs(dx) + radius * 2,
+            h: Math.abs(dy) + radius * 2,
+            x1: a.x, y1: a.y, x2: b.x, y2: b.y, radius, material,
+            _freehandSegment: true, _freehandStroke: true, _freehandSlope: true,
+            collision: true, itemCollision: true,
+            ...(motion ? { move: { ...motion }, motion: { ...motion } } : {}),
+          });
+        }
+      }
+      return result;
+    };
+
+    // IMPORTANT: moving/destructible platforms are mutated by the match loop.
     // Never run a match directly against the saved stage array or the editor's
     // saved data can be changed by gameplay.
     let source = customPlatforms || eventPlatforms || applyStageMaterials(MAP_PLATFORMS[mapId] || MAP_PLATFORMS.splitcity, mapId);
     let p = Array.isArray(source)
-      ? sanitizeFreehandPlatforms(source).map(platform => ({
+      ? source.filter(platform => !platform?._freehandSegment).map(platform => ({
           ...platform,
           move: platform?.move ? { ...platform.move, chain: Array.isArray(platform.move.chain) ? platform.move.chain.map(step => ({ ...step })) : platform.move.chain } : platform?.move,
           motion: platform?.motion ? { ...platform.motion, chain: Array.isArray(platform.motion.chain) ? platform.motion.chain.map(step => ({ ...step })) : platform.motion.chain } : platform?.motion,
@@ -712,6 +779,11 @@ export default function PlatformFighter({
     // Gravity & jumps stay normal, so all existing collision/landing logic works
     // unchanged; fighters simply stand on the (now top) platforms and fall "down".
     if (mods?.upsideDown && !customPlatforms) p = p.map(pl => ({ ...pl, y: H - pl.y - pl.h, _moveBaseY: undefined }));
+
+    const freehandSource = Array.isArray(stageConfig.freehandStrokes) ? stageConfig.freehandStrokes : [];
+    if (freehandSource.length) {
+      p.push(...buildRuntimeFreehand(freehandSource));
+    }
     return p;
   })();
 
@@ -771,6 +843,11 @@ export default function PlatformFighter({
     if (activeKillPerimeter) {
       f1._customBlastZone = { ...activeKillPerimeter };
       f2._customBlastZone = { ...activeKillPerimeter };
+      f1._customBlastZoneDisabled = false;
+      f2._customBlastZoneDisabled = false;
+    } else if (_killPerimeterCandidate?.enabled === false) {
+      f1._customBlastZoneDisabled = true;
+      f2._customBlastZoneDisabled = true;
     }
     if (customSpawnPoints && customSpawnPoints[0]) f1.respawnPoint = { x: customSpawnPoints[0].x, y: customSpawnPoints[0].y };
     if (customSpawnPoints && customSpawnPoints[1]) f2.respawnPoint = { x: customSpawnPoints[1].x, y: customSpawnPoints[1].y };
@@ -1406,12 +1483,16 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const _largeMaps = new Set(['grandarena', 'skycitadel', 'colossalcoliseum', 'infiniteexpanse']);
       const _isLarge = _largeMaps.has(mapId);
       const _defaultZone = { left: _isLarge ? -800 : -500, right: _isLarge ? W + 800 : W + 500, top: _isLarge ? -800 : -600, bottom: _isLarge ? H + 600 : H + 450 };
-      const _zone = activeKillPerimeter ? getMovingPerimeter(activeKillPerimeter, (now - g.stageStartTime) / 1000) : _defaultZone;
-      const BLAST_L = _zone.left, BLAST_R = _zone.right, BLAST_T = _zone.top, BLAST_B = _zone.bottom;
-      ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_R, BLAST_T); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_B); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_L, BLAST_B); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(BLAST_R, BLAST_T); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
+      const _zone = activeKillPerimeter
+        ? getMovingPerimeter(activeKillPerimeter, (now - g.stageStartTime) / 1000)
+        : (_killPerimeterCandidate?.enabled === false ? null : _defaultZone);
+      if (_zone) {
+        const BLAST_L = _zone.left, BLAST_R = _zone.right, BLAST_T = _zone.top, BLAST_B = _zone.bottom;
+        ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_R, BLAST_T); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_B); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_L, BLAST_B); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(BLAST_R, BLAST_T); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
+      }
       ctx.setLineDash([]); ctx.shadowBlur = 0; ctx.restore();
       }
 

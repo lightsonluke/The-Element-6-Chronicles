@@ -403,38 +403,57 @@ export function drawMaterialStroke(ctx, stroke, frame=0) {
   ctx.lineWidth=diameter;
   ctx.strokeStyle=rgba(color,.88);
   ctx.shadowColor=rgba(color,.28);ctx.shadowBlur=Math.min(12,diameter*.18);
+  // Extremely detailed mouse/touch strokes can contain tens of thousands of
+  // points. Keep the visual path smooth while bounding canvas path work.
+  const renderPts = pts.length > 2400
+    ? Array.from({ length: 2401 }, (_, i) => {
+        const at = (i / 2400) * (pts.length - 1);
+        const lo = Math.floor(at);
+        const hi = Math.min(pts.length - 1, Math.ceil(at));
+        const t = at - lo;
+        return {
+          x: pts[lo].x + (pts[hi].x - pts[lo].x) * t,
+          y: pts[lo].y + (pts[hi].y - pts[lo].y) * t,
+        };
+      })
+    : pts;
   ctx.beginPath();
-  pts.forEach((pt,i)=>i?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y));
-  if(pts.length===1) ctx.lineTo(pts[0].x+.01,pts[0].y+.01);
+  renderPts.forEach((pt,i)=>i?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y));
+  if(renderPts.length===1) ctx.lineTo(renderPts[0].x+.01,renderPts[0].y+.01);
   ctx.stroke();
   ctx.shadowBlur=0;
 
   // A compact material-specific surface pass, scaled to the stroke width.
-  // Avoid Math.min/Math.max spread on very large strokes: spreading a huge
-  // point array can overflow the JS argument stack and crash the game.
-  let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+  // Never spread thousands of points into Math.min/Math.max. Large freehand
+  // strokes can contain tens of thousands of points, and the argument spread
+  // can overflow the JS engine's call stack and crash the match.
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const q of pts) {
-    const x=Number(q?.x), y=Number(q?.y);
+    const x = Number(q?.x);
+    const y = Number(q?.y);
     if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-    if (x<minX) minX=x; if (x>maxX) maxX=x;
-    if (y<minY) minY=y; if (y>maxY) maxY=y;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
   }
-  if (!Number.isFinite(minX)) { ctx.restore(); return; }
+  if (!Number.isFinite(minX)) return;
   const box={x:minX-diameter/2,y:minY-diameter/2,w:Math.max(diameter,maxX-minX+diameter),h:Math.max(diameter,maxY-minY+diameter),material:stroke.material};
   ctx.save();
   ctx.globalAlpha=.75;
   if(stroke.material==='water'||stroke.material==='lava'||stroke.material==='acid'||stroke.material==='tar'||stroke.material==='quicksand') {
     // Liquids get a moving highlight rather than a slab, matching their physics.
-    const n=Math.max(2,Math.floor(pts.length/6));
+    const detailPts = renderPts;
+    const n=Math.max(2,Math.floor(detailPts.length/240));
     ctx.strokeStyle=stroke.material==='lava'?'rgba(255,236,130,.8)':stroke.material==='acid'?'rgba(232,255,145,.75)':stroke.material==='tar'?'rgba(160,130,170,.55)':'rgba(205,244,255,.72)';
     ctx.lineWidth=Math.max(1.5,diameter*.055);
     ctx.beginPath();
-    for(let i=0;i<pts.length;i+=Math.max(1,n)){const q=pts[i];i?ctx.lineTo(q.x,q.y-diameter*.12):ctx.moveTo(q.x,q.y-diameter*.12);}
+    for(let i=0;i<detailPts.length;i+=Math.max(1,n)){const q=detailPts[i];i?ctx.lineTo(q.x,q.y-diameter*.12):ctx.moveTo(q.x,q.y-diameter*.12);}
     ctx.stroke();
   } else {
     // Stamp only a few high-value details; do not draw a rectangle around the stroke.
     ctx.strokeStyle=rgba('#FFFFFF',.18);ctx.lineWidth=Math.max(1,diameter*.035);
-    ctx.beginPath();pts.forEach((pt,i)=>i?ctx.lineTo(pt.x,pt.y-diameter*.18):ctx.moveTo(pt.x,pt.y-diameter*.18));ctx.stroke();
+    ctx.beginPath();renderPts.forEach((pt,i)=>i?ctx.lineTo(pt.x,pt.y-diameter*.18):ctx.moveTo(pt.x,pt.y-diameter*.18));ctx.stroke();
   }
   ctx.restore();
   ctx.restore();
