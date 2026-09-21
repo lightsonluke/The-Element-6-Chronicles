@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getClipBlob, getClipPreviewBlob, deleteClipBlob, listClipMetadata } from './clipStorage.js';
 import GameIcon from './GameIcon.jsx';
+import { convertWebMBlobToMP4 } from './clipMp4Download.js';
 
 const DEFAULT_FPS = 60;
 
@@ -14,9 +15,6 @@ function makeVideoSource(video, blob) {
   video.preload = 'auto';
   video.setAttribute('playsinline', '');
   video.setAttribute('webkit-playsinline', '');
-  // The global music manager intentionally silences foreign media elements.
-  // Clip videos are explicitly trusted local media and must be left alone.
-  video.dataset.ekKeep = 'true';
   video.load();
   return { url, video };
 }
@@ -140,20 +138,33 @@ export default function ClipsScreen({
     } catch {}
   };
 
-  const download = clip => {
+  const download = async clip => {
     const source = sources[clip.id];
     if (!source?.blob) return;
 
-    const url = URL.createObjectURL(source.blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download =
-      `Element6_Clip_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.mp4`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    const buttonKey = clip.id;
+    setFailed(prev => ({ ...prev, [buttonKey]: false }));
 
-    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    try {
+      // Clips are intentionally stored exactly as the recorder produces them
+      // (WebM). Only the final download is converted to a real MP4.
+      const mp4Blob = String(source.blob.type || source.mime || '').includes('mp4')
+        ? source.blob
+        : await convertWebMBlobToMP4(source.blob);
+
+      const url = URL.createObjectURL(mp4Blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download =
+        `Element6_Clip_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (error) {
+      console.error('[Element 6 Clips] MP4 download conversion failed:', error);
+      window.alert('The clip could not be converted to MP4. Please try the download again.');
+    }
   };
 
   const remove = async id => {
