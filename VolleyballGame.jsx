@@ -7,6 +7,7 @@ import { readGamepadInput } from './controllerProfiles.js';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
+import { observeBot, predictLandingX, botSkill } from './botIntelligence.js';
 
 const charFor = (id, element) => { const c = ALL_CHARS.find(c => c.id === id); if (!c) return null; if (element && element !== 'basic') return { ...c, stats: applyElement(c.stats || {}, element) }; return c; };
 
@@ -733,8 +734,8 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
     }
 
     // RECEIVE MODE: ball is incoming — move to receive, stay grounded
-    let predictX = b.x;
-    if (b.vy > 0) {
+    let predictX = predictedBallX;
+    if (mind.skill.predict < 0.45 && b.vy > 0) {
       const tToFloor = (FLOOR - b.y) / Math.max(0.1, b.vy);
       predictX = b.x + b.vx * tToFloor * 0.8;
     }
@@ -919,6 +920,8 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
     const teammate = team[mateIdx];
     if (!p) return;
     const b = s.ball;
+    const mind = observeBot(p, { target: b, opponents: s.t1 || [], teammates: team, losing: s.s2 < s.s1 }, difficulty);
+    const predictedBallX = b.vy > 0 ? predictLandingX(b, FLOOR, Math.round(55 + botSkill(difficulty).predict * 35)) : b.x + b.vx * (10 + botSkill(difficulty).predict * 18);
     const lo = NET_X + 16, hi = COURT_RIGHT;
 
     if (p.diving) return; // dive is processed in the main loop

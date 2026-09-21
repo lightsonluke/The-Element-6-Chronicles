@@ -1,6 +1,7 @@
 // botAI.js — CPU AI logic extracted from fighter.js for maintainability.
 import { COMBOS, comboMoveReady as comboMoveReadyUtil, comboMoveToInput } from './combos.js';
 import { selectTarget, navigateToward, platformNavigate as navPlatformNavigate } from './botNavigation.js';
+import { honoredFightTactics } from './botIntelligence.js';
 
 export const CPU_DIFFICULTY = {
   newcomer: { reactionTime: 200, skillChance: 0.03, jumpChance: 0.03, attackChance: 0.05, edgeGuard: false, combo: false, superUse: false, heavyChance: 0.02 },
@@ -434,6 +435,11 @@ export function updateAI(fighter, opponent, difficultyKey = 'regular', platforms
     if (fighter.superMeter >= fighter.maxSuper && Math.random() < 0.4) inputs.superMove = true;
     if (doJump && fighter.grounded) inputs.jump = true;
     fighter.aiAction = inputs; return inputs;
+  }
+
+  if ((difficultyKey === 'honored' || difficultyKey === 'insane') && opponent && opponent.stocks > 0) {
+    const strategicInputs = honoredFightTactics(fighter, opponent, platforms, difficultyKey, { opponents: fighter._allOpponents || [opponent] });
+    if (strategicInputs) { avoidHazards(fighter, strategicInputs, platforms, opponent); fighter.aiAction = strategicInputs; return strategicInputs; }
   }
 
   if (difficultyKey === 'honored' && opponent && opponent.stocks > 0) {

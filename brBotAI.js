@@ -6,6 +6,7 @@
 
 import { updateAI } from './fighter.js';
 import { navigateToward, selectTarget } from './botNavigation.js';
+import { observeBot, chooseBestTarget } from './botIntelligence.js';
 import { isPositionInHazard, nearestHazardToTarget, rockLandingNear } from './brHazards.js';
 import { nearestLaunchPad, nearestDashPad, itemAt } from './brItems.js';
 import { nearestObjectToHit, getBoomerangInfo } from './brObjects.js';
@@ -19,11 +20,13 @@ export function updateBRAI(fighter, opponents, platforms, env, botDifficulty, dt
   const { sections, items, hazards, objects } = env;
   if (!opponents || opponents.length === 0) return NO_INPUT;
 
+  const world = observeBot(fighter, { opponents, target: fighter._brTarget }, botDifficulty);
+
   // Select target (reuse the route-aware selector from botNavigation)
   let target = fighter._brTarget;
   if (!target || target._eliminated || target.stocks <= 0) {
     const alive = opponents.filter(o => o && o.stocks > 0 && !o._eliminated);
-    target = alive.length > 0 ? selectTarget(fighter, alive, platforms) : null;
+    target = alive.length > 0 ? (chooseBestTarget(fighter, alive, { threat: world.target, objectiveTarget: fighter._brObjectiveTarget }, botDifficulty) || selectTarget(fighter, alive, platforms)) : null;
     fighter._brTarget = target;
   }
   if (!target) return NO_INPUT;

@@ -8,6 +8,7 @@ import { drawSportChar } from './sportDraw.jsx';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
+import { universalDodgeballDecision, botSkill } from './botIntelligence.js';
 import GameIcon from "./GameIcon.jsx";
 
 // ── Dodgeball court (2D side-view, eye-level) ──
@@ -19,7 +20,7 @@ const BALL_R = 13;
 const GRAV = 0.9;
 const P_W = 32, P_H = 96;
 const BALL_COUNT = 10;
-const DIFF_MUL = { newcomer: 0.45, beginner: 0.55, easy: 0.65, amateur: 0.75, regular: 0.9, pro: 1.0, hard: 1.12, insane: 1.25, honored: 1.4 };
+const DIFF_MUL = { newcomer: 0.45, beginner: 0.55, easy: 0.65, amateur: 0.75, regular: 0.9, pro: 1.0, hard: 1.12, insane: 1.25, honored: 1.55 };
 
 const charFor = (id, element, custom) => {
   const c = (custom && custom[id]) || ALL_CHARS.find(c => c.id === id) || ALL_CHARS[0];
@@ -186,6 +187,8 @@ export default function DodgeballGame({
   const cpuInput = (p, opp, s, side) => {
     const D = DIFF_MUL[difficulty] || 1;
     const r = { left: false, right: false, up: false, down: false, sig: false, superMove: false, power: false };
+    const smartDodge = universalDodgeballDecision(p, opp, s, side, difficulty);
+    if (smartDodge) return { ...r, ...smartDodge };
     // dodge an incoming airborne throw aimed at us
     const incoming = s.balls.find(b => b.heldBy === null && b.lastThrower !== side && b.lastThrower !== 0 &&
       Math.abs(b.vx) > 2 && ((side === 1 && b.vx < 0) || (side === 2 && b.vx > 0)) &&

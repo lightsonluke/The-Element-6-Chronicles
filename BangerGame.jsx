@@ -9,6 +9,7 @@ import { getKeybinds } from './keybinds.js';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
+import { universalBangerDecision } from './botIntelligence.js';
 import GameIcon from "./GameIcon.jsx";
 
 // ── Banger — Element 6 Original ──
@@ -27,7 +28,7 @@ const BASE_X = {
   1: [COURT_LEFT + 90, (COURT_LEFT + NET_X) / 2, NET_X - 110],
   2: [NET_X + 110, (NET_X + COURT_RIGHT) / 2, COURT_RIGHT - 90],
 };
-const DIFF_MUL = { newcomer: 0.5, beginner: 0.6, easy: 0.7, amateur: 0.8, regular: 0.9, pro: 1.0, hard: 1.12, insane: 1.25, honored: 1.4 };
+const DIFF_MUL = { newcomer: 0.5, beginner: 0.6, easy: 0.7, amateur: 0.8, regular: 0.9, pro: 1.0, hard: 1.12, insane: 1.25, honored: 1.55 };
 
 const charFor = (id, element, custom) => {
   const c = (custom && custom[id]) || ALL_CHARS.find(c => c.id === id) || ALL_CHARS[0];
@@ -302,6 +303,8 @@ export default function BangerGame({
         hitter.y = FLOOR;
         const cpu = side === 1 ? p1IsCPU : p2IsCPU;
         if (cpu) {
+          const smart = universalBangerDecision(s, side, difficulty, { curAngle });
+          if (smart?.strike) strike(side);
           const a = curAngle(s); const D = DIFF_MUL[difficulty] || 1;
           const ds = dsFor(side, hitter.slot);
           const q = (a + Math.PI / 6) / (Math.PI / 3);
@@ -348,8 +351,10 @@ export default function BangerGame({
             s.hits++; sfx.hit();
             const cpu = b.lastSide === 1 ? p1IsCPU : p2IsCPU;
             if (cpu) {
+              const smart = universalBangerDecision(s, b.lastSide, difficulty, { curAngle });
               const D = DIFF_MUL[difficulty] || 1;
-              if (difficulty === 'honored') s.cpuBangerT = 1;
+              if (smart?.banger) s.cpuBangerT = 1;
+              else if (difficulty === 'honored') s.cpuBangerT = 1;
               else if (Math.random() < 0.35 + D * 0.5) s.cpuBangerT = Math.round(8 + Math.random() * 14);
             }
             break;

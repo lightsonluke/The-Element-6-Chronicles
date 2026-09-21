@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { CPU_DIFFICULTY } from './fighter.js';
+import { observeBot, predictPosition } from './botIntelligence.js';
 
 // ── Field constants (must match SoccerFighter.jsx) ──
 const W = 1280;
@@ -478,6 +479,8 @@ export function soccerAI(fighter, ball, opponent, difficultyKey = 'regular', per
   const diff = CPU_DIFFICULTY[difficultyKey] || CPU_DIFFICULTY.regular;
   const params = DIFF_PARAMS[difficultyKey] || DIFF_PARAMS.regular;
   const pm = PERSONALITY[fighter._aiPersonality || personality] || PERSONALITY.balanced;
+  const botWorld = observeBot(fighter, { target: opponent, opponents: [opponent], objectiveUrgency: gameCtx.timer !== undefined && gameCtx.timer < 30 ? 1 : 0, losing: (fighter.team === 1 ? (gameCtx.p1Score || 0) < (gameCtx.p2Score || 0) : (gameCtx.p2Score || 0) < (gameCtx.p1Score || 0)) }, difficultyKey);
+  const predictedOpponent = botWorld.predictedTarget || predictPosition(opponent, 8);
 
   // ── Situational awareness — score and time affect aggression ──
   const myScore = fighter.team === 1 ? (gameCtx.p1Score || 0) : (gameCtx.p2Score || 0);
@@ -551,7 +554,7 @@ export function soccerAI(fighter, ball, opponent, difficultyKey = 'regular', per
     const predictedShot = predictOpponentShot(opponent, ball, selfState.defendGoalX);
     if (predictedShot && predictedShot.scores) {
       // Move to predicted shot intercept position
-      const interceptX = predictedShot.x;
+      const interceptX = predictedShot.x + (predictedOpponent?.x - opponent.x) * 0.08;
       const interceptY = predictedShot.y;
       if (fighter.x < interceptX - 10) inputs.right = true;
       else if (fighter.x > interceptX + 10) inputs.left = true;

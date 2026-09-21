@@ -7,6 +7,7 @@ import { readGamepadInput } from './controllerProfiles.js';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
+import { observeBot, botSkill } from './botIntelligence.js';
 import { drawMinimap, drawOnDeck } from './baseballOverlay.jsx';
 import GameIcon from "./GameIcon.jsx";
 import { toggleElementFullscreen } from './fullscreen.js';
@@ -494,6 +495,8 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
   }
 
   function cpuPitch(s, mult) {
+    const pitcherMind = observeBot({ x: PITCHER_X, y: GROUND - 52 }, { target: { x: PLATE_X, y: GROUND - 52 }, objectiveUrgency: s.strikeCount >= 2 ? 0.8 : 0.3 }, difficulty);
+    const pitcherSkill = botSkill(difficulty);
     const pitcherChars = s.batting === 1 ? p2Chars : p1Chars;
     const pitcherEls = s.batting === 1 ? p2Elements : p1Elements;
     const pitcher = charFor(pitcherChars[0], pitcherEls?.[0]);
@@ -502,7 +505,7 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
     s.ball.alive = true; s.ball.x = PITCHER_X; s.ball.y = GROUND - 52;
     s.ball.vx = baseSpeed; s.ball.vy = 0; s.ball.trail = [];
     s.ball.everInZone = false;
-    const curves = ['none', 'none', 'down', 'up', 'fast', 'slow'];
+    const curves = pitcherSkill.think > 0.9 ? ['down', 'up', 'fast', 'slow', 'down', 'none'] : ['none', 'none', 'down', 'up', 'fast', 'slow'];
     s.ball.curveDir = curves[Math.floor(Math.random() * curves.length)];
     s.pitched = true; s.swung = false; s.swingResult = null; s.swingTimer = 0;
     s.phase = 'pitched'; s.phaseTimer = 0; s.cpuBatCd = 0;
@@ -510,6 +513,7 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
   }
 
   function cpuBat(s, mult) {
+    const batterMind = observeBot({ x: s.ball.x, y: s.ball.y }, { target: s.ball, objectiveUrgency: s.strikeCount >= 2 ? 1 : 0 }, difficulty);
     s.swung = true; s.swingTimer = 18; sfx.hit();
     const batterChars = s.batting === 2 ? p2Chars : p1Chars;
     const batterEls = s.batting === 2 ? p2Elements : p1Elements;
@@ -521,7 +525,8 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
     const cy = (STRIKE_TOP + STRIKE_BOT) / 2;
     const centered = 1 - Math.max(Math.abs(s.ball.x - cx) / 44, Math.abs(s.ball.y - cy) / 49);
     // Quality with difficulty scaling + random variance (sometimes great, sometimes poor)
-    const variance = (Math.random() - 0.5) * 0.15;
+    const varianceScale = batterMind.skill.execution > 0.9 ? 0.055 : 0.15;
+    const variance = (Math.random() - 0.5) * varianceScale;
     const quality = Math.max(0.18, Math.min(1, centered * (0.6 + mult * 0.4) * (0.7 + utility * 0.06) + variance));
     const hitPower = quality * (0.5 + power * 0.1);
     s.swingPower = hitPower;
