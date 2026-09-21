@@ -195,7 +195,7 @@ function activatePower(fighter, opponent) {
     case 'shield': {
       // noAttackImmune (Silver): no invincibility — just damage + knockback reduction for the full duration.
       // Other shields: full attack immunity, capped at 5s.
-      const sDur = effect.noAttackImmune ? Math.min(effect.duration, 10) : Math.min(effect.duration, 5);
+      const sDur = effect.noAttackImmune ? Math.min(effect.duration, 5) : Math.min(effect.duration, 5);
       fighter.powerActive = 'shield'; fighter.powerTimer = sDur * 60; fighter.shieldAmount = effect.damageReduction || 0.5;
       fighter.knockbackReduction = effect.knockbackReduction || 0;
       if (!effect.noAttackImmune) fighter.invincible = Math.max(fighter.invincible, sDur * 60);

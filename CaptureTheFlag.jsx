@@ -13,7 +13,7 @@ import GameIcon from "./GameIcon.jsx";
 import PauseMenu from "./PauseMenu.jsx";
 
 const VIEW_W = 1280, VIEW_H = 720;
-const WORLD_W = 2800, WORLD_H = 840;
+const WORLD_W = 5600, WORLD_H = 840;
 
 // All characters share the same HP in CTF — no HP stat differences.
 const CTF_HP = 300;
@@ -67,8 +67,8 @@ const TEAM_COMBOS = [
   { id: 'pc_cc', label: 'P + CPU  vs  CPU + CPU', desc: 'You + a CPU teammate vs two CPUs' },
 ];
 
-const TEAM_A_BASE = { x: 205, y: 560 };
-const TEAM_B_BASE = { x: 2595, y: 560 };
+const TEAM_A_BASE = { x: 410, y: 560 };
+const TEAM_B_BASE = { x: 5190, y: 560 };
 const TEAM_COLORS = { A: '#3577E8', B: '#E04646' };
 
 const ALL_CHARS_POOL = ALL_CHARS;
@@ -125,7 +125,16 @@ export default function CaptureTheFlag({
     const canvas = canvasRef.current; if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    const platforms = ARENA_PLATFORMS.map(p => ({ ...p }));
+    // CTF is intentionally twice as wide as the original arena. Keep the full-width
+    // floor and stretch the horizontal platform network, then add a low navigation
+    // lane so every side remains reachable without requiring impossible jumps.
+    const platforms = [
+      ...ARENA_PLATFORMS.filter(p => !p.isFloor).map(p => ({ ...p, x: p.x * 2, w: p.w * 2 })),
+      { x: 0, y: 800, w: WORLD_W, h: 40, isFloor: true },
+      ...Array.from({ length: 28 }, (_, i) => ({
+        x: 100 + i * 200, y: 680 + (i % 2) * 8, w: 120, h: 14, navigation: true
+      })),
+    ];
     const mkFighter = (slot, team, charId, elementId, spawnX, spawnY) => {
       const base = resolveChar(charId);
       const sc = safeChar(base);
@@ -290,8 +299,14 @@ export default function CaptureTheFlag({
         const dx = (target.x || 0) - f.x;
         const dy = (target.y || 0) - f.y;
         if (!shouldFight && !mustFight && !fightEnemyCarrier) {
-          if (Math.abs(dx) > 30) { if (dx < 0) { aiInput.left = true; aiInput.right = false; } else { aiInput.right = true; aiInput.left = false; } }
-          if (dy < -40 && f.grounded) aiInput.jump = true;
+          // Platform navigation is authoritative. Only fall back to direct horizontal
+          // steering when the navigation solver has no directional recommendation.
+          // This prevents CTF bots from walking off platforms just because the flag is
+          // horizontally farther away.
+          if (!aiInput.left && !aiInput.right && Math.abs(dx) > 30) {
+            if (dx < 0) aiInput.left = true; else aiInput.right = true;
+          }
+          if (dy < -40 && f.grounded && !aiInput.jump) aiInput.jump = true;
         }
         if (f._stuckTimer > 25 && f.grounded && frame - f._lastStuckJump > 20) { aiInput.jump = true; f._stuckTimer = 0; f._lastStuckJump = frame; }
         if (f._stuckTimer > 40 && !f.grounded) { aiInput.left = !aiInput.left; aiInput.right = !aiInput.right; f._stuckTimer = 0; }

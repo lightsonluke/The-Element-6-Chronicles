@@ -2,14 +2,14 @@ import db from './cloudCommunity.js';
 
 import React, { useState, useRef, useEffect } from 'react';
 
-import { MATERIALS, drawMaterialOverlay, drawMaterialStroke } from './materials.js';
+import { MATERIALS, drawMaterialOverlay } from './materials.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import { STAGE_BACKDROPS } from './stageBackdrops.js';
 import { drawStageBackground } from './stageBackgrounds.js';
 import WorldStages from './WorldStages.jsx';
 import StagePreview from './StagePreview.jsx';
-import { directionVector, makeMotionStep, normalizeMotion } from './StageMotionRuntime.js';
+import { directionVector, makeMotionStep, normalizeMotion, sampleMotion } from './StageMotionRuntime.js';
 import GameIcon from "./GameIcon.jsx";
 import { HAZARD_TYPES, OBJECT_TYPES, makeHazard, makeObject } from './stageHazards.js';
 
@@ -47,6 +47,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   const [material, setMaterial] = useState('normal');
   const [freehandDiameter, setFreehandDiameter] = useState(36);
   const [freehandStrokes, setFreehandStrokes] = useState([]);
+  const [selectedFreehandIdx, setSelectedFreehandIdx] = useState(null);
   const [drag, setDrag] = useState(null);
   const [mousePos, setMousePos] = useState(null);
   const [stageName, setStageName] = useState('');
@@ -130,7 +131,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       const k=e.key.toLowerCase();
       if(k==='c'){e.preventDefault();copySelection();}
       if(k==='v'){e.preventDefault();pasteSelection();}
-      if(k==='a' && mode==='select'){e.preventDefault();setSelectedEntities([...platforms.map((_,i)=>({kind:'platform',index:i})),...hazards.map((_,i)=>({kind:'hazard',index:i})),...objects.map((_,i)=>({kind:'object',index:i}))]);}
+      if(k==='a' && mode==='select'){e.preventDefault();setSelectedEntities([...platforms.map((_,i)=>({kind:'platform',index:i})),...hazards.map((_,i)=>({kind:'hazard',index:i})),...objects.map((_,i)=>({kind:'object',index:i})),...freehandStrokes.map((_,i)=>({kind:'freehand',index:i}))]);}
     };
     window.addEventListener('keydown',key); return()=>window.removeEventListener('keydown',key);
   }, [tab,mode,platforms,hazards,objects,selectedEntities,clipboardEntities]);
@@ -173,12 +174,48 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       // Freehand material strokes. These are rendered as continuous round-ended
       // strokes in the editor; SAVE STAGE also converts them into collision
       // segments so every existing match consumer can use them.
-      freehandStrokes.forEach((stroke) => drawMaterialStroke(ctx, stroke, f));
-      // Preview the stroke that is currently being drawn so the material is
-      // visible continuously instead of appearing only on mouse-up.
-      if (drag?.freehand && drag.points?.length) {
-        drawMaterialStroke(ctx, { material, diameter: freehandDiameter, points: drag.points }, f);
-      }
+      freehandStrokes.forEach((stroke, strokeIdx) => {
+        if (!stroke?.points?.length) return;
+        const mat = MATERIALS.find(m => m.id === (stroke.material || 'normal')) || MATERIALS[0];
+        let ox = 0, oy = 0;
+        if (stroke.motion) {
+          const sampled = sampleMotion(stroke.motion, f * 16.6667, 0, {});
+          ox = sampled.x || 0; oy = sampled.y || 0;
+        }
+        ctx.save();
+        ctx.strokeStyle = mat.color;
+        ctx.lineWidth = Number(stroke.diameter || freehandDiameter || 36);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalAlpha = 0.92;
+        ctx.beginPath();
+        stroke.points.forEach((pt, idx) => idx ? ctx.lineTo(pt.x + ox, pt.y + oy) : ctx.moveTo(pt.x + ox, pt.y + oy));
+        if (stroke.points.length === 1) ctx.lineTo(stroke.points[0].x + ox + 0.01, stroke.points[0].y + oy + 0.01);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+        ctx.beginPath();
+        stroke.points.forEach((pt, idx) => idx ? ctx.lineTo(pt.x + ox, pt.y + oy) : ctx.moveTo(pt.x + ox, pt.y + oy));
+        ctx.stroke(); ctx.setLineDash([]);
+        if (selectedFreehandIdx === strokeIdx || mode === 'remove') {
+          ctx.strokeStyle = selectedFreehandIdx === strokeIdx ? '#FFD700' : '#FF4444';
+          ctx.lineWidth = 3; ctx.globalAlpha = 0.9;
+          ctx.beginPath();
+          stroke.points.forEach((pt, idx) => idx ? ctx.lineTo(pt.x + ox, pt.y + oy) : ctx.moveTo(pt.x + ox, pt.y + oy));
+          ctx.stroke();
+        }
+        if (stroke.motion && mode === 'motion') {
+          const d = Number(stroke.motion.distance || 0) / 2;
+          ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1.5; ctx.setLineDash([6,4]);
+          const anchor = stroke.points[0];
+          const dir = stroke.motion.direction || stroke.motion.chain?.[0]?.direction || 'right';
+          ctx.beginPath();
+          if (dir === 'up' || dir === 'down') { ctx.moveTo(anchor.x + ox, anchor.y - d); ctx.lineTo(anchor.x + ox, anchor.y + d); }
+          else { ctx.moveTo(anchor.x - d, anchor.y + oy); ctx.lineTo(anchor.x + d, anchor.y + oy); }
+          ctx.stroke(); ctx.setLineDash([]);
+        }
+        ctx.restore();
+      });
       // platforms
       platforms.forEach((p, i) => {
         const mat = MATERIALS.find(m => m.id === (p.material || 'normal')) || MATERIALS[0];
@@ -229,6 +266,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           if (sel.kind === 'platform' && platforms[sel.index]) { const q = platforms[sel.index]; box = { x:q.x, y:q.y, w:q.w, h:q.h }; }
           if (sel.kind === 'hazard' && hazards[sel.index]) { const q = hazards[sel.index]; box = { x:q.x, y:q.y, w:q.w, h:q.h }; }
           if (sel.kind === 'object' && objects[sel.index]) { const q = objects[sel.index]; box = { x:q.x-q.w/2, y:q.y-q.h/2, w:q.w, h:q.h }; }
+          if (sel.kind === 'freehand') box = entityBox('freehand', sel.index);
           if (!box) continue;
           ctx.save(); ctx.strokeStyle='#00E5FF'; ctx.lineWidth=3; ctx.setLineDash([7,4]); ctx.strokeRect(box.x-4,box.y-4,box.w+8,box.h+8); ctx.setLineDash([]);
           ctx.fillStyle='rgba(0,229,255,0.08)'; ctx.fillRect(box.x,box.y,box.w,box.h); ctx.restore();
@@ -360,6 +398,11 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     if (kind === 'platform') { const q=platforms[index]; return q ? {x:q.x,y:q.y,w:q.w,h:q.h} : null; }
     if (kind === 'hazard') { const q=hazards[index]; return q ? {x:q.x,y:q.y,w:q.w,h:q.h} : null; }
     if (kind === 'object') { const q=objects[index]; return q ? {x:q.x-q.w/2,y:q.y-q.h/2,w:q.w,h:q.h} : null; }
+    if (kind === 'freehand') {
+      const q=freehandStrokes[index]; if (!q?.points?.length) return null;
+      const r=(Number(q.diameter)||36)/2; const xs=q.points.map(p=>p.x), ys=q.points.map(p=>p.y);
+      return {x:Math.min(...xs)-r,y:Math.min(...ys)-r,w:Math.max(...xs)-Math.min(...xs)+r*2,h:Math.max(...ys)-Math.min(...ys)+r*2};
+    }
     return null;
   };
   const boxesIntersect = (a,b) => a && b && a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
@@ -368,11 +411,12 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     platforms.forEach((q,i)=>{if(boxesIntersect(rect,{x:q.x,y:q.y,w:q.w,h:q.h})) out.push({kind:'platform',index:i});});
     hazards.forEach((q,i)=>{if(boxesIntersect(rect,{x:q.x,y:q.y,w:q.w,h:q.h})) out.push({kind:'hazard',index:i});});
     objects.forEach((q,i)=>{if(boxesIntersect(rect,{x:q.x-q.w/2,y:q.y-q.h/2,w:q.w,h:q.h})) out.push({kind:'object',index:i});});
+    freehandStrokes.forEach((q,i)=>{const b=entityBox('freehand',i); if(boxesIntersect(rect,b)) out.push({kind:'freehand',index:i});});
     return out;
   };
   const copySelection = async () => {
     if (!selectedEntities.length) return;
-    const payload = selectedEntities.map(sel => ({ kind:sel.kind, data: JSON.parse(JSON.stringify(sel.kind==='platform'?platforms[sel.index]:sel.kind==='hazard'?hazards[sel.index]:objects[sel.index])) }));
+    const payload = selectedEntities.map(sel => ({ kind:sel.kind, data: JSON.parse(JSON.stringify(sel.kind==='platform'?platforms[sel.index]:sel.kind==='hazard'?hazards[sel.index]:sel.kind==='object'?objects[sel.index]:freehandStrokes[sel.index])) }));
     setClipboardEntities(payload);
     try { await navigator.clipboard?.writeText(JSON.stringify(payload)); } catch {}
   };
@@ -439,6 +483,8 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       // remove object at point (circle hit test)
       const objIdx = objects.findIndex(o => { const r = 20; return Math.hypot(x - o.x, y - o.y) < r + 6; });
       if (objIdx >= 0) { setObjects(objects.filter((_, idx) => idx !== objIdx)); return; }
+      const freeIdx = freehandStrokes.findIndex(st => pointNearFreehand(x, y, st));
+      if (freeIdx >= 0) { setFreehandStrokes(freehandStrokes.filter((_, idx) => idx !== freeIdx)); if (selectedFreehandIdx === freeIdx) setSelectedFreehandIdx(null); return; }
       return;
     }
     if (mode === 'hazard') {
@@ -506,6 +552,20 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       return;
     }
     if (mode === 'motion') {
+      const freeIdx = freehandStrokes.findIndex(st => pointNearFreehand(x, y, st));
+      if (freeIdx >= 0) {
+        setSelectedFreehandIdx(freeIdx); setSelectedMotionId(null); setSelectedHazardIdx(null); setMotionTarget({ kind: 'freehand', index: freeIdx });
+        const existing = normalizeMotion(freehandStrokes[freeIdx].motion);
+        if (existing) {
+          setMotionPattern(existing.mode === 'pingpong' ? 'pingpong' : 'chain');
+          setMotionDirection(existing.direction || existing.chain?.[0]?.direction || 'right');
+          setMotionDistance(existing.distance || existing.chain?.[0]?.distance || 160);
+          setMotionSpeed(existing.speed || existing.chain?.[0]?.speed || 100);
+          setMotionLoop(!!existing.loop);
+          setMotionChain(existing.chain?.length ? existing.chain.slice(0,10) : [makeMotionStep(existing.direction || 'right', existing.distance || 160, existing.speed || 100)]);
+        }
+        return;
+      }
       const i = findPlatformAt(x, y);
       if (i >= 0) {
         setSelectedMotionId(i); setSelectedHazardIdx(null); setMotionTarget({ kind: 'platform', index: i });
@@ -535,6 +595,13 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         return;
       }
       setSelectedMotionId(null); setSelectedHazardIdx(null); setMotionTarget(null);
+      return;
+    }
+    // ADD mode: freehand strokes behave like real editor objects and can be dragged.
+    const freeIdx = freehandStrokes.findIndex(st => pointNearFreehand(x, y, st));
+    if (freeIdx >= 0) {
+      setSelectedFreehandIdx(freeIdx);
+      setDrag({ x, y, freehandIdx: freeIdx, lastX: x, lastY: y });
       return;
     }
     // ADD mode: if clicking on an existing platform, drag it instead of drawing a new one
@@ -579,6 +646,11 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     }
     if (!drag) return;
     const snap = (v) => gridLock ? Math.round(v / 40) * 40 : Math.round(v);
+    if (drag.freehandIdx >= 0) {
+      const dx = mp.x - (drag.lastX ?? mp.x), dy = mp.y - (drag.lastY ?? mp.y);
+      if (dx || dy) { setFreehandStrokes(prev => prev.map((q,i)=>i===drag.freehandIdx?{...q,points:q.points.map(pt=>({x:pt.x+dx,y:pt.y+dy}))}:q)); drag.lastX=mp.x; drag.lastY=mp.y; }
+      return;
+    }
     if (drag.group) {
       const dx=mp.x-(drag.lastX??mp.x), dy=mp.y-(drag.lastY??mp.y);
       const snapDelta=(v)=>gridLock ? Math.round(v/40)*40 : v;
@@ -587,6 +659,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         setPlatforms(prev=>prev.map((q,i)=>drag.selected.some(z=>z.kind==='platform'&&z.index===i)?{...q,x:q.x+sx,y:q.y+sy}:q));
         setHazards(prev=>prev.map((q,i)=>drag.selected.some(z=>z.kind==='hazard'&&z.index===i)?{...q,x:q.x+sx,y:q.y+sy,move:q.move?{...q.move,startX:(q.move.startX??q.x)+sx,startY:(q.move.startY??q.y)+sy}:q.move}:q));
         setObjects(prev=>prev.map((q,i)=>drag.selected.some(z=>z.kind==='object'&&z.index===i)?{...q,x:q.x+sx,y:q.y+sy,_originX:(q._originX??q.x)+sx,_originY:(q._originY??q.y)+sy}:q));
+        setFreehandStrokes(prev=>prev.map((q,i)=>drag.selected.some(z=>z.kind==='freehand'&&z.index===i)?{...q,points:q.points.map(pt=>({x:pt.x+sx,y:pt.y+sy}))}:q));
         drag.lastX=mp.x; drag.lastY=mp.y;
       }
       return;
@@ -627,6 +700,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       setSelectionDrag(null);setMousePos(null);return;
     }
     if (!drag) return;
+    if (drag.freehandIdx >= 0) { setDrag(null); setPerimeterDrag(null); setMousePos(null); return; }
     if (drag.platformIdx < 0) {
       const { x, y } = pos(e);
       const px = Math.min(drag.x, x), py = Math.min(drag.y, y);
@@ -683,19 +757,10 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
 
     const sx = w / 1280, sy = h / 720;
     platforms.forEach(p => {
-      if (p?._freehandSegment) return;
       const mat = MATERIALS.find(m => m.id === (p.material || 'normal')) || MATERIALS[0];
       ctx.fillStyle = mat.color;
       ctx.fillRect(p.x * sx, p.y * sy, p.w * sx, Math.max(2, p.h * sy));
       drawMaterialOverlay(ctx, { ...p, x: p.x * sx, y: p.y * sy, w: p.w * sx, h: Math.max(2, p.h * sy) }, 0);
-    });
-    (Array.isArray(safeStage.freehandStrokes) ? safeStage.freehandStrokes : []).forEach(stroke => {
-      const scaled = {
-        ...stroke,
-        points: (stroke.points || []).map(pt => ({ x: pt.x * sx, y: pt.y * sy })),
-        diameter: Math.max(2, (Number(stroke.diameter) || 36) * Math.min(sx, sy)),
-      };
-      drawMaterialStroke(ctx, scaled, 0);
     });
     // hazards + objects in thumbnail
     (Array.isArray(safeStage.hazards) ? safeStage.hazards : []).forEach(hz => {
@@ -718,8 +783,9 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     if (!motionTarget) return;
     if (motionTarget.kind === 'platform') setPlatforms(prev => prev.map((p,i) => i === motionTarget.index ? { ...p, move: motion, motion } : p));
     if (motionTarget.kind === 'hazard') setHazards(prev => prev.map((h,i) => i === motionTarget.index ? { ...h, move: motion, motion } : h));
+    if (motionTarget.kind === 'freehand') setFreehandStrokes(prev => prev.map((st,i) => i === motionTarget.index ? { ...st, motion } : st));
   };
-  const stagePreviewData = { platforms, freehandStrokes, hazards, objects, backdrop, killPerimeter: perimeter, stageCamera: { ...stageCamera, motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null } };
+  const stagePreviewData = { platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)], freehandStrokes, hazards, objects, backdrop, killPerimeter: perimeter, stageCamera: { ...stageCamera, motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null } };
 
   return (
     <div className="w-full max-w-5xl flex flex-col gap-3">
@@ -950,7 +1016,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
               <span className="text-[10px] font-heading text-muted-foreground">DIST</span><input type="range" min="0" max="1500" step="10" value={motionDistance} onChange={e=>setMotionDistance(Number(e.target.value))} className="w-16"/><span className="text-[9px]">{motionDistance}</span>
               {motionPattern === 'chain' && <><span className="text-[10px] font-heading text-muted-foreground">LOOP</span><button onClick={()=>setMotionLoop(v=>!v)} className={`px-2 py-1 rounded text-[10px] border-2 ${motionLoop?'border-accent bg-accent/20':'border-border'}`}>{motionLoop?'ON ↻':'OFF'}</button><button onClick={()=>setMotionChain(c=>c.length>=10?c:[...c,makeMotionStep(motionDirection,motionDistance,motionSpeed*100)])} className="px-2 py-1 rounded text-[10px] bg-secondary">+ STEP</button><span className="text-[9px]">{motionChain.length}/10</span><button onClick={()=>setMotionChain(c=>c.length>1?c.slice(0,-1):c)} className="px-2 py-1 rounded text-[10px] bg-secondary">− STEP</button></>}
               <button onClick={()=>applyMotionToTarget(buildMotion(motionPattern,motionDirection,motionDistance,motionSpeed*100,motionLoop,motionChain))} disabled={!motionTarget} className="px-2 py-1 rounded text-[10px] bg-primary text-primary-foreground disabled:opacity-40">APPLY</button>
-              <button onClick={()=>{if(motionTarget?.kind==='platform')setPlatforms(p=>p.map((q,i)=>i===motionTarget.index?{...q,move:null,motion:null}:q)); if(motionTarget?.kind==='hazard')setHazards(h=>h.map((q,i)=>i===motionTarget.index?{...q,move:null,motion:null}:q));}} disabled={!motionTarget} className="px-2 py-1 rounded text-[10px] bg-destructive text-destructive-foreground disabled:opacity-40">CLEAR</button>
+              <button onClick={()=>{if(motionTarget?.kind==='platform')setPlatforms(p=>p.map((q,i)=>i===motionTarget.index?{...q,move:null,motion:null}:q)); if(motionTarget?.kind==='hazard')setHazards(h=>h.map((q,i)=>i===motionTarget.index?{...q,move:null,motion:null}:q)); if(motionTarget?.kind==='freehand')setFreehandStrokes(st=>st.map((q,i)=>i===motionTarget.index?{...q,move:null,motion:null}:q));}} disabled={!motionTarget} className="px-2 py-1 rounded text-[10px] bg-destructive text-destructive-foreground disabled:opacity-40">CLEAR</button>
               {motionTarget?.kind === 'platform' && <button onClick={()=>setPlatforms(p=>p.map((q,i)=>i===motionTarget.index?{...q,destroyable:!q.destroyable}:q))} className={`px-2 py-1 rounded text-[10px] border-2 ${platforms[motionTarget.index]?.destroyable ? 'border-accent bg-accent/20' : 'border-border'}`}>{platforms[motionTarget.index]?.destroyable ? 'DESTROY ON 💥' : 'DESTROY OFF'}</button>}
               <span className="text-[9px] text-muted-foreground">Chain steps are executed in order. Loop continues from the current endpoint instead of snapping back.</span>
             </div>
@@ -1082,7 +1148,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       <div className="bg-card border border-border rounded-xl p-3 text-[10px] text-muted-foreground font-body">
         <p className="font-heading text-accent text-xs mb-1">HOW TO USE</p>
         <p>• <b>ADD mode:</b> Click and drag on the canvas to draw a platform. A blue dotted line shows where the block will be placed — release to confirm.</p>
-        <p>• <b>FREEHAND mode:</b> Select a material, choose the diameter, then draw directly on the canvas. Strokes are saved and converted into many collision segments in the actual match, so complex shapes work with the existing stage physics.</p>
+        <p>• <b>FREEHAND mode:</b> Select a material, choose the diameter, then draw directly on the canvas. Freehand strokes are full editor objects: use ADD/drag to move them, REMOVE to delete them, and MOTION to animate them. They are converted into solid collision segments for fighters and stage items in matches.</p>
         <p>• <b>Right-click:</b> Right-click anywhere on the canvas to instantly place a default-sized block (160×20) using the currently selected material.</p>
         <p>• <b>Grid toggle:</b> Turn the grid on/off for easier alignment.</p>
         <p>• <b>Grid Lock:</b> When ON, platforms snap to 40px grid lines for perfect symmetry.</p>
@@ -1115,6 +1181,21 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   );
 }
 
+function pointNearFreehand(x, y, stroke) {
+  if (!stroke?.points?.length) return false;
+  const r = Math.max(6, (Number(stroke.diameter) || 36) / 2 + 8);
+  for (let i = 0; i < stroke.points.length; i++) {
+    const a = stroke.points[i];
+    if (Math.hypot(x - a.x, y - a.y) <= r) return true;
+    if (i > 0) {
+      const b = stroke.points[i - 1]; const vx=b.x-a.x, vy=b.y-a.y;
+      const len2=vx*vx+vy*vy; const t=len2?Math.max(0,Math.min(1,((x-a.x)*vx+(y-a.y)*vy)/len2)):0;
+      const px=a.x+t*vx, py=a.y+t*vy; if (Math.hypot(x-px,y-py)<=r) return true;
+    }
+  }
+  return false;
+}
+
 function expandFreehandToPlatforms(strokes = []) {
   const out = [];
   for (const stroke of Array.isArray(strokes) ? strokes : []) {
@@ -1123,7 +1204,7 @@ function expandFreehandToPlatforms(strokes = []) {
     const r = d / 2;
     const mat = stroke?.material || 'normal';
     if (!pts.length) continue;
-    const emit = (x, y) => out.push({ x: x - r, y: y - r, w: d, h: d, material: mat, _freehandSegment: true, _freehandStroke: true });
+    const emit = (x, y) => out.push({ x: x - r, y: y - r, w: d, h: d, material: mat, _freehandSegment: true, _freehandStroke: true, collision: true, itemCollision: true, ...(stroke.motion ? { move: { ...stroke.motion }, motion: { ...stroke.motion } } : {}) });
     if (pts.length === 1) { emit(pts[0].x, pts[0].y); continue; }
     let last = null;
     for (let i = 1; i < pts.length; i++) {

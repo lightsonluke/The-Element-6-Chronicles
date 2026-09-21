@@ -1751,13 +1751,13 @@ export default function Game() {
 
   const handleSaveCustomStage = (stageData) => {
     const platforms = stageData.platforms || stageData;
+    const freehandStrokes = Array.isArray(stageData.freehandStrokes) ? stageData.freehandStrokes : [];
     const name = stageData.name || 'Custom Stage';
     const emoji = stageData.emoji || 'palette';
     const spawnPoints = stageData.spawnPoints || null;
     const backdrop = stageData.backdrop || null;
     const hazards = stageData.hazards || null;
     const objects = stageData.objects || null;
-    const freehandStrokes = Array.isArray(stageData.freehandStrokes) ? stageData.freehandStrokes : [];
     const killPerimeter = stageData.killPerimeter || null;
     const stageCamera = stageData.stageCamera || null;
     const cameraZoom = stageData.cameraZoom || stageCamera?.zoom || 1;
