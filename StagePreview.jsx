@@ -44,25 +44,48 @@ function drawScene(ctx, stage, now, playing) {
     try { drawMaterialOverlay(ctx, { ...p, x: pos.x, y: pos.y }, 0); } catch {}
     if (p.destroyable) { ctx.strokeStyle = '#ff8844'; ctx.strokeRect(pos.x, pos.y, p.w, p.h); }
   });
-  (data.freehandStrokes || []).forEach(stroke => {
-    try { drawMaterialStroke(ctx, stroke, Math.floor(now / 16)); } catch {}
+  (data.freehandStrokes || []).forEach((stroke, idx) => {
+    try {
+      let rendered = stroke;
+      if (playing && stroke?.motion && Array.isArray(stroke.points)) {
+        const m = normalizeMotion(stroke.motion);
+        const sampled = m ? sampleMotion(m, now, started, stroke.__previewMotionState || {}) : { x: 0, y: 0, state: {} };
+        stroke.__previewMotionState = sampled.state;
+        rendered = { ...stroke, points: stroke.points.map(pt => ({ x: pt.x + sampled.x, y: pt.y + sampled.y })) };
+      }
+      drawMaterialStroke(ctx, rendered, Math.floor(now / 16));
+    } catch {}
   });
   (data.hazards || []).forEach(h => {
     const pos = drawMove(h, h.x, h.y);
     const def = HAZARD_TYPES.find(t => t.id === h.type) || HAZARD_TYPES[0];
     ctx.globalAlpha = .65; ctx.fillStyle = def.color || '#f44'; ctx.fillRect(pos.x, pos.y, h.w || 50, h.h || 40); ctx.globalAlpha = 1;
   });
-  (data.objects || []).forEach(o => {
+  (data.objects || []).forEach((o, idx) => {
     const def = OBJECT_TYPES.find(t => t.id === o.type) || OBJECT_TYPES[0];
-    ctx.fillStyle = def.color || '#fff'; ctx.beginPath(); ctx.arc(o.x, o.y, (def.size || 24) / 2, 0, Math.PI * 2); ctx.fill();
+    const pos = drawMove(o, o.x, o.y);
+    ctx.fillStyle = def.color || '#fff'; ctx.beginPath(); ctx.arc(pos.x, pos.y, (def.size || 24) / 2, 0, Math.PI * 2); ctx.fill();
+    ctx.save(); ctx.translate(pos.x, pos.y); ctx.rotate((o._previewRot || 0)); ctx.strokeStyle = '#ffffff88'; ctx.strokeRect(-(def.size||24)/2, -(def.size||24)/2, def.size||24, def.size||24); ctx.restore();
   });
 
   const kp = data.killPerimeter;
   if (kp?.enabled !== false) {
+    const pm = kp?.motions || {};
+    const lo = pm.left ? sampleMotion(pm.left, now, started, kp.__l || {}).x : 0;
+    const ro = pm.right ? sampleMotion(pm.right, now, started, kp.__r || {}).x : 0;
+    const to = pm.top ? sampleMotion(pm.top, now, started, kp.__t || {}).y : 0;
+    const bo = pm.bottom ? sampleMotion(pm.bottom, now, started, kp.__b || {}).y : 0;
     ctx.strokeStyle = 'rgba(255,70,70,.7)'; ctx.lineWidth = 3; ctx.setLineDash([10, 8]);
-    ctx.strokeRect(kp?.left ?? -500, kp?.top ?? -600, (kp?.right ?? 1780) - (kp?.left ?? -500), (kp?.bottom ?? 1170) - (kp?.top ?? -600));
+    const left = (kp?.left ?? -500) + lo, right = (kp?.right ?? 1780) + ro;
+    const top = (kp?.top ?? -600) + to, bottom = (kp?.bottom ?? 1170) + bo;
+    ctx.strokeRect(left, top, right - left, bottom - top);
     ctx.setLineDash([]);
   }
+  (data.spawnPoints || []).forEach((sp, i) => {
+    ctx.save(); ctx.globalAlpha = .75; ctx.strokeStyle = sp.color || (i === 0 ? '#f44' : '#48f');
+    ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sp.x - 14, sp.y); ctx.lineTo(sp.x + 14, sp.y); ctx.moveTo(sp.x, sp.y - 14); ctx.lineTo(sp.x, sp.y + 14); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = '10px sans-serif'; ctx.fillText(`P${i+1}`, sp.x + 8, sp.y - 8); ctx.restore();
+  });
   ctx.restore();
 }
 

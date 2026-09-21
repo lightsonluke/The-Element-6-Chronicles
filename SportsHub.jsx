@@ -74,6 +74,7 @@ export default function SportsHub({ initialSport = null, onBack, onPlaySoccer, o
         sfxVolume={sfxVolume} musicVolume={musicVolume}
         settings={settings}
         charLevels={charLevels}
+        equippedEmotes={equippedEmotes}
       />
     );
   }

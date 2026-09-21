@@ -85,7 +85,7 @@ export function buildHazardsFromStage(stageHazards) {
       const axis = h.axis || 'horizontal';
       const speed = h.speed || 2.5;
       const range = h.range || 200;
-      grouped.moving.push({ x: h.x, y: h.y, w: h.w, h: h.h, axis, speed, range, vx: axis === 'horizontal' ? speed : 0, vy: axis === 'vertical' ? speed : 0, dir: 1, type: 'saw', startX: h.x, startY: h.y, damage: 1.5, knockback: 10 });
+      grouped.moving.push({ x: h.x, y: h.y, w: h.w, h: h.h, axis, speed, range, vx: axis === 'horizontal' ? speed : 0, vy: axis === 'vertical' ? speed : 0, dir: 1, type: 'saw', startX: h.x, startY: h.y, damage: 1.5, knockback: 10, ...(h.move ? { move: { ...h.move } } : {}) });
     }
     else if (h.type === 'water') grouped.water.push({ x: h.x, y: h.y, w: h.w, h: h.h, ...(h.move ? { move: { ...h.move } } : {}) });
     else if (h.type === 'portal') portalList.push({ x: h.x, y: h.y, w: h.w, h: h.h });

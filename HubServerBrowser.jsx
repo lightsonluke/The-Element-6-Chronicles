@@ -215,7 +215,7 @@ export default function HubServerBrowser({
     }
   };
 
-  const joinRoom = async room => {
+  const joinRoom = async (room, suppliedPasscode = null) => {
     if (!room?.id) return false;
 
     if (!userId) {
@@ -243,6 +243,15 @@ export default function HubServerBrowser({
       if (current.settings?.mode !== 'hub') {
         setErr('That is not a Community Hub server.');
         return false;
+      }
+
+      if (current.settings?.private) {
+        const expected = String(current.settings?.passcode || '');
+        const pass = suppliedPasscode == null ? window.prompt('Enter the 4-digit private server passcode:') : suppliedPasscode;
+        if (!/^\d{4}$/.test(String(pass || '')) || String(pass) !== expected) {
+          setErr('Incorrect 4-digit private server passcode.');
+          return false;
+        }
       }
 
       const players = Array.isArray(current.players)
@@ -324,6 +333,14 @@ export default function HubServerBrowser({
           .toString(36)
           .slice(2, 7)
           .toUpperCase();
+      let passcode = null;
+      if (isPrivate) {
+        passcode = window.prompt('Create a 4-digit private Community Hub passcode:')?.trim() || '';
+        if (!/^\d{4}$/.test(passcode)) {
+          setErr('Private servers require exactly 4 digits.');
+          return;
+        }
+      }
 
       const player = makePlayer();
 
@@ -337,7 +354,8 @@ export default function HubServerBrowser({
         players: [player],
         settings: {
           mode: 'hub',
-          private: Boolean(isPrivate)
+          private: Boolean(isPrivate),
+          passcode: isPrivate ? passcode : null
         }
       });
 
@@ -777,7 +795,7 @@ export default function HubServerBrowser({
                       </p>
 
                       <p className="text-[9px] text-muted-foreground">
-                        {room.room_code}
+                        {room.room_code}{room.settings?.private ? ' 🔒' : ''}
                         {' • '}
                         {playerCount}/{maxPlayers}
                         {' • '}

@@ -86,6 +86,7 @@ export default function ClansScreen({
   const [applyText, setApplyText] = useState('');
   const [chatText, setChatText] = useState('');
   const [meetingForm, setMeetingForm] = useState({ clanId: '', title: '', notes: '', scheduledAt: '' });
+  const [badgeInput, setBadgeInput] = useState('');
 
   const isLeader = myClan?.myRole === 'leader';
   const isLieutenant = myClan?.myRole === 'lieutenant';
@@ -396,6 +397,29 @@ export default function ClansScreen({
     } catch (e) { setNotice(safeError(e)); }
   }
 
+  async function updateClanBadge() {
+    if (!isLeader || !myClan) return;
+    const icon = badgeInput.trim();
+    if (icon && !/^https?:\/\//i.test(icon) && !icon.startsWith('data:image/')) {
+      setNotice('Badge must be an image URL or data image.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.rpc('element6_update_clan_badge', { p_icon_url: icon || null });
+      if (error) throw error;
+      setMyClan(prev => ({ ...prev, icon_url: data?.icon_url ?? icon || null }));
+      window.__e6ClanBadgeLogo = data?.icon_url ?? icon || '';
+      try { localStorage.setItem('element6_clan_badge_logo', data?.icon_url ?? icon || ''); } catch {}
+      setBadgeInput('');
+      setNotice('Clan badge updated.');
+    } catch (e) {
+      setNotice(safeError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function setMemberRole(userIdToChange, role) {
     if (!canManageMembers) return;
     try {
@@ -636,6 +660,27 @@ export default function ClansScreen({
                 <div className="text-right"><div className="font-heading text-lg">{myClan.xp.toLocaleString()} XP</div><div className="text-xs text-muted-foreground">365-day minimum to Tier 10</div></div>
               </div>
               <div className="mt-3 h-3 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary" style={{width:`${tierProgress(myClan).percent}%`}} /></div>
+              {isLeader && <div className="mt-3 rounded-xl border border-accent/30 bg-secondary/30 p-3">
+                <div className="flex items-center gap-3">
+                  {myClan.icon_url ? <img src={myClan.icon_url} alt="" className="h-12 w-12 rounded-xl object-cover border border-accent/40" /> : <div className="h-12 w-12 rounded-xl border border-dashed border-accent/40 flex items-center justify-center text-xl">🏳️</div>}
+                  <div className="flex-1">
+                    <p className="font-heading text-xs text-accent">CLAN BADGE</p>
+                    <p className="text-[10px] text-muted-foreground">Change it whenever you want. There is no cooldown.</p>
+                    <div className="mt-2 flex gap-2">
+                      <input value={badgeInput} onChange={e=>setBadgeInput(e.target.value)} placeholder="Image URL (leave blank to remove)" className="flex-1 rounded-lg border bg-background px-2 py-1.5 text-xs" />
+                      <input type="file" accept="image/*" className="max-w-[150px] text-[9px]" onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 150000) { setNotice('Badge image must be 150 KB or smaller.'); return; }
+                        const reader = new FileReader();
+                        reader.onload = () => setBadgeInput(String(reader.result || ''));
+                        reader.readAsDataURL(file);
+                      }} />
+                      <button onClick={updateClanBadge} disabled={busy} className="rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground">UPDATE</button>
+                    </div>
+                  </div>
+                </div>
+              </div>}
               <div className="mt-3 rounded-xl bg-secondary/40 p-3 text-sm">
                 <b>CLAN MILESTONE REWARDS</b>
                 <p className="mt-1 text-xs text-muted-foreground">Every member who was in the clan when a milestone was reached receives the milestone reward on their next clan sync.</p>

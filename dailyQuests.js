@@ -54,18 +54,20 @@ export function generateDailyQuests(seed) {
   const used = new Set();
   const picks = [];
 
+  // Exactly three different quests every calendar day: one hard, one medium,
+  // and a third quest selected from the remaining pool. The date seed makes
+  // every client generate the same three quests at local midnight.
   const hard = pick(byCategory('hard'), used);
   if (hard) { used.add(hard.id); picks.push(hard); }
 
   const medium = pick(byCategory('medium'), used);
   if (medium) { used.add(medium.id); picks.push(medium); }
 
-  // 70% medium, 30% easy for the third slot. A second hard is never forced.
-  const flexPool = rng() < 0.3 ? byCategory('easy') : byCategory('medium');
-  const flex = pick(flexPool, used) || pick(byCategory('easy'), used) || pick(byCategory('medium'), used);
+  const remaining = QUEST_POOL.filter(q => !used.has(q.id));
+  const flex = pick(remaining, used);
   if (flex) { used.add(flex.id); picks.push(flex); }
 
-  return picks.map((q, i) => ({
+  return picks.slice(0, 3).map((q, i) => ({
     id: `daily_${q.id}`,
     title: q.title,
     desc: q.desc.replace('{n}', q.targets[0]),

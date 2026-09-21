@@ -770,6 +770,11 @@ export default function PlatformFighter({
     if (activeKillPerimeter) {
       f1._customBlastZone = { ...activeKillPerimeter };
       f2._customBlastZone = { ...activeKillPerimeter };
+      f1._customBlastZoneDisabled = false;
+      f2._customBlastZoneDisabled = false;
+    } else if (_killPerimeterCandidate?.enabled === false) {
+      f1._customBlastZoneDisabled = true;
+      f2._customBlastZoneDisabled = true;
     }
     if (customSpawnPoints && customSpawnPoints[0]) f1.respawnPoint = { x: customSpawnPoints[0].x, y: customSpawnPoints[0].y };
     if (customSpawnPoints && customSpawnPoints[1]) f2.respawnPoint = { x: customSpawnPoints[1].x, y: customSpawnPoints[1].y };
@@ -1405,12 +1410,16 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const _largeMaps = new Set(['grandarena', 'skycitadel', 'colossalcoliseum', 'infiniteexpanse']);
       const _isLarge = _largeMaps.has(mapId);
       const _defaultZone = { left: _isLarge ? -800 : -500, right: _isLarge ? W + 800 : W + 500, top: _isLarge ? -800 : -600, bottom: _isLarge ? H + 600 : H + 450 };
-      const _zone = activeKillPerimeter ? getMovingPerimeter(activeKillPerimeter, (now - g.stageStartTime) / 1000) : _defaultZone;
-      const BLAST_L = _zone.left, BLAST_R = _zone.right, BLAST_T = _zone.top, BLAST_B = _zone.bottom;
-      ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_R, BLAST_T); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_B); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_L, BLAST_B); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(BLAST_R, BLAST_T); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
+      const _zone = activeKillPerimeter
+        ? getMovingPerimeter(activeKillPerimeter, (now - g.stageStartTime) / 1000)
+        : (_killPerimeterCandidate?.enabled === false ? null : _defaultZone);
+      if (_zone) {
+        const BLAST_L = _zone.left, BLAST_R = _zone.right, BLAST_T = _zone.top, BLAST_B = _zone.bottom;
+        ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_R, BLAST_T); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_B); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_L, BLAST_B); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(BLAST_R, BLAST_T); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
+      }
       ctx.setLineDash([]); ctx.shadowBlur = 0; ctx.restore();
       }
 

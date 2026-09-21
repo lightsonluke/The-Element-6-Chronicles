@@ -39,6 +39,15 @@ export function applyMovingPlatforms(platforms, timeMs, fighters) {
 
     p.x = baseX + offX;
     p.y = baseY + offY;
+    if (p._freehandSlope && p._baseX1 === undefined) {
+      p._baseX1 = p.x1; p._baseY1 = p.y1; p._baseX2 = p.x2; p._baseY2 = p.y2;
+    }
+    if (p._freehandSlope) {
+      p.x1 = p._baseX1 + (p.x - p._moveBaseX);
+      p.y1 = p._baseY1 + (p.y - p._moveBaseY);
+      p.x2 = p._baseX2 + (p.x - p._moveBaseX);
+      p.y2 = p._baseY2 + (p.y - p._moveBaseY);
+    }
 
     const dx = p.x - prevX, dy = p.y - prevY;
     if (!fighters || (!dx && !dy)) continue;

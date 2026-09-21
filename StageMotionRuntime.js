@@ -68,10 +68,13 @@ export function sampleMotion(motion, nowMs, startMs, state = {}) {
 
   if (!totalDuration) return { x: 0, y: 0, done: !m.loop, state };
 
+  // A looping chain returns to its own start each cycle. Do not accumulate
+  // totalDistance across cycles: that caused visible teleports/random stops
+  // whenever a chain's net displacement was not exactly zero.
   const completedCycles = m.loop ? Math.floor(t / totalDuration) : 0;
   let remaining = m.loop ? t - completedCycles * totalDuration : Math.min(t, totalDuration);
-  let x = totalDistance.x * completedCycles;
-  let y = totalDistance.y * completedCycles;
+  let x = 0;
+  let y = 0;
   let stepIndex = chain.length - 1;
 
   for (let i = 0; i < chain.length; i++) {

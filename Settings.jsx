@@ -443,6 +443,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
             />
           </div>
 
+          <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Social notifications:</span><Toggle on={local.socialNotifications !== false} onClick={() => apply({ socialNotifications: !local.socialNotifications })} /></div>
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Screen shake:</span><Toggle on={local.screenShake !== false} onClick={() => apply({ screenShake: !local.screenShake })} /></div>
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Damage numbers:</span><Toggle on={local.showDamageNumbers !== false} onClick={() => apply({ showDamageNumbers: !local.showDamageNumbers })} /></div>
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Kill FX animations:</span><Toggle on={local.killFXEnabled !== false} onClick={() => apply({ killFXEnabled: !local.killFXEnabled })} /></div>

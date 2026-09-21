@@ -327,15 +327,30 @@ export function saveClip() {
     const snapshot = await makeSnapshot();
     if (!snapshot) return null;
 
-    const mp4 = await convertToMP4(snapshot.blob);
+    // MP4 conversion is optional. Browser MediaRecorder WebM is the reliable
+    // capture format; a CDN/FFmpeg failure must never turn a valid recording
+    // into "clip save failure".
+    let outputBlob = snapshot.blob;
+    let outputMime = snapshot.blob.type || recorderMime || 'video/webm';
+    let outputExtension = 'webm';
+    try {
+      const mp4 = await convertToMP4(snapshot.blob);
+      if (mp4 && mp4.size >= 1000) {
+        outputBlob = mp4;
+        outputMime = 'video/mp4';
+        outputExtension = 'mp4';
+      }
+    } catch (error) {
+      log('MP4 conversion unavailable; saving native WebM instead', error);
+    }
 
     window.__e6ClipRecorderReady = true;
 
     return {
-      blob: mp4,
+      blob: outputBlob,
       previewBlob: snapshot.blob,
-      mime: 'video/mp4',
-      extension: 'mp4',
+      mime: outputMime,
+      extension: outputExtension,
       duration: snapshot.duration,
       sequence: ++saveSequence
     };

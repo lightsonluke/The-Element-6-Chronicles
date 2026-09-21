@@ -3,7 +3,6 @@ import { ALL_CHARS } from './sports.js';
 import { applyElement, getCharLevelData, getUnlockedElements } from './elements.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, loseStock, updateProjectiles, drawProjectiles } from './fighter.js';
 import { navigateToward, selectTarget } from './botNavigation.js';
-import { strategicCTF } from './botStrategicBrain.js';
 import { drawStickman, drawPlatforms, drawAttackEffect } from './renderer.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
@@ -11,6 +10,8 @@ import { readGamepadInput } from './controllerProfiles.js';
 import { getKeybinds, readPlayerInput, readSinglePlayerInput } from './keybinds.js';
 import ElementSelect from './ElementSelect.jsx';
 import GameIcon from "./GameIcon.jsx";
+import { getEmoteForKey } from './emoteSlots.js';
+import { drawEmote } from './emotes.js';
 import PauseMenu from "./PauseMenu.jsx";
 
 const VIEW_W = 1280, VIEW_H = 720;
@@ -90,7 +91,7 @@ function safeChar(c) {
 export default function CaptureTheFlag({
   onExit, onAward, unlockedIds = [], equippedAccessories = {}, equippedSkins = {},
   customCharsData = {}, sfxVolume = 70, musicVolume = 50, settings = {},
-  charLevels = {},
+  charLevels = {}, equippedEmotes = {},
 }) {
   const canvasRef = useRef(null);
   const gameRef = useRef(null);
@@ -292,17 +293,6 @@ export default function CaptureTheFlag({
         }
       }
 
-      // Strategic CTF layer: persistent carrier/threat memory and score/time planning.
-      {
-        const strategicWorld = {
-          role, objectiveTarget: target, enemyCarrier, teammateCarrier, enemyBase, homeBase: myBase,
-          defendPoint: myFlag, score: { for: myScore, against: enemyScore }, time: matchTime,
-          carrierDanger: enemyCarrier ? Math.max(0, 1 - nearestEnemyDist / 500) : 0,
-          opponents: nearestEnemy ? [nearestEnemy] : [],
-        };
-        aiInput = strategicCTF(f, strategicWorld, f.cpuDifficulty || 'regular', aiInput);
-      }
-
       // ── Anti-stuck tracking ──
       if (Math.abs(f.x - f._lastX) < 4) f._stuckTimer++;
       else { f._stuckTimer = 0; f._lastX = f.x; }
@@ -357,6 +347,15 @@ export default function CaptureTheFlag({
     const kd = e => {
       const k = e.key; const kl = k.toLowerCase();
       keysRef.current[k] = true; keysRef.current[kl] = true;
+      if (/^[0-9]$/.test(k)) {
+        const f = fighters.find(x => x.slot === 'p1');
+        const emote = getEmoteForKey(k, equippedEmotes, 1, 'solo');
+        if (emote && f && f.grounded && !f.emote) {
+          f.emote = { id: emote.id, timer: emote.duration, maxTimer: emote.duration, progress: 0, key: k };
+          sfx.emote?.();
+        }
+        return;
+      }
       if (k === 'Escape' || kl === 'p') { e.preventDefault(); setPaused(p => { const next = !p; if (gameRef.current) gameRef.current.running = !next; return next; }); return; }
       if (!['F5', 'F12'].includes(k)) e.preventDefault();
     };
@@ -399,7 +398,18 @@ export default function CaptureTheFlag({
           }
         }
 
+        if (f.emote && f.emote.timer > 0) {
+          input = { left:false,right:false,jump:false,up:false,down:false,sig:false,power:false,superMove:false,heavy:false };
+        }
         updateFighter(f, input, platforms, WORLD_W, WORLD_H, null);
+        if (f.emote && f.emote.timer > 0) {
+          if (!f.grounded) f.emote = null;
+          else {
+            f.emote.timer--;
+            f.emote.progress = 1 - f.emote.timer / f.emote.maxTimer;
+            if (f.emote.timer <= 0) f.emote = null;
+          }
+        }
         // Enclosed arena — bounce off world walls
         if (f.x < 20) { f.x = 20; f.vx = Math.abs(f.vx) * 0.5; }
         if (f.x > WORLD_W - 20) { f.x = WORLD_W - 20; f.vx = -Math.abs(f.vx) * 0.5; }
@@ -757,7 +767,8 @@ function drawScene(ctx, g, frame, camX, camY, vp) {
     ctx.save(); ctx.globalAlpha = 0.2; ctx.fillStyle = TEAM_COLORS[f.team];
     ctx.beginPath(); ctx.ellipse(f.x, f.y + 3, 28, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     // Draw stickman with character's own color (NOT team color)
-    drawStickman(ctx, f.x, f.y, charColor, f.facing, frame, 1, false, f.state, f.char, f.powerActive);
+    drawStickman(ctx, f.x, f.y, charColor, f.facing, frame, 1, false, f.state, f.char, f.powerActive, false, null, f.emote);
+    if (f.emote) drawEmote(ctx, f.x, f.y, f.emote.id, f.emote.timer, f.emote.maxTimer, frame);
     // Team uniform overlay — colored jersey band on torso
     ctx.fillStyle = TEAM_COLORS[f.team];
     ctx.globalAlpha = 0.85;

@@ -785,7 +785,15 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     if (motionTarget.kind === 'hazard') setHazards(prev => prev.map((h,i) => i === motionTarget.index ? { ...h, move: motion, motion } : h));
     if (motionTarget.kind === 'freehand') setFreehandStrokes(prev => prev.map((st,i) => i === motionTarget.index ? { ...st, motion } : st));
   };
-  const stagePreviewData = { platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)], freehandStrokes, hazards, objects, backdrop, killPerimeter: perimeter, stageCamera: { ...stageCamera, motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null } };
+  const stagePreviewData = {
+    platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)],
+    freehandStrokes, hazards, objects, spawnPoints, backdrop, killPerimeter: perimeter,
+    stageCamera: {
+      ...stageCamera,
+      zoom: Number(stageCamera.zoom || 1),
+      motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null
+    }
+  };
 
   return (
     <div className="w-full max-w-5xl flex flex-col gap-3">
@@ -1200,23 +1208,37 @@ function expandFreehandToPlatforms(strokes = []) {
   const out = [];
   for (const stroke of Array.isArray(strokes) ? strokes : []) {
     const pts = Array.isArray(stroke?.points) ? stroke.points : [];
-    const d = Math.max(4, Number(stroke?.diameter) || 36);
-    const r = d / 2;
+    const radius = Math.max(2, (Number(stroke?.diameter) || 36) / 2);
     const mat = stroke?.material || 'normal';
-    if (!pts.length) continue;
-    const emit = (x, y) => out.push({ x: x - r, y: y - r, w: d, h: d, material: mat, _freehandSegment: true, _freehandStroke: true, collision: true, itemCollision: true, ...(stroke.motion ? { move: { ...stroke.motion }, motion: { ...stroke.motion } } : {}) });
-    if (pts.length === 1) { emit(pts[0].x, pts[0].y); continue; }
-    let last = null;
+    if (pts.length === 1) {
+      const p = pts[0];
+      out.push({
+        x: p.x - radius, y: p.y - radius, w: radius * 2, h: radius * 2,
+        material: mat, _freehandSegment: true, _freehandStroke: true,
+        _freehandPoint: true, collision: true, itemCollision: true,
+        ...(stroke.motion ? { move: { ...stroke.motion }, motion: { ...stroke.motion } } : {})
+      });
+      continue;
+    }
     for (let i = 1; i < pts.length; i++) {
       const a = pts[i - 1], b = pts[i];
-      const dist = Math.hypot(b.x - a.x, b.y - a.y);
-      const step = Math.max(3, d * 0.35);
-      const count = Math.max(1, Math.ceil(dist / step));
-      for (let j = 0; j <= count; j++) {
-        const t = j / count;
-        const x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
-        if (!last || Math.hypot(x - last.x, y - last.y) >= step * 0.45) { emit(x, y); last = { x, y }; }
-      }
+      const dx = b.x - a.x, dy = b.y - a.y;
+      if (Math.hypot(dx, dy) < 1) continue;
+      out.push({
+        x: Math.min(a.x, b.x) - radius,
+        y: Math.min(a.y, b.y) - radius,
+        w: Math.abs(dx) + radius * 2,
+        h: Math.abs(dy) + radius * 2,
+        x1: a.x, y1: a.y, x2: b.x, y2: b.y,
+        radius,
+        material: mat,
+        _freehandSegment: true,
+        _freehandStroke: true,
+        _freehandSlope: true,
+        collision: true,
+        itemCollision: true,
+        ...(stroke.motion ? { move: { ...stroke.motion }, motion: { ...stroke.motion } } : {})
+      });
     }
   }
   return out;

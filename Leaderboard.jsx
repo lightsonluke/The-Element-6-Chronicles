@@ -1,22 +1,15 @@
-import db from './localBackend';
-
-import React, { useState, useEffect } from 'react';
-
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import GameIcon from "./GameIcon.jsx";
-import HonoredBotTracking from './HonoredBotTracking.jsx';
+import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from './supabaseClient.js';
 import { loadSharedLeaderboard } from './sharedLeaderboard.js';
+import HonoredBotTracking from './HonoredBotTracking.jsx';
+import GameIcon from './GameIcon.jsx';
 
 const FILTERS = [
-  { key: 'overall', label: 'OVERALL' },
-  { key: 'soccer', label: 'SOCCER' },
-  { key: 'combat', label: 'COMBAT' },
-  { key: 'ranked', label: 'RANKED' },
-  { key: 'honored', label: '👑 HONORED' },
+  ['overall','OVERALL'], ['soccer','SOCCER'], ['combat','COMBAT'], ['ranked','RANKED'],
+  ['parkour','PARKOUR'], ['rockclimb','ROCK CLIMBING'], ['zipline','ZIPLINING'], ['honored','👑 HONORED BOT']
 ];
 
-function getRank(elo) {
+function rankName(elo) {
   if (elo >= 2400) return 'Legend';
   if (elo >= 2100) return 'Grandmaster';
   if (elo >= 1800) return 'Master';
@@ -29,143 +22,84 @@ function getRank(elo) {
 }
 
 export default function Leaderboard({ onBack }) {
-  const [entries, setEntries] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('overall');
+  const [entries, setEntries] = useState([]);
+  const [world, setWorld] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [myId, setMyId] = useState(null);
 
   useEffect(() => {
-    const load = async () => {
+    let alive = true;
+    (async () => {
+      setLoading(true);
       try {
-        const { data: auth } = await supabase.auth.getUser();
-        if (auth.user) setMyId(auth.user.id);
-        const data = await loadSharedLeaderboard();
-        setEntries(data);
+        const { data } = await supabase.auth.getUser();
+        if (alive) setMyId(data?.user?.id || null);
+        const shared = await loadSharedLeaderboard().catch(() => []);
+        const { data: worldRows } = await supabase.from('element6_world_scores')
+          .select('user_id,username,mode,score,score_meta,updated_at')
+          .in('mode', ['parkour','rockclimb','zipline'])
+          .limit(600);
+        if (alive) {
+          setEntries(shared || []);
+          setWorld(worldRows || []);
+        }
       } catch {}
-      setLoading(false);
-    };
-    load();
+      if (alive) setLoading(false);
+    })();
+    return () => { alive = false; };
   }, []);
 
-  const getXp = (e) => {
-    if (filter === 'soccer') return e.soccer_xp || 0;
-    if (filter === 'combat') return e.combat_xp || 0;
-    if (filter === 'ranked') return e.wins || 0; // sort ranked by wins
-    return e.total_xp || 0;
-  };
+  const rows = useMemo(() => {
+    if (filter === 'parkour' || filter === 'rockclimb' || filter === 'zipline') {
+      return world.filter(r => r.mode === filter)
+        .sort((a,b) => filter === 'rockclimb' ? Number(a.score)-Number(b.score) : Number(b.score)-Number(a.score))
+        .map((r,i) => ({ ...r, rank: i+1, value: r.score }));
+    }
+    return [...entries].sort((a,b) => {
+      if (filter === 'ranked') return Number(b.ranked_elo ?? b.ranked_rating ?? 1000) - Number(a.ranked_elo ?? a.ranked_rating ?? 1000);
+      if (filter === 'soccer') return Number(b.soccer_xp || 0) - Number(a.soccer_xp || 0);
+      if (filter === 'combat') return Number(b.combat_xp || 0) - Number(a.combat_xp || 0);
+      return Number(b.total_xp || 0) - Number(a.total_xp || 0);
+    }).map((r,i) => ({ ...r, rank: i+1, value:
+      filter === 'ranked' ? Number(r.ranked_elo ?? r.ranked_rating ?? 1000) :
+      filter === 'soccer' ? Number(r.soccer_xp || 0) :
+      filter === 'combat' ? Number(r.combat_xp || 0) : Number(r.total_xp || 0)
+    }));
+  }, [filter, entries, world]);
 
-  const getRankedElo = (e) => e.ranked_elo || 1000;
+  if (filter === 'honored') return <HonoredBotTracking onBack={onBack} />;
 
-  const sorted = [...entries].sort((a, b) => {
-    if (filter === 'ranked') return getRankedElo(b) - getRankedElo(a);
-    return getXp(b) - getXp(a);
-  });
-  const top10 = sorted.slice(0, 10);
-
-  const chartData = top10.map(e => ({
-    name: (e.user_name || 'Player').slice(0, 10),
-    Value: filter === 'ranked' ? getRankedElo(e) : getXp(e),
-  }));
-
-  const myRank = myId ? sorted.findIndex(e => e.user_id === myId) : -1;
-
-  if (filter === 'honored') {
-    return <HonoredBotTracking onBack={onBack} />;
-  }
+  const mine = rows.findIndex(r => r.user_id === myId);
+  const label = filter === 'rockclimb' ? 'TIME (LOWER IS BETTER)' :
+    filter === 'ranked' ? 'ELO' : filter === 'parkour' || filter === 'zipline' ? 'DISTANCE' : 'XP';
 
   return (
-    <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
+    <div className="flex flex-col items-center gap-4 w-full max-w-4xl">
       <div className="flex justify-between items-center w-full">
         <h2 className="text-2xl font-heading text-accent tracking-wider">LEADERBOARD</h2>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary rounded-lg font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
       </div>
-
-      <div className="flex gap-2 flex-wrap">
-        {FILTERS.map(f => (
-          <button key={f.key} onClick={() => setFilter(f.key)}
-            className={`px-5 py-2 rounded-lg font-heading text-sm ${filter === f.key ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>
-            {f.label}
-          </button>
-        ))}
+      <div className="flex gap-2 flex-wrap justify-center">
+        {FILTERS.map(([key,labelText]) => <button key={key} onClick={()=>setFilter(key)}
+          className={`px-3 py-2 rounded-lg font-heading text-[10px] ${filter===key?'bg-accent text-accent-foreground':'bg-secondary text-secondary-foreground'}`}>{labelText}</button>)}
       </div>
-
-      {loading ? (
-        <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
-      ) : sorted.length === 0 ? (
-        <p className="text-sm text-muted-foreground font-body py-8">No entries yet. Play some matches!</p>
-      ) : (
-        <>
-          <div className="w-full bg-card border border-border rounded-xl p-3">
-            <p className="text-xs font-heading text-muted-foreground mb-2">
-              TOP 10 — {filter === 'ranked' ? 'RANKED ELO' : `${filter.toUpperCase()} XP`}
-            </p>
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={chartData}>
-                <XAxis dataKey="name" tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} angle={-30} textAnchor="end" height={50} />
-                <YAxis tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} />
-                <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }} />
-                <Bar dataKey="Value" radius={[4, 4, 0, 0]}>
-                  {chartData.map((_, i) => (
-                    <Cell key={i} fill={i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : 'hsl(var(--primary))'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {myRank >= 0 && (
-            <div className="w-full bg-primary/15 border-2 border-primary rounded-xl p-3 flex items-center gap-3">
-              <span className="font-heading text-2xl text-primary">#{myRank + 1}</span>
-              <div className="flex-1">
-                <span className="font-heading text-sm">YOUR RANK</span>
-                <div className="flex gap-4 text-xs text-muted-foreground flex-wrap">
-                  {filter === 'ranked' ? (
-                    <>
-                      <span>ELO: {getRankedElo(sorted[myRank])}</span>
-                      <span>Rank: {getRank(getRankedElo(sorted[myRank]))}</span>
-                    </>
-                  ) : (
-                    <span>XP: {getXp(sorted[myRank])}</span>
-                  )}
-                  <span>W: {sorted[myRank].wins || 0}</span>
-                  <span>L: {sorted[myRank].losses || 0}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="w-full space-y-1 max-h-[400px] overflow-y-auto">
-            {sorted.map((e, i) => (
-              <div key={e.id || i} className={`flex items-center gap-3 p-2 rounded-lg border ${e.user_id === myId ? 'border-primary bg-primary/10' : 'border-border bg-card/50'}`}>
-                <span className="font-heading text-lg w-8 text-center" style={{ color: i < 3 ? ['#FFD700', '#C0C0C0', '#CD7F32'][i] : 'hsl(var(--muted-foreground))' }}>#{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <span className="font-heading text-sm truncate block">{e.user_name || 'Player'}</span>
-                  <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
-                    {filter === 'ranked' ? (
-                      <>
-                        <span>ELO: {getRankedElo(e)}</span>
-                        <span className="text-accent">{getRank(getRankedElo(e))}</span>
-                        <span>W: {e.wins || 0}</span>
-                        <span>L: {e.losses || 0}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>XP: {getXp(e)}</span>
-                        <span>W: {e.wins || 0}</span>
-                        <span>L: {e.losses || 0}</span>
-                        {filter === 'soccer' && <span><GameIcon emoji="⚽" size={14} /> {e.soccer_goals || 0}</span>}
-                        {filter === 'soccer' && <span><GameIcon emoji="🧤" size={14} /> {e.soccer_saves || 0}</span>}
-                        {filter === 'combat' && <span><GameIcon emoji="⚔" size={14} /> {e.combat_kills || 0}</span>}
-                        {filter === 'combat' && <span><GameIcon emoji="💀" size={14} /> {e.combat_deaths || 0}</span>}
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+      {loading ? <div className="py-12 text-muted-foreground">Loading rankings…</div> :
+        <div className="w-full space-y-1 max-h-[65vh] overflow-y-auto">
+          {rows.length === 0 && <div className="py-12 text-center text-muted-foreground">No scores recorded yet.</div>}
+          {rows.map((r,i) => {
+            const name = r.username || r.user_name || 'Player';
+            const elo = Number(r.ranked_elo ?? r.ranked_rating ?? 1000);
+            return <div key={`${r.user_id}-${r.mode || filter}`} className={`flex items-center gap-3 rounded-lg border p-3 ${r.user_id===myId?'border-primary bg-primary/10':'border-border bg-card/60'}`}>
+              <span className="font-heading w-10 text-center text-accent">#{i+1}</span>
+              <span className="font-heading text-sm flex-1 truncate">{name}</span>
+              <span className="text-[10px] text-muted-foreground">{label}</span>
+              <span className="font-heading text-sm text-primary">{filter==='rockclimb' ? `${(Number(r.value)/1000).toFixed(2)}s` : filter==='parkour'||filter==='zipline' ? `${Math.round(Number(r.value))}m` : Math.round(Number(r.value))}</span>
+              {filter==='ranked' && <span className="text-[10px] text-accent">{rankName(elo)}</span>}
+            </div>;
+          })}
+        </div>}
+      {mine >= 0 && <div className="w-full rounded-xl border-2 border-primary bg-primary/10 p-3 text-xs">YOUR RANK: <b>#{mine+1}</b> · {label}: <b>{rows[mine].value}</b></div>}
     </div>
   );
 }

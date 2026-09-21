@@ -1,41 +1,100 @@
-# Element 6 feature package
+# Element 6 — Clips / Stage Physics / Social / Leaderboard / Clan Fix Package
 
-This package is built against the current Element 6 project.
+This is a TARGETED replacement package. Copy the files at the package root over the
+same-named files in the root of The Element 6 Chronicles project.
 
-## Replace these project files
+## Included fixes
 
-- `clipRecorder.js`
-- `GlobalClipRecorder.jsx`
-- `useClipRecorder.js`
-- `StageEditor.jsx`
-- `cosmetics.js`
-- `Shop.jsx`
-- `EquipScreen.jsx`
-- `ClansScreen.jsx`
-- `Game.jsx`
-- `DailyQuests.jsx`
-- `dailyQuests.js`
-- `TeamMode.jsx`
-- `StoryMode.jsx`
-- `StoryBattle.jsx`
-- `package.json`
+### Clips
+- Stops an FFmpeg/CDN failure from turning a valid recording into "CLIP SAVE FAILED".
+- Saves the native WebM recording when MP4 conversion is unavailable.
+- Preserves MP4 when conversion succeeds.
+- IndexedDB now stores the actual MIME type/extension.
+- Clip downloads use the real saved extension.
 
-## Run the clan-logo SQL
+### Stage Editor / stage runtime
+- Freehand collision is now continuous slope collision instead of hundreds of tiny
+  square collision blobs.
+- Players smoothly roll downhill on freehand slopes.
+- Physics objects roll substantially faster downhill.
+- Moving freehand slopes carry their actual endpoints with the motion.
+- Looping motion chains no longer accumulate displacement and teleport/jump at cycle
+  boundaries.
+- Stage preview shows moving freehand strokes, moving objects, moving KO perimeter,
+  camera motion/zoom, hazards, materials, spawn points and other saved stage data.
+- Explicitly disabled KO perimeters remain disabled in the actual match.
+- Custom stage camera zoom/motion and KO-perimeter settings continue through the
+  custom-stage runtime.
 
-Run `Supabase-clan-logos-and-badges.sql` in the Supabase SQL editor after the existing clan SQL.
+### Leaderboards
+The main Leaderboard now has:
+- Overall
+- Soccer
+- Combat
+- Ranked
+- Parkour
+- Rock Climbing
+- Ziplining
+- Honored Bot Tracking
 
-It creates the public `clan-logos` storage bucket and scoped authenticated upload/update/delete policies.
+Parkour/Rock Climbing/Ziplining screens prefer the Supabase world-score table and
+fall back to their existing local entities.
 
-## Features in this package
+Honored Bot matches are additionally written to a global Supabase table.
 
-1. Stage Editor FREEHAND tool with material selection and adjustable brush diameter. Freehand strokes are stored and converted into collision segments when saved, so they work in existing match consumers.
-2. Modern clothing/accessory catalog: hoodies, tees, shorts, pants, jeans, caps, berets, cardigans, bracelets, necklaces, jackets, beanies, sweatpants, vests, watches, rings, bucket hats and tote bags. Each has black, white, character-main and character-accent variants.
-3. Working Supabase clan logo upload + public display + dynamic `Clan Badge` accessory tied to the player's current clan.
-4. Always-on 60 FPS rolling clip recording. MP4/H.264 conversion only happens when a clip is saved, with overlapping windows and previous-match windows preserved for Victory/Match Facts.
-5. Controller support expanded to menu navigation, Story mode, Story battles and Team mode in addition to the game's existing controller-enabled modes. Bluetooth/wired controllers are discovered through the browser Gamepad API.
-6. Account/cloud hydration is now Supabase-only. Anonymous/tab-local progress is prevented from overwriting an account during sign-in; account progress wins when it exists, and user-scoped local progress is maintained.
-7. Daily quests are GOLD → SILVER → BRONZE, reset on the local calendar date at midnight, and chest rewards auto-close after about one second without an OK button.
+### Clan
+- Clan tournament monthly view exposes `clan_tag`, fixing:
+  `column element6_clan_tournament_monthly.clan_tag does not exist`
+- Clan leader can change/remove the clan badge at any time.
+- Badge can be entered by URL or uploaded as an image <=150 KB.
 
-## Important
+### Social notifications
+Global top-left notifications are added for:
+- Incoming chat from any player, not just friends
+- Incoming friend request
+- Friend request accepted
+- Friend coming online
 
-The clip recorder uses the browser FFmpeg package at runtime for H.264 MP4 conversion. `package.json` therefore includes `@ffmpeg/ffmpeg`, `@ffmpeg/core`, and `@ffmpeg/util`. The existing GitHub Actions workflow uses `pnpm install --no-frozen-lockfile`, so it can resolve these dependencies automatically.
+Notifications can be disabled in Settings -> Social notifications.
+
+The SQL migration also allows DMs to be sent to players who are not friends.
+
+### Private Community Hub servers
+- Creating a private server requires an exactly 4-digit passcode.
+- Joining a private server requires that passcode.
+- Public servers do not require a passcode.
+
+### Fight emotes
+Capture the Flag now supports equipped emotes using the normal number-key slots.
+
+### Daily quests
+- Daily generation is deterministic by calendar date.
+- Exactly 3 different quests are generated per day.
+- The existing midnight reset path now also tracks matches, signature KOs,
+  ground-pound KOs and emote-before-move progress correctly.
+
+## SQL
+
+Run:
+`sql/Supabase-Element6-Complete-Feature-Fixes.sql`
+
+after your existing Element 6 Supabase setup/migrations.
+
+If the ELO leaderboard SQL has not already been run, also run:
+`sql/Supabase-elo-leaderboard-fix.sql`
+
+If the shared leaderboard hardening migration has not already been run, also run:
+`sql/Supabase-all-leaderboards-fix.sql`
+
+If your world-score setup is missing, run:
+`sql/Supabase-world-scores-fix.sql`
+
+Do not replace the entire database with these files; they are migrations.
+
+## Validation
+
+The changed JavaScript files passed Node syntax parsing and the changed JSX files passed
+TypeScript/JSX parser validation.
+
+A full Vite production build was not run in this environment because the uploaded
+project did not contain its installed `node_modules`.

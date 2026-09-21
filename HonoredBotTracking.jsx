@@ -3,6 +3,7 @@ import db from './localBackend';
 import React, { useState, useEffect } from 'react';
 
 import GameIcon from "./GameIcon.jsx";
+import { supabase } from './supabaseClient.js';
 
 export default function HonoredBotTracking({ onBack }) {
   const [matches, setMatches] = useState([]);
@@ -15,7 +16,18 @@ export default function HonoredBotTracking({ onBack }) {
       try {
         const user = await db.auth.me().catch(() => null);
         if (user) setMyId(user.id);
-        const data = await db.entities.HonoredBotMatch.list('-created_date', 200);
+        const { data: cloud } = await supabase.from('element6_honored_bot_matches').select('*').order('created_at', { ascending: false }).limit(200);
+        const data = (cloud && cloud.length) ? cloud.map(r => ({
+          ...r,
+          created_date: r.created_at,
+          username: r.username,
+          char_name: r.char_name,
+          bot_char_name: r.bot_char_name,
+          winner: r.winner,
+          player_stocks: r.player_stocks,
+          bot_stocks: r.bot_stocks,
+          match_duration_seconds: r.match_duration_seconds
+        })) : await db.entities.HonoredBotMatch.list('-created_date', 200);
         setMatches(data || []);
       } catch {}
       setLoading(false);

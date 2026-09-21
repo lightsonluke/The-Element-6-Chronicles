@@ -117,13 +117,17 @@ export function updateSandboxHazards(hazards, fighters, dt) {
 
   // Moving hazards — support horizontal & vertical motion
   for (const m of hazards.moving) {
-    const axis = m.axis || 'horizontal';
-    if (axis === 'vertical') {
+    if (m.move || m.motion) {
+      moveHazard(m);
+    } else {
+      const axis = m.axis || 'horizontal';
+      if (axis === 'vertical') {
       m.y += m.vy;
       if (m.y > m.startY + m.range || m.y < m.startY) { m.vy *= -1; m.dir *= -1; }
     } else {
       m.x += m.vx;
       if (m.x > m.startX + m.range || m.x < m.startX) { m.vx *= -1; m.dir *= -1; }
+      }
     }
     for (const fighter of fighters) {
       if (!fighter || fighter.stocks <= 0 || fighter.invincible > 0) continue;
@@ -260,6 +264,18 @@ export function buildSandboxObjects(platforms) {
   return objects;
 }
 
+function freehandSlopeSample(p, x) {
+  if (!p?._freehandSlope) return null;
+  const x1 = Number(p.x1), y1 = Number(p.y1), x2 = Number(p.x2), y2 = Number(p.y2);
+  const r = Math.max(1, Number(p.radius) || 1);
+  const minX = Math.min(x1, x2) - r - 2, maxX = Math.max(x1, x2) + r + 2;
+  if (x < minX || x > maxX) return null;
+  const dx = x2 - x1;
+  const t = Math.max(0, Math.min(1, dx ? (x - x1) / dx : 0));
+  const lineY = y1 + (y2 - y1) * t;
+  return { surfaceY: lineY - r, slope: dx ? (y2 - y1) / dx : 0 };
+}
+
 // Update sandbox objects each frame (simplified from brObjects).
 export function updateSandboxObjects(objects, fighters, platforms, dt, W, H, hazards) {
   for (const obj of objects) {
@@ -373,9 +389,30 @@ export function updateSandboxObjects(objects, fighters, platforms, dt, W, H, haz
     obj.x += obj.vx; obj.y += obj.vy;
     obj._rot += obj.vx * 0.02;
 
-    // Platform collision — top (landing), bottom (underside), and side walls
+    // Smooth freehand/slope collision. Items roll noticeably faster than
+    // fighters because their mass is lower and their slope acceleration is
+    // intentionally stronger.
     obj.grounded = false;
     for (const p of platforms) {
+      if (!p._freehandSlope || p._deleted) continue;
+      const sample = freehandSlopeSample(p, obj.x);
+      if (!sample) continue;
+      const hh = obj.h / 2;
+      const surfaceY = sample.surfaceY - hh;
+      if (obj.vy >= 0 && obj.y >= surfaceY - 3 && obj.y <= surfaceY + 18) {
+        obj.y = surfaceY;
+        obj.vy = 0;
+        obj.grounded = true;
+        const downhill = Math.sign(sample.slope) || 0;
+        if (Math.abs(sample.slope) > 0.02) {
+          obj.vx += downhill * Math.min(0.65, Math.abs(sample.slope) * 0.42);
+        }
+      }
+    }
+
+    // Platform collision — top (landing), bottom (underside), and side walls
+    for (const p of platforms) {
+      if (p._freehandSlope) continue;
       if (p._deleted) continue;
       if (p.material === 'antigravity') continue; // pass-through field
       const hw = obj.w / 2, hh = obj.h / 2;

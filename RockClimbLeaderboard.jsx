@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 
 import { ALL_CHARS } from './sports.js';
 import { sfx } from './sfx.js';
+import { loadWorldLeaderboard } from './worldLeaderboard.js';
 import GameIcon from "./GameIcon.jsx";
 
 function charName(id, customCharsData) {
@@ -34,10 +35,12 @@ export default function RockClimbLeaderboard({ onBack, customCharsData = {} }) {
       setLoading(true);
       try {
         const me = await db.auth.me().catch(() => null);
-        const all = await db.entities.RockClimbScore.list('-created_date', 200);
+        let all = [];
+        try { all = await loadWorldLeaderboard('rockclimb'); }
+        catch { all = await db.entities.RockClimbScore.list('-created_date', 200); }
         if (cancelled) return;
         const sorted = [...(all || [])].sort((a, b) => (a.time_ms || 0) - (b.time_ms || 0));
-        const mapped = sorted.map((e, i) => ({ ...e, rank: i + 1 }));
+        const mapped = sorted.map((e, i) => ({ ...e, rank: i + 1, user_name: e.user_name || e.username }));
         setEntries(mapped);
         if (me) {
           const fr = await db.entities.Friendship.filter({ owner_user_id: me.id });
