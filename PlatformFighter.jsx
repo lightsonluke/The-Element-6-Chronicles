@@ -17,7 +17,7 @@ import { music } from './music.js';
 import { sfx } from './sfx.js';
 import { getKeybinds, readPlayerInput, readSinglePlayerInput, getSchemeKeybinds, getSoloKeybinds } from './keybinds.js';
 import { useClipRecorder } from './useClipRecorder.js';
-import { drawMaterialOverlay } from './materials.js';
+import { drawMaterialOverlay, drawMaterialStroke } from './materials.js';
 import { drawStageBackground } from './stageBackgrounds.js';
 import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor, getEquippedAccessories } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
@@ -1389,7 +1389,10 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       ctx.scale(g.camZoom, g.camZoom);
       ctx.translate(-W / 2 - g.camX, -H / 2 - g.camY);
 
-      drawPlatforms(ctx, platforms, f1.frame, mapId, Array.isArray(stageConfig.freehandStrokes) ? stageConfig.freehandStrokes : null);
+      drawPlatforms(ctx, platforms, f1.frame, mapId);
+      if (Array.isArray(stageConfig.freehandStrokes)) {
+        stageConfig.freehandStrokes.forEach(stroke => drawMaterialStroke(ctx, stroke, f1.frame));
+      }
       // Sandbox hazard zones + knockback items
       if (sbHazards) drawSBHazards(ctx, sbHazards, f1.frame);
       if (sbObjects) drawSBObjects(ctx, sbObjects, f1.frame);
@@ -1411,7 +1414,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       ctx.setLineDash([]); ctx.shadowBlur = 0; ctx.restore();
       }
 
-      platforms.forEach(p => drawMaterialOverlay(ctx, p, f1.frame));
+      platforms.forEach(p => { if (!p?._freehandSegment) drawMaterialOverlay(ctx, p, f1.frame); });
       // Visual indicator for erased platforms
       platforms.forEach(p => {
         if (p._deleted > 0) {

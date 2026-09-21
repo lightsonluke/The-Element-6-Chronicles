@@ -1651,13 +1651,15 @@ export function drawTimer(ctx, canvasWidth, seconds) {
 
 // ─── Stage / Environment ────────────────────────────────────────────────────
 
-export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity', freehandStrokes = null) {
+export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
   const map = STAGE_MAPS.find(m => m.id === mapId) || STAGE_MAPS[0];
   const accent = map.accentColor;
   const ground = map.groundColor;
 
   platforms.forEach((p, idx) => {
-    if (Array.isArray(freehandStrokes) && p?._freehandSegment) return;
+    // Freehand collision segments are physics-only. The original stroke is
+    // rendered once by the stage/match renderer.
+    if (p?._freehandSegment) return;
     const isMain = p.h >= 18;
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
@@ -1708,37 +1710,6 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity', fr
       ctx.globalAlpha = 1;
     }
   });
-
-  if (Array.isArray(freehandStrokes)) {
-    freehandStrokes.forEach((stroke) => {
-      const pts = Array.isArray(stroke?.points) ? stroke.points : [];
-      if (!pts.length) return;
-      const mat = stroke?.material && stroke.material !== 'normal' ? getMaterial(stroke.material) : null;
-      const baseColor = mat ? mat.color : ground;
-      const width = Math.max(4, Number(stroke?.diameter) || 36);
-      ctx.save();
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
-      ctx.lineWidth = width + 7;
-      ctx.beginPath();
-      pts.forEach((pt,i)=>i ? ctx.lineTo(pt.x,pt.y) : ctx.moveTo(pt.x,pt.y));
-      if (pts.length === 1) ctx.lineTo(pts[0].x + 0.01, pts[0].y + 0.01);
-      ctx.stroke();
-      ctx.strokeStyle = baseColor;
-      ctx.lineWidth = width;
-      ctx.beginPath();
-      pts.forEach((pt,i)=>i ? ctx.lineTo(pt.x,pt.y) : ctx.moveTo(pt.x,pt.y));
-      if (pts.length === 1) ctx.lineTo(pts[0].x + 0.01, pts[0].y + 0.01);
-      ctx.stroke();
-      ctx.strokeStyle = (mat ? mat.color : accent) + 'AA';
-      ctx.lineWidth = Math.max(1, Math.min(2.5, width * 0.045));
-      ctx.beginPath();
-      pts.forEach((pt,i)=>i ? ctx.lineTo(pt.x,pt.y) : ctx.moveTo(pt.x,pt.y));
-      ctx.stroke();
-      ctx.restore();
-    });
-  }
 }
 
 export function drawBackground(ctx, w, h, frame = 0, mapId = 'splitcity', eventColor) {

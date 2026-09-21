@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MATERIALS, drawMaterialOverlay } from './materials.js';
+import { MATERIALS, drawMaterialOverlay, drawMaterialStroke } from './materials.js';
 import { HAZARD_TYPES, OBJECT_TYPES } from './stageHazards.js';
 import { drawStageBackground } from './stageBackgrounds.js';
 import { directionVector, normalizeMotion, sampleMotion } from './StageMotionRuntime.js';
@@ -36,12 +36,16 @@ function drawScene(ctx, stage, now, playing) {
   };
 
   (data.platforms || []).forEach(p => {
+    if (p?._freehandSegment) return;
     const pos = drawMove(p, p.x, p.y);
     const mat = MATERIALS.find(m => m.id === (p.material || 'normal')) || MATERIALS[0];
     ctx.fillStyle = mat.color || '#777';
     ctx.fillRect(pos.x, pos.y, p.w, p.h);
     try { drawMaterialOverlay(ctx, { ...p, x: pos.x, y: pos.y }, 0); } catch {}
     if (p.destroyable) { ctx.strokeStyle = '#ff8844'; ctx.strokeRect(pos.x, pos.y, p.w, p.h); }
+  });
+  (data.freehandStrokes || []).forEach(stroke => {
+    try { drawMaterialStroke(ctx, stroke, Math.floor(now / 16)); } catch {}
   });
   (data.hazards || []).forEach(h => {
     const pos = drawMove(h, h.x, h.y);
