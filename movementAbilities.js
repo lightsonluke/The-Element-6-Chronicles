@@ -21,11 +21,7 @@ export const MOVEMENT_ABILITY_CONFIG = Object.freeze({
   airDodgeSpeed: 7.0,
   wallSlideMaxFallSpeed: 1,
   wallSlideAcceleration: 0.15,
-  wallMinHeight: 18,          // > half of the ~55px fighter body
-  wallContactTolerance: 5,    // collision/rendering can leave a few px of separation
-  wallVerticalPadding: 2,
-  wallDustInterval: 3,
-  wallDustCount: 2,
+  wallMinHeight: 10,          // > half of the ~55px fighter body
   maxWallGrants: 2,
 });
 
@@ -114,83 +110,33 @@ function tryDirectionalDoubleTap(fighter, inputs) {
 
 function getWallContact(platforms, fighter) {
   const halfW = 16;
-  const fighterHeight = 55;
-  const fighterTop = fighter.y - fighterHeight;
+  const fighterTop = fighter.y - 55;
   const fighterBottom = fighter.y;
-  const tolerance = MOVEMENT_ABILITY_CONFIG.wallContactTolerance;
-  const verticalPadding = MOVEMENT_ABILITY_CONFIG.wallVerticalPadding;
+  const tolerance = 4;
+  let left = false;
+  let right = false;
 
-  let best = null;
-
+  // Wall sliding is based on actual side contact, not the input direction and
+  // not only on the side-wall collision pass in fighter.js. This makes every
+  // solid material consistently wall-slideable, including thin/custom/editor
+  // geometry that may not participate in the normal side-wall solver.
   for (const p of platforms || []) {
-    if (!p) continue;
     const mat = p.material || 'normal';
     if (['water', 'lava', 'cloud', 'acid', 'tar', 'antigravity'].includes(mat)) continue;
-    if (p._deleted > 0 || p.h < MOVEMENT_ABILITY_CONFIG.wallMinHeight) continue;
-    if (!(p.w > 0 && p.h > 0)) continue;
+    if (p._deleted > 0 || !Number.isFinite(p.x) || !Number.isFinite(p.y) ||
+        !Number.isFinite(p.w) || !Number.isFinite(p.h) || p.w <= 0 || p.h <= 0) continue;
 
-    // The fighter body must overlap the vertical span of the solid wall.
-    const verticallyOverlaps =
-      fighterBottom > p.y + verticalPadding &&
-      fighterTop < p.y + p.h - verticalPadding;
+    const verticallyOverlaps = fighterBottom > p.y + tolerance && fighterTop < p.y + p.h - tolerance;
     if (!verticallyOverlaps) continue;
 
     const leftEdge = p.x - halfW;
     const rightEdge = p.x + p.w + halfW;
-    const leftGap = Math.abs(fighter.x - leftEdge);
-    const rightGap = Math.abs(fighter.x - rightEdge);
-
-    // The collision solver places the fighter's center exactly half a body-width
-    // outside a wall. Use a small tolerance so the wall still registers when
-    // floating-point movement/collision order leaves a tiny gap.
-    if (leftGap <= tolerance && (!best || leftGap < best.distance)) {
-      best = { side: -1, distance: leftGap, platform: p };
-    }
-    if (rightGap <= tolerance && (!best || rightGap < best.distance)) {
-      best = { side: 1, distance: rightGap, platform: p };
-    }
+    if (Math.abs(fighter.x - leftEdge) <= tolerance) left = true;
+    if (Math.abs(fighter.x - rightEdge) <= tolerance) right = true;
+    if (left && right) break;
   }
 
-  return best;
-}
-
-function spawnWallDust(fighter, contact) {
-  if (!contact) return;
-  if ((fighter._wallDustCooldown || 0) > 0) {
-    fighter._wallDustCooldown--;
-    return;
-  }
-
-  fighter._wallDustCooldown = MOVEMENT_ABILITY_CONFIG.wallDustInterval;
-
-  // The normal renderer already draws doubleJumpParticles. Reuse that established
-  // particle channel so wall dust is visible everywhere the fighter is rendered,
-  // without touching camera/rendering code.
-  fighter.doubleJumpParticles = fighter.doubleJumpParticles || [];
-
-  const count = MOVEMENT_ABILITY_CONFIG.wallDustCount;
-  const wallX = contact.side < 0
-    ? fighter.x - 15
-    : fighter.x + 15;
-
-  for (let i = 0; i < count; i++) {
-    fighter.doubleJumpParticles.push({
-      x: wallX + (Math.random() - 0.5) * 3,
-      y: fighter.y - 12 - Math.random() * 28,
-      vx: contact.side * (0.15 + Math.random() * 0.45),
-      vy: -0.15 - Math.random() * 0.7,
-      life: 10 + Math.floor(Math.random() * 7),
-      maxLife: 17,
-      color: '#FFFFFF',
-      isGroundPuff: true,
-      isWallDust: true,
-    });
-  }
-
-  // Keep the particle list bounded even during a long wall slide.
-  if (fighter.doubleJumpParticles.length > 90) {
-    fighter.doubleJumpParticles.splice(0, fighter.doubleJumpParticles.length - 90);
-  }
+  return left ? -1 : right ? 1 : 0;
 }
 
 export function updateMovementAbilities(fighter, inputs, platforms) {
@@ -222,22 +168,17 @@ export function updateMovementAbilities(fighter, inputs, platforms) {
     return;
   }
 
-  // Wall slide only happens when the player is airborne and is actually pressing
-  // toward a real solid wall. Do not rely exclusively on fighter.wallSide: the
-  // collision resolver can clear that value at the beginning of its next pass,
-  // and that used to make wall contact intermittently disappear.
-  const detectedWall = getWallContact(platforms, fighter);
-  const side = detectedWall?.side || fighter.wallSide || 0;
-  const intoWall =
-    (side < 0 && !!inputs.left) ||
-    (side > 0 && !!inputs.right);
+  // Wall slide activates on every airborne side contact. The player does not
+  // need to hold toward the wall: touching a solid material is enough. This is
+  // intentionally independent of fighter.wallSide because that value is produced
+  // by the normal side-collision solver and can be absent for custom/thin geometry.
+  const detectedWallSide = getWallContact(platforms, fighter);
+  const side = detectedWallSide || fighter.wallSide || 0;
 
   const touchingWall =
     !fighter.grounded &&
     !fighter.gravityInverted &&
-    side !== 0 &&
-    intoWall &&
-    !!detectedWall;
+    side !== 0;
 
   if (touchingWall) {
     fighter.wallSide = side;
@@ -245,21 +186,13 @@ export function updateMovementAbilities(fighter, inputs, platforms) {
     fighter.wallContactActive = true;
     fighter.wallGrantPending = true;
     fighter.vx = 0;
-
-    // Clamp downward speed rather than replacing it. This gives a stable,
-    // controllable slide instead of a sticky/teleporting wall state.
     fighter.vy = Math.min(
       fighter.vy + MOVEMENT_ABILITY_CONFIG.wallSlideAcceleration,
       MOVEMENT_ABILITY_CONFIG.wallSlideMaxFallSpeed
     );
     fighter.state = 'jumping';
-    spawnWallDust(fighter, detectedWall);
   } else {
     fighter.wallSlide = false;
-    if (!detectedWall) {
-      fighter.wallContactActive = false;
-    }
-    fighter._wallDustCooldown = 0;
   }
 }
 
@@ -296,13 +229,12 @@ export function resetMovementAbilityState(fighter) {
   fighter.dashCooldown = 0;
   fighter.dashTimer = 0;
   fighter.dashDirection = { x: 0, y: 0 };
-  fighter.airDodgeUses = 3;
+  fighter.airDodgeUses = fighter.maxJumps || 3;
   fighter.wallSlide = false;
   fighter.wallSide = 0;
   fighter.wallContactActive = false;
   fighter.wallGrantsUsed = 0;
   fighter.wallGrantPending = false;
-  fighter._wallDustCooldown = 0;
 
   fighter._movementTapState = {
     left: -9999, right: -9999, up: -9999, down: -9999,
