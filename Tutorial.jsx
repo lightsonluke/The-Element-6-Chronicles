@@ -7,6 +7,9 @@ import GameIcon from "./GameIcon.jsx";
 const STEPS = [
   { title: 'Move Around', desc: 'Use the Arrow Keys (or A/D) to walk left and right. Try it now!', check: (k) => k['ArrowLeft'] || k['ArrowRight'] || k['a'] || k['d'] },
   { title: 'Jump', desc: 'Press Up (or W) to jump. You get a double-jump too — press jump again in the air!', check: (k) => k['ArrowUp'] || k['w'] },
+  { title: 'Dash', desc: 'Double-tap LEFT or RIGHT quickly to dash. Your dash stops at solid stage walls and platforms.', special: 'dash' },
+  { title: 'Air Dodge', desc: 'While airborne, double-tap a direction to air-dodge. You can dodge in all four directions.', special: 'airDodge' },
+  { title: 'Wall Slide', desc: 'Jump beside a tall solid wall and hold toward it while falling to slide down it. Release the direction to leave the wall.', special: 'wallSlide' },
   { title: 'Signature Attack', desc: 'Press , (comma) to unleash your signature attack. Add a direction for different sigs!', check: (k) => k[','] || k['v'] },
   { title: 'Heavy Attack', desc: 'Press L to do a heavy attack. Hold Down + L in the air for a Ground Pound!', check: (k) => k['l'] || k['g'] },
   { title: 'Power Button', desc: 'Press . (period) to activate your character\'s unique power. It has a cooldown!', check: (k) => k['.'] || k['c'] },
@@ -23,10 +26,24 @@ export default function Tutorial({ onBack }) {
   const [done, setDone] = useState([]);
   const keysRef = useRef({});
   const keyTimesRef = useRef({});
+  const movementRef = useRef({ dash: 0, airDodge: 0, wallSlide: 0, lastTap: {}, wallFrames: 0 });
   const cur = STEPS[step];
 
   useEffect(() => {
-    const kd = e => { keysRef.current[e.key] = true; keysRef.current[e.key.toLowerCase?.()] = true; keyTimesRef.current[e.key] = Date.now(); keyTimesRef.current[e.key.toLowerCase?.()] = Date.now(); };
+    const kd = e => {
+      const now = Date.now();
+      keysRef.current[e.key] = true; keysRef.current[e.key.toLowerCase?.()] = true;
+      keyTimesRef.current[e.key] = now; keyTimesRef.current[e.key.toLowerCase?.()] = now;
+      const k = e.key.toLowerCase();
+      if (['arrowleft','arrowright','arrowup','arrowdown','a','d','w','s'].includes(k)) {
+        const prev = movementRef.current.lastTap[k] || 0;
+        if (now - prev <= 240) {
+          if (k === 'arrowleft' || k === 'arrowright' || k === 'a' || k === 'd') movementRef.current.dash++;
+          else movementRef.current.airDodge++;
+        }
+        movementRef.current.lastTap[k] = now;
+      }
+    };
     const ku = e => { keysRef.current[e.key] = false; keysRef.current[e.key.toLowerCase?.()] = false; };
     window.addEventListener('keydown', kd);
     window.addEventListener('keyup', ku);
@@ -36,7 +53,22 @@ export default function Tutorial({ onBack }) {
   useEffect(() => {
     if (!fighting || cur.last || done.includes(step)) return;
     const interval = setInterval(() => {
-      if (cur.combo) {
+      if (cur.special) {
+        const m = movementRef.current;
+        if (cur.special === 'dash' && m.dash > 0) {
+          setDone(prev => [...prev, step]);
+          setTimeout(() => setStep(s => Math.min(s + 1, STEPS.length - 1)), 600);
+        } else if (cur.special === 'airDodge' && m.airDodge > 0) {
+          setDone(prev => [...prev, step]);
+          setTimeout(() => setStep(s => Math.min(s + 1, STEPS.length - 1)), 600);
+        } else if (cur.special === 'wallSlide' && (keysRef.current.ArrowLeft || keysRef.current.ArrowRight || keysRef.current.a || keysRef.current.d)) {
+          m.wallFrames++;
+          if (m.wallFrames >= 8) {
+            setDone(prev => [...prev, step]);
+            setTimeout(() => setStep(s => Math.min(s + 1, STEPS.length - 1)), 600);
+          }
+        }
+      } else if (cur.combo) {
         const k1 = cur.combo[0], k2 = cur.combo[1];
         const t1 = keyTimesRef.current[k1] || keyTimesRef.current[k1.toLowerCase?.()];
         const t2 = keyTimesRef.current[k2] || keyTimesRef.current[k2.toLowerCase?.()];
@@ -111,7 +143,7 @@ export default function Tutorial({ onBack }) {
         <p className="font-body text-muted-foreground text-sm mb-4">You'll learn: movement, jumping, signature attacks, heavy attacks, the power button, and super moves. Each step advances automatically once you perform the action.</p>
         <div className="bg-muted/30 rounded-lg p-3 mb-4 text-xs font-body text-foreground/80">
           <p className="font-heading text-primary mb-1">CONTROLS</p>
-          <p>Arrows/WASD = move & jump · , = sig · L = heavy · . = power · / = super</p>
+          <p>Arrows/WASD = move & jump · Double-tap LEFT/RIGHT = dash · Double-tap a direction in air = air dodge · Hold toward a wall while falling = wall slide · , = sig · L = heavy · . = power · / = super</p>
         </div>
         <button onClick={() => setFighting(true)} className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading hover:opacity-80">START TUTORIAL</button>
       </div>

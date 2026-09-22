@@ -1512,8 +1512,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 function freehandSlopeSample(p, x) {
   if (!p?._freehandSlope) return null;
   const x1 = Number(p.x1), y1 = Number(p.y1), x2 = Number(p.x2), y2 = Number(p.y2);
-  if (![x1,y1,x2,y2].every(Number.isFinite)) return null;
-  const r = Math.max(1, Math.min(90, Number(p.radius) || 1));
+  const r = Math.max(1, Number(p.radius) || 1);
   const minX = Math.min(x1, x2) - r - 2;
   const maxX = Math.max(x1, x2) + r + 2;
   if (x < minX || x > maxX) return null;
@@ -1658,10 +1657,8 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
   // Freehand strokes are continuous sloped surfaces, not hundreds of tiny
   // AABBs. This prevents the old "random stop" behavior and lets fighters
   // naturally roll down a line.
-  let freehandSlopeChecks = 0;
   for (const p of platforms) {
-    if (!p?._freehandSlope || p._deleted > 0) continue;
-    if (++freehandSlopeChecks > 512) break;
+    if (!p._freehandSlope || p._deleted > 0) continue;
     const sample = freehandSlopeSample(p, fighter.x);
     if (!sample) continue;
     const surfaceY = sample.surfaceY;
@@ -1734,12 +1731,17 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     if (fighterTop >= p.y + p.h) continue;
     // Check horizontal overlap
     if (fighter.x + charHalfW > p.x && fighter.x - charHalfW < p.x + p.w) {
+      // Swept side collision: also catch a fast dash that crosses a wall between
+      // frames.  The previous check could miss that case, which made movement
+      // abilities appear to pass through solid stage geometry.
+      const crossedFromLeft = fighter.prevX + charHalfW <= p.x + 2 && fighter.x + charHalfW >= p.x;
+      const crossedFromRight = fighter.prevX - charHalfW >= p.x + p.w - 2 && fighter.x - charHalfW <= p.x + p.w;
       // Push back to the side the fighter came from
-      if (fighter.prevX + charHalfW <= p.x + 2) {
+      if (crossedFromLeft || fighter.prevX + charHalfW <= p.x + 2) {
         fighter.x = p.x - charHalfW;
         fighter.wallSide = -1;
         if (fighter.vx > 0) fighter.vx = 0;
-      } else if (fighter.prevX - charHalfW >= p.x + p.w - 2) {
+      } else if (crossedFromRight || fighter.prevX - charHalfW >= p.x + p.w - 2) {
         fighter.x = p.x + p.w + charHalfW;
         fighter.wallSide = 1;
         if (fighter.vx < 0) fighter.vx = 0;

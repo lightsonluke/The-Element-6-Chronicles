@@ -21,7 +21,7 @@ export const MOVEMENT_ABILITY_CONFIG = Object.freeze({
   airDodgeSpeed: 7.0,
   wallSlideMaxFallSpeed: 1,
   wallSlideAcceleration: 0.15,
-  wallMinHeight: 10,          // > half of the ~55px fighter body
+  wallMinHeight: 18,          // > half of the ~55px fighter body
   maxWallGrants: 2,
 });
 
@@ -123,8 +123,8 @@ function hasWallHeight(platforms, side, fighter) {
     const verticallyOverlaps = fighterBottom > p.y + 2 && fighterTop < p.y + p.h;
     if (!verticallyOverlaps) continue;
 
-    const touchingLeft = side < 0 && Math.abs(fighter.x - (p.x - halfW)) < 2.5;
-    const touchingRight = side > 0 && Math.abs(fighter.x - (p.x + p.w + halfW)) < 2.5;
+    const touchingLeft = side < 0 && Math.abs(fighter.x - (p.x - halfW)) < 7;
+    const touchingRight = side > 0 && Math.abs(fighter.x - (p.x + p.w + halfW)) < 7;
     if (touchingLeft || touchingRight) return true;
   }
 
@@ -222,7 +222,7 @@ export function resetMovementAbilityState(fighter) {
   fighter.dashCooldown = 0;
   fighter.dashTimer = 0;
   fighter.dashDirection = { x: 0, y: 0 };
-  fighter.airDodgeUses = 3;
+  fighter.airDodgeUses = fighter.maxJumps || 3;
   fighter.wallSlide = false;
   fighter.wallSide = 0;
   fighter.wallContactActive = false;
