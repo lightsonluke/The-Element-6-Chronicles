@@ -18,6 +18,7 @@ import { sfx } from './sfx.js';
 import { getKeybinds, readPlayerInput, readSinglePlayerInput, getSchemeKeybinds, getSoloKeybinds } from './keybinds.js';
 import { useClipRecorder } from './useClipRecorder.js';
 import { drawMaterialOverlay, drawMaterialStroke } from './materials.js';
+import { sanitizeFreehandStroke, buildFreehandCollisionPlatforms } from './freehandSafe.js';
 import { drawStageBackground } from './stageBackgrounds.js';
 import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor, getEquippedAccessories } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
@@ -39,21 +40,6 @@ import GameIcon from "./GameIcon.jsx";
 // Bigger stages — 1280x720 internal resolution (canvas scales to fill the screen via CSS)
 const W = 1280;
 const H = 720;
-const FREEHAND_RENDER_MAX_POINTS = 640;
-function safeFreehandPoints(stroke) {
-  const pts = Array.isArray(stroke?.points) ? stroke.points.filter(p => p && Number.isFinite(Number(p.x)) && Number.isFinite(Number(p.y))) : [];
-  if (pts.length <= FREEHAND_RENDER_MAX_POINTS) return pts.map(p => ({ x:Number(p.x), y:Number(p.y) }));
-  const out = [pts[0]];
-  const stride = (pts.length - 1) / (FREEHAND_RENDER_MAX_POINTS - 1);
-  for (let i=1;i<FREEHAND_RENDER_MAX_POINTS-1;i++) out.push(pts[Math.round(i*stride)]);
-  out.push(pts[pts.length-1]);
-  return out.map(p => ({ x:Number(p.x), y:Number(p.y) }));
-}
-function drawSafeFreehandStroke(ctx, stroke, frame) {
-  const points = safeFreehandPoints(stroke);
-  if (!points.length) return;
-  drawMaterialStroke(ctx, { ...stroke, points }, frame);
-}
 
 const MAP_PLATFORMS = {
   splitcity: [
@@ -715,6 +701,14 @@ export default function PlatformFighter({
     // Never run a match directly against the saved stage array or the editor's
     // saved data can be changed by gameplay.
     let source = customPlatforms || eventPlatforms || applyStageMaterials(MAP_PLATFORMS[mapId] || MAP_PLATFORMS.splitcity, mapId);
+    // Rebuild freehand collision geometry from the bounded stroke data instead
+    // of trusting legacy saved stages that may contain thousands of tiny
+    // _freehandSegment entries. This keeps old stages playable too.
+    if (customStageConfig && Array.isArray(customStageConfig.freehandStrokes)) {
+      const normalPlatforms = (Array.isArray(source) ? source : []).filter(p => !p?._freehandSegment);
+      const safeStrokes = customStageConfig.freehandStrokes.map(st => sanitizeFreehandStroke(st)).filter(Boolean);
+      source = [...normalPlatforms, ...buildFreehandCollisionPlatforms(safeStrokes)];
+    }
     let p = Array.isArray(source)
       ? source.map(platform => ({
           ...platform,
@@ -1411,7 +1405,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
 
       drawPlatforms(ctx, platforms, f1.frame, mapId);
       if (Array.isArray(stageConfig.freehandStrokes)) {
-        stageConfig.freehandStrokes.forEach(stroke => drawSafeFreehandStroke(ctx, stroke, f1.frame));
+        stageConfig.freehandStrokes.forEach(stroke => drawMaterialStroke(ctx, stroke, f1.frame));
       }
       // Sandbox hazard zones + knockback items
       if (sbHazards) drawSBHazards(ctx, sbHazards, f1.frame);
