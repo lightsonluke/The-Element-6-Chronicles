@@ -475,7 +475,7 @@ export default function Game() {
   const activeStorySlotRef = useRef(null);
   const [storySlots, setStorySlots] = useState(() => {
     const slots = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 3; i++) {
       try { const d = localStorage.getItem(`element6_story_slot_${i}`); slots.push(d ? JSON.parse(d) : null); } catch { slots.push(null); }
     }
     return slots;
@@ -483,7 +483,7 @@ export default function Game() {
 
   const refreshStorySlots = () => {
     const slots = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 3; i++) {
       try { const d = localStorage.getItem(`element6_story_slot_${i}`); slots.push(d ? JSON.parse(d) : null); } catch { slots.push(null); }
     }
     setStorySlots(slots);
@@ -966,7 +966,7 @@ export default function Game() {
     if (dest === 'hub') { setScreen('hubserverselect'); sfx.click(); }
     else if (dest === 'sandbox') { setScreen('sandbox'); sfx.click(); }
     else if (dest === 'creatormode') { setPlayCampaign(null); setScreen('creatormode'); sfx.click(); }
-    else if (dest === 'story') { refreshStorySlots(); setScreen('story'); }
+    else if (dest === 'story') { setScreen('story'); sfx.click(); }
     else if (dest === 'fight') setScreen('modeSelect');
     else if (dest === 'creator') setScreen('creator');
     else if (dest === 'mobilecontrols') { setScreen('mobilecontrols'); sfx.click(); }
@@ -2116,7 +2116,7 @@ export default function Game() {
           <Settings onBack={goBack} settings={progress.settings} onSave={(s) => update({ settings: s })} onUsernameChange={handleUsernameChange} onOpenController={() => setScreen('controller')} onOpenMobileControls={() => setScreen('mobilecontrols')} onReset={() => {
             try {
               localStorage.removeItem('element6_progress');
-              for (let i = 0; i < 5; i++) localStorage.removeItem(`element6_story_slot_${i}`);
+              for (let i = 0; i < 3; i++) localStorage.removeItem(`element6_story_slot_${i}`);
             } catch {}
             window.location.reload();
           }} />

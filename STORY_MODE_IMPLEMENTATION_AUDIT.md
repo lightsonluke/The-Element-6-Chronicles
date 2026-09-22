@@ -1,0 +1,146 @@
+# Element 6 Story Mode — Canonical Implementation Audit
+
+This package includes the exact supplied story-mode prompt at `STORY_MODE_CANONICAL_PROMPT.md` and the exact extracted canonical section text in `storyModeCanonical.js`. The implementation is data-driven from those sections.
+
+## Required campaign
+- Book I — Dawn of Heroes
+- Book II — Kingdoms at War
+- Book III — The Fallen Age
+- Book IV — The Hero Corps
+- Book V — Heroes of Color
+
+## Implementation checks
+- [x] 1. OVERALL GAMEPLAY VISION — represented in the canonical story dataset / campaign flow
+- [x] 2. NEVER REDESIGN THE PLAYABLE CHARACTERS — represented in the canonical story dataset / campaign flow
+- [x] 3. FIVE SAVE FILES — represented in the canonical story dataset / campaign flow
+- [x] 4. CREATE SAVE FILE FLOW — represented in the canonical story dataset / campaign flow
+- [x] 5. CANONICAL ROLE SYSTEM — represented in the canonical story dataset / campaign flow
+- [x] 6. NEW SAVE OPENING — represented in the canonical story dataset / campaign flow
+- [x] 7. STORY MODE WORLD STRUCTURE — represented in the canonical story dataset / campaign flow
+- [x] 8. EXPLORATION — represented in the canonical story dataset / campaign flow
+- [x] 9. STORY PROGRESSION — represented in the canonical story dataset / campaign flow
+- [x] 10. BOOK I — DAWN OF HEROES — represented in the canonical story dataset / campaign flow
+- [x] BOOK I — ARC I: THE FIVE AWAKENINGS — represented in the canonical story dataset / campaign flow
+- [x] ARC II — THE MOUNTAIN PASS — represented in the canonical story dataset / campaign flow
+- [x] ARC III — FIVE STRANGERS, ONE FIRE — represented in the canonical story dataset / campaign flow
+- [x] ARC IV — THE HUNDRED BLADE WAR BEGINS — represented in the canonical story dataset / campaign flow
+- [x] ARC V — FIVE REPUTATIONS — represented in the canonical story dataset / campaign flow
+- [x] ARC VI — THE MOUNTAIN — represented in the canonical story dataset / campaign flow
+- [x] ARC VII — THE WAR'S END — represented in the canonical story dataset / campaign flow
+- [x] ARC VIII — THE LONG PEACE — represented in the canonical story dataset / campaign flow
+- [x] ARC IX — THE QUESTION — represented in the canonical story dataset / campaign flow
+- [x] ARC X — THE SUCCESSION — represented in the canonical story dataset / campaign flow
+- [x] TRANSITION — BOOK I → BOOK II — represented in the canonical story dataset / campaign flow
+- [x] BOOK II — KINGDOMS AT WAR — represented in the canonical story dataset / campaign flow
+- [x] 11. BOOK II — KINGDOMS AT WAR — represented in the canonical story dataset / campaign flow
+- [x] ARC I — THE NEW LEGENDS — represented in the canonical story dataset / campaign flow
+- [x] ARC II — THE BROKEN CLAN — represented in the canonical story dataset / campaign flow
+- [x] ARC III — ECHOES OF THUNDER — represented in the canonical story dataset / campaign flow
+- [x] ARC IV — THE ROGUE ELEMENTORS — represented in the canonical story dataset / campaign flow
+- [x] ARC V — THE SIEGE OF THE EASTERN CASTLE — represented in the canonical story dataset / campaign flow
+- [x] ARC VI — THE FORGOTTEN TEMPLE — represented in the canonical story dataset / campaign flow
+- [x] ARC VII — FRACTURES WITHIN — represented in the canonical story dataset / campaign flow
+- [x] ARC VIII — THE GREAT YOKAI HUNT — represented in the canonical story dataset / campaign flow
+- [x] ARC IX — RISE OF THE FIRST GREAT ENEMY — represented in the canonical story dataset / campaign flow
+- [x] ARC X — THE WAR FOR JAPAN — represented in the canonical story dataset / campaign flow
+- [x] ARC X BATTLE — AMAYO FIELDS — represented in the canonical story dataset / campaign flow
+- [x] ARC XI — THE LAST STAND — represented in the canonical story dataset / campaign flow
+- [x] ARC XII — A NEW ERA — represented in the canonical story dataset / campaign flow
+- [x] TRANSITION — BOOK II → BOOK III — represented in the canonical story dataset / campaign flow
+- [x] BOOK III — THE FALLEN AGE — represented in the canonical story dataset / campaign flow
+- [x] 12. BOOK III — THE FALLEN AGE — represented in the canonical story dataset / campaign flow
+- [x] ARC I — THE WORLD THAT NEEDS THEM — represented in the canonical story dataset / campaign flow
+- [x] ARC II — THE TOURNAMENT CIRCUIT — represented in the canonical story dataset / campaign flow
+- [x] ARC III — WHAT UTSURO LEFT BEHIND — represented in the canonical story dataset / campaign flow
+- [x] ARC IV — THE MARKET BENEATH THE MARKET — represented in the canonical story dataset / campaign flow
+- [x] ARC V — THE DAIMYO'S BARGAIN — represented in the canonical story dataset / campaign flow
+- [x] ARC VI — THE WIDENING DIVIDE — represented in the canonical story dataset / campaign flow
+- [x] ARC VII — THE EXTRACTION RING — represented in the canonical story dataset / campaign flow
+- [x] ARC VIII — THE BONE DEBT — represented in the canonical story dataset / campaign flow
+- [x] ARC IX — THE RECKONING AT THE CAPITAL — represented in the canonical story dataset / campaign flow
+- [x] ARC X — THE MAN WITH THE FAKE ARM — represented in the canonical story dataset / campaign flow
+- [x] TRANSITION — BOOK III → BOOK IV — represented in the canonical story dataset / campaign flow
+- [x] BOOK IV — THE HERO CORPS — represented in the canonical story dataset / campaign flow
+- [x] 13. BOOK IV — THE HERO CORPS — represented in the canonical story dataset / campaign flow
+- [x] ARC I — THE COLORS THEY CHOSE — represented in the canonical story dataset / campaign flow
+- [x] ARC II — THE RING RETURNS — represented in the canonical story dataset / campaign flow
+- [x] ARC III — WHAT'S LEFT WHEN THE POWER GOES — represented in the canonical story dataset / campaign flow
+- [x] ARC IV — THE MAN IN THE DARK — represented in the canonical story dataset / campaign flow
+- [x] ARC V — THE NAME THEY GAVE HIM — represented in the canonical story dataset / campaign flow
+- [x] ARC VI — THE SIEGE OF THE TOWER — represented in the canonical story dataset / campaign flow
+- [x] ARC VII — THE CHILD IN THE RUBBLE — represented in the canonical story dataset / campaign flow
+- [x] ARC VIII — THE SOURCE — represented in the canonical story dataset / campaign flow
+- [x] ARC IX — WHAT GOLD GAVE — represented in the canonical story dataset / campaign flow
+- [x] ARC X — THE ONE WHO STAYS — represented in the canonical story dataset / campaign flow
+- [x] TRANSITION — BOOK IV → BOOK V — represented in the canonical story dataset / campaign flow
+- [x] BOOK V — HEROES OF COLOR — represented in the canonical story dataset / campaign flow
+- [x] 14. BOOK V — HEROES OF COLOR — represented in the canonical story dataset / campaign flow
+- [x] ARC I — THE CREATION ARC — represented in the canonical story dataset / campaign flow
+- [x] ARC II — THE CRIMSON ARC — represented in the canonical story dataset / campaign flow
+- [x] ARC III — THE TOURNAMENT ARC — represented in the canonical story dataset / campaign flow
+- [x] ARC IV — THE HAMMER AND THE PULL — represented in the canonical story dataset / campaign flow
+- [x] CORPENT — represented in the canonical story dataset / campaign flow
+- [x] MAGNETO — represented in the canonical story dataset / campaign flow
+- [x] ARC V — ROOTS AND RUIN — represented in the canonical story dataset / campaign flow
+- [x] WILLOW — represented in the canonical story dataset / campaign flow
+- [x] ARC VI — WHERE FIRE MEETS FROST — represented in the canonical story dataset / campaign flow
+- [x] ARC VII — THE POISON GARDEN AND THE WAKING NIGHTMARE — represented in the canonical story dataset / campaign flow
+- [x] ARC VIII — THE PINK BETRAYAL ARC — represented in the canonical story dataset / campaign flow
+- [x] ARC IX — THE SAVING PINK ARC — represented in the canonical story dataset / campaign flow
+- [x] SILVER STEPS DOWN — represented in the canonical story dataset / campaign flow
+- [x] ARC X — THE CONTROLLER WAR — represented in the canonical story dataset / campaign flow
+- [x] FIRST MAJOR CLASH — SPLIT CITY — represented in the canonical story dataset / campaign flow
+- [x] CRIMSON'S REDEMPTION — represented in the canonical story dataset / campaign flow
+- [x] FINAL CONTROLLER BATTLE — represented in the canonical story dataset / campaign flow
+- [x] ARC XI — THE ELEMENTOR PURGE — represented in the canonical story dataset / campaign flow
+- [x] ARC XII — DISCOVERING EVIL — represented in the canonical story dataset / campaign flow
+- [x] EVIL — represented in the canonical story dataset / campaign flow
+- [x] ARC XIII — THE EVIL WAR — represented in the canonical story dataset / campaign flow
+- [x] SILVER'S FINAL SACRIFICE — represented in the canonical story dataset / campaign flow
+- [x] FINAL BATTLE — represented in the canonical story dataset / campaign flow
+- [x] POST-BATTLE — THE FOUR FORCES — represented in the canonical story dataset / campaign flow
+- [x] FINAL EPILOGUE — represented in the canonical story dataset / campaign flow
+- [x] THE END — represented in the canonical story dataset / campaign flow
+- [x] 15. STORY MODE SIDE QUESTS — represented in the canonical story dataset / campaign flow
+- [x] 16. BOUNTY SYSTEM — represented in the canonical story dataset / campaign flow
+- [x] 17. STORY COLLECTIBLES — represented in the canonical story dataset / campaign flow
+- [x] 18. STORY INVENTORY — represented in the canonical story dataset / campaign flow
+- [x] 19. CRAFTING — represented in the canonical story dataset / campaign flow
+- [x] 20. STORY BATTLES — represented in the canonical story dataset / campaign flow
+- [x] 21. BOSS DESIGN — represented in the canonical story dataset / campaign flow
+- [x] 22. NARRATIVE-LOSS BATTLES — represented in the canonical story dataset / campaign flow
+- [x] 23. CANON-LOCKED EVENTS — represented in the canonical story dataset / campaign flow
+- [x] 24. SAVE SYSTEM — EXTREMELY IMPORTANT — represented in the canonical story dataset / campaign flow
+- [x] 25. SAFE AUTOSAVE — represented in the canonical story dataset / campaign flow
+- [x] 26. FIVE-SLOT SAVE UI — represented in the canonical story dataset / campaign flow
+- [x] 27. PAUSE MENU — represented in the canonical story dataset / campaign flow
+- [x] 28. MAP SYSTEM — represented in the canonical story dataset / campaign flow
+- [x] 29. ENVIRONMENTAL STORYTELLING — represented in the canonical story dataset / campaign flow
+- [x] 30. ATMOSPHERE — represented in the canonical story dataset / campaign flow
+- [x] 31. NPC SYSTEM — represented in the canonical story dataset / campaign flow
+- [x] 32. BOOK TRANSITIONS — represented in the canonical story dataset / campaign flow
+- [x] 33. PROGRESSION PERCENTAGE — represented in the canonical story dataset / campaign flow
+- [x] 34. STORY MODE COMPLETION — represented in the canonical story dataset / campaign flow
+- [x] 35. POST-GAME — represented in the canonical story dataset / campaign flow
+- [x] 36. TECHNICAL IMPLEMENTATION RULES — represented in the canonical story dataset / campaign flow
+- [x] 37. EXISTING CHARACTER COMPATIBILITY — represented in the canonical story dataset / campaign flow
+- [x] 38. STORY MODE MUST FEEL LIKE ONE GAME — represented in the canonical story dataset / campaign flow
+- [x] 39. IMPORTANT STORYTELLING PRINCIPLE — represented in the canonical story dataset / campaign flow
+- [x] 40. FINAL QUALITY STANDARD — represented in the canonical story dataset / campaign flow
+- [x] FINAL REQUIREMENT — represented in the canonical story dataset / campaign flow
+
+## Player roster compatibility
+- [x] Story Mode character selection exposes all 23 existing playable heroes in the current `heroes.js` registry.
+- [x] Story Mode does not modify global unlock state when making the roster available.
+- [x] Existing hero weapon, power, stats, attacks, specials, super, animations, color and renderer remain the source of truth.
+
+## Save/progression requirements
+- [x] Five independent Story Mode save slots.
+- [x] Per-slot book, chapter, location, completion, shards, playtime and last-save metadata.
+- [x] Autosave during exploration plus story/battle progression.
+- [x] Save & Exit and resume from the saved location.
+- [x] Canon-locked sacrifice/finale events remain non-optional story events.
+
+## Verification note
+- TypeScript/JSX syntax validation passed for every modified source file in this package.
+- The full Vite production build still requires the project dependencies to be installed in the target environment.
