@@ -140,7 +140,8 @@ export default function Tutorial({ onBack }) {
       </div>
       <div className="bg-card border border-border rounded-xl p-6">
         <p className="font-body text-foreground/90 mb-4">Welcome to <span className="font-heading text-accent">The Element 6: Heroes in Color</span>! This tutorial will teach you the basics in a practice arena with a training dummy that won't fight back.</p>
-        <p className="font-body text-muted-foreground text-sm mb-4">You'll learn: movement, jumping, signature attacks, heavy attacks, the power button, and super moves. Each step advances automatically once you perform the action.</p>
+        <p className="font-body text-muted-foreground text-sm mb-4">This is a guided hands-on tutorial. The dummy will not attack you, and every lesson tracks the exact input you need. Complete the movement, combat, defense, and super lessons in order.</p>
+        <div className="grid grid-cols-2 gap-2 mb-4 text-[10px] font-heading"><div className="bg-muted/30 rounded p-2">MOVEMENT<br/><span className="font-body text-muted-foreground">Walk • Jump • Dash • Air Dodge • Wall Slide</span></div><div className="bg-muted/30 rounded p-2">COMBAT<br/><span className="font-body text-muted-foreground">Signature • Heavy • Power • Combos • Super</span></div></div>
         <div className="bg-muted/30 rounded-lg p-3 mb-4 text-xs font-body text-foreground/80">
           <p className="font-heading text-primary mb-1">CONTROLS</p>
           <p>Arrows/WASD = move & jump · Double-tap LEFT/RIGHT = dash · Double-tap a direction in air = air dodge · Hold toward a wall while falling = wall slide · , = sig · L = heavy · . = power · / = super</p>

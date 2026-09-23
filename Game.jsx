@@ -2079,6 +2079,7 @@ export default function Game() {
           <TrainingMode unlockedIds={progress.unlockedIds} favoriteId={progress.favoriteId}
             equippedAccessories={progress.equippedAccessories || {}} equippedSkins={progress.equippedSkins || {}}
             customCharsData={customCharData}
+            settings={progress.settings || {}}
             onBack={goBack} />
         )}
 

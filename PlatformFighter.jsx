@@ -628,6 +628,43 @@ function getMovingPerimeter(perimeter, elapsedSeconds) {
   };
 }
 
+function cloneTrainingValue(value, seen = new WeakSet()) {
+  if (value === null || typeof value !== 'object') return value;
+  if (seen.has(value)) return null;
+  seen.add(value);
+  if (Array.isArray(value)) return value.map(v => cloneTrainingValue(v, seen));
+  const out = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (k === 'char' || k === '_allOpponents' || k === '_lastHitBy' || k === 'dotTargets' || k === 'target') continue;
+    if (typeof v === 'function') continue;
+    out[k] = cloneTrainingValue(v, seen);
+  }
+  return out;
+}
+function restoreTrainingValue(target, snapshot) {
+  if (!target || !snapshot) return;
+  for (const k of Object.keys(target)) {
+    if (k === 'char' || k === '_allOpponents') continue;
+    if (!(k in snapshot)) delete target[k];
+  }
+  for (const [k, v] of Object.entries(snapshot)) {
+    if (k === 'char' || k === '_allOpponents') continue;
+    target[k] = v;
+  }
+}
+function drawTrainingHitbox(ctx, x, y, w, h, label) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,80,80,.9)';
+  ctx.fillStyle = 'rgba(255,80,80,.12)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.fillRect(x - w / 2, y - h / 2, w, h);
+  ctx.strokeRect(x - w / 2, y - h / 2, w, h);
+  ctx.setLineDash([]);
+  if (label) { ctx.font = '10px monospace'; ctx.fillStyle = '#ff7777'; ctx.fillText(label, x - w / 2, y - h / 2 - 3); }
+  ctx.restore();
+}
+
 export default function PlatformFighter({
   p1Char, p2Char, p2IsCPU, onEnd, onAward, onRematch, selectedMap, cpuDifficulty = 'regular',
   gameMode = 'regular', dummy = false, dummyAutoRecover = false, customPlatforms = null, customSpawnPoints = null, musicVolume = 50, sfxVolume = 70,
@@ -651,6 +688,8 @@ export default function PlatformFighter({
   customStageConfig = null,
   stageCamera = null,
   killPerimeter = null,
+  trainingMode = false,
+  trainingController = null,
 }) {
   const canvasRef = useRef(null);
   const gameRef = useRef(null);
@@ -661,6 +700,9 @@ export default function PlatformFighter({
   const [countdown, setCountdown] = useState(3);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
+  const trainingHistoryRef = useRef([]);
+  const trainingCursorRef = useRef(-1);
+  const trainingInitializedRef = useRef(false);
   const lastResultAwardedRef = useRef(false); // guards against double-paying the same match (rematch vs exit)
   const onMoveRef = useRef(onMove);
   onMoveRef.current = onMove;
@@ -809,6 +851,22 @@ export default function PlatformFighter({
     }
     if (gameMode === 'hp' || gameMode === 'brawl') { f1.hp = 450; f2.hp = 450; }
 
+    if (trainingMode && trainingController) {
+      trainingController.historyLimit = 900;
+      trainingController.frame = 0;
+      trainingController.paused = false;
+      trainingController.stepDelta = 0;
+      trainingController.resetDamage = () => { f2.damage = Number(trainingController.damageResetValue ?? 0); f2.hitstun = 0; f2.state = 'idle'; };
+      trainingController.resetPosition = () => { f2.x = trainingController.positionReset?.x ?? p2Spawn.x; f2.y = trainingController.positionReset?.y ?? p2Spawn.y; f2.vx = 0; f2.vy = 0; f2.grounded = true; };
+      trainingController.capturePosition = () => { trainingController.positionReset = { x: f2.x, y: f2.y }; };
+      trainingController.stepBack = () => { trainingController.stepDelta = -1; trainingController.paused = true; };
+      trainingController.stepForward = () => { trainingController.stepDelta = 1; trainingController.paused = true; };
+      trainingController.togglePause = () => { trainingController.paused = !trainingController.paused; };
+      trainingController.setCharacters = null;
+      trainingHistoryRef.current = [];
+      trainingCursorRef.current = -1;
+      trainingInitializedRef.current = true;
+    }
     let timer = gameMode === 'sudden' ? 240 : (matchTime > 0 ? matchTime : (gameMode === 'time' ? 180 : 240));
     if (gameMode === 'time' && matchTime > 0) timer = matchTime;
     if (matchTime === 0 && gameMode !== 'sudden') timer = 99999;
@@ -893,7 +951,19 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
     const loop = (now) => {
       if (!gameRef.current?.running) return;
       // Soft pause: in LAN/online play the game continues while you stand still behind the overlay
-      if (pausedRef.current && !lanConnection) { requestAnimationFrame(loop); return; }
+      const trainingPaused = trainingMode && trainingController?.paused;
+      if ((pausedRef.current || trainingPaused) && !lanConnection) {
+        const delta = trainingMode && trainingController ? Number(trainingController.stepDelta || 0) : 0;
+        if (delta !== 0) {
+          const history = trainingHistoryRef.current;
+          const nextIndex = Math.max(0, Math.min(history.length - 1, (trainingCursorRef.current < 0 ? history.length - 1 : trainingCursorRef.current) + delta));
+          const snap = history[nextIndex];
+          if (snap) { restoreTrainingValue(f1, snap.f1); restoreTrainingValue(f2, snap.f2); platforms.splice(0, platforms.length, ...(snap.platforms || [])); }
+          trainingCursorRef.current = nextIndex;
+          trainingController.stepDelta = 0;
+        }
+        requestAnimationFrame(loop); return;
+      }
 
       const dt = Math.min((now - lastTime) / 1000, 0.05) * (M?.slowMotion || 1);
       lastTime = now;
@@ -921,6 +991,22 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           gameRef.current._suddenDeath = true;
           f1.stocks = 1; f2.stocks = 1; f1.damage = 600; f2.damage = 600;
           if (gameMode === 'hp' || gameMode === 'brawl') { f1.hp = 450; f2.hp = 450; }
+    if (trainingMode && trainingController) {
+      trainingController.historyLimit = 900;
+      trainingController.frame = 0;
+      trainingController.paused = false;
+      trainingController.stepDelta = 0;
+      trainingController.resetDamage = () => { f2.damage = Number(trainingController.damageResetValue ?? 0); f2.hitstun = 0; f2.state = 'idle'; };
+      trainingController.resetPosition = () => { f2.x = trainingController.positionReset?.x ?? p2Spawn.x; f2.y = trainingController.positionReset?.y ?? p2Spawn.y; f2.vx = 0; f2.vy = 0; f2.grounded = true; };
+      trainingController.capturePosition = () => { trainingController.positionReset = { x: f2.x, y: f2.y }; };
+      trainingController.stepBack = () => { trainingController.stepDelta = -1; trainingController.paused = true; };
+      trainingController.stepForward = () => { trainingController.stepDelta = 1; trainingController.paused = true; };
+      trainingController.togglePause = () => { trainingController.paused = !trainingController.paused; };
+      trainingController.setCharacters = null;
+      trainingHistoryRef.current = [];
+      trainingCursorRef.current = -1;
+      trainingInitializedRef.current = true;
+    }
           gameRef.current.timer = 120;
           return;
         }
@@ -967,6 +1053,20 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
              : readPlayerInput(k, _kb.p1), gp1);
         p2In = dummy ? (() => {
           const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
+          if (trainingMode && trainingController) {
+            const source = p1In || NO_INPUT;
+            const mode = trainingController.botMode || 'dummy';
+            if (mode === 'mimic' || mode === 'mirror') {
+              const out = { ...source };
+              if (mode === 'mirror') { const l = out.left; out.left = !!out.right; out.right = !!l; }
+              return out;
+            }
+            if (trainingController.repeatJump) {
+              const out = { ...NO_INPUT };
+              if (f2.grounded && (f2.frame % Math.max(20, Number(trainingController.jumpInterval || 45)) < 5)) out.jump = true;
+              return out;
+            }
+          }
           if (!dummyAutoRecover) return NO_INPUT;
           // Auto-recover dummy: stays completely still while safely grounded on the
           // main platform. It ONLY triggers recovery movement once it has been knocked
@@ -1054,8 +1154,24 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         const zone = getMovingPerimeter(activeKillPerimeter, (now - gameRef.current.stageStartTime) / 1000);
         f1._customBlastZone = zone; f2._customBlastZone = zone;
       }
+      if (trainingMode && trainingController) {
+        const c = trainingController;
+        if (!c.positionReset) c.positionReset = { x: f2.x, y: f2.y };
+        const quiet = f2.grounded && Math.abs(f2.vx || 0) < 0.15 && !f2.attackData && !f2.hitstun;
+        c.quietFrames = quiet ? (c.quietFrames || 0) + 1 : 0;
+        if (c.damageResetEnabled && ((c.damageResetTimer > 0 && f1.frame % Math.max(1, c.damageResetTimer) === 0) || (c.resetWhenGrounded && c.quietFrames >= 180))) f2.damage = Number(c.damageResetValue ?? 0);
+        if (c.positionResetEnabled && ((c.positionResetTimer > 0 && f1.frame % Math.max(1, c.positionResetTimer) === 0) || (c.positionResetWhenGrounded && c.quietFrames >= 180))) { f2.x = c.positionReset.x; f2.y = c.positionReset.y; f2.vx = 0; f2.vy = 0; f2.grounded = true; }
+      }
       updateFighter(f1, p1In, platforms, W, H, f2);
       updateFighter(f2, p2In, platforms, W, H, f1);
+      if (trainingMode && trainingController) {
+        const hist = trainingHistoryRef.current;
+        if (trainingCursorRef.current >= 0 && trainingCursorRef.current < hist.length - 1) hist.splice(trainingCursorRef.current + 1);
+        hist.push({ f1: cloneTrainingValue(f1), f2: cloneTrainingValue(f2), platforms: cloneTrainingValue(platforms) });
+        if (hist.length > (trainingController.historyLimit || 900)) hist.shift();
+        trainingCursorRef.current = hist.length - 1;
+        trainingController.frame = f1.frame;
+      }
       // Update emote timers — cancel if airborne, decrement timer, update progress
       [f1, f2].forEach(f => {
         if (f.emote && f.emote.timer > 0) {
@@ -1121,6 +1237,22 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         // Infinite HP — keep HP full in hp/brawl modes; in regular mode prevent 700% KO death
         if (M.infiniteHP) {
           if (gameMode === 'hp' || gameMode === 'brawl') { f1.hp = 450; f2.hp = 450; }
+    if (trainingMode && trainingController) {
+      trainingController.historyLimit = 900;
+      trainingController.frame = 0;
+      trainingController.paused = false;
+      trainingController.stepDelta = 0;
+      trainingController.resetDamage = () => { f2.damage = Number(trainingController.damageResetValue ?? 0); f2.hitstun = 0; f2.state = 'idle'; };
+      trainingController.resetPosition = () => { f2.x = trainingController.positionReset?.x ?? p2Spawn.x; f2.y = trainingController.positionReset?.y ?? p2Spawn.y; f2.vx = 0; f2.vy = 0; f2.grounded = true; };
+      trainingController.capturePosition = () => { trainingController.positionReset = { x: f2.x, y: f2.y }; };
+      trainingController.stepBack = () => { trainingController.stepDelta = -1; trainingController.paused = true; };
+      trainingController.stepForward = () => { trainingController.stepDelta = 1; trainingController.paused = true; };
+      trainingController.togglePause = () => { trainingController.paused = !trainingController.paused; };
+      trainingController.setCharacters = null;
+      trainingHistoryRef.current = [];
+      trainingCursorRef.current = -1;
+      trainingInitializedRef.current = true;
+    }
           else { f1._pendingDeath = false; f2._pendingDeath = false; if (f1.damage > 650) f1.damage = 650; if (f2.damage > 650) f2.damage = 650; }
         }
         // Infinite power — power always ready and never disabled
@@ -1405,7 +1537,11 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
 
       drawPlatforms(ctx, platforms, f1.frame, mapId);
       if (Array.isArray(stageConfig.freehandStrokes)) {
-        stageConfig.freehandStrokes.forEach(stroke => drawMaterialStroke(ctx, stroke, f1.frame));
+        stageConfig.freehandStrokes.slice(0, 64).forEach(stroke => {
+          const safe = sanitizeFreehandStroke(stroke);
+          if (!safe) return;
+          try { drawMaterialStroke(ctx, safe, f1.frame); } catch {}
+        });
       }
       // Sandbox hazard zones + knockback items
       if (sbHazards) drawSBHazards(ctx, sbHazards, f1.frame);
@@ -1553,6 +1689,23 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         }
         ctx.shadowBlur = 0; ctx.restore();
       };
+      if (settings.hitboxes === true) {
+        const drawFighterBox = (f, label) => {
+          drawTrainingHitbox(ctx, f.x, f.y - 28, 44, 76, label);
+          if (f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
+            const range = (f.attackData.range || 80) * (f.rangeBoost || 1);
+            let cx = f.x + f.facing * Math.max(20, range * 0.45), cy = f.y - 30, w = Math.max(50, range), h = 60;
+            const st = f.attackData.sigType;
+            if (st === 'up' || st === 'aerial') { cx = f.x; cy = f.y - range / 2 - 10; w = 70; h = range; }
+            else if (st === 'down' || st === 'downNormal' || st === 'downHeavy') { cx = f.x; cy = f.y + range / 2 - 20; w = 70; h = range; }
+            else if (f.attackData.isSuper || f.state === 'superAttack') { cx = f.x; cy = f.y - 30; w = 240; h = 240; }
+            drawTrainingHitbox(ctx, cx, cy, w, h, `${label} ATTACK`);
+          }
+        };
+        drawFighterBox(f1, 'P1'); drawFighterBox(f2, 'P2');
+        (sbObjects || []).forEach(o => drawTrainingHitbox(ctx, o.x, o.y, o.w || 24, o.h || 24, 'ITEM'));
+        Object.values(sbHazards || {}).flat().forEach(h => drawTrainingHitbox(ctx, h.x, h.y, h.w || 40, h.h || 40, 'HAZARD'));
+      }
       if (settings.comboCounter !== false) { drawCombo(combo1, f2, char1.color); drawCombo(combo2, f1, char2.color); }
 
       // Draw emote name labels (only in non-botbattle modes)
@@ -1756,7 +1909,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       document.removeEventListener('visibilitychange', onWakeVis);
       releaseWakeLock();
     };
-  }, [gameStarted, p1Char, p2Char, p2IsCPU, mapId, cpuDifficulty, gameMode, dummy, customStageConfig, stageCamera, killPerimeter, customPlatforms, customSpawnPoints, customHazards, customObjects]);
+  }, [gameStarted, p1Char, p2Char, p2IsCPU, mapId, cpuDifficulty, gameMode, dummy, customStageConfig, stageCamera, killPerimeter, customPlatforms, customSpawnPoints, customHazards, customObjects, trainingMode]);
 
   // Suppress controller menu-nav while a match is actively running; re-enable
   // when paused or finished so the player can click buttons with the controller.

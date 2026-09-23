@@ -757,11 +757,17 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     drawStageBackground(ctx, w, h, 0, safeStage.backdrop || 'splitcity', null, null);
 
     const sx = w / 1280, sy = h / 720;
-    platforms.forEach(p => {
+    platforms.slice(0, 1000).forEach(p => {
+      const x=Number(p?.x), y=Number(p?.y), pw=Number(p?.w), ph=Number(p?.h);
+      if (![x,y,pw,ph].every(Number.isFinite)) return;
       const mat = MATERIALS.find(m => m.id === (p.material || 'normal')) || MATERIALS[0];
-      ctx.fillStyle = mat.color;
-      ctx.fillRect(p.x * sx, p.y * sy, p.w * sx, Math.max(2, p.h * sy));
-      drawMaterialOverlay(ctx, { ...p, x: p.x * sx, y: p.y * sy, w: p.w * sx, h: Math.max(2, p.h * sy) }, 0);
+      ctx.fillStyle = mat.color || '#777';
+      ctx.fillRect(x * sx, y * sy, Math.max(1, pw * sx), Math.max(2, ph * sy));
+      try { drawMaterialOverlay(ctx, { ...p, x: x * sx, y: y * sy, w: Math.max(1,pw * sx), h: Math.max(2,ph * sy) }, 0); } catch {}
+    });
+    (Array.isArray(safeStage.freehandStrokes) ? safeStage.freehandStrokes : []).slice(0,64).forEach(st => {
+      const safe = sanitizeFreehandStroke(st); if (!safe) return;
+      try { ctx.beginPath(); ctx.lineWidth=Math.max(1,(safe.diameter||36)*sx); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle=(MATERIALS.find(m=>m.id===safe.material)||MATERIALS[0]).color||'#777'; safe.points.forEach((q,i)=>i?ctx.lineTo(q.x*sx,q.y*sy):ctx.moveTo(q.x*sx,q.y*sy)); ctx.stroke(); } catch {}
     });
     // hazards + objects in thumbnail
     (Array.isArray(safeStage.hazards) ? safeStage.hazards : []).forEach(hz => {
@@ -839,7 +845,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
               emoji: s.emoji || stageData.emoji || '🎨',
               hazards: Array.isArray(stageData.hazards) ? stageData.hazards : [],
               objects: Array.isArray(stageData.objects) ? stageData.objects : [],
-              freehandStrokes: Array.isArray(stageData.freehandStrokes) ? stageData.freehandStrokes : [],
+              freehandStrokes: (Array.isArray(stageData.freehandStrokes) ? stageData.freehandStrokes : []).map(st => sanitizeFreehandStroke(st)).filter(Boolean).slice(0,64),
               downloaded: true,
               originalOwnerId: s.owner_user_id,
             };
@@ -858,7 +864,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
               emoji: s.emoji || stageData.emoji || '🎨',
               hazards: Array.isArray(stageData.hazards) ? stageData.hazards : [],
               objects: Array.isArray(stageData.objects) ? stageData.objects : [],
-              freehandStrokes: Array.isArray(stageData.freehandStrokes) ? stageData.freehandStrokes : [],
+              freehandStrokes: (Array.isArray(stageData.freehandStrokes) ? stageData.freehandStrokes : []).map(st => sanitizeFreehandStroke(st)).filter(Boolean).slice(0,64),
               downloaded: true,
               originalOwnerId: s.owner_user_id,
             });

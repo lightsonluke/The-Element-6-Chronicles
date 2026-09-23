@@ -2,14 +2,21 @@
 // bounding point/collision work so malformed or extremely long strokes cannot
 // lock up the editor or a match.
 
-export const MAX_FREEHAND_POINTS = 512;
-export const MAX_FREEHAND_COLLISION_SEGMENTS = 1200;
+export const MAX_FREEHAND_POINTS = 256;
+export const MAX_FREEHAND_COLLISION_SEGMENTS = 600;
+const FREEHAND_COORD_LIMIT = 200000;
+
+function safeCoord(v, fallback = 0) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(-FREEHAND_COORD_LIMIT, Math.min(FREEHAND_COORD_LIMIT, n));
+}
 
 export function sanitizeFreehandPoints(points, maxPoints = MAX_FREEHAND_POINTS) {
   if (!Array.isArray(points) || points.length === 0) return [];
   const clean = [];
   for (const p of points) {
-    const x = Number(p?.x), y = Number(p?.y);
+    const x = safeCoord(p?.x), y = safeCoord(p?.y);
     if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
     const q = { x, y };
     const last = clean[clean.length - 1];
@@ -29,13 +36,13 @@ export function sanitizeFreehandPoints(points, maxPoints = MAX_FREEHAND_POINTS) 
 
 export function sanitizeFreehandStroke(stroke, maxPoints = MAX_FREEHAND_POINTS) {
   if (!stroke || typeof stroke !== 'object') return null;
-  const points = sanitizeFreehandPoints(stroke.points, maxPoints);
+  const points = sanitizeFreehandPoints(stroke.points, Math.min(MAX_FREEHAND_POINTS, Math.max(2, Number(maxPoints) || MAX_FREEHAND_POINTS)));
   if (!points.length) return null;
   return {
     material: stroke.material || 'normal',
     diameter: Math.max(4, Math.min(300, Number(stroke.diameter) || 36)),
     points,
-    ...(stroke.motion ? { motion: stroke.motion } : {}),
+    ...(stroke.motion && typeof stroke.motion === 'object' ? { motion: stroke.motion } : {}),
   };
 }
 

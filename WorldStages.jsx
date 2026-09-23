@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import db from './cloudCommunity.js';
 import GameIcon from './GameIcon.jsx';
 import { MATERIALS, drawMaterialOverlay } from './materials.js';
+import { sanitizeFreehandStroke } from './freehandSafe.js';
 import { HAZARD_TYPES, OBJECT_TYPES } from './stageHazards.js';
 
 const PAGE_SIZE = 24;
@@ -51,40 +52,18 @@ function formatDate(value) {
 }
 
 function renderThumb(ctx, stage, w = 320, h = 180) {
-  const data = stageDataOf(stage);
-  ctx.clearRect(0, 0, w, h);
-  const g = ctx.createLinearGradient(0, 0, 0, h);
-  const palette = {
-    city: ['#0a0820', '#1a1250'], forest: ['#0a2010', '#1a4020'], void: ['#05010a', '#150030'],
-    sunset: ['#1a0a30', '#FF6644'], ocean: ['#001030', '#004488'], volcano: ['#1a0500', '#FF3300'],
-    space: ['#000005', '#100020'], arctic: ['#0a0a30', '#4488CC'], desert: ['#2a1a00', '#CCAA44'],
-    jungle: ['#0a2000', '#226622'], sky: ['#001122', '#4488FF'], underworld: ['#0a0005', '#440022'],
-    neon: ['#0a0020', '#FF00AA'], ruins: ['#1a1000', '#443322'], crystal: ['#0a0a20', '#AA44FF'],
-    storm: ['#050510', '#334466'], dawn: ['#1a1040', '#FFAA88'], midnight: ['#000010', '#000033'],
-    aurora: ['#000510', '#44FF88'], ember: ['#100000', '#FF6600'], splitcity: ['#0a0820', '#1a1250'],
-  };
-  const colors = palette[stage.backdrop || data.backdrop] || palette.city;
-  g.addColorStop(0, colors[0]); g.addColorStop(1, colors[1]);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-
-  const sx = w / 1280, sy = h / 720;
-  (data.platforms || []).forEach(p => {
-    const mat = MATERIALS.find(m => m.id === (p.material || 'normal')) || MATERIALS[0];
-    ctx.fillStyle = mat.color;
-    ctx.fillRect(p.x * sx, p.y * sy, Math.max(2, p.w * sx), Math.max(2, p.h * sy));
-    try { drawMaterialOverlay(ctx, { ...p, x: p.x * sx, y: p.y * sy, w: Math.max(2, p.w * sx), h: Math.max(2, p.h * sy) }, 0); } catch {}
-  });
-  (data.hazards || []).forEach(h => {
-    const def = HAZARD_TYPES.find(t => t.id === h.type) || HAZARD_TYPES[0];
-    ctx.globalAlpha = 0.6; ctx.fillStyle = def.color || '#ff4444';
-    ctx.fillRect(h.x * sx, h.y * sy, Math.max(2, (h.w || 40) * sx), Math.max(2, (h.h || 30) * sy));
-    ctx.globalAlpha = 1;
-  });
-  (data.objects || []).forEach(o => {
-    const def = OBJECT_TYPES.find(t => t.id === o.type) || OBJECT_TYPES[0];
-    ctx.fillStyle = def.color || '#ffffff';
-    ctx.beginPath(); ctx.arc(o.x * sx, o.y * sy, Math.max(2, (def.size || 20) * sx * 0.5), 0, Math.PI * 2); ctx.fill();
-  });
+  try {
+    const data = stageDataOf(stage) || {};
+    ctx.clearRect(0, 0, w, h);
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    const palette = { city:['#0a0820','#1a1250'], forest:['#0a2010','#1a4020'], void:['#05010a','#150030'], sunset:['#1a0a30','#FF6644'], ocean:['#001030','#004488'], volcano:['#1a0500','#FF3300'], space:['#000005','#100020'], arctic:['#0a0a30','#4488CC'], desert:['#2a1a00','#CCAA44'], jungle:['#0a2000','#226622'], sky:['#001122','#4488FF'], underworld:['#0a0005','#440022'], neon:['#0a0020','#FF00AA'], ruins:['#1a1000','#443322'], crystal:['#0a0a20','#AA44FF'], storm:['#050510','#334466'], dawn:['#1a1040','#FFAA88'], midnight:['#000010','#000033'], aurora:['#000510','#44FF88'], ember:['#100000','#FF6600'], splitcity:['#0a0820','#1a1250'] };
+    const colors = palette[stage?.backdrop || data.backdrop] || palette.city; g.addColorStop(0, colors[0]); g.addColorStop(1, colors[1]); ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+    const sx=w/1280, sy=h/720;
+    (Array.isArray(data.platforms)?data.platforms:[]).slice(0,1000).forEach(p=>{ const x=Number(p?.x),y=Number(p?.y),pw=Number(p?.w),ph=Number(p?.h); if(![x,y,pw,ph].every(Number.isFinite))return; const mat=MATERIALS.find(m=>m.id===(p.material||'normal'))||MATERIALS[0]; ctx.fillStyle=mat.color||'#777'; ctx.fillRect(x*sx,y*sy,Math.max(1,pw*sx),Math.max(1,ph*sy)); try{drawMaterialOverlay(ctx,{...p,x:x*sx,y:y*sy,w:Math.max(1,pw*sx),h:Math.max(1,ph*sy)},0)}catch{} });
+    (Array.isArray(data.freehandStrokes)?data.freehandStrokes:[]).slice(0,64).forEach(st=>{const safe=sanitizeFreehandStroke(st); if(!safe)return; try{const pts=safe.points.map(p=>({x:p.x*sx,y:p.y*sy})); ctx.beginPath(); ctx.lineWidth=Math.max(1,(safe.diameter||36)*sx); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle=(MATERIALS.find(m=>m.id===safe.material)||MATERIALS[0]).color||'#777'; pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)); ctx.stroke();}catch{} });
+    (Array.isArray(data.hazards)?data.hazards:[]).slice(0,300).forEach(h=>{const x=Number(h?.x),y=Number(h?.y),hw=Number(h?.w||40),hh=Number(h?.h||30);if(![x,y,hw,hh].every(Number.isFinite))return;const def=HAZARD_TYPES.find(t=>t.id===h.type)||HAZARD_TYPES[0];ctx.globalAlpha=.6;ctx.fillStyle=def.color||'#f44';ctx.fillRect(x*sx,y*sy,Math.max(1,hw*sx),Math.max(1,hh*sy));ctx.globalAlpha=1});
+    (Array.isArray(data.objects)?data.objects:[]).slice(0,300).forEach(o=>{const x=Number(o?.x),y=Number(o?.y);if(![x,y].every(Number.isFinite))return;const def=OBJECT_TYPES.find(t=>t.id===o.type)||OBJECT_TYPES[0];ctx.fillStyle=def.color||'#fff';ctx.beginPath();ctx.arc(x*sx,y*sy,Math.max(2,(def.size||20)*sx*.5),0,Math.PI*2);ctx.fill()});
+  } catch { try { ctx.clearRect(0,0,w,h); ctx.fillStyle='#111'; ctx.fillRect(0,0,w,h); ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.fillText('STAGE PREVIEW',12,20); } catch {} }
 }
 
 function Thumbnail({ stage }) {
