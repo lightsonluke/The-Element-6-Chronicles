@@ -691,6 +691,7 @@ export default function PlatformFighter({
   trainingMode = false,
   trainingController = null,
   onTrainingSettings = null,
+  trainingSettingsOverlay = null,
 }) {
   const canvasRef = useRef(null);
   const gameRef = useRef(null);
@@ -1930,11 +1931,24 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
-        {trainingMode && onTrainingSettings && <button onClick={onTrainingSettings} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-90">SETTINGS</button>}
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs">PAUSE (ESC)</button>
+      <div className="el6-match-control-layer absolute top-3 right-3 flex items-center gap-2">
+        {trainingMode && onTrainingSettings && (
+          <button
+            onClick={onTrainingSettings}
+            className="px-3 py-1 bg-secondary/90 text-secondary-foreground rounded font-body text-xs hover:opacity-90"
+          >
+            SETTINGS
+          </button>
+        )}
+        <button
+          onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }}
+          className="px-3 py-1 bg-secondary/90 text-secondary-foreground rounded font-body text-xs hover:opacity-90"
+        >
+          PAUSE (ESC)
+        </button>
       </div>
       {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={gameMode === 'challenge' ? () => { pausedRef.current = false; setPaused(false); } : finishQuit} />}
+      {trainingMode && !winner && trainingSettingsOverlay}
       {winner && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/78 rounded-lg gap-5">
           <span className="text-5xl font-heading text-accent drop-shadow-lg">{winner === 'Draw' ? 'DRAW!' : `${winner} WINS!`}</span>

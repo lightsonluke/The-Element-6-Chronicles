@@ -212,9 +212,18 @@
 
 /* Non-pause match overlays can sit above gameplay, but below pause UI. */
 .el6-match-viewport > .el6-match-overlay,
-.el6-match-viewport > .absolute:not(.el6-pause-overlay-layer):not(.el6-match-pause-button),
+.el6-match-viewport > .absolute:not(.el6-pause-overlay-layer):not(.el6-match-pause-button):not(.el6-match-control-layer),
 .el6-match-viewport > div > .absolute:not(.el6-pause-overlay-layer) {
   z-index: 10;
+}
+
+/* Match control row (training SETTINGS + PAUSE): same top UI layer as the pause control. */
+.el6-match-control-layer {
+  position: absolute !important;
+  top: max(12px, env(safe-area-inset-top)) !important;
+  right: max(12px, env(safe-area-inset-right)) !important;
+  z-index: 300 !important;
+  pointer-events: auto !important;
 }
 
 /* Pause menu: guaranteed above the actual match and other match overlays. */
