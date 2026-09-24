@@ -237,7 +237,6 @@ function SupabaseFightLobby({
         <div className="flex flex-col items-center gap-4 py-12">
           <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
           <p className="font-heading text-lg text-accent animate-pulse">SEARCHING GLOBALLY…</p>
-          <p className="text-xs text-muted-foreground font-body">Open the game with a different account to test matchmaking.</p>
           <button onClick={cancel} className="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">CANCEL</button>
         </div>
       )}
