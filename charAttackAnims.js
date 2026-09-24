@@ -7,8 +7,6 @@ import { drawJab, drawSlash, drawWhip, drawLaunch, drawGround, drawSlam, drawCha
 import { drawSuper } from './attackSupers.js';
 import { drawUniqueSuper } from './uniqueSupers.js';
 import { PARTICLES } from './charAttackParticles.js';
-import { getAttackSpec, getAttackSpecForData } from './attackSpecs.js';
-import { drawSpecAttack, drawSpecSuper } from './attackSpecRenderer.js';
 
 const SUPER_W = 1200, SUPER_H = 700;
 
@@ -32,16 +30,6 @@ function getAttackKey(attack, attackKey) {
 
 // ── Main entry: draw sig/heavy attack with per-character config ──
 export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power) {
-  // The attached attack specification is authoritative for Gen I-V fighting moves.
-  // This path intentionally bypasses the older generic shape table so the animation
-  // stays attached to the same attack object that supplies the hitbox.
-  const spec = getAttackSpecForData(charId, attack);
-  if (spec) {
-    drawSpecAttack(ctx, x, y, color, p, facing, spec);
-    ctx.shadowBlur = 0;
-    return;
-  }
-
   const config = getConfig(charId, power, color);
   if (!config) return;
 
@@ -85,13 +73,6 @@ export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, atta
 
 // ── Main entry: draw super with per-character config ──
 export function drawCharSuper(ctx, x, y, color, p, charId) {
-  const spec = getAttackSpec(charId, 'Super');
-  if (spec) {
-    drawSpecSuper(ctx, x, y, color, p, spec, 1);
-    ctx.shadowBlur = 0;
-    return;
-  }
-
   const config = getConfig(charId, '', color);
   if (!config || !config.sp) {
     // Fallback: generic burst
