@@ -7,6 +7,7 @@ import { DOWN_HEAVIES } from './downHeavies.js';
 import { drawWhip } from './whipRenderer.js';
 import { activateGenPower, updateGenProjectiles, onGenPowerExpire } from './genPowers.js';
 import { updateMovementAbilities, onMovementAbilityLanded, resetMovementAbilityState } from './movementAbilities.js';
+import { attackHitsDefender, getAttackKnockbackDirection, scaledAttackDamage } from './attackCombatProfiles.js';
 
 export const GRAVITY = 0.42;
 export const JUMP_FORCE = -14.5;
@@ -1281,7 +1282,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       inputs._heavyConsumed = true;
       fighter.state = 'attacking';
       fighter.attackTimer = 20;
-      fighter.attackData = { name: 'Ground Pound', type: 'groundPound', duration: 20, damage: 18, range: 130, color: fighter.char.color, sigType: 'down', hitApplied: false, progress: 0, isHeavy: true, isGroundPound: true };
+      fighter.attackData = { name: 'Ground Pound', type: 'groundPound', duration: 20, damage: scaledAttackDamage(fighter, null, 'heavy'), range: 130, color: fighter.char.color, sigType: 'down', hitApplied: false, progress: 0, isHeavy: true, isGroundPound: true };
       fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
       fighter.groundPoundCooldown = 45 * (fighter.statControlRecoveryMul || 1);
       fighter.vy = 18;
@@ -1295,7 +1296,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         fighter.state = 'attacking';
         const dur = Math.min(downHeavy.duration, 28);
         fighter.attackTimer = dur;
-        fighter.attackData = { ...downHeavy, duration: dur, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true };
+        fighter.attackData = { ...downHeavy, duration: dur, damage: scaledAttackDamage(fighter, downHeavy, 'heavy'), sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true };
         fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
         fighter.vy = 0;
         fighter.moveStats.downHeavy++;
@@ -1309,7 +1310,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         fighter.state = 'attacking';
         const dur = Math.min(heavy.duration, 30);
         fighter.attackTimer = dur;
-        fighter.attackData = { ...heavy, duration: dur, sigType: 'heavy', hitApplied: false, progress: 0, isHeavy: true };
+        fighter.attackData = { ...heavy, duration: dur, damage: scaledAttackDamage(fighter, heavy, 'heavy'), sigType: 'heavy', hitApplied: false, progress: 0, isHeavy: true };
         fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
         if (fighter.grounded) fighter.vy = 0;
         if (heavy.hasArmor) fighter.invincible = Math.max(fighter.invincible, 8);
@@ -1357,7 +1358,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
           fighter.state = 'attacking';
           const dur = Math.min(sig.duration, 28);
           fighter.attackTimer = dur;
-          fighter.attackData = { ...sig, duration: dur, sigType, hitApplied: false, progress: 0 };
+          fighter.attackData = { ...sig, duration: dur, damage: scaledAttackDamage(fighter, sig, 'signature'), sigType, hitApplied: false, progress: 0 };
           fighter.sigCooldown = SIG_COOLDOWN * (fighter.statControlRecoveryMul || 1);
           fighter.vy = 0;
           if (sigType === 'side') fighter.moveStats.sigSide++;
@@ -1384,7 +1385,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       fighter.state = 'superAttack';
       const dur = Math.min(sm?.duration || 50, 55);
       fighter.attackTimer = dur;
-      fighter.attackData = { ...(sm || {}), duration: dur, sigType: 'super', hitApplied: false, progress: 0, isSuper: true };
+      fighter.attackData = { ...(sm || {}), duration: dur, damage: scaledAttackDamage(fighter, sm, 'super'), sigType: 'super', hitApplied: false, progress: 0, isSuper: true };
       fighter.moveStats.super++;
     }
     if (!inputs.superMove) inputs._superConsumed = false;
@@ -1792,43 +1793,10 @@ export function checkHit(attacker, defender) {
   const p = attacker.attackData.progress;
   if (p < 0.08 || p > 0.85) return false;
 
-  // Super moves use generous distance check
-  if (attacker.attackData.isSuper) {
-    const sdx = defender.x - attacker.x;
-    const sdy = defender.y - attacker.y;
-    return Math.sqrt(sdx * sdx + sdy * sdy) < 240;
-  }
-
-  // ── AABB hitbox collision — attacks only hit if the hitbox overlaps the defender's body ──
-  const baseRange = (attacker.attackData.range || 80) * (attacker.rangeBoost || 1);
-  const facing = attacker.facing;
-  const st = attacker.attackData.sigType;
-
-  // Build attack hitbox rectangle based on attack type
-  let hbW, hbH, hbCX, hbCY;
-  if (st === 'up' || st === 'aerial') {
-    hbW = 70; hbH = baseRange;
-    hbCX = attacker.x; hbCY = attacker.y - baseRange / 2 - 10;
-  } else if (st === 'down' || st === 'downNormal') {
-    hbW = 70; hbH = baseRange;
-    hbCX = attacker.x; hbCY = attacker.y + baseRange / 2 - 20;
-  } else if (st === 'heavy') {
-    hbW = baseRange * 1.1; hbH = 80;
-    hbCX = attacker.x + facing * (hbW / 2 - 10); hbCY = attacker.y - 30;
-  } else {
-    hbW = baseRange; hbH = 60;
-    hbCX = attacker.x + facing * (hbW / 2 - 10); hbCY = attacker.y - 30;
-  }
-
-  // Defender body box — rectangle centered on body
-  const dBW = 32, dBH = 72;
-  const dBX = defender.x, dBY = defender.y - 36;
-
-  // AABB overlap test
-  return (hbCX - hbW / 2) < (dBX + dBW / 2) &&
-         (hbCX + hbW / 2) > (dBX - dBW / 2) &&
-         (hbCY - hbH / 2) < (dBY + dBH / 2) &&
-         (hbCY + hbH / 2) > (dBY - dBH / 2);
+  // Character-specific combat geometry. The visible attack config and the actual
+  // hitbox now use the same shape family, so a visual bolt/whip/arc does not
+  // secretly damage the entire generic rectangle around the fighter.
+  return attackHitsDefender(attacker, defender, attacker.attackData);
 }
 
 export function applyHit(attacker, defender) {
@@ -1870,38 +1838,16 @@ export function applyHit(attacker, defender) {
   const kb = dmg * kbFactor * kbMul * kbBase * (attacker.knockbackMul || 1) * KNOCKBACK_SCALE * (1 - (defender.knockbackReduction || 0));
   const st = attacker.attackData.sigType;
 
+  const hitDir = getAttackKnockbackDirection(attacker, defender, attacker.attackData);
+  const verticalBoost = st === 'up' || st === 'aerial' ? 1.35 : st === 'down' || st === 'downNormal' ? 0.75 : 1;
+  const heavyBoost = attacker.attackData.isHeavy ? 1.12 : 1;
+  const superBoost = attacker.attackData.isSuper ? 1.18 : 1;
+  defender.vx = hitDir.x * kb * heavyBoost * superBoost;
+  defender.vy = hitDir.y * kb * heavyBoost * superBoost;
+  if (st === 'up' || st === 'aerial') defender.vy -= kb * 0.8 * verticalBoost;
   if (attacker.attackData.isGroundPound) {
     defender.vy = -kb * 0.5;
-    defender.vx = (defender.x > attacker.x ? 1 : -1) * kb * 1.5;
-  } else if (attacker.attackData.isRecovery) {
-    defender.vy = -kb * 2.0;
-    defender.vx = attacker.facing * kb * 0.3;
-  } else if (st === 'up' || st === 'aerial') {
-    defender.vy = -kb * 1.8;
-    defender.vx = attacker.facing * kb * 0.3;
-  } else if (st === 'down' || st === 'downNormal') {
-    defender.vy = kb * 0.6;
-    defender.vx = attacker.facing * kb * 0.5;
-  } else if (st === 'super') {
-    defender.vy = -kb * 1.4;
-    defender.vx = attacker.facing * kb * 1.2;
-  } else if (st === 'heavy') {
-    // Heavy attacks: strong, directional knockback based on attack type
-    const heavyType = attacker.attackData.type;
-    if (heavyType === 'groundSlam' || heavyType === 'freeze') {
-      defender.vy = -kb * 1.5;
-      defender.vx = attacker.facing * kb * 0.6;
-    } else if (heavyType === 'launch') {
-      defender.vy = -kb * 2.0;
-      defender.vx = attacker.facing * kb * 0.3;
-    } else {
-      // Forward-launching heavy
-      defender.vx = attacker.facing * kb * 1.4;
-      defender.vy = -kb * 0.6;
-    }
-  } else {
-    defender.vx = attacker.facing * kb * 1.2;
-    defender.vy = -kb * 0.55;
+    defender.vx = (defender.x >= attacker.x ? 1 : -1) * kb * 1.25;
   }
 
   const baseStun = attacker.attackData.isHeavy ? 20 : attacker.attackData.isSuper ? 35 : isLight ? 16 : 18;

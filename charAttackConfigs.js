@@ -425,6 +425,26 @@ export const CHAR_ATTACKS = {
   },
 
   // ═══════════════════════════════════════════════════════════════
+  // Remaining Gen I-IV villains and Guardians — explicit configs
+  // ═══════════════════════════════════════════════════════════════
+  'corpent': { ss: ['slam','rock','#775533',0.9,'hammer'], us: ['launch','rock','#997755',1.0,'pillar'], ds: ['ground','rock','#554422',0.8,'crack'], sh: ['arcAround','rock','#775533',1.4,'hammer'], dh: ['slam','rock','#775533',1.3,'venom'], sp: ['unique','#775533','rock'] },
+  'magneto': { ss: ['radial','metal','#AAAAAA',0.9,'pull'], us: ['launch','metal','#CCCCCC',1.0,'rain'], ds: ['slam','metal','#888888',0.8,'polarity'], sh: ['arcAround','metal','#AAAAAA',1.4,'magnet'], dh: ['radial','metal','#AAAAAA',1.3,'polarity'], sp: ['unique','#AAAAAA','metal'] },
+  'willow': { ss: ['whip','plant','#448833',1.0,'thorn'], us: ['launch','plant','#66AA55',1.0,'vine'], ds: ['ground','plant','#336622',0.8,'roots'], sh: ['whip','plant','#448833',1.4,'thorn'], dh: ['slam','plant','#448833',1.3,'cage'], sp: ['unique','#448833','plant'] },
+  'cable': { ss: ['beam','spark','#4488CC',1.0,'laser'], us: ['launch','spark','#66AAEE',1.0,'drone'], ds: ['radial','spark','#2266AA',0.8,'emp'], sh: ['whip','spark','#4488CC',1.4,'chain'], dh: ['radial','spark','#4488CC',1.3,'pulse'], sp: ['unique','#4488CC','spark'] },
+  'snodvor': { ss: ['beam','crystal','#AADDFF',1.0,'freeze'], us: ['launch','crystal','#CCEEFF',1.0,'stasis'], ds: ['ground','crystal','#88BBDD',0.8,'freeze'], sh: ['charge','crystal','#AADDFF',1.4,'avalanche'], dh: ['slam','crystal','#AADDFF',1.3,'snow'], sp: ['unique','#AADDFF','crystal'] },
+  'kirsten': { ss: ['whip','flame','#FF4400',1.0,'wreath'], us: ['launch','flame','#FF6622',1.0,'pillar'], ds: ['ground','flame','#CC2200',0.8,'inferno'], sh: ['arcAround','flame','#FF4400',1.4,'spiral'], dh: ['slam','flame','#FF4400',1.3,'burn'], sp: ['unique','#FF4400','flame'] },
+  'volt': { ss: ['beam','spark','#CCAA00',1.0,'sonic'], us: ['launch','spark','#DDCC22',1.0,'scream'], ds: ['radial','spark','#AA8800',0.8,'bass'], sh: ['beam','spark','#CCAA00',1.4,'wave'], dh: ['slam','spark','#CCAA00',1.3,'bass'], sp: ['unique','#CCAA00','spark'] },
+  'temple': { ss: ['slash','rock','#AA6633',0.9,'dismantle'], us: ['launch','rock','#CC8855',1.0,'shatter'], ds: ['slam','rock','#884422',0.8,'collapse'], sh: ['slash','rock','#AA6633',1.4,'cleave'], dh: ['slam','rock','#AA6633',1.3,'ruin'], sp: ['unique','#AA6633','rock'] },
+  'nightmare': { ss: ['lineArc','dark','#442266',1.0,'terror'], us: ['launch','dark','#663388',1.0,'tendrils'], ds: ['ground','dark','#331155',0.8,'trap'], sh: ['arcAround','dark','#442266',1.4,'scythe'], dh: ['radial','dark','#442266',1.3,'fear'], sp: ['unique','#442266','dark'] },
+  'hazel': { ss: ['whip','plant','#3A7A22',1.0,'web'], us: ['launch','plant','#4A9A2A',1.0,'spider'], ds: ['ground','plant','#1A3A0E',0.8,'venom'], sh: ['barrier','plant','#2D5A1B',1.4,'cage'], dh: ['slam','plant','#2D5A1B',1.3,'thorns'], sp: ['unique','#2D5A1B','plant'] },
+  'whami': { ss: ['lineBurst','glow','#EEDD99',1.0,'potion'], us: ['launch','glow','#FFFFAA',1.0,'growth'], ds: ['ground','glow','#CCBB88',0.8,'poison'], sh: ['lineBurst','glow','#EEDD99',1.4,'acid'], dh: ['radial','glow','#EEDD99',1.3,'alchemy'], sp: ['unique','#F5DEB3','glow'] },
+  'controller': { ss: ['beam','thread','#1A1A6A',1.0,'mind'], us: ['launch','thread','#2222AA',1.0,'puppet'], ds: ['ground','thread','#050520',0.8,'dominate'], sh: ['barrier','thread','#1A1A6A',1.4,'control'], dh: ['radial','thread','#1A1A6A',1.3,'field'], sp: ['unique','#0A0A2A','thread'] },
+  'evil': { ss: ['beam','dark','#AA00CC',1.0,'void'], us: ['launch','dark','#CC44EE',1.0,'erase'], ds: ['slam','dark','#550088',0.8,'annihilate'], sh: ['radial','dark','#AA00CC',1.4,'void'], dh: ['radial','dark','#AA00CC',1.3,'collapse'], sp: ['unique','#7700AA','dark'] },
+  'life': { ss: ['whip','plant','#44FF44',1.0,'root'], us: ['launch','plant','#88FF88',1.0,'bloom'], ds: ['ground','plant','#228822',0.8,'roots'], sh: ['whip','plant','#44FF44',1.4,'lance'], dh: ['radial','plant','#44FF44',1.3,'bloom'], sp: ['unique','#44FF44','plant'] },
+  'death': { ss: ['beam','dark','#AAAAAA',1.0,'silence'], us: ['launch','dark','#CCCCCC',1.0,'spectral'], ds: ['radial','dark','#888888',0.8,'rest'], sh: ['beam','dark','#AAAAAA',1.4,'silence'], dh: ['radial','dark','#AAAAAA',1.3,'collapse'], sp: ['unique','#AAAAAA','dark'] },
+  'mercy': { ss: ['beam','glow','#FF99DD',1.0,'balance'], us: ['launch','glow','#FFBBEE',1.0,'mercy'], ds: ['radial','glow','#DD77BB',0.8,'equilibrium'], sh: ['beam','glow','#FF99DD',1.4,'balance'], dh: ['radial','glow','#FF99DD',1.3,'pulse'], sp: ['unique','#FF99DD','glow'] },
+
+  // ═══════════════════════════════════════════════════════════════
   // GEN 5 — Heroes of Color (imported from gen5Attacks.js)
   // ═══════════════════════════════════════════════════════════════
   ...GEN5_ATTACKS,

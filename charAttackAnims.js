@@ -7,12 +7,15 @@ import { drawJab, drawSlash, drawWhip, drawLaunch, drawGround, drawSlam, drawCha
 import { drawSuper } from './attackSupers.js';
 import { drawUniqueSuper } from './uniqueSupers.js';
 import { PARTICLES } from './charAttackParticles.js';
+import { getCharByIdUniversal } from './allCharacters.js';
 
 const SUPER_W = 1200, SUPER_H = 700;
 
 // ── Get the config for a character, or derive a fallback ──
 function getConfig(charId, power, color) {
   if (CHAR_ATTACKS[charId]) return CHAR_ATTACKS[charId];
+  const universal = getCharByIdUniversal(charId);
+  if (universal?.baseCharId && CHAR_ATTACKS[universal.baseCharId]) return CHAR_ATTACKS[universal.baseCharId];
   return getFallbackConfig(power, color);
 }
 
