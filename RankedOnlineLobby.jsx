@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import OnlineLobby from './OnlineLobby.jsx';
 import RollbackOnlineFight from './RollbackOnlineFight.jsx';
+import PlatformFighter from './PlatformFighter.jsx';
+import { TrainingOverlay } from './TrainingMode.jsx';
 import UniversalCharacterSelect from './UniversalCharacterSelect.jsx';
 import GameIcon from './GameIcon.jsx';
 import { music } from './music.js';
@@ -54,6 +56,8 @@ function SupabaseFightLobby({
   const [role, setRole] = useState(null);
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState(null);
+  const [trainingSettingsOpen, setTrainingSettingsOpen] = useState(false);
+  const matchmakingTrainingController = useRef({ botMode: 'dummy', repeatJump: false, damageResetEnabled: false, damageResetValue: 0, damageResetTimer: 0, resetWhenGrounded: false, positionResetEnabled: false, positionResetTimer: 0, positionResetWhenGrounded: false, paused: false, stepDelta: 0, jumpInterval: 45 });
   const countdownStarted = useRef(false);
 
   const loadout = { equippedSkins, equippedAccessories, equippedShikigami, element: myElement };
@@ -114,6 +118,8 @@ function SupabaseFightLobby({
     setError(null);
     setMyChar(characterId);
     setPhase('searching');
+    setTrainingSettingsOpen(false);
+    matchmakingTrainingController.current = { botMode: 'dummy', repeatJump: false, damageResetEnabled: false, damageResetValue: 0, damageResetTimer: 0, resetWhenGrounded: false, positionResetEnabled: false, positionResetTimer: 0, positionResetWhenGrounded: false, paused: false, stepDelta: 0, jumpInterval: 45 };
     countdownStarted.current = false;
     try {
       const result = await matchmakeOnlineGame({ mode, characterId, loadout: { ...loadout, element: equippedElements?.[characterId] || myElement } });
@@ -234,9 +240,53 @@ function SupabaseFightLobby({
       )}
 
       {phase === 'searching' && (
-        <div className="flex flex-col items-center gap-4 py-12">
-          <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
-          <p className="font-heading text-lg text-accent animate-pulse">SEARCHING GLOBALLY…</p>
+        <div className="w-full flex flex-col items-center gap-4">
+          <div className="bg-card border border-accent/40 rounded-xl p-4 w-full max-w-xl text-center">
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+              <p className="font-heading text-lg text-accent animate-pulse">SEARCHING GLOBALLY…</p>
+            </div>
+            <p className="text-[10px] text-muted-foreground font-body mt-2">Matchmaking continues in the background while you wait.</p>
+          </div>
+          {mode === 'ranked' && settings.rankedMatchmakingMode === 'training' ? (
+            <div className="w-full relative">
+              <div className="bg-card border border-border rounded-xl p-2 mb-2 text-center">
+                <p className="font-heading text-xs text-primary">TRAINING WHILE MATCHMAKING</p>
+                <p className="text-[10px] text-muted-foreground font-body">You are practicing as {myChar}. When a Ranked opponent is found, training ends automatically and the match begins.</p>
+              </div>
+              <TrainingOverlay
+                open={trainingSettingsOpen}
+                onClose={() => setTrainingSettingsOpen(false)}
+                ctl={matchmakingTrainingController}
+                p1={myChar}
+                p2={myChar === 'red' ? 'yellow' : 'red'}
+                onCharacters={() => {}}
+              />
+              <PlatformFighter
+                p1Char={myChar}
+                p2Char={myChar === 'red' ? 'yellow' : 'red'}
+                p2IsCPU
+                gameMode="regular"
+                selectedMap="traininggrounds"
+                cpuDifficulty="beginner"
+                dummy
+                dummyAutoRecover
+                trainingMode
+                trainingController={matchmakingTrainingController.current}
+                infiniteSuper
+                stockCount={999}
+                onTrainingSettings={() => setTrainingSettingsOpen(v => !v)}
+                settings={settings || {}}
+                equippedAccessories={equippedAccessories}
+                equippedSkins={equippedSkins}
+                onEnd={() => {}}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-4 py-12">
+              <p className="text-xs text-muted-foreground font-body">Open the game with a different account to test matchmaking.</p>
+            </div>
+          )}
           <button onClick={cancel} className="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">CANCEL</button>
         </div>
       )}

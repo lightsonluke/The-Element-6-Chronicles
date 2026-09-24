@@ -577,6 +577,16 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
               <option value="ranked">Ranked</option><option value="unranked">Unranked</option><option value="soccer">Soccer</option>
             </select>
           </div>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <span className="text-xs font-body text-muted-foreground">Ranked matchmaking screen:</span>
+              <p className="text-[9px] text-muted-foreground mt-0.5">Choose whether Ranked shows the normal search screen or lets you practice with your selected fighter while matchmaking runs.</p>
+            </div>
+            <select value={local.rankedMatchmakingMode || 'search'} onChange={e => apply({ rankedMatchmakingMode: e.target.value })} className="shrink-0 px-3 py-1.5 bg-secondary text-secondary-foreground rounded text-xs font-body">
+              <option value="search">Normal — Searching Globally</option>
+              <option value="training">Training While Searching</option>
+            </select>
+          </div>
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Auto-accept matchmaking:</span><Toggle on={local.autoAcceptMatchmaking === true} onClick={() => apply({ autoAcceptMatchmaking: !local.autoAcceptMatchmaking })} /></div>
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Allow cross-region matches:</span><Toggle on={local.crossRegion === true} onClick={() => apply({ crossRegion: !local.crossRegion })} /></div>
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Show opponent ping:</span><Toggle on={local.showPing !== false} onClick={() => apply({ showPing: !local.showPing })} /></div>
