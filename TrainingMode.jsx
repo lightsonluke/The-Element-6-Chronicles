@@ -7,7 +7,7 @@ import UniversalCharacterSelect from './UniversalCharacterSelect.jsx';
 
 const TRAINING_DEFAULTS = { botMode:'dummy', repeatJump:false, damageResetEnabled:false, damageResetValue:0, damageResetTimer:0, resetWhenGrounded:false, positionResetEnabled:false, positionResetTimer:0, positionResetWhenGrounded:false, paused:false, stepDelta:0, jumpInterval:45 };
 
-function TrainingOverlay({ ctl, p1, p2, onCharacters, onClose }) {
+export function TrainingOverlay({ ctl, p1, p2, onCharacters, onClose }) {
   const [, force] = useState(0);
   useEffect(() => { const id=setInterval(()=>force(v=>v+1),120); return()=>clearInterval(id); }, []);
   const update = patch => Object.assign(ctl.current, patch);

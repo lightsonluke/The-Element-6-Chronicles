@@ -254,14 +254,6 @@ function SupabaseFightLobby({
                 <p className="font-heading text-xs text-primary">TRAINING WHILE MATCHMAKING</p>
                 <p className="text-[10px] text-muted-foreground font-body">You are practicing as {myChar}. When a Ranked opponent is found, training ends automatically and the match begins.</p>
               </div>
-              <TrainingOverlay
-                open={trainingSettingsOpen}
-                onClose={() => setTrainingSettingsOpen(false)}
-                ctl={matchmakingTrainingController}
-                p1={myChar}
-                p2={myChar === 'red' ? 'yellow' : 'red'}
-                onCharacters={() => {}}
-              />
               <PlatformFighter
                 p1Char={myChar}
                 p2Char={myChar === 'red' ? 'yellow' : 'red'}
@@ -273,6 +265,15 @@ function SupabaseFightLobby({
                 dummyAutoRecover
                 trainingMode
                 trainingController={matchmakingTrainingController.current}
+                trainingSettingsOverlay={trainingSettingsOpen ? (
+                  <TrainingOverlay
+                    ctl={matchmakingTrainingController}
+                    p1={myChar}
+                    p2={myChar === 'red' ? 'yellow' : 'red'}
+                    onClose={() => setTrainingSettingsOpen(false)}
+                    onCharacters={() => {}}
+                  />
+                ) : null}
                 infiniteSuper
                 stockCount={999}
                 onTrainingSettings={() => setTrainingSettingsOpen(v => !v)}
