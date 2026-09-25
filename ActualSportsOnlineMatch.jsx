@@ -36,16 +36,26 @@ export default function ActualSportsOnlineMatch({
   const startedAt = useRef(Date.now());
   const resyncTimer = useRef(null);
   const resyncVisible = useRef(false);
+  const stalledRef = useRef(false);
+  const lastRemoteFrame = useRef(-1);
+  const lastRemoteAt = useRef(Date.now());
+  const syncRequestRef = useRef(false);
+  const lastHostStateRef = useRef(null);
+  const resyncRequestersRef = useRef(new Set());
 
   const showResyncOnce = () => {
-    // State packets arrive continuously; they are normal transport, not a
-    // resync event.  Keep one short overlay per recovery instead of flashing
-    // RESYNCING on every packet.
     if (resyncVisible.current) return;
     resyncVisible.current = true;
+    stalledRef.current = true;
     setSyncing(true);
+    if (!isHost && channel.current && me?.id) {
+      syncRequestRef.current = true;
+      channel.current.send({ type: 'broadcast', event: 'control', payload: { sender: me.id, kind: 'sync-request', lastFrame: lastRemoteFrame.current } });
+    }
     clearTimeout(resyncTimer.current);
-    resyncTimer.current = setTimeout(() => { resyncVisible.current = false; setSyncing(false); }, 180);
+    resyncTimer.current = setTimeout(() => {
+      if (isHost) { resyncVisible.current = false; setSyncing(false); }
+    }, 500);
   };
 
   useEffect(() => {
@@ -93,10 +103,37 @@ export default function ActualSportsOnlineMatch({
       })
       .on('broadcast', { event: 'state' }, ({ payload }) => {
         if (active && !isHost && payload?.state) {
+          const nextFrame = Number(payload.state.frame ?? 0);
+          if (nextFrame < lastRemoteFrame.current) return;
+          lastRemoteFrame.current = nextFrame;
+          lastRemoteAt.current = Date.now();
           setRemoteState(payload.state);
-          // First authoritative snapshot is a normal join sync.  Later state
-          // packets silently keep the guest current; the sport engines may
-          // explicitly request the one-time recovery overlay when needed.
+          if (stalledRef.current && syncRequestRef.current) {
+            syncRequestRef.current = false;
+            channel.current?.send({ type: 'broadcast', event: 'control', payload: { sender: me.id, kind: 'sync-ack', frame: nextFrame } });
+          }
+        }
+      })
+      .on('broadcast', { event: 'control' }, ({ payload }) => {
+        if (!active || !payload || payload.sender === me.id) return;
+        if (payload.kind === 'sync-request' && isHost) {
+          stalledRef.current = true;
+          setSyncing(true);
+          if (payload.sender) resyncRequestersRef.current.add(payload.sender);
+          const state = lastHostStateRef.current || payload.state || null;
+          if (state) channel.current?.send({ type: 'broadcast', event: 'state', payload: { state, resync: true } });
+        } else if (payload.kind === 'sync-ack' && isHost) {
+          if (payload.sender) resyncRequestersRef.current.delete(payload.sender);
+          if (resyncRequestersRef.current.size === 0) {
+            stalledRef.current = false;
+            setSyncing(false);
+            channel.current?.send({ type: 'broadcast', event: 'control', payload: { sender: me.id, kind: 'sync-resume' } });
+          }
+        } else if (payload.kind === 'sync-resume') {
+          stalledRef.current = false;
+          syncRequestRef.current = false;
+          setSyncing(false);
+          resyncVisible.current = false;
         }
       })
       .on('broadcast', { event: 'result' }, ({ payload }) => {
@@ -113,6 +150,19 @@ export default function ActualSportsOnlineMatch({
     };
   }, [match?.id, me?.id, sport, isHost]);
 
+  useEffect(() => {
+    if (!match?.id || !me?.id || !sport || isHost) return undefined;
+    const timer = setInterval(() => {
+      if (Date.now() - lastRemoteAt.current > 350 && !syncRequestRef.current) {
+        syncRequestRef.current = true;
+        stalledRef.current = true;
+        setSyncing(true);
+        channel.current?.send({ type: 'broadcast', event: 'control', payload: { sender: me.id, kind: 'sync-request', lastFrame: lastRemoteFrame.current } });
+      }
+    }, 100);
+    return () => clearInterval(timer);
+  }, [match?.id, me?.id, sport, isHost]);
+
   const lanConnection = useMemo(() => ({
     onMessage(handler) {
       messageHandler.current = handler;
@@ -123,14 +173,16 @@ export default function ActualSportsOnlineMatch({
         channel.current.send({ type: 'broadcast', event: 'input', payload: { sender: me.id, message: { ...message, playerSlot: Number(mePlayer?.slot || 1) - 1 } } });
       }
     },
-    stalled: false,
-    stalledRef: { current: false },
+    get stalled() { return stalledRef.current; },
+    stalledRef,
   }), [me?.id, mePlayer?.slot]);
 
   const onStateExport = state => {
     // Existing games export every animation frame; send at ~20Hz instead.
     if (!isHost || !channel.current || performance.now() - lastStateSent.current < 50) return;
     lastStateSent.current = performance.now();
+    lastHostStateRef.current = state;
+    if (stalledRef.current) return;
     channel.current.send({ type: 'broadcast', event: 'state', payload: { state } });
   };
 

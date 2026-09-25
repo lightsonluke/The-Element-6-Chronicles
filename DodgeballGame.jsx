@@ -238,6 +238,7 @@ export default function DodgeballGame({
     let raf;
     const loop = () => {
       raf = requestAnimationFrame(loop);
+      if (lanConnection?.stalledRef?.current) { draw(); return; }
       if (remoteStateRef.current) {
         stRef.current = remoteStateRef.current;
         draw();

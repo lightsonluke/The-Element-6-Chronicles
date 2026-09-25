@@ -19,6 +19,7 @@ import { getKeybinds, readPlayerInput, readSinglePlayerInput, getSchemeKeybinds,
 import { useClipRecorder } from './useClipRecorder.js';
 import { drawMaterialOverlay, drawMaterialStroke } from './materials.js';
 import { sanitizeFreehandStroke, buildFreehandCollisionPlatforms } from './freehandSafe.js';
+import { drawOffscreenIndicator } from './offscreenIndicator.js';
 import { drawStageBackground } from './stageBackgrounds.js';
 import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor, getEquippedAccessories } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
@@ -1778,6 +1779,11 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         });
       }
       ctx.restore();
+
+      [f1, f2].forEach(f => {
+        if (f.stocks <= 0) return;
+        drawOffscreenIndicator(ctx, { x: f.x, y: f.y - 45, color: f.char?.color, cameraX: g.camX, cameraY: g.camY, zoom: g.camZoom, width: W, height: H });
+      });
 
       drawTimer(ctx, W, gameRef.current.timer);
 

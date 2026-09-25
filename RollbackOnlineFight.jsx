@@ -29,6 +29,7 @@ import { useClipRecorder } from './useClipRecorder.js';
 import { RollbackSession } from './rollback/rollbackSession.js';
 import { SupabaseRollbackTransport } from './rollback/realtimeTransport.js';
 import { checksumState } from './rollback/stateChecksum.js';
+import { drawOffscreenIndicator } from './offscreenIndicator.js';
 import {
   createElement6OnlineState,
   getOnlineStagePlatforms,
@@ -125,6 +126,8 @@ export default function RollbackOnlineFight({
     let stopped = false;
     let finished = false;
     let resyncing = false;
+    let resyncToken = null;
+    let resyncAcked = false;
     let lastResyncAt = 0;
     let lastPeerMessageAt = Date.now();
     let transport;
@@ -202,8 +205,8 @@ export default function RollbackOnlineFight({
       // synchronized state, so both screens select the identical view.
       const midpoint = (hostFighter.x + guestFighter.x) / 2;
       const separation = Math.abs(hostFighter.x - guestFighter.x);
-      const camX = (midpoint - ONLINE_STAGE_WIDTH / 2) * (1 - camZoom) * 0.35;
       const camZoom = Math.max(0.82, Math.min(1.12, 1.12 - Math.max(0, separation - 360) / 1800));
+      const camX = (midpoint - ONLINE_STAGE_WIDTH / 2) * (1 - camZoom) * 0.35;
       ctx.save();
       ctx.translate(ONLINE_STAGE_WIDTH / 2, ONLINE_STAGE_HEIGHT / 2);
       ctx.scale(camZoom, camZoom);
@@ -212,6 +215,9 @@ export default function RollbackOnlineFight({
       drawFighter(hostFighter, hostCharacter, hostLoadout, isHost ? myUsername : oppUsername);
       drawFighter(guestFighter, guestCharacter, guestLoadout, isHost ? oppUsername : myUsername);
       ctx.restore();
+
+      drawOffscreenIndicator(ctx, { x: hostFighter.x, y: hostFighter.y - 45, color: hostCharacter?.color, cameraX: camX, cameraY: 0, zoom: camZoom, width: ONLINE_STAGE_WIDTH, height: ONLINE_STAGE_HEIGHT });
+      drawOffscreenIndicator(ctx, { x: guestFighter.x, y: guestFighter.y - 45, color: guestCharacter?.color, cameraX: camX, cameraY: 0, zoom: camZoom, width: ONLINE_STAGE_WIDTH, height: ONLINE_STAGE_HEIGHT });
 
       ctx.fillStyle = 'rgba(0,0,0,0.72)';
       ctx.fillRect(0, ONLINE_STAGE_HEIGHT - 80, ONLINE_STAGE_WIDTH, 80);
@@ -276,11 +282,14 @@ export default function RollbackOnlineFight({
             // from repeatedly flashing RESYNCING while the host snapshot fixes it.
             if (resyncing || Date.now() - lastResyncAt < 2500) return;
             resyncing = true;
+            resyncAcked = false;
+            resyncToken = `${matchId}:${Date.now()}`;
             lastResyncAt = Date.now();
             setResyncing(true);
             setConnectionText('RESYNCING…');
-            if (isHost) transport?.sendControl('resync-state', { frame: session?.getStats().currentFrame || 0, state: session?.getRenderableState() }).catch(() => {});
-            else transport?.sendControl('resync-request').catch(() => {});
+            transport?.sendControl('resync-begin', { token: resyncToken, frame: session?.getStats().currentFrame || 0 }).catch(() => {});
+            if (isHost) transport?.sendControl('resync-state', { token: resyncToken, frame: session?.getStats().currentFrame || 0, state: session?.getRenderableState() }).catch(() => {});
+            else transport?.sendControl('resync-request', { token: resyncToken }).catch(() => {});
           },
           onFrame: ({ state }) => {
             for (const event of state.events || []) {
@@ -301,19 +310,46 @@ export default function RollbackOnlineFight({
           if (packet.kind === 'ready') {
             transport.sendControl('ready-ack').catch(() => {});
             markPeerReady();
-          } else if (packet.kind === 'ready-ack') markPeerReady();
-          else if (packet.kind === 'resync-request' && isHost) {
-            transport.sendControl('resync-state', { frame: session.getStats().currentFrame, state: session.getRenderableState() }).catch(() => {});
-          } else if ((packet.kind === 'resync-state' || packet.kind === 'state-snapshot') && packet.state) {
-            if (resyncing && packet.kind === 'state-snapshot') return;
+          } else if (packet.kind === 'ready-ack') {
+            markPeerReady();
+          } else if (packet.kind === 'resync-begin') {
             resyncing = true;
-            lastResyncAt = Date.now();
+            resyncToken = packet.token || resyncToken || `${matchId}:${Date.now()}`;
+            resyncAcked = false;
             setResyncing(true);
+            setConnectionText('RESYNCING…');
+            if (isHost) transport.sendControl('resync-state', { token: resyncToken, frame: session.getStats().currentFrame, state: session.getRenderableState() }).catch(() => {});
+          } else if (packet.kind === 'resync-request' && isHost) {
+            resyncing = true;
+            setResyncing(true);
+            resyncToken = packet.token || resyncToken || `${matchId}:${Date.now()}`;
+            transport.sendControl('resync-state', { token: resyncToken, frame: session.getStats().currentFrame, state: session.getRenderableState() }).catch(() => {});
+          } else if (packet.kind === 'resync-state' && packet.state) {
+            resyncing = true;
+            setResyncing(true);
+            resyncToken = packet.token || resyncToken;
             session.replaceState(packet.state, Number(packet.frame) || packet.state.frame || 0);
-            window.setTimeout(() => { resyncing = false; setResyncing(false); }, 140);
+            transport.sendControl('resync-ack', { token: resyncToken, frame: session.getStats().currentFrame }).catch(() => {});
             setNetworkError(null);
-            setConnectionText('CONNECTED · RESYNCED');
-          } else if (packet.kind === 'disconnect') finishMatch(role);
+          } else if (packet.kind === 'resync-ack' && isHost) {
+            if (packet.token === resyncToken) {
+              resyncAcked = true;
+              transport.sendControl('resync-resume', { token: resyncToken, frame: session.getStats().currentFrame }).catch(() => {});
+              resyncing = false;
+              setResyncing(false);
+              setConnectionText('CONNECTED · RESYNCED');
+            }
+          } else if (packet.kind === 'resync-resume') {
+            if (!resyncToken || !packet.token || packet.token === resyncToken) {
+              resyncing = false;
+              setResyncing(false);
+              setConnectionText('CONNECTED · RESYNCED');
+            }
+          } else if (packet.kind === 'state-snapshot' && packet.state && !resyncing) {
+            // Normal checkpoints are informational; they do not pause the match.
+          } else if (packet.kind === 'disconnect') {
+            finishMatch(role);
+          }
         });
 
         await transport.connect();

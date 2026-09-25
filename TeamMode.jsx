@@ -5,6 +5,7 @@ import { createFighter, updateFighter, checkHit, applyHit, updateAI, updateProje
 import { getKeybinds, readPlayerInput, readSinglePlayerInput } from './keybinds.js';
 import { readGamepadInput } from './controllerProfiles.js';
 import { drawStickman, drawAttackEffect, drawSuperEffect, drawHealthBar, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawSuperFlash } from './renderer.js';
+import { drawOffscreenIndicator } from './offscreenIndicator.js';
 import { POWER_EFFECTS, getPowerEffect } from './powerEffects.js';
 import { withCustomChars } from './characterNumber.js';
 import { music } from './music.js';
@@ -558,6 +559,11 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
       fighters.forEach(f => { if (f.stocks > 0) drawProjectiles(ctx, f); });
 
       ctx.restore();
+
+      fighters.forEach(f => {
+        if (f.stocks <= 0) return;
+        drawOffscreenIndicator(ctx, { x: f.x, y: f.y - 45, color: f.char?.color || TEAM_COLORS[f.team], cameraX: camX, cameraY: camY, zoom: camZoom, width: W, height: H });
+      });
 
       // HUD — team stock counts (background hidden when stock boxes are hidden)
       if (!settings?.hideStockBoxes) {

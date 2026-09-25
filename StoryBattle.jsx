@@ -13,6 +13,7 @@ import {
   drawHealthBar, drawTimer, drawPlatforms, drawBackground,
   drawHitSparks, drawSuperFlash
 } from './renderer.js';
+import { drawOffscreenIndicator } from './offscreenIndicator.js';
 import { getVillainStage, STORY_STAGE_PLATFORMS } from './storyStages.js';
 import { music } from './music.js';
 import { readGamepadInput } from './controllerProfiles.js';
@@ -349,6 +350,11 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
         }
       });
       ctx.restore();
+
+      [...pTeam, ...eTeam].forEach(f => {
+        if (f.stocks <= 0) return;
+        drawOffscreenIndicator(ctx, { x: f.x, y: f.y - 45, color: f.char?.color, cameraX: camX, cameraY: camY, zoom: camZoom, width: W, height: H });
+      });
 
       drawTimer(ctx, W, gameRef.current.timer);
 

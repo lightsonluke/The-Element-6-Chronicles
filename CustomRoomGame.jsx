@@ -8,6 +8,7 @@ import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, updateProjectiles, loseStock, CPU_DIFFICULTY } from './fighter.js';
 import { drawStickman, drawAttackEffect, drawSuperEffect, drawHealthBar, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles } from './renderer.js';
+import { drawOffscreenIndicator } from './offscreenIndicator.js';
 import { getKeybinds, readPlayerInput } from './keybinds.js';
 import { readGamepadInput } from './controllerProfiles.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
@@ -539,6 +540,13 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
       });
 
       ctx.restore();
+
+      renderFighters.forEach((f, i) => {
+        if ((isHost ? f.stocks : (f.stocks ?? 0)) <= 0) return;
+        const charData = isHost ? f.char : getCharData(f.charId);
+        if (!charData) return;
+        drawOffscreenIndicator(ctx, { x: f.x, y: f.y - 45, color: charData.color, cameraX: -camX, cameraY: -camY, zoom: camZoom, width: W, height: H });
+      });
 
       // HUD — fighter stock/damage bars
       ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, 10 + renderFighters.filter(f => (isHost ? f.stocks > 0 : (f.stocks ?? 0) > 0)).length * 22);

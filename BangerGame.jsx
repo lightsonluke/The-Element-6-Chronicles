@@ -232,6 +232,7 @@ export default function BangerGame({
     let raf;
     const loop = () => {
       raf = requestAnimationFrame(loop);
+      if (lanConnection?.stalledRef?.current) { draw(ctx, stRef.current); return; }
       if (remoteStateRef.current) {
         stRef.current = remoteStateRef.current;
         draw(ctx, stRef.current);
