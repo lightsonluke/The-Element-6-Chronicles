@@ -61,10 +61,14 @@ function rebuildBlob() {
 }
 
 function trimBuffer(referenceTime = performance.now()) {
+  // MediaRecorder's first chunk contains the WebM initialization/header data.
+  // Keep that chunk forever and rotate only the media chunks after it. Removing
+  // the first chunk makes the remaining WebM invalid, which caused saves to
+  // fail with the recorder reporting that a clip was not ready.
   const cutoff = referenceTime - CLIP_SECONDS * 1000;
-  while (chunks.length && chunks[0].time < cutoff) {
-    chunkBytes -= chunks[0].size;
-    chunks.shift();
+  while (chunks.length > 1 && chunks[1].time < cutoff) {
+    chunkBytes -= chunks[1].size;
+    chunks.splice(1, 1);
   }
 }
 
@@ -150,8 +154,8 @@ async function makeSnapshot() {
   trimBuffer(now);
   const blob = rebuildBlob();
   if (!blob) return null;
-  const oldest = chunks[0]?.time ?? now;
-  const duration = Math.min(CLIP_SECONDS, Math.max(0.25, (now - Math.max(recordingStartedAt, oldest)) / 1000));
+  const mediaStart = chunks[1]?.time ?? chunks[0]?.time ?? recordingStartedAt;
+  const duration = Math.min(CLIP_SECONDS, Math.max(0.25, (now - Math.max(recordingStartedAt, mediaStart)) / 1000));
   return { blob, duration };
 }
 
