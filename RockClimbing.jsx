@@ -13,8 +13,6 @@ import RockClimbing2P from './RockClimbing2P.jsx';
 import { applyElement } from './elements.js';
 import ElementSelect from './ElementSelect.jsx';
 import GameIcon from "./GameIcon.jsx";
-import PauseMenu from './PauseMenu.jsx';
-import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 
 // ── Canvas / world ──
 const W = 900, H = 720;
@@ -30,6 +28,12 @@ const PW = 9, PH = 42;
 // launches them in the exact direction the arrow points — no left/right steering.
 const AIM_SWEEP = 1.43;         // max angle from vertical (rad) ≈ 82°
 const AIM_BASE_SPEED = 0.022;   // oscillation rad/frame (very slow, ~4.8s sweep at base)
+// Very small invisible timing forgiveness: if a hold is already close to the
+// arrow's straight-line path, the launch angle quietly realigns to that hold.
+// The corridor is intentionally narrow so the timing mechanic remains difficult.
+const AIM_CORRIDOR_HALF_WIDTH = 22;
+const AIM_CORRIDOR_MIN_FORWARD = 28;
+const AIM_CORRIDOR_MAX_FORWARD = 520;
 
 // Hold types — real climbing hold shapes, each with a distinct color.
 const HOLD_TYPES = {
@@ -82,6 +86,40 @@ function deriveStats(char, element) {
 function envFor(progress) {
   const i = Math.min(7, Math.floor(progress * 8));
   return { idx: i, name: ENV_NAMES[i], progress };
+}
+
+// Returns the best hold already sitting inside a narrow corridor extending
+// from the current arrow direction. This is intentionally a geometric
+// forgiveness window rather than a visible magnet/auto-target indicator.
+function findCorridorHold(s, p, angle) {
+  const dxDir = Math.sin(angle);
+  const dyDir = -Math.cos(angle);
+  let best = null;
+  let bestScore = Infinity;
+
+  for (const h of s.holds || []) {
+    if (h.broken || h === p.hold) continue;
+    // Only assist toward holds above the climber.
+    if (h.y >= p.y - 8) continue;
+
+    const dx = h.x - p.x;
+    const dy = h.y - p.y;
+    const forward = dx * dxDir + dy * dyDir;
+    if (forward < AIM_CORRIDOR_MIN_FORWARD || forward > AIM_CORRIDOR_MAX_FORWARD) continue;
+
+    // Perpendicular distance from the hold center to the arrow's infinite line.
+    const perpendicular = Math.abs(dx * (-dyDir) + dy * dxDir);
+    if (perpendicular > AIM_CORRIDOR_HALF_WIDTH) continue;
+
+    // Prefer the hold closest to the center of the corridor, then the nearer hold.
+    const score = perpendicular * 3 + forward * 0.015;
+    if (score < bestScore) {
+      bestScore = score;
+      best = h;
+    }
+  }
+
+  return best;
 }
 
 // ── Strategic route generator ──
@@ -267,14 +305,6 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
     const isDown = k => k === 'arrowdown' || k === 's';
     const kd = e => {
       const k = e.key.toLowerCase();
-      if (k === 'r') {
-        e.preventDefault();
-        initRun(charId, trackId);
-        setResult(null);
-        pausedRef.current = false;
-        setPaused(false);
-        return;
-      }
       if (k === 'escape' || k === 'p') { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
       if (['F5', 'F12'].includes(e.key)) return;
       if (isJump(k) && !keysRef.current[k]) edgeRef.current.jump = true;
@@ -285,7 +315,7 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
     const ku = e => { keysRef.current[e.key.toLowerCase()] = false; };
     window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
     return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); };
-  }, [phase, onExit, initRun, charId, trackId]);
+  }, [phase, onExit]);
 
   // ── Loop ──
   useEffect(() => {
@@ -346,8 +376,8 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
     // ── breakable / cracked crumbling while grabbed ──
     if (p.hold) {
       const ht = HOLD_TYPES[p.hold.type] || HOLD_TYPES.medium;
-      if (ht.breaks && !p.hold.crumbling) { p.hold.crumbling = true; p.hold.crumbleT = 36; sfx.rockBreak(); }
-      if (ht.crack && !p.hold.crumbling && Math.random() < 0.004) { p.hold.crumbling = true; p.hold.crumbleT = 60; }
+      if (ht.breaks && !p.hold.crumbling) { p.hold.crumbling = true; p.hold.crumbleT = 47; sfx.rockBreak(); }
+      if (ht.crack && !p.hold.crumbling && Math.random() < 0.004) { p.hold.crumbling = true; p.hold.crumbleT = 78; }
     }
     for (const h of s.holds) {
       if (h.crumbling && !h.broken) { h.crumbleT--; if (h.crumbleT <= 0) { h.broken = true; if (p.hold === h) { releaseHold(s, false); sfx.rockBreak(); s.shake = 8; } } }
@@ -428,6 +458,10 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
             a = a + (targetAngle - a) * assist;
           }
         }
+        // Tiny hidden forgiveness window: after normal character-control assist,
+        // snap only if a hold is already very close to the arrow's path.
+        const corridorHold = findCorridorHold(s, p, a);
+        if (corridorHold) a = Math.atan2(corridorHold.x - p.x, -(corridorHold.y - p.y));
         const power = s.stats.launchPower;
         releaseHold(s, true);
         p.grabCooldown = 10;
@@ -458,6 +492,8 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
             a = a + (targetAngle - a) * assist;
           }
         }
+        const corridorHold = findCorridorHold(s, p, a);
+        if (corridorHold) a = Math.atan2(corridorHold.x - p.x, -(corridorHold.y - p.y));
         const power = s.stats.launchPower;
         p.vy = -power * Math.cos(a);
         p.vx = power * Math.sin(a);
@@ -576,15 +612,15 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
         if (me) {
           const char = resolveChar(charId, customCharsData);
           const uname = me.full_name || me.email || 'Climber';
-          const existing = await db.entities.RockClimbScore.filter({ user_id: me.id, track_id: s.track?.id ?? trackId });
+          const existing = await db.entities.RockClimbScore.filter({ user_id: me.id });
           if (existing && existing.length) {
             const best = existing.reduce((a, b) => ((a.time_ms || 0) <= (b.time_ms || 0) ? a : b));
             if (Math.floor(time) < (best.time_ms || Infinity)) {
-              await db.entities.RockClimbScore.update(best.id, { track_id: s.track?.id ?? trackId, time_ms: Math.floor(time), user_name: uname, char_id: charId, char_name: char?.name || charId, checkpoints_used: s.cpUsed, no_checkpoint_run: !s.usedCheckpoint });
+              await db.entities.RockClimbScore.update(best.id, { time_ms: Math.floor(time), user_name: uname, char_id: charId, char_name: char?.name || charId, checkpoints_used: s.cpUsed, no_checkpoint_run: !s.usedCheckpoint });
             }
             for (const e of existing) if (e.id !== best.id) await db.entities.RockClimbScore.delete(e.id).catch(() => {});
           } else {
-            await db.entities.RockClimbScore.create({ user_id: me.id, track_id: s.track?.id ?? trackId, user_name: uname, char_id: charId, char_name: char?.name || charId, time_ms: Math.floor(time), checkpoints_used: s.cpUsed, no_checkpoint_run: !s.usedCheckpoint });
+            await db.entities.RockClimbScore.create({ user_id: me.id, user_name: uname, char_id: charId, char_name: char?.name || charId, time_ms: Math.floor(time), checkpoints_used: s.cpUsed, no_checkpoint_run: !s.usedCheckpoint });
           }
           saved = true;
           const all = await db.entities.RockClimbScore.list('-created_date', 200);
@@ -594,7 +630,7 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
         }
       } catch { saved = false; }
       try {
-        const remote = await submitWorldScore('rockclimb', Math.floor(time), { track_id: s.track?.id ?? trackId, track_name: s.track?.name || 'Unknown', char_id: charId, checkpoints_used: s.cpUsed, no_checkpoint_run: !s.usedCheckpoint });
+        const remote = await submitWorldScore('rockclimb', Math.floor(time), { char_id: charId, checkpoints_used: s.cpUsed, no_checkpoint_run: !s.usedCheckpoint });
         saved = true; rank = remote.rank || rank;
       } catch { /* Local best is still retained if the player is offline. */ }
     }
@@ -709,12 +745,18 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
         <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-        <MatchPauseButtonPortal>
-          <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? 'RESUME' : 'PAUSE'}</button>
-        </MatchPauseButtonPortal>
-        <span className="text-[10px] text-muted-foreground font-body"><GameIcon emoji="↑" size={14} />/W/SPACE: Launch · <GameIcon emoji="↓" size={14} />/S: Let go · <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} />/AD: Steer · R: Restart · ESC/P: Pause</span>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause</button>
+        <span className="text-[10px] text-muted-foreground font-body"><GameIcon emoji="↑" size={14} />/W/SPACE: Launch (time the arrow!) · <GameIcon emoji="↓" size={14} />/S: Let go · <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} />/AD: Steer while falling · ESC/P: Pause</span>
       </div>
-      {paused && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onExit} /></MatchPausePortal>}
+      {paused && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-lg gap-4 z-10">
+          <h2 className="text-3xl font-heading text-accent">PAUSED</h2>
+          <div className="flex gap-2">
+            <button onClick={() => { pausedRef.current = false; setPaused(false); }} className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="▶" size={14} /> RESUME</button>
+            <button onClick={onExit} className="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">QUIT TO MENU</button>
+          </div>
+        </div>
+      )}
       <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#0e1a14' }} />
     </div>
