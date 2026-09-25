@@ -31,7 +31,7 @@ const AIM_BASE_SPEED = 0.022;   // oscillation rad/frame (very slow, ~4.8s sweep
 // Very small invisible timing forgiveness: if a hold is already close to the
 // arrow's straight-line path, the launch angle quietly realigns to that hold.
 // The corridor is intentionally narrow so the timing mechanic remains difficult.
-const AIM_CORRIDOR_HALF_WIDTH = 22;
+const AIM_CORRIDOR_HALF_WIDTH = 30;
 const AIM_CORRIDOR_MIN_FORWARD = 28;
 const AIM_CORRIDOR_MAX_FORWARD = 520;
 
@@ -306,6 +306,15 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
     const kd = e => {
       const k = e.key.toLowerCase();
       if (k === 'escape' || k === 'p') { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
+      if (k === 'r') {
+        initRun(charId, trackId);
+        setResult(null);
+        setPaused(false);
+        pausedRef.current = false;
+        edgeRef.current = { jump: false, down: false };
+        keysRef.current = {};
+        return;
+      }
       if (['F5', 'F12'].includes(e.key)) return;
       if (isJump(k) && !keysRef.current[k]) edgeRef.current.jump = true;
       if (isDown(k) && !keysRef.current[k]) edgeRef.current.down = true;
@@ -315,7 +324,7 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
     const ku = e => { keysRef.current[e.key.toLowerCase()] = false; };
     window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
     return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); };
-  }, [phase, onExit]);
+  }, [phase, onExit, initRun, charId, trackId]);
 
   // ── Loop ──
   useEffect(() => {
