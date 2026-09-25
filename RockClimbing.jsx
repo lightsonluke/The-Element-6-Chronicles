@@ -13,6 +13,8 @@ import RockClimbing2P from './RockClimbing2P.jsx';
 import { applyElement } from './elements.js';
 import ElementSelect from './ElementSelect.jsx';
 import GameIcon from "./GameIcon.jsx";
+import PauseMenu from './PauseMenu.jsx';
+import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 
 // ── Canvas / world ──
 const W = 900, H = 720;
@@ -265,6 +267,14 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
     const isDown = k => k === 'arrowdown' || k === 's';
     const kd = e => {
       const k = e.key.toLowerCase();
+      if (k === 'r') {
+        e.preventDefault();
+        initRun(charId, trackId);
+        setResult(null);
+        pausedRef.current = false;
+        setPaused(false);
+        return;
+      }
       if (k === 'escape' || k === 'p') { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
       if (['F5', 'F12'].includes(e.key)) return;
       if (isJump(k) && !keysRef.current[k]) edgeRef.current.jump = true;
@@ -275,7 +285,7 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
     const ku = e => { keysRef.current[e.key.toLowerCase()] = false; };
     window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
     return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); };
-  }, [phase, onExit]);
+  }, [phase, onExit, initRun, charId, trackId]);
 
   // ── Loop ──
   useEffect(() => {
@@ -566,15 +576,15 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
         if (me) {
           const char = resolveChar(charId, customCharsData);
           const uname = me.full_name || me.email || 'Climber';
-          const existing = await db.entities.RockClimbScore.filter({ user_id: me.id });
+          const existing = await db.entities.RockClimbScore.filter({ user_id: me.id, track_id: s.track?.id ?? trackId });
           if (existing && existing.length) {
             const best = existing.reduce((a, b) => ((a.time_ms || 0) <= (b.time_ms || 0) ? a : b));
             if (Math.floor(time) < (best.time_ms || Infinity)) {
-              await db.entities.RockClimbScore.update(best.id, { time_ms: Math.floor(time), user_name: uname, char_id: charId, char_name: char?.name || charId, checkpoints_used: s.cpUsed, no_checkpoint_run: !s.usedCheckpoint });
+              await db.entities.RockClimbScore.update(best.id, { track_id: s.track?.id ?? trackId, time_ms: Math.floor(time), user_name: uname, char_id: charId, char_name: char?.name || charId, checkpoints_used: s.cpUsed, no_checkpoint_run: !s.usedCheckpoint });
             }
             for (const e of existing) if (e.id !== best.id) await db.entities.RockClimbScore.delete(e.id).catch(() => {});
           } else {
-            await db.entities.RockClimbScore.create({ user_id: me.id, user_name: uname, char_id: charId, char_name: char?.name || charId, time_ms: Math.floor(time), checkpoints_used: s.cpUsed, no_checkpoint_run: !s.usedCheckpoint });
+            await db.entities.RockClimbScore.create({ user_id: me.id, track_id: s.track?.id ?? trackId, user_name: uname, char_id: charId, char_name: char?.name || charId, time_ms: Math.floor(time), checkpoints_used: s.cpUsed, no_checkpoint_run: !s.usedCheckpoint });
           }
           saved = true;
           const all = await db.entities.RockClimbScore.list('-created_date', 200);
@@ -584,7 +594,7 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
         }
       } catch { saved = false; }
       try {
-        const remote = await submitWorldScore('rockclimb', Math.floor(time), { char_id: charId, checkpoints_used: s.cpUsed, no_checkpoint_run: !s.usedCheckpoint });
+        const remote = await submitWorldScore('rockclimb', Math.floor(time), { track_id: s.track?.id ?? trackId, track_name: s.track?.name || 'Unknown', char_id: charId, checkpoints_used: s.cpUsed, no_checkpoint_run: !s.usedCheckpoint });
         saved = true; rank = remote.rank || rank;
       } catch { /* Local best is still retained if the player is offline. */ }
     }
@@ -699,18 +709,12 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
         <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause</button>
-        <span className="text-[10px] text-muted-foreground font-body"><GameIcon emoji="↑" size={14} />/W/SPACE: Launch (time the arrow!) · <GameIcon emoji="↓" size={14} />/S: Let go · <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} />/AD: Steer while falling · ESC/P: Pause</span>
+        <MatchPauseButtonPortal>
+          <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? 'RESUME' : 'PAUSE'}</button>
+        </MatchPauseButtonPortal>
+        <span className="text-[10px] text-muted-foreground font-body"><GameIcon emoji="↑" size={14} />/W/SPACE: Launch · <GameIcon emoji="↓" size={14} />/S: Let go · <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} />/AD: Steer · R: Restart · ESC/P: Pause</span>
       </div>
-      {paused && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-lg gap-4 z-10">
-          <h2 className="text-3xl font-heading text-accent">PAUSED</h2>
-          <div className="flex gap-2">
-            <button onClick={() => { pausedRef.current = false; setPaused(false); }} className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="▶" size={14} /> RESUME</button>
-            <button onClick={onExit} className="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">QUIT TO MENU</button>
-          </div>
-        </div>
-      )}
+      {paused && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onExit} /></MatchPausePortal>}
       <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#0e1a14' }} />
     </div>

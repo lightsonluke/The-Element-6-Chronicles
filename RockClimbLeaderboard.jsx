@@ -24,6 +24,8 @@ function fmtTime(ms) {
 
 export default function RockClimbLeaderboard({ onBack, customCharsData = {} }) {
   const [tab, setTab] = useState('global');
+  const [trackId, setTrackId] = useState(0);
+  const TRACK_NAMES = ['Beginner Cliff','Forest Ascent','Waterfall Cliffs','Ancient Ruins','Snowy Peaks','Crystal Cavern','Floating Cliffs','Summit Temple','Rock Wall'];
   const [query, setQuery] = useState('');
   const [entries, setEntries] = useState([]);
   const [friends, setFriends] = useState([]);
@@ -39,8 +41,9 @@ export default function RockClimbLeaderboard({ onBack, customCharsData = {} }) {
         try { all = await loadWorldLeaderboard('rockclimb'); }
         catch { all = await db.entities.RockClimbScore.list('-created_date', 200); }
         if (cancelled) return;
-        const sorted = [...(all || [])].sort((a, b) => (a.time_ms || 0) - (b.time_ms || 0));
-        const mapped = sorted.map((e, i) => ({ ...e, rank: i + 1, user_name: e.user_name || e.username }));
+        const trackFiltered = (all || []).filter(e => Number(e.track_id ?? e.score_meta?.track_id ?? 0) === Number(trackId));
+        const sorted = [...trackFiltered].sort((a, b) => (a.time_ms || 0) - (b.time_ms || 0));
+        const mapped = sorted.map((e, i) => ({ ...e, track_id: Number(e.track_id ?? e.score_meta?.track_id ?? 0), rank: i + 1, user_name: e.user_name || e.username }));
         setEntries(mapped);
         if (me) {
           const fr = await db.entities.Friendship.filter({ owner_user_id: me.id });
@@ -51,7 +54,7 @@ export default function RockClimbLeaderboard({ onBack, customCharsData = {} }) {
       finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [trackId]);
 
   const filtered = entries.filter(e => {
     if (tab === 'search') {
@@ -68,6 +71,12 @@ export default function RockClimbLeaderboard({ onBack, customCharsData = {} }) {
       <div className="flex justify-between items-center w-full">
         <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="⛰️" size={14} /> ROCK CLIMBING LEADERBOARD</h2>
         <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+      </div>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <span className="text-[10px] font-heading text-muted-foreground">TRACK:</span>
+        <select value={trackId} onChange={e => { setTrackId(Number(e.target.value)); sfx.click(); }} className="px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground font-heading text-xs">
+          {TRACK_NAMES.map((name, id) => <option key={id} value={id}>{name}</option>)}
+        </select>
       </div>
       <div className="flex gap-2">
         {['global', 'friends', 'search'].map(t => (

@@ -36,19 +36,8 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
   const stats = { ...(progress?.stats || {}), ...(questState.dailyStats || {}) };
 
   const getQuestProgress = (q) => {
-    // dailyStats accumulates today's fight stats per stat type, summed across all characters
     const daily = questState.dailyStats || {};
-    if (q.stat === 'wins') return daily._total?.wins || 0;
-    if (q.stat === 'matches') return daily._total?.matches || 0;
-    if (q.stat === 'sigs') return daily._total?.sigs || 0;
-    if (q.stat === 'signatureKOs') return daily._total?.signatureKOs || 0;
-    if (q.stat === 'groundPoundKOs') return daily._total?.groundPoundKOs || 0;
-    if (q.stat === 'emoteBeforeMove') return daily._total?.emoteBeforeMove || 0;
-    if (q.stat === 'heavies') return daily._total?.heavies || 0;
-    if (q.stat === 'powers') return daily._total?.powers || 0;
-    if (q.stat === 'supers') return daily._total?.supers || 0;
-    if (q.stat === 'distance') return daily._total?.distance || 0;
-    return 0;
+    return Number(daily._total?.[q.stat] || 0);
   };
 
   const allClaimed = questState.quests.every(q => questState.claimed.includes(q.id) || getQuestProgress(q) >= q.target);

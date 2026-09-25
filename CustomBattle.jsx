@@ -11,6 +11,7 @@ import {
 } from './renderer.js';
 import { MAP_PLATFORMS } from './PlatformFighter';
 import { drawMaterialStroke } from './materials.js';
+import { sanitizeFreehandStroke } from './freehandSafe.js';
 import { applyStageMaterials } from './stageMaterials.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
@@ -27,8 +28,6 @@ import { buildHazardsFromStage, buildObjectsFromStage, updateSandboxHazards, upd
 import { mergeBotCosmetics } from './botCosmetics.js';
 import { getEmoteForKey } from './emoteSlots.js';
 import { getEmoteById } from './emotes.js';
-import { sanitizeFreehandStroke, buildFreehandCollisionPlatforms } from './freehandSafe.js';
-import { drawOffscreenIndicator } from './offscreenIndicator.js';
 import GameIcon from "./GameIcon.jsx";
 
 const W = 1280, H = 720;
@@ -322,17 +321,37 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
   equippedAccessoriesRef.current = mergedAccessories;
   equippedShikigamiRef.current = mergedShikigami;
 
-  // Rebuild freehand collision geometry through the shared bounded sanitizer.
-  // Never allow malformed/legacy editor segments to explode the physics array.
+  // Never let legacy editor-generated freehand platform explosions enter the
+  // physics loop. Rebuild a small bounded collision set from the source strokes.
   const basePlatforms = (customPlatforms || applyStageMaterials(MAP_PLATFORMS[mapId] || MAP_PLATFORMS.splitcity, mapId));
   const cleanPlatforms = Array.isArray(basePlatforms) ? basePlatforms.filter(p => !p?._freehandSegment) : [];
-  const strokes = Array.isArray(customFreehandStrokes || customStageConfig?.freehandStrokes)
-    ? (customFreehandStrokes || customStageConfig.freehandStrokes)
-    : [];
-  const safeFreehandStrokes = strokes.map(st => sanitizeFreehandStroke(st)).filter(Boolean).slice(0, 64);
-  const platforms = cleanPlatforms.concat(buildFreehandCollisionPlatforms(safeFreehandStrokes));
+  const freehandCollision = [];
+  const strokes = (Array.isArray(customFreehandStrokes || customStageConfig?.freehandStrokes) ? (customFreehandStrokes || customStageConfig.freehandStrokes) : [])
+    .map(stroke => sanitizeFreehandStroke(stroke))
+    .filter(Boolean)
+    .slice(0, 64);
+  let freehandCount = 0;
+  for (const stroke of strokes) {
+    if (freehandCount >= 900) break;
+    const raw = Array.isArray(stroke?.points) ? stroke.points : [];
+    const pts = raw.filter(q => Number.isFinite(Number(q?.x)) && Number.isFinite(Number(q?.y)));
+    if (pts.length < 2) continue;
+    const sampled = pts.length <= 121 ? pts : Array.from({ length: 121 }, (_, i) => pts[Math.min(pts.length - 1, Math.round(i * (pts.length - 1) / 120))]);
+    const d = Math.max(4, Number(stroke?.diameter) || 36);
+    for (let i = 1; i < sampled.length && freehandCount < 900; i++) {
+      const a = sampled[i - 1], b = sampled[i];
+      freehandCollision.push({
+        x: Math.min(a.x, b.x) - d / 2, y: Math.min(a.y, b.y) - d / 2,
+        w: Math.max(d, Math.abs(b.x - a.x) + d), h: Math.max(d, Math.abs(b.y - a.y) + d),
+        material: stroke?.material || 'normal', _freehandSegment: true, _freehandStroke: true,
+        _freehandLine: { ax: a.x, ay: a.y, bx: b.x, by: b.y, diameter: d },
+        ...(stroke?.motion ? { move: { ...stroke.motion }, motion: { ...stroke.motion } } : {})
+      });
+      freehandCount++;
+    }
+  }
+  const platforms = cleanPlatforms.concat(freehandCollision);
   const isLarge = LARGE_MAPS.has(mapId);
-
   const mapObj = STAGE_MAPS.find(m => m.id === mapId);
   const ALL = withCustomChars(BASE_ALL, customCharsData, customNumberMap);
   const getCharData = (id) => ALL.find(c => c.id === id);
@@ -577,7 +596,9 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
       ctx.translate(-W / 2 - g.camX, -H / 2 - g.camY);
 
       drawPlatforms(ctx, platforms, fs[0].frame, mapId);
-      safeFreehandStrokes.forEach(stroke => { try { drawMaterialStroke(ctx, stroke, fs[0].frame); } catch {} });
+      strokes.forEach(stroke => {
+        try { drawMaterialStroke(ctx, stroke, fs[0].frame); } catch {}
+      });
       // Stage-placed hazard zones + knockback items
       if (sbHazards) drawSBHazards(ctx, sbHazards, fs[0].frame);
       if (sbObjects) drawSBObjects(ctx, sbObjects, fs[0].frame);

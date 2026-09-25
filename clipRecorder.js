@@ -60,11 +60,11 @@ function rebuildBlob() {
   return blob.size >= MIN_CHUNK_BYTES ? blob : null;
 }
 
-function trimBuffer() {
-  const cutoff = performance.now() - CLIP_SECONDS * 1000 - 1000;
-  while (chunks.length > 2 && chunks[1].time < cutoff) {
-    chunkBytes -= chunks[1].size;
-    chunks.splice(1, 1);
+function trimBuffer(referenceTime = performance.now()) {
+  const cutoff = referenceTime - CLIP_SECONDS * 1000;
+  while (chunks.length && chunks[0].time < cutoff) {
+    chunkBytes -= chunks[0].size;
+    chunks.shift();
   }
 }
 
@@ -86,10 +86,11 @@ function attachRecorderHandlers(instance, myGeneration) {
   instance.ondataavailable = event => {
     if (myGeneration !== generation) return;
     if (!event.data || event.data.size <= 0) return;
-    chunks.push({ data: event.data, time: performance.now(), size: event.data.size });
+    const now = performance.now();
+    chunks.push({ data: event.data, time: now, size: event.data.size });
     chunkBytes += event.data.size;
-    lastDataAt = performance.now();
-    trimBuffer();
+    lastDataAt = now;
+    trimBuffer(now);
   };
   instance.onerror = event => {
     log(`MediaRecorder error: ${event?.error?.message || 'unknown error'}`, event?.error);
@@ -145,9 +146,12 @@ async function makeSnapshot() {
   if (!recorder || recorder.state === 'inactive') return null;
   attachRecordingAudioTrack();
   await requestRecorderData();
+  const now = performance.now();
+  trimBuffer(now);
   const blob = rebuildBlob();
   if (!blob) return null;
-  const duration = Math.min(CLIP_SECONDS, Math.max(0.25, (performance.now() - recordingStartedAt) / 1000));
+  const oldest = chunks[0]?.time ?? now;
+  const duration = Math.min(CLIP_SECONDS, Math.max(0.25, (now - Math.max(recordingStartedAt, oldest)) / 1000));
   return { blob, duration };
 }
 

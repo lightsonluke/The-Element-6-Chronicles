@@ -21,6 +21,22 @@ function stageEntity() {
   return entities.UploadedStage || entities.CommunityStage || entities.community_stages || null;
 }
 
+function StageThumbnail({ stage, renderFn }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas || typeof renderFn !== 'function') return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    try { renderFn(ctx, stage && typeof stage === 'object' ? stage : {}, canvas.width, canvas.height); }
+    catch (error) {
+      console.error('[Element 6] Stage thumbnail render failed:', error);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }, [stage, renderFn]);
+  return <canvas ref={ref} width={360} height={202} className="w-full aspect-video rounded-lg border border-border bg-black/20 object-cover" />;
+}
+
 // Editor canvas covers the full KO perimeter of an actual match.
 // A normal (non-large) stage's blast zone extends 500px left/right and
 // 600px up / 450px down beyond the 1280×720 play area, so the editor canvas

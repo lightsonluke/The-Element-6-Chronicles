@@ -103,6 +103,7 @@ import GameIcon from "./GameIcon.jsx";
 import ClipsScreen from './ClipsScreen.jsx';
 import ClansScreen from './ClansScreen.jsx';
 import GlobalClipRecorder from './GlobalClipRecorder.jsx';
+import { sanitizeFreehandStroke } from './freehandSafe.js';
 import { recordClanMatchActivity } from './clanActivity.js';
 
 // Screens where a canvas game is actively running and the gamepad is used
@@ -1552,15 +1553,27 @@ export default function Game() {
       if (!prev.dailyQuests) return prev;
       const dq = { ...prev.dailyQuests };
       dq.dailyStats = dq.dailyStats || {};
-      dq.dailyStats._total = dq.dailyStats._total || { sigs: 0, heavies: 0, powers: 0, supers: 0, distance: 0, wins: 0 };
-      dq.dailyStats._total.heavies += stats.heavies || 0;
-      dq.dailyStats._total.powers += stats.powers || 0;
-      dq.dailyStats._total.supers += stats.supers || 0;
-      dq.dailyStats._total.distance += stats.distance || 0;
-      if (won) dq.dailyStats._total.wins += 1;
+      dq.dailyStats._total = dq.dailyStats._total || {};
+      const total = dq.dailyStats._total;
+      total.heavies = (total.heavies || 0) + (stats.heavies || 0);
+      total.powers = (total.powers || 0) + (stats.powers || 0);
+      total.supers = (total.supers || 0) + (stats.supers || 0);
+      total.distance = (total.distance || 0) + (stats.distance || 0);
+      total.hits = (total.hits || 0) + (stats.hits || 0);
+      total.kills = (total.kills || 0) + (stats.kills || 0);
+      total.deaths = (total.deaths || 0) + (stats.deaths || 0);
+      total.matches = (total.matches || 0) + 1;
+      if (won) total.wins = (total.wins || 0) + 1;
       if (m.moveStats) {
         for (const v of Object.values(m.moveStats)) {
-          dq.dailyStats._total.sigs = (dq.dailyStats._total.sigs || 0) + (v.sig || 0) + (v.recovery || 0);
+          total.sigs = (total.sigs || 0) + (v.sig || 0) + (v.recovery || 0);
+          total.signatureKOs = (total.signatureKOs || 0) + (v.signatureKOs || 0);
+          total.groundPoundKOs = (total.groundPoundKOs || 0) + (v.groundPoundKOs || 0);
+          total.groundPounds = (total.groundPounds || 0) + (v.groundPound || 0);
+          total.downHeavies = (total.downHeavies || 0) + (v.downHeavy || 0);
+          total.aerials = (total.aerials || 0) + (v.aerial || 0);
+          total.recoveries = (total.recoveries || 0) + (v.recovery || 0);
+          total.emoteBeforeMove = (total.emoteBeforeMove || 0) + (v.emoteBeforeMove || 0);
         }
       }
       const next = { ...prev, dailyQuests: dq };
@@ -1751,7 +1764,10 @@ export default function Game() {
 
   const handleSaveCustomStage = (stageData) => {
     const platforms = stageData.platforms || stageData;
-    const freehandStrokes = Array.isArray(stageData.freehandStrokes) ? stageData.freehandStrokes : [];
+    const freehandStrokes = (Array.isArray(stageData.freehandStrokes) ? stageData.freehandStrokes : [])
+      .map(stroke => sanitizeFreehandStroke(stroke))
+      .filter(Boolean)
+      .slice(0, 64);
     const name = stageData.name || 'Custom Stage';
     const emoji = stageData.emoji || 'palette';
     const spawnPoints = stageData.spawnPoints || null;

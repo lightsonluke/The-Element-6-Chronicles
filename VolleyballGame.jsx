@@ -7,6 +7,8 @@ import { readGamepadInput } from './controllerProfiles.js';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
+import PauseMenu from './PauseMenu.jsx';
+import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 
 const charFor = (id, element) => { const c = ALL_CHARS.find(c => c.id === id); if (!c) return null; if (element && element !== 'basic') return { ...c, stats: applyElement(c.stats || {}, element) }; return c; };
 
@@ -34,7 +36,7 @@ function newPlayer(x) { return { x, base: x, y: FLOOR, vx: 0, vy: 0, jump: 0, on
 function newPlayerStats() { return { spikes: 0, sets: 0, bumps: 0, digs: 0, receives: 0, points: 0, assists: 0 }; }
 function addStat(s, side, slot, field, n = 1) { const k = `${side}-${slot}`; if (s.playerStats[k]) s.playerStats[k][field] += n; }
 
-export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, onResult, onQuit, p1Jersey = true, p2Jersey = true, musicVolume = 50, sfxVolume = 70, p1Elements = [], p2Elements = [], equippedSkins = {}, equippedAccessories = {}, settings = {}, lanConnection = null, lanRole = null, localScheme = null, remoteState = null, onStateExport = null, isOnlineHost = false, localPlayerSlot = null, online2v2 = false }) {
+export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, onResult, onQuit, p1Jersey = true, p2Jersey = true, musicVolume = 50, sfxVolume = 70, p1Elements = [], p2Elements = [], equippedSkins = {}, equippedAccessories = {}, settings = {}, lanConnection = null, lanRole = null, localScheme = null, remoteState = null, onStateExport = null, isOnlineHost = false }) {
   const is1v1 = p1Chars.length === 1;
   const canvasRef = useRef(null);
   const [countdown, setCountdown] = useState(3);
@@ -48,7 +50,6 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
   const remoteKeysProc = useRef(false);
   const remoteStateRef = useRef(null);
   const onStateExportRef = useRef(null);
-  const onlineKeysRef = useRef({});
 
   // Merge bot cosmetics for CPU characters — bots get random accessories every match
   const botAccsRef = useRef(null);
@@ -232,23 +233,14 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
       if (scheme === 'p2' && toScheme === 'p1') return VB_P2_TO_P1[kl] || key;
       return key;
     };
-    const setOnlineKey = (slot, key, down) => {
-      if (!Number.isInteger(slot)) return;
-      if (!onlineKeysRef.current[slot]) onlineKeysRef.current[slot] = {};
-      onlineKeysRef.current[slot][String(key).toLowerCase()] = down;
-    };
     const kd = e => {
-      if (Number.isInteger(localPlayerSlot) && !p2IsCPU) {
-        const localSide = localPlayerSlot < 2 ? 1 : 2;
-        const localTeamSlot = localPlayerSlot % 2;
-        if (is1v1) st.current[localSide === 1 ? 'active1' : 'active2'] = 0;
-        else st.current[localSide === 1 ? 'active1' : 'active2'] = localTeamSlot;
-      }
       const rk = resolveKey(e.key);
       const k = rk.toLowerCase(); keysRef.current[k] = true;
-      if (Number.isInteger(localPlayerSlot) && !p2IsCPU && !remoteKeysProc.current) setOnlineKey(localPlayerSlot, k, true);
       if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: true });
-      if (e.key === 'Escape') { onQuit?.(); return; }
+      if (e.key === 'Escape') {
+        if (started) { e.preventDefault(); pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }
+        return;
+      }
       if (['F5','F12'].includes(e.key)) return;
       // Switch works in ANY phase (serve or rally) — handle FIRST so it's never blocked
       if (k === '/' && !is1v1) { tryHit(1, 'switch'); e.preventDefault(); return; }
@@ -276,16 +268,10 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
       if (k === 'l') tryDive(1);
       e.preventDefault();
     };
-    const ku = e => { const rk = resolveKey(e.key); keysRef.current[rk.toLowerCase()] = false; if (Number.isInteger(localPlayerSlot) && !p2IsCPU && !remoteKeysProc.current) setOnlineKey(localPlayerSlot, rk.toLowerCase(), false); if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: false }); };
+    const ku = e => { const rk = resolveKey(e.key); keysRef.current[rk.toLowerCase()] = false; if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: false }); };
     if (lanConnection) {
       lanConnection.onMessage((msg) => {
         if (!msg || msg.type !== 'key') return;
-        if (Number.isInteger(msg.playerSlot) && !p2IsCPU) {
-          const side = msg.playerSlot < 2 ? 1 : 2;
-          const slot = is1v1 ? 0 : msg.playerSlot % 2;
-          st.current[side === 1 ? 'active1' : 'active2'] = slot;
-          setOnlineKey(msg.playerSlot, String(msg.key).toLowerCase(), !!msg.down);
-        }
         remoteKeysProc.current = true;
         if (msg.down) kd({ key: msg.key, preventDefault() {} }); else ku({ key: msg.key });
         remoteKeysProc.current = false;
@@ -299,15 +285,13 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
     const pollGamepad = () => {
       if (gpEnabled) {
         for (const slot of [0, 1]) {
-          if (Number.isInteger(localPlayerSlot) && !p2IsCPU && slot !== 0) continue;
-          const gp = readGamepadInput(Number.isInteger(localPlayerSlot) && !p2IsCPU ? 0 : slot);
+          const gp = readGamepadInput(slot);
           gpRef.current[slot] = gp || {};
           if (gp) {
             const prev = gpPrevRef.current[slot] || {};
             // P1 = slot 0, P2 = slot 1 (or alt controls when vs CPU)
-            const side = (Number.isInteger(localPlayerSlot) && !p2IsCPU) ? (localPlayerSlot < 2 ? 1 : 2) : ((p2IsCPU && slot === 1) ? 1 : (slot === 0 ? 1 : 2));
+            const side = (p2IsCPU && slot === 1) ? 1 : (slot === 0 ? 1 : 2);
             // Bump/serve (sig button = light attack)
-            if (Number.isInteger(localPlayerSlot) && !p2IsCPU) st.current[side === 1 ? 'active1' : 'active2'] = is1v1 ? 0 : (localPlayerSlot % 2);
             if (gp.sig && !prev.sig) {
               if (st.current.phase === 'serve' && (p2IsCPU || st.current.serverSide === side)) tryHit(side, 'serve');
               else tryHit(side, 'bump');
@@ -332,16 +316,6 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
     return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); if (gpRaf) cancelAnimationFrame(gpRaf); };
   }, [started, p2IsCPU, p1Chars, p2Chars, onQuit, is1v1, settings?.controllerEnabled]);
 
-  // Pause menu: offline freezes; online/LAN keeps the authoritative simulation running.
-  useEffect(() => {
-    const kd = (e) => {
-      if (e.key !== 'Escape' && e.key.toLowerCase() !== 'p') return;
-      if (!started) return;
-      e.preventDefault(); pausedRef.current = !pausedRef.current; setPaused(pausedRef.current);
-    };
-    window.addEventListener('keydown', kd); return () => window.removeEventListener('keydown', kd);
-  }, [started]);
-
   // Game loop
   useEffect(() => {
     if (!started) return;
@@ -350,11 +324,6 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
     let raf; let last = performance.now();
     const loop = (now) => {
       last = now;
-      if (lanConnection?.stalledRef?.current) {
-        draw(ctx, st.current, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories);
-        raf = requestAnimationFrame(loop);
-        return;
-      }
       if (remoteStateRef.current) {
         st.current = remoteStateRef.current;
         draw(ctx, st.current, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories);
@@ -499,11 +468,9 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
       const p1Main = s.t1[s.active1];
       const gp1 = gpRef.current[0] || {};
       const gp2 = gpRef.current[1] || {};
-      const p1Keys = Number.isInteger(localPlayerSlot) && !p2IsCPU ? (onlineKeysRef.current[s.active1] || {}) : keysRef.current;
-      const p2Keys = Number.isInteger(localPlayerSlot) && !p2IsCPU ? (onlineKeysRef.current[2 + s.active2] || {}) : keysRef.current;
-      const p1Left = p1Keys['arrowleft'] || gp1.left || (p2IsCPU && (keysRef.current['a'] || gp2.left));
-      const p1Right = p1Keys['arrowright'] || gp1.right || (p2IsCPU && (keysRef.current['d'] || gp2.right));
-      const p1Up = p1Keys['arrowup'] || gp1.up || (p2IsCPU && (keysRef.current['w'] || gp2.up));
+      const p1Left = keysRef.current['arrowleft'] || gp1.left || (p2IsCPU && (keysRef.current['a'] || gp2.left));
+      const p1Right = keysRef.current['arrowright'] || gp1.right || (p2IsCPU && (keysRef.current['d'] || gp2.right));
+      const p1Up = keysRef.current['arrowup'] || gp1.up || (p2IsCPU && (keysRef.current['w'] || gp2.up));
       const p1Frozen = s.phase === 'serve' && s.serverSide === 1 && !s.serveTossed && s.active1 === s.serverSlot1;
       if (p1Main.diving) updateDive(s, p1Main, 1, p1Chars, is1v1);
       else if (p1Frozen) moveFrozen(p1Main, p1Up);
@@ -525,8 +492,8 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
         const p2Main = s.t2[s.active2];
         const p2Frozen = s.phase === 'serve' && s.serverSide === 2 && !s.serveTossed && s.active2 === s.serverSlot2;
         if (p2Main.diving) updateDive(s, p2Main, 2, p2Chars, is1v1);
-        else if (p2Frozen) moveFrozen(p2Main, p2Keys['w'] || gp2.up);
-        else if (canMove) movePlayer(p2Main, p2Keys['a'] || gp2.left, p2Keys['d'] || gp2.right, p2Keys['w'] || gp2.up, 4.5, false);
+        else if (p2Frozen) moveFrozen(p2Main, keysRef.current['w'] || gp2.up);
+        else if (canMove) movePlayer(p2Main, keysRef.current['a'] || gp2.left, keysRef.current['d'] || gp2.right, keysRef.current['w'] || gp2.up, 4.5, false);
         else idlePlayer(p2Main);
         // Process P2 teammate bot dive before AI logic
         if (!is1v1) {
@@ -1202,8 +1169,10 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
 
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
-      <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="absolute top-3 right-3 z-20 px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
-      {paused && <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/65 rounded-lg pointer-events-none"><div className="bg-card border-2 border-accent rounded-xl px-8 py-6 text-center"><p className="font-heading text-3xl text-accent">PAUSED</p><p className="text-xs text-muted-foreground mt-2">{(remoteStateRef.current || lanConnection) ? 'Online match continues in the background.' : 'Press ESC or P to resume.'}</p></div></div>}
+      <MatchPauseButtonPortal>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
+      </MatchPauseButtonPortal>
+      {paused && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></MatchPausePortal>}
       <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas" />
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">

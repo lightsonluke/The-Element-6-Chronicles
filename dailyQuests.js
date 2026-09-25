@@ -31,6 +31,20 @@ const QUEST_POOL = [
   { id: 'land_signatures', category: 'easy', title: 'Signature Practice', desc: 'Land {n} signature attacks.', stat: 'sigs', targets: [5] },
   { id: 'play_matches', category: 'easy', title: 'Step Into Battle', desc: 'Complete {n} match.', stat: 'matches', targets: [1] },
   { id: 'use_power', category: 'easy', title: 'Spark Up', desc: 'Activate your power {n} time.', stat: 'powers', targets: [2] },
+  { id: 'land_hits', category: 'easy', title: 'Clean Contact', desc: 'Land {n} hits.', stat: 'hits', targets: [25] },
+  { id: 'score_kos', category: 'medium', title: 'KO Artist', desc: 'Score {n} KOs.', stat: 'kills', targets: [5] },
+  { id: 'ground_pounds', category: 'medium', title: 'Meteor Drop', desc: 'Use Ground Pound attacks {n} times.', stat: 'groundPounds', targets: [8] },
+  { id: 'down_heavies', category: 'medium', title: 'Downward Force', desc: 'Use {n} down-heavy attacks.', stat: 'downHeavies', targets: [10] },
+  { id: 'aerials', category: 'easy', title: 'Air Time', desc: 'Land {n} aerial attacks.', stat: 'aerials', targets: [12] },
+  { id: 'recoveries', category: 'medium', title: 'Never Give Up', desc: 'Use recovery attacks {n} times.', stat: 'recoveries', targets: [6] },
+  { id: 'survive', category: 'easy', title: 'Stay Standing', desc: 'Complete {n} matches.', stat: 'matches', targets: [3] },
+  { id: 'travel_far', category: 'hard', title: 'Across the Arena', desc: 'Travel {n} meters in matches.', stat: 'distance', targets: [1000] },
+  { id: 'signature_ko_chain', category: 'hard', title: 'Signature KO Chain', desc: 'Score {n} KOs with signature attacks.', stat: 'signatureKOs', targets: [10] },
+  { id: 'ground_pound_ko_chain', category: 'hard', title: 'Meteor KO', desc: 'Score {n} KOs with Ground Pound attacks.', stat: 'groundPoundKOs', targets: [8] },
+  { id: 'emote_move_chain', category: 'medium', title: 'Showboat', desc: 'Emote before moving {n} times in matches.', stat: 'emoteBeforeMove', targets: [10] },
+  { id: 'heavy_combo', category: 'hard', title: 'Heavy Rotation', desc: 'Land {n} heavy attacks.', stat: 'heavies', targets: [20] },
+  { id: 'power_cycle', category: 'medium', title: 'Full Charge', desc: 'Activate your power {n} times.', stat: 'powers', targets: [12] },
+  { id: 'super_cycle', category: 'hard', title: 'Supercharged', desc: 'Use your super move {n} times.', stat: 'supers', targets: [5] },
 ];
 
 export const CHEST_TYPES = [

@@ -25,6 +25,16 @@ export function getOnlineStagePlatforms(stageId) {
   return MAP_PLATFORMS[stageId] || ONLINE_PLATFORMS;
 }
 
+export function resolveOnlineStageId(stageId, matchId = '') {
+  const ids = Object.keys(MAP_PLATFORMS).filter(id => id !== 'custom');
+  if (stageId && stageId !== '__random__' && MAP_PLATFORMS[stageId]) return stageId;
+  if (!ids.length) return 'splitcity';
+  let hash = 2166136261;
+  const text = String(matchId || 'online');
+  for (let i = 0; i < text.length; i += 1) { hash ^= text.charCodeAt(i); hash = Math.imul(hash, 16777619); }
+  return ids[(hash >>> 0) % ids.length] || 'splitcity';
+}
+
 const REF_KEY = '__rollbackFighterRef';
 
 function hashSeed(text) {
@@ -130,7 +140,7 @@ export function createElement6OnlineState({ matchId, mode, stageId = 'splitcity'
     mode,
     // Included in rollback snapshots/checksums so both clients must agree on
     // the server-selected normal stage before the match advances.
-    stageId,
+    stageId: resolveOnlineStageId('__random__', matchId),
     seed: hashSeed(String(matchId)),
     timerFrames: 4 * 60 * 60,
     winner: null,
