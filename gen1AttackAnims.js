@@ -62,47 +62,76 @@ function particles(ctx, x, y, color, p, count, radius, spread = TAU) {
 // circle continues, 11 near-end, 12 recovery. The hitbox is NOT the circle.
 // It is only the moving dot at the beginning of the circular path.
 function thunderUp(ctx, x, y, p) {
+  // This is intentionally authored as the supplied 12-frame reference:
+  // 1 startup, 2 circle begins, 3-8 orbit, 9 launch, 10 continue,
+  // 11 near-end, 12 recovery. The visible circle is never the hitbox.
   const c = '#FFFF44';
-  const frame = clamp01(p) * 12;
+  const frame = 1 + clamp01(p) * 11;
   const cy = y - 112;
   const rx = 86, ry = 34;
   const start = -Math.PI / 2;
-  let theta = start;
-  if (frame >= 2) theta = start + ease(Math.min(1, (frame - 2) / 7.2)) * TAU;
+  const orbitT = clamp01((frame - 2) / 6);
+  const theta = start + ease(orbitT) * TAU;
   const dotX = x + Math.cos(theta) * rx;
   const dotY = cy + Math.sin(theta) * ry;
 
   ctx.save();
-  if (frame < 1.2) {
-    ctx.globalAlpha = .35 + frame * .3;
-    ctx.strokeStyle = c; ctx.lineWidth = 2; glow(ctx, c, 14);
-    ctx.beginPath(); ctx.ellipse(x, cy, rx, ry, 0, 0, TAU); ctx.stroke();
+
+  // Frame 1: startup pose only — no attack shape yet.
+  if (frame < 1.75) {
+    dot(ctx, x, y - 52, 3, c, .18 + alpha(p) * .2);
+    ctx.restore();
+    return;
   }
-  if (frame >= 1.0) {
-    const trace = Math.min(1, (frame - 1) / 8.2);
-    ctx.globalAlpha = .3 + alpha(p) * .55;
-    ctx.strokeStyle = c; ctx.lineWidth = 3; glow(ctx, c, 22);
-    ctx.beginPath(); ctx.ellipse(x, cy, rx, ry, 0, 0, TAU * trace); ctx.stroke();
-    // six small electrical breaks around the circle make the path visibly alive
-    for (let i = 0; i < 6; i++) {
-      const a = start + (i / 6) * TAU + p * .08;
-      const px = x + Math.cos(a) * rx, py = cy + Math.sin(a) * ry;
-      const qx = x + Math.cos(a + .08) * (rx + 5), qy = cy + Math.sin(a + .08) * (ry + 2);
-      strokePath(ctx, [[px, py], [qx, qy]], c, 1.5, .45 * alpha(p));
-    }
-    dot(ctx, dotX, dotY, frame < 2 ? 5 : 8, '#FFFFFF', .98);
-    dot(ctx, dotX, dotY, 5, c, 1);
-  }
-  if (frame >= 7.8 && frame < 11.4) {
-    const q = easeOut((frame - 7.8) / 3.6);
-    // Upward launch trail under the fighter. The circle remains visible while it finishes.
+
+  // Frame 2 onward: the lightning circle appears above the head.
+  const circleAlpha = frame < 2.5 ? (frame - 1.75) / .75 : 1;
+  ctx.globalAlpha = .35 * circleAlpha;
+  ctx.strokeStyle = c;
+  ctx.lineWidth = 2;
+  glow(ctx, c, 14);
+  ctx.beginPath(); ctx.ellipse(x, cy, rx, ry, 0, 0, TAU); ctx.stroke();
+
+  // The moving dot is the beginning of the circular line. It is deliberately
+  // brighter/larger than the path so the attack's actual collision point is clear.
+  if (frame >= 2) {
+    const traceT = clamp01((frame - 2) / 8.7);
+    ctx.globalAlpha = .78 * alpha(p) + .22;
+    ctx.strokeStyle = c; ctx.lineWidth = 3.5; glow(ctx, c, 22);
+    ctx.beginPath(); ctx.ellipse(x, cy, rx, ry, 0, start, start + traceT * TAU); ctx.stroke();
+
+    // Electrical breaks along the authored path.
     for (let i = 0; i < 7; i++) {
-      const yy = y - 30 - q * (45 + i * 18);
-      strokePath(ctx, [[x - 13 + i * 4, y - 5], [x - 8 + i * 2, yy]], c, 2.2, (.45 - i * .045) * (1 - q * .25));
+      const a = start + (i / 7) * TAU + p * .04;
+      const px = x + Math.cos(a) * rx, py = cy + Math.sin(a) * ry;
+      const qx = x + Math.cos(a + .07) * (rx + 5), qy = cy + Math.sin(a + .07) * (ry + 2);
+      strokePath(ctx, [[px, py], [qx, qy]], c, 1.6, .5 * alpha(p));
     }
-    dot(ctx, x, y - 48 - q * 80, 4, '#FFFFFF', .75);
+
+    dot(ctx, dotX, dotY, frame < 3 ? 6 : 8, '#FFFFFF', .98);
+    dot(ctx, dotX, dotY, 5.5, c, 1);
   }
-  if (frame >= 10.4) particles(ctx, x, cy, c, p, 16, 100);
+
+  // Frame 9: upward launch begins while the circle is still completing.
+  if (frame >= 9 && frame < 12) {
+    const launch = easeOut((frame - 9) / 2.6);
+    for (let i = 0; i < 8; i++) {
+      const yy = y - 24 - launch * (45 + i * 18);
+      strokePath(ctx, [[x - 15 + i * 4, y - 4], [x - 8 + i * 2, yy]], c, 2.4, (.5 - i * .045) * (1 - launch * .2));
+    }
+    dot(ctx, x, y - 48 - launch * 80, 4.5, '#FFFFFF', .8);
+  }
+
+  // Frame 10/11: the orbit finishes and discharges into the launch.
+  if (frame >= 10) {
+    const q = clamp01((frame - 10) / 2);
+    particles(ctx, x, cy, c, q, 16, 100);
+  }
+  if (frame >= 11.5) {
+    ctx.globalAlpha = (frame - 11.5) / .5;
+    ctx.strokeStyle = c; ctx.lineWidth = 2; glow(ctx, c, 16);
+    ctx.beginPath(); ctx.ellipse(x, cy, rx * .65, ry * .25, 0, 0, TAU); ctx.stroke();
+  }
   ctx.restore();
 }
 

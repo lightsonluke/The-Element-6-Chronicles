@@ -62,8 +62,44 @@ function activate() {
   const el = document.activeElement;
   if (!el) return;
   if (el.matches('button,a[href],[role="button"]')) el.click();
-  else if (el.matches('input,select,textarea')) el.focus();
+  else if (el.matches('input,textarea')) {
+    // Merely moving focus onto a text box must NOT open the virtual keyboard.
+    // It opens only when the controller explicitly confirms the focused field.
+    const type = el.tagName === 'INPUT' ? (el.type || 'text').toLowerCase() : 'text';
+    const textLike = el.tagName === 'TEXTAREA' || ['text', 'search', 'email', 'password', 'url', 'tel'].includes(type);
+    if (textLike) el.dispatchEvent(new CustomEvent('el6-controller-text-activate', { bubbles: true }));
+    else el.click();
+  } else if (el.matches('select')) {
+    el.focus();
+  }
 }
+
+function getScrollContainer(start) {
+  let el = start && start.nodeType === 1 ? start : null;
+  while (el && el !== document.body && el !== document.documentElement) {
+    const st = getComputedStyle(el);
+    const canY = /(auto|scroll|overlay)/.test(st.overflowY) && el.scrollHeight > el.clientHeight + 2;
+    const canX = /(auto|scroll|overlay)/.test(st.overflowX) && el.scrollWidth > el.clientWidth + 2;
+    if (canY || canX) return el;
+    el = el.parentElement;
+  }
+  return document.scrollingElement || document.documentElement;
+}
+
+function scrollWithRightStick(x, y, anchor) {
+  const threshold = 0.18;
+  if (Math.abs(x) < threshold && Math.abs(y) < threshold) return;
+  const target = getScrollContainer(anchor);
+  const speed = 18;
+  if (target === document.scrollingElement || target === document.documentElement || target === document.body) {
+    window.scrollBy(x * speed, y * speed);
+  } else {
+    target.scrollLeft += x * speed;
+    target.scrollTop += y * speed;
+  }
+}
+
+export { focusElement, markControllerFocus };
 
 export function useGamepadMenuNav(enabled = true) {
   const previous = useRef({ up:false, down:false, left:false, right:false, confirm:false, back:false, start:false });
@@ -78,6 +114,10 @@ export function useGamepadMenuNav(enabled = true) {
       if (!window.__el6ControllerCapture && (!gameplay || menuOpen)) {
         const gp = readGamepadInput(0);
         if (gp) {
+          // Right stick is reserved for menu/document scrolling. It never
+          // changes the left-stick/D-pad focus target.
+          scrollWithRightStick(gp.rightX || 0, gp.rightY || 0, document.activeElement);
+
           const dirs = { up:!!gp.up, down:!!gp.down, left:!!gp.left, right:!!gp.right };
           for (const d of Object.keys(dirs)) {
             if (dirs[d] && !previous.current[d]) { spatialMove(d); repeat.current[d] = 0; }
@@ -92,8 +132,6 @@ export function useGamepadMenuNav(enabled = true) {
           if (back && !previous.current.back) window.dispatchEvent(new KeyboardEvent('keydown', { key:'Escape', bubbles:true, cancelable:true }));
           previous.current.confirm = confirm; previous.current.back = back; previous.current.start = start;
 
-          // If the controller is on a menu and nothing is focused, immediately
-          // expose a visible target instead of waiting for the first direction.
           const visible = getVisibleFocusable();
           if (visible.length && !visible.includes(document.activeElement)) focusElement(visible[0]);
         }

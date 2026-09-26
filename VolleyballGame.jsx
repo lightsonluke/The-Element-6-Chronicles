@@ -37,7 +37,14 @@ function newPlayer(x) { return { x, base: x, y: FLOOR, vx: 0, vy: 0, jump: 0, on
 function newPlayerStats() { return { spikes: 0, sets: 0, bumps: 0, digs: 0, receives: 0, points: 0, assists: 0 }; }
 function addStat(s, side, slot, field, n = 1) { const k = `${side}-${slot}`; if (s.playerStats[k]) s.playerStats[k][field] += n; }
 
-export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, onResult, onQuit, p1Jersey = true, p2Jersey = true, musicVolume = 50, sfxVolume = 70, p1Elements = [], p2Elements = [], equippedSkins = {}, equippedAccessories = {}, settings = {}, lanConnection = null, lanRole = null, localScheme = null, remoteState = null, onStateExport = null, isOnlineHost = false }) {
+export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Chars, p2IsCPU = true, difficulty = 'regular', onResult, onQuit, p1Jersey = true, p2Jersey = true, musicVolume = 50, sfxVolume = 70, p1Elements = [], p2Elements = [], equippedSkins = {}, equippedAccessories = {}, settings = {}, lanConnection = null, lanRole = null, localScheme = null, remoteState = null, onStateExport = null, isOnlineHost = false }) {
+  // SportsShell normally supplies complete arrays. Normalize them here as a hard
+  // safety boundary so an incomplete tournament/online payload can never crash
+  // the match during first render.
+  const p1Chars = Array.isArray(rawP1Chars) && rawP1Chars.length ? rawP1Chars : ['yellow'];
+  const p2Chars = Array.isArray(rawP2Chars) && rawP2Chars.length ? rawP2Chars : ['blue'];
+  const safeP1Elements = Array.isArray(p1Elements) ? p1Elements : [];
+  const safeP2Elements = Array.isArray(p2Elements) ? p2Elements : [];
   const is1v1 = p1Chars.length === 1;
   const canvasRef = useRef(null);
   const [countdown, setCountdown] = useState(3);
@@ -172,7 +179,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
       if (type === 'spike' && b.spike && b.last !== side) return;
 
       const charId = side === 1 ? p1Chars[s[ak]] : p2Chars[s[ak]];
-      const c = charFor(charId, (side === 1 ? p1Elements : p2Elements)?.[s[ak]]);
+      const c = charFor(charId, (side === 1 ? safeP1Elements : safeP2Elements)?.[s[ak]]);
       const dir = side === 1 ? 1 : -1;
       recordHit(s, side, s[ak], type, b);
       if (type === 'bump') {
@@ -314,7 +321,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
     if (gpEnabled) gpRaf = requestAnimationFrame(pollGamepad);
 
     return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); if (gpRaf) cancelAnimationFrame(gpRaf); };
-  }, [started, p2IsCPU, p1Chars, p2Chars, onQuit, is1v1, settings?.controllerEnabled]);
+  }, [started, p2IsCPU, p1Chars, p2Chars, onQuit, is1v1, settings, lanConnection, lanRole, localScheme]);
 
   // Game loop
   useEffect(() => {
@@ -454,8 +461,8 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
       if (s.phase === 'point') {
         s.phaseTimer--;
         if (s.phaseTimer <= 0) {
-          if (s.s1 >= WIN_POINTS && s.s1 - s.s2 >= 2) { s.done = true; s.phase = 'done'; setTimeout(() => onResult?.({ p1Won: true, stats: { spikes: s.p1Spikes + s.p2Spikes, digs: s.p1Digs + s.p2Digs, aces: 0, p2Points: s.s2 }, p1Stats: { spikes: s.p1Spikes, digs: s.p1Digs, points: s.s1 }, p2Stats: { spikes: s.p2Spikes, digs: s.p2Digs, points: s.s2 }, p1CharStats: buildCharStats(s, 1, p1Chars, p1Elements), p2CharStats: buildCharStats(s, 2, p2Chars, p2Elements) }), 1500); }
-          else if (s.s2 >= WIN_POINTS && s.s2 - s.s1 >= 2) { s.done = true; s.phase = 'done'; setTimeout(() => onResult?.({ p1Won: false, stats: { spikes: s.p1Spikes + s.p2Spikes, digs: s.p1Digs + s.p2Digs, aces: 0, p2Points: s.s2 }, p1Stats: { spikes: s.p1Spikes, digs: s.p1Digs, points: s.s1 }, p2Stats: { spikes: s.p2Spikes, digs: s.p2Digs, points: s.s2 }, p1CharStats: buildCharStats(s, 1, p1Chars, p1Elements), p2CharStats: buildCharStats(s, 2, p2Chars, p2Elements) }), 1500); }
+          if (s.s1 >= WIN_POINTS && s.s1 - s.s2 >= 2) { s.done = true; s.phase = 'done'; setTimeout(() => onResult?.({ p1Won: true, stats: { spikes: s.p1Spikes + s.p2Spikes, digs: s.p1Digs + s.p2Digs, aces: 0, p2Points: s.s2 }, p1Stats: { spikes: s.p1Spikes, digs: s.p1Digs, points: s.s1 }, p2Stats: { spikes: s.p2Spikes, digs: s.p2Digs, points: s.s2 }, p1CharStats: buildCharStats(s, 1, p1Chars, safeP1Elements), p2CharStats: buildCharStats(s, 2, p2Chars, safeP2Elements) }), 1500); }
+          else if (s.s2 >= WIN_POINTS && s.s2 - s.s1 >= 2) { s.done = true; s.phase = 'done'; setTimeout(() => onResult?.({ p1Won: false, stats: { spikes: s.p1Spikes + s.p2Spikes, digs: s.p1Digs + s.p2Digs, aces: 0, p2Points: s.s2 }, p1Stats: { spikes: s.p1Spikes, digs: s.p1Digs, points: s.s1 }, p2Stats: { spikes: s.p2Spikes, digs: s.p2Digs, points: s.s2 }, p1CharStats: buildCharStats(s, 1, p1Chars, safeP1Elements), p2CharStats: buildCharStats(s, 2, p2Chars, safeP2Elements) }), 1500); }
           else {
             s.suddenDeath = (s.s1 >= WIN_POINTS - 1 && s.s2 >= WIN_POINTS - 1 && Math.abs(s.s1 - s.s2) < 2);
             s.phase = 'countdown'; s.countdownNum = 3; s.phaseTimer = 50;
@@ -572,7 +579,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
           const isSame = touchKey === b.lastTouchKey;
           if (!(isSame && b.consecTouches >= 2)) {
             const dir = side === 1 ? 1 : -1;
-            const c = charFor(chars[slot], (side === 1 ? p1Elements : p2Elements)?.[slot]);
+            const c = charFor(chars[slot], (side === 1 ? safeP1Elements : safeP2Elements)?.[slot]);
             const ctrl = c?.stats?.control || 5;
             recordHit(s, side, slot, 'dig', b);
             b.vx = dir * (7 + ctrl * 0.15); b.vy = -14;
@@ -701,7 +708,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
         const touchKey = `${side}-${botSlot}`;
         const isSame = touchKey === b.lastTouchKey;
         if (!(isSame && b.consecTouches >= 2)) {
-          const c = charFor(chars[botSlot], (side === 1 ? p1Elements : p2Elements)?.[botSlot]);
+          const c = charFor(chars[botSlot], (side === 1 ? safeP1Elements : safeP2Elements)?.[botSlot]);
           const dir = side === 1 ? 1 : -1;
           const power = c?.stats?.power || 5;
           b.vx = dir * (10 + power * 0.3); b.vy = 2;
@@ -860,7 +867,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
         const isSame = touchKey === b.lastTouchKey;
         if (isSame && b.consecTouches >= 2) return;
         if (b.spike && b.last !== 2) return;
-        const c = charFor(p2Chars[0], p2Elements?.[0]);
+        const c = charFor(p2Chars[0], safeP2Elements?.[0]);
         const ballHighAboveNet = b.y < NET_TOP - 20;
         const ballNearNet = Math.abs(b.x - NET_X) < 150;
         // 1v1: only set if the CPU set it themselves and will bump it after.
@@ -955,7 +962,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
         const touchKey = `2-${botIdx}`;
         const isSame = touchKey === b.lastTouchKey;
         if (!(isSame && b.consecTouches >= 2)) {
-          const c = charFor(chars[botIdx], p2Elements?.[botIdx]);
+          const c = charFor(chars[botIdx], safeP2Elements?.[botIdx]);
           const Hvel = 10 + (c?.stats?.power || 5) * 0.3;
           b.vx = -Hvel; b.vy = 2; b.last = 2; b.spike = true; b.setter = null; b.isSet = false;
           p.actionState = 'spike'; p.actionTimer = 15;
@@ -1218,17 +1225,19 @@ function draw(ctx, s, p1Chars, p2Chars, j1, j2, p2IsCPU, is1v1, equippedSkins, e
   drawTeamPlayer(ctx, s, s.t2, s.active2, p2Chars, j2, TEAM_COLOR_P2, 2, equippedSkins, equippedAccessories);
 
   // Controls bar — simpler, spaced out
-  ctx.fillStyle = 'rgba(0,0,0,0.72)'; ctx.fillRect(0, 0, W, 30);
-  ctx.font = 'bold 11px Orbitron';
+  const drawKey = k => k === 'ArrowLeft' ? '←' : k === 'ArrowRight' ? '→' : k === 'ArrowUp' ? '↑' : k === 'ArrowDown' ? '↓' : String(k || '—').toUpperCase();
+  const drawBinds = getKeybinds(settings);
+  const p1b = drawBinds.p1, p2b = drawBinds.p2;
+  ctx.fillStyle = 'rgba(0,0,0,0.72)'; ctx.fillRect(0, 0, W, 48);
+  ctx.font = 'bold 10px Orbitron';
   ctx.textAlign = 'left'; ctx.fillStyle = TEAM_COLOR_P1;
-  ctx.fillText('P1: ←→ Move  ↑ Jump  , Bump  . Set/Spike  / Switch(Super)  L+Dir Dive', 14, 20);
+  ctx.fillText(`P1: ${drawKey(p1b.left)}/${drawKey(p1b.right)} Move  ${drawKey(p1b.jump)} Jump  ${drawKey(p1b.sig)} Bump  ${drawKey(p1b.power)} Set/Spike  ${drawKey(p1b.superMove)} Switch  ${drawKey(p1b.heavy)} Dive`, 14, 18);
   if (p2IsCPU) {
-    ctx.fillStyle = '#FF3333'; ctx.font = 'bold 10px Orbitron';
-    ctx.fillText('ALTERNATE CONTROLS: W/A/S/D Move  X Bump  C Set/Spike  V Switch  F+Dir Dive', 14, 44);
-  }
-  if (!p2IsCPU) {
+    ctx.fillStyle = '#FF3333';
+    ctx.fillText(`P2: ${drawKey(p2b.left)}/${drawKey(p2b.right)} Move  ${drawKey(p2b.jump)} Jump  ${drawKey(p2b.sig)} Bump  ${drawKey(p2b.power)} Set/Spike  ${drawKey(p2b.superMove)} Switch  ${drawKey(p2b.heavy)} Dive`, 14, 35);
+  } else {
     ctx.textAlign = 'right'; ctx.fillStyle = TEAM_COLOR_P2;
-    ctx.fillText('Dive F+Dir  Switch V  Set/Spike C  Bump X  Jump W  Move A/D :P2', W - 14, 20);
+    ctx.fillText(`P2: ${drawKey(p2b.left)}/${drawKey(p2b.right)} Move · ${drawKey(p2b.jump)} Jump · ${drawKey(p2b.sig)} Bump · ${drawKey(p2b.power)} Set/Spike · ${drawKey(p2b.superMove)} Switch · ${drawKey(p2b.heavy)} Dive`, W - 14, 18);
   }
 
   // Score HUD

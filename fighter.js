@@ -1831,8 +1831,11 @@ export function checkHit(attacker, defender) {
   if (p < 0.08 || p > 0.85) return false;
 
   // Legacy supers use a generous distance check. Hand-authored supers below
-  // use their exact active geometry instead.
-  const hasExactSuper = attacker.attackData.isSuper && getActiveSpecHitboxes(attacker).length > 0;
+  // use their exact active geometry instead. Geometry generation is isolated so
+  // one malformed optional attack can never take down the whole match.
+  let activeSpecHitboxes = [];
+  try { activeSpecHitboxes = getActiveSpecHitboxes(attacker) || []; } catch (err) { activeSpecHitboxes = []; }
+  const hasExactSuper = attacker.attackData.isSuper && activeSpecHitboxes.length > 0;
   if (attacker.attackData.isSuper && attacker.char?.id?.startsWith('g1_') && !hasExactSuper) return false;
   if (attacker.attackData.isSuper && !hasExactSuper) {
     const sdx = defender.x - attacker.x;
@@ -1842,9 +1845,9 @@ export function checkHit(attacker, defender) {
 
   // Hand-authored spec hitboxes take precedence for Generation I and any future
   // move that supplies a spec. This keeps collision locked to the actual visual.
-  const specHitboxes = getActiveSpecHitboxes(attacker);
+  const specHitboxes = activeSpecHitboxes;
   if (specHitboxes.length) {
-    return specHitboxes.some(hb => hitboxIntersectsBody(hb, defender));
+    try { return specHitboxes.some(hb => hitboxIntersectsBody(hb, defender)); } catch (err) { return false; }
   }
 
   // ── Fallback AABB hitbox collision ──

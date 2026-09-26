@@ -978,17 +978,22 @@ export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isN
 
   // Generation I hitboxes are authored directly against the final animation.
   // Do not apply the old generic 1.3x visual-only scale or the collision would drift.
-  if (String(charId || '').startsWith('g1_')) {
-    drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power);
-  } else {
-    const isUpOrDownSig = (attack.sigType === 'up' || attack.sigType === 'aerial' ||
-                           attack.sigType === 'down' || attack.sigType === 'downNormal') && !attack.isNormal;
-    if (isUpOrDownSig) {
-      ctx.save();
-      ctx.translate(x, y - 15); ctx.scale(1.3, 1.3); ctx.translate(-x, -(y - 15));
+  try {
+    if (String(charId || '').startsWith('g1_')) {
       drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power);
-      ctx.restore();
-    } else drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power);
+    } else {
+      const isUpOrDownSig = (attack.sigType === 'up' || attack.sigType === 'aerial' ||
+                             attack.sigType === 'down' || attack.sigType === 'downNormal') && !attack.isNormal;
+      if (isUpOrDownSig) {
+        ctx.save();
+        ctx.translate(x, y - 15); ctx.scale(1.3, 1.3); ctx.translate(-x, -(y - 15));
+        drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power);
+        ctx.restore();
+      } else drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power);
+    }
+  } catch (err) {
+    // Animation data is cosmetic; never let a malformed move animation crash
+    // an otherwise valid match. Collision uses the separate attack spec path.
   }
 
   ctx.shadowBlur = 0;

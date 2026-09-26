@@ -4,11 +4,12 @@ import GameIcon from "./GameIcon.jsx";
 
 // Rounded parallelogram button split diagonally — half primary, half accent.
 // Rimmed with dark blue (dark mode) or light purple (light mode).
-export default function MenuButton({ label, onClick, disabled, notifCount, isDark, hasSubItems, expanded, onToggleExpand }) {
+export default function MenuButton({ label, onClick, disabled, notifCount, isDark, hasSubItems, expanded, onToggleExpand, onFocus }) {
   const rim = isDark ? '#1a1a4e' : '#c4a8ff';
 
   return (
     <button
+      onFocus={onFocus}
       onClick={() => {
         if (disabled) return;
         sfx.click();

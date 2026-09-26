@@ -85,10 +85,10 @@ export default function VirtualKeyboard() {
     });
   };
 
-  // Detect focus on a text input/textarea — show keyboard only if a gamepad is
-  // connected.
+  // Controller navigation may focus a text box without opening the keyboard.
+  // The keyboard opens only after the controller explicitly confirms that field.
   useEffect(() => {
-    const onFocusIn = (e) => {
+    const onActivate = (e) => {
       const el = e.target;
       if (!el) return;
       if (el.tagName === 'INPUT' && NON_TEXT_TYPES.has(el.type)) return;
@@ -102,8 +102,8 @@ export default function VirtualKeyboard() {
       setPreview(el.value || '');
       setActive(true);
     };
-    document.addEventListener('focusin', onFocusIn);
-    return () => document.removeEventListener('focusin', onFocusIn);
+    document.addEventListener('el6-controller-text-activate', onActivate);
+    return () => document.removeEventListener('el6-controller-text-activate', onActivate);
   }, []);
 
   // Close the keyboard if the target input loses focus (e.g. user clicks away
@@ -175,13 +175,16 @@ export default function VirtualKeyboard() {
               const sel = cursor.r === r && cursor.c === c;
               const wide = key === 'SPACE' || key === 'BACK' || key === 'DONE';
               return (
-                <div
+                <button
                   key={c}
+                  type="button"
+                  onClick={() => typeKey(key)}
+                  aria-label={key === 'DONE' ? 'Done' : key}
                   className={`font-heading rounded-lg transition-all select-none ${wide ? 'px-5' : 'px-3'} py-2.5 text-sm
                     ${sel ? 'bg-accent text-accent-foreground scale-110 shadow-lg ring-2 ring-accent' : 'bg-secondary text-secondary-foreground'}`}
                 >
                   {key === 'BACK' ? '⌫' : key === 'SPACE' ? '␣ SPACE' : key === 'DONE' ? '✓ DONE' : key}
-                </div>
+                </button>
               );
             })}
           </div>

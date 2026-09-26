@@ -366,16 +366,8 @@ export function readGamepadInput(slot = 0) {
   const btn = (k) => { const idx = prof.buttons[k]; return idx != null && !!gp.buttons[idx]?.pressed; };
   const moveX = prof.leftStick.move ? apply(0, prof.leftStick) : 0;
   const moveY = prof.leftStick.move ? apply(1, prof.leftStick) : 0;
-  // Right-stick emote wheel: 8 sectors clockwise from Up.
-  const rx = apply(2, prof.rightStick || { deadzone: 0.2, sensitivity: 1 });
-  const ry = apply(3, prof.rightStick || { deadzone: 0.2, sensitivity: 1 });
-  const rmag = Math.hypot(rx, ry);
-  let emoteSlot = 0;
-  if (rmag > Math.max(0.35, prof.rightStick?.deadzone ?? 0.2)) {
-    let sector = Math.round((Math.atan2(rx, -ry) / (Math.PI / 4))) % 8;
-    if (sector < 0) sector += 8;
-    emoteSlot = sector + 1;
-  }
+  const rightX = apply(2, prof.rightStick || { deadzone: 0.18, sensitivity: 1 });
+  const rightY = apply(3, prof.rightStick || { deadzone: 0.18, sensitivity: 1 });
   let left = moveX < -0.15, right = moveX > 0.15;
   let up = moveY < -0.15, down = moveY > 0.15;
   // D-Pad also drives movement/navigation when the stick isn't overriding it.
@@ -389,6 +381,6 @@ export function readGamepadInput(slot = 0) {
     power: btn('power'), superMove: btn('super'),
     start: btn('start'),
     confirm: btn('confirm'), back: btn('back'),
-    emoteSlot,
+    rightX, rightY,
   };
 }

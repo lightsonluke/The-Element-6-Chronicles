@@ -95,8 +95,10 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
       return (
         <div key={item.id}>
           <MenuButton label={item.label} hasSubItems expanded={expandedTab === item.id}
-            onToggleExpand={() => isFront && setExpandedTab(expandedTab === item.id ? null : item.id)}
-            disabled={!isFront} isDark={isDark} />
+            onFocus={() => { if (!isFront) { setFrontCol(colId); setExpandedTab(null); } }}
+            onToggleExpand={() => { if (!isFront) { setFrontCol(colId); setExpandedTab(null); } else setExpandedTab(expandedTab === item.id ? null : item.id); }}
+            onClick={() => { if (!isFront) { setFrontCol(colId); setExpandedTab(null); } }}
+            disabled={false} isDark={isDark} />
           {expandedTab === item.id && isFront && (
             <div className="mt-1.5 ml-4 space-y-1.5">
               {item.items.map(sub => (
@@ -111,8 +113,9 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
       );
     }
     return (
-      <MenuButton key={item.key} label={item.label} onClick={() => handleNav(item.key)}
-        disabled={!isFront} notifCount={item.key === 'chat' ? chatNotifCount : 0} isDark={isDark} />
+      <MenuButton key={item.key} label={item.label} onClick={() => { if (!isFront) { setFrontCol(colId); setExpandedTab(null); } else handleNav(item.key); }}
+        onFocus={() => { if (!isFront) { setFrontCol(colId); setExpandedTab(null); } }}
+        disabled={false} notifCount={item.key === 'chat' ? chatNotifCount : 0} isDark={isDark} />
     );
   };
 

@@ -23,6 +23,7 @@ import HubChat from './HubChat.jsx';
 import PartyPanel from './PartyPanel.jsx';
 import GameIcon from "./GameIcon.jsx";
 import { getClientRegion } from './hubRegion.js';
+import { readGamepadInput } from './controllerProfiles.js';
 
 const HUB_ROOM_NAME = 'Community Hub';
 const HUB_GROUND_Y = 340; // canvas is 420 tall — player stands fully visible, no jump needed
@@ -82,6 +83,7 @@ const SKY = {
 
 export default function CommunityHub({ progress, userProfile, customCharsData = {}, onBack, onNavigate, onOpenServers, onPlayCampaign, onEquipPatch, onTransfer, onDownloadStage, serverCode = 'default' }) {
   const canvasRef = useRef(null);
+  const hubCanvasFocusedRef = useRef(false);
   const stateRef = useRef({ px: HUB_WIDTH / 2, py: HUB_GROUND_Y, vy: 0, grounded: true, facing: 1, cam: 0, frame: 0, emote: null, emoteT: 0, emoteMaxT: 0 });
   const keysRef = useRef({});
   const [userId, setUserId] = useState(null);
@@ -370,6 +372,35 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       try { Notification.requestPermission(); } catch {}
     }
+  }, []);
+
+  // Controller can enter the actual hub game from the Quick Queue menu.
+  // Once the canvas owns focus, left stick/D-pad controls the character and B
+  // returns focus to Quick Queue instead of opening a generic menu/back action.
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      if (hubCanvasFocusedRef.current && !window.__el6ControllerCapture) {
+        const gp = readGamepadInput(0);
+        if (gp) {
+          const s = stateRef.current;
+          const speed = 4.5;
+          if (gp.left) { s.px -= speed; s.facing = -1; }
+          if (gp.right) { s.px += speed; s.facing = 1; }
+          if (gp.jump && s.grounded) { s.vy = -12; s.grounded = false; sfx.jump(); }
+          if (gp.back) {
+            hubCanvasFocusedRef.current = false;
+            window.__el6GameplayActive = false;
+            canvasRef.current?.blur();
+            const queue = document.querySelector('[data-el6-quick-queue] button');
+            queue?.focus();
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   // Input
@@ -845,7 +876,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
       </div>
 
       {/* Matchmaking quick queue — back returns to Hub */}
-      <div className="flex gap-1.5 flex-wrap bg-card/60 border border-border rounded-xl px-2 py-1.5">
+      <div data-el6-quick-queue="true" className="flex gap-1.5 flex-wrap bg-card/60 border border-border rounded-xl px-2 py-1.5">
         <span className="text-[9px] font-heading text-muted-foreground self-center mr-1">QUICK QUEUE:</span>
         <button onClick={() => onNavigate?.('onlineunranked')} className="px-2 py-1 bg-accent text-accent-foreground rounded font-heading text-[10px]">ONLINE</button>
         <button onClick={() => onNavigate?.('onlineranked')} className="px-2 py-1 bg-accent text-accent-foreground rounded font-heading text-[10px]">RANKED</button>
@@ -854,8 +885,12 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
         <button onClick={() => onNavigate?.('customrooms')} className="px-2 py-1 bg-accent text-accent-foreground rounded font-heading text-[10px]">CUSTOM ROOMS</button>
       </div>
 
-      <canvas ref={canvasRef} width={800} height={420} onClick={handleClick} onMouseMove={handleMove}
-        className="w-full rounded-xl border-2 border-border shadow-2xl" style={{ aspectRatio: '800 / 420', cursor: 'pointer' }} />
+      <canvas ref={canvasRef} width={800} height={420} tabIndex={0}
+        onFocus={() => { hubCanvasFocusedRef.current = true; window.__el6GameplayActive = true; }}
+        onBlur={() => { hubCanvasFocusedRef.current = false; window.__el6GameplayActive = false; }}
+        onClick={handleClick} onMouseMove={handleMove}
+        data-el6-hub-gameplay="true"
+        className="w-full rounded-xl border-2 border-border shadow-2xl outline-none" style={{ aspectRatio: '800 / 420', cursor: 'pointer' }} />
 
       <div className="flex justify-between items-center flex-wrap gap-2 bg-card/60 border border-border rounded-xl px-3 py-1.5 text-[10px]">
         <div className="flex gap-3 font-heading text-muted-foreground"><span>A/D <GameIcon emoji="←" size={14} /> Move</span><span>Space/W Jump</span><span>1-5 Emote</span><span>Click a board to read · Click a player to interact</span></div>

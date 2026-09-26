@@ -7,6 +7,8 @@ import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { DOWN_HEAVIES } from './downHeavies.js';
 
+const TAU = Math.PI * 2;
+
 const CHAR_MAP = new Map([
   ...[...OLD_GEN_CHARS, ...HEROES, ...VILLAINS, ...GUARDIANS].map(c => [c.id, c]),
 ]);
@@ -124,23 +126,23 @@ export function getActiveSpecHitboxes(attacker) {
     case 'threeBolts': { const top = -38 - 150*q; for(const dx of [24,82,140]) P([[dx-10,-38],[dx+10,-38],[dx+10,top],[dx-10,top]]); break; }
     case 'orbitBall': { const a=-Math.PI/2+q*TAU; C(20+Math.cos(a)*94,-72+Math.sin(a)*55,13); break; }
     case 'bottomBolt': { if(q < .35) break; P([[-15,-95],[15,-95],[9,-42],[14,-10],[-14,-10],[-9,-42]]); break; }
-    case 'hook': { const a=-1.2+q*2.1, r=52+q*14; K(18,-48,18+Math.cos(a)*r,-48+Math.sin(a)*r,11); break; }
+    case 'hook': { const a=-1.2+q*2.1, r=52+q*14; const ex=18+Math.cos(a)*r, ey=-48+Math.sin(a)*r; K(18,-48,18+r*.50*Math.cos(a*.55),-48+r*.50*Math.sin(a*.55),8); K(18+r*.50*Math.cos(a*.55),-48+r*.50*Math.sin(a*.55),ex,ey,8); C(ex,ey,11); break; }
     case 'stampFlames': { for(let i=0;i<4;i++) C((i-1.5)*13,-9-Math.abs(i-1.5)*4,11); break; }
     case 'elbow': { K(20,-42,20+q*48,-42,14); break; }
     case 'fireWheel': { const r=70; for(let i=0;i<14;i++){const a=i/14*TAU+q*TAU; C(Math.cos(a)*r,-92+Math.sin(a)*r,11);} break; }
     case 'cracks': { if(q<.2) break; for(let i=0;i<5;i++){const dx=(i-2)*30*q; C(dx,-34-(i%2)*4,13);} break; }
-    case 'gauntlet': { K(22,-42,22+q*92,-42,18); C(22+q*92,-42,21); break; }
+    case 'gauntlet': { const ang=-.8+q*1.7, cx=28+Math.cos(ang)*42, cy=-42+Math.sin(ang)*42; K(8,-42,cx,cy,15); C(cx,cy,20); break; }
     case 'explosion': { if(q<.5) break; const e=(q-.5)/.5; C(78,-48,Math.min(88,34+e*54)); break; }
     case 'waterRing': { const a=-Math.PI/2+q*1.25; const r=48; C(12+Math.cos(a)*r,-54+Math.sin(a)*r,13); break; }
-    case 'twinSplashes': { C(-42,-34*q,12); C(42,-34*q,12); break; }
+    case 'twinSplashes': { const sy=-8-62*q; C(-42,sy,11); C(42,sy,11); break; }
     case 'whipTip': { C(16+72*q,-42-Math.sin(q*Math.PI)*26,10); break; }
-    case 'waterRibbon': { for(let i=0;i<16;i++){const a=i/16*TAU+q*1.9; C(Math.cos(a)*54,-64+Math.sin(a)*92,10);} break; }
+    case 'waterRibbon': { for(let i=0;i<10;i++){const a=-1.25+i/9*2.5+q*1.9; C(Math.cos(a)*54,-64+Math.sin(a)*92,9);} break; }
     case 'waterBounce': { const bx=70-140*q, by=-46+Math.max(0,q-.45)*90; C(bx,by,22); if(q>.65) for(let i=0;i<8;i++) C(bx+(i-3.5)*12,by-70*(q-.65),8); break; }
     case 'crescent': { const pts=[]; for(let i=0;i<=12;i++){const a=-.85+i/12*1.7; pts.push([20+Math.cos(a)*78,-48+Math.sin(a)*78]);} P(pts); break; }
     case 'collapseRing': { if(q<.45) break; const r=10+(q-.45)/.55*110; for(let i=0;i<18;i++){const a=i/18*TAU; C(Math.cos(a)*r,-52+Math.sin(a)*r*.7,10);} break; }
     case 'propellerLeaves': { const cy=-112; for(let i=0;i<3;i++){const a=i/3*TAU+q*TAU; P([[Math.cos(a)*5-7,cy+Math.sin(a)*5-25],[Math.cos(a)*30,cy+Math.sin(a)*30],[Math.cos(a)*5+7,cy+Math.sin(a)*5+25]]);} break; }
     case 'thornTips': { C(-38+q*24,-42,9); C(38-q*24,-42,9); break; }
-    case 'branchEnd': { B(14+70*q,-44,18,14); break; }
+    case 'branchEnd': { B(12+70*q,-44,20,16); C(82*q+12,-44,11); break; }
     case 'flowerPetals': { const r=76*q; for(let i=0;i<8;i++){const a=i/8*TAU; P([[Math.cos(a)*r-9,-48+Math.sin(a)*r*.55-24],[Math.cos(a)*r+14,-48+Math.sin(a)*r*.55],[Math.cos(a)*r-9,-48+Math.sin(a)*r*.55+24]]);} break; }
     case 'vineTwoHits': { if(q<.55) { const u=q/.55; K(-25,-105,85*u,-5,12); } else { const u=(q-.55)/.45; K(85,-5,85-95*u,-35+u*12,12); } break; }
     case 'branchSplit': { const len=115*q; P([[18,-48],[18+len,-55],[18+len,-41]]); if(q>.58){const s=(q-.58)/.42; for(const a of [-.28,0,.28]) P([[18+len,-48],[18+len+48*s,-48+Math.sin(a)*48*s],[18+len+48*s+8,-48+Math.sin(a)*48*s+6]]);} break; }
@@ -148,10 +150,10 @@ export function getActiveSpecHitboxes(attacker) {
     case 'throwingShard': { const sx=22+55*q, sy=-62-100*q; P([[sx,-30+sy],[sx+11,sy+12],[sx-7,sy+20]]); break; }
     case 'plateShards': { for(let i=0;i<7;i++){const a=Math.PI*1.05+i/6*Math.PI*.9; const sx=Math.cos(a)*52*q, sy=-18+Math.sin(a)*35*q; P([[sx,sy-14],[sx+10,sy+5],[sx-8,sy+8]]);} break; }
     case 'forearmBlade': { const a=-1.15+q*2.3; K(20,-45,20+Math.cos(a)*58,-45+Math.sin(a)*58,12); break; }
-    case 'shardBurst': { for(let i=0;i<3;i++){const a=-Math.PI/2+i*TAU/3+q*.7; K(0,-70,Math.cos(a)*96,-70+Math.sin(a)*96,10);} break; }
+    case 'shardBurst': { for(let i=0;i<3;i++){const a=-Math.PI/2+i*TAU/3+q*.7; const sx=Math.cos(a)*76*q, sy=-70+Math.sin(a)*76*q; K(sx*.65,-70+sy*.35,sx,sy,9);} break; }
     case 'iceBlock': { const bx=28+100*q; B(bx,-18,68,34); if(q>.7){B(bx+34,-48,24,26);B(bx-34,-6,24,26);} break; }
     case 'hammerArc': { const a=-1+q*2; C(22+Math.cos(a)*72,-42+Math.sin(a)*72,20); break; }
-    case 'crystalShards': { if(q<.35) break; const e=(q-.35)/.65, cx=52, cy=-54, r=22+e*112; for(let i=0;i<16;i++){const a=i/16*TAU; const sx=cx+Math.cos(a)*r, sy=cy+Math.sin(a)*r*.72; P([[sx-8,sy-18],[sx+12,sy],[sx-5,sy+16]]);} break; }
+    case 'crystalShards': { if(q<.38) break; const e=(q-.38)/.62, cx=52, cy=-54, r=24+e*110; for(let i=0;i<16;i++){const a=i/16*TAU; const sx=cx+Math.cos(a)*r, sy=cy+Math.sin(a)*r*.72; const nx=Math.cos(a), ny=Math.sin(a)*.72; P([[sx-8*nx,sy-8*ny],[sx+12*nx,sy+12*ny],[sx-5*nx+ny*6,sy-5*ny-nx*6]]);} break; }
     default: {
       const reach=Math.min(160,Math.max(50,spec.range)); K(24,-42,reach*q,-42,12);
     }

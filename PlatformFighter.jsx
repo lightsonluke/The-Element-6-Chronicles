@@ -6,6 +6,7 @@ import { GUARDIANS } from './guardians.js';
 import { ALL_CHARS_MAP } from './allCharacters.js';
 import { POWER_EFFECTS, getPowerEffect } from './powerEffects.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, CPU_DIFFICULTY, updateProjectiles, drawProjectiles, loseStock } from './fighter.js';
+import { getActiveSpecHitboxes } from './attackSpecs.js';
 import {
   drawStickman, drawAttackEffect, drawSuperEffect,
   drawHealthBar, drawTimer, drawPlatforms, drawBackground,
@@ -663,6 +664,54 @@ function drawTrainingHitbox(ctx, x, y, w, h, label) {
   ctx.strokeRect(x - w / 2, y - h / 2, w, h);
   ctx.setLineDash([]);
   if (label) { ctx.font = '10px monospace'; ctx.fillStyle = '#ff7777'; ctx.fillText(label, x - w / 2, y - h / 2 - 3); }
+  ctx.restore();
+}
+
+
+function drawExactAttackHitboxOverlay(ctx, fighter, label) {
+  if (!fighter?.attackData) return;
+  let boxes = [];
+  try { boxes = getActiveSpecHitboxes(fighter) || []; } catch (err) { return; }
+  if (!boxes.length) return;
+  ctx.save();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#FF3B5C';
+  ctx.fillStyle = 'rgba(255,59,92,0.10)';
+  ctx.shadowColor = '#FF3B5C';
+  ctx.shadowBlur = 8;
+  for (const hb of boxes) {
+    ctx.beginPath();
+    if (hb.shape === 'circle') {
+      ctx.arc(hb.x, hb.y, hb.r, 0, Math.PI * 2);
+    } else if (hb.shape === 'box') {
+      ctx.rect(hb.x - hb.w / 2, hb.y - hb.h / 2, hb.w, hb.h);
+    } else if (hb.shape === 'capsule') {
+      const dx = hb.x2 - hb.x1, dy = hb.y2 - hb.y1;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len * hb.r, ny = dx / len * hb.r;
+      ctx.moveTo(hb.x1 + nx, hb.y1 + ny);
+      ctx.lineTo(hb.x2 + nx, hb.y2 + ny);
+      ctx.arc(hb.x2, hb.y2, hb.r, Math.atan2(ny, nx), Math.atan2(-ny, -nx));
+      ctx.lineTo(hb.x1 - nx, hb.y1 - ny);
+      ctx.arc(hb.x1, hb.y1, hb.r, Math.atan2(-ny, -nx), Math.atan2(ny, nx));
+      ctx.closePath();
+    } else if (hb.shape === 'polygon' && hb.points?.length) {
+      ctx.moveTo(hb.points[0][0], hb.points[0][1]);
+      for (let i = 1; i < hb.points.length; i++) ctx.lineTo(hb.points[i][0], hb.points[i][1]);
+      ctx.closePath();
+    } else continue;
+    ctx.fill();
+    ctx.stroke();
+  }
+  // Label is anchored beside the first actual hitbox rather than a generic range box.
+  const first = boxes[0];
+  const lx = first.x ?? first.points?.[0]?.[0] ?? first.x1 ?? fighter.x;
+  const ly = first.y ?? first.points?.[0]?.[1] ?? first.y1 ?? fighter.y - 60;
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#FF3B5C';
+  ctx.font = 'bold 9px Orbitron, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${label} ATTACK`, lx, ly - 10);
   ctx.restore();
 }
 
@@ -1694,15 +1743,11 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       };
       if (settings.hitboxes === true) {
         const drawFighterBox = (f, label) => {
+          // Hurtbox remains a body-shaped training box; attack hitboxes are the
+          // exact authored circles/capsules/polygons used by collision.
           drawTrainingHitbox(ctx, f.x, f.y - 28, 44, 76, label);
           if (f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
-            const range = (f.attackData.range || 80) * (f.rangeBoost || 1);
-            let cx = f.x + f.facing * Math.max(20, range * 0.45), cy = f.y - 30, w = Math.max(50, range), h = 60;
-            const st = f.attackData.sigType;
-            if (st === 'up' || st === 'aerial') { cx = f.x; cy = f.y - range / 2 - 10; w = 70; h = range; }
-            else if (st === 'down' || st === 'downNormal' || st === 'downHeavy') { cx = f.x; cy = f.y + range / 2 - 20; w = 70; h = range; }
-            else if (f.attackData.isSuper || f.state === 'superAttack') { cx = f.x; cy = f.y - 30; w = 240; h = 240; }
-            drawTrainingHitbox(ctx, cx, cy, w, h, `${label} ATTACK`);
+            drawExactAttackHitboxOverlay(ctx, f, label);
           }
         };
         drawFighterBox(f1, 'P1'); drawFighterBox(f2, 'P2');
@@ -1931,6 +1976,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       <canvas
         ref={canvasRef} width={W} height={H}
         className="el6-match-canvas"
+        style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(100vw, calc(100dvh * 16 / 9))', height: 'min(100dvh, calc(100vw * 9 / 16))', maxWidth: 'none', maxHeight: 'none', aspectRatio: '16 / 9', zIndex: 0 }}
       />
       {countdown > 0 && !settings.hideCountdown && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">

@@ -133,11 +133,32 @@ body { overflow: hidden; }
   background: #060615 !important;
 }
 
+
+/* Every gameplay canvas is a fixed 16:9 presentation surface. This intentionally
+   ignores the width of React/Tailwind parents so a match can never collapse into
+   a small top-left rectangle. */
+.el6-match-viewport > canvas[data-e6-game-canvas="true"],
+.el6-match-viewport > canvas.el6-match-canvas,
+.el6-match-viewport canvas.el6-match-canvas {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(100vw, calc(100dvh * 16 / 9)) !important;
+  height: min(100dvh, calc(100vw * 9 / 16)) !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: 16 / 9 !important;
+  object-fit: fill !important;
+}
+
 /* 16:9 gameplay surface. Letterboxing is intentional on ultrawide/tall screens. */
 .el6-match-viewport > canvas,
 .el6-match-viewport canvas.el6-match-canvas,
 .el6-match-viewport .el6-match-canvas {
-  position: absolute !important;
+  position: fixed !important;
   left: 50% !important;
   top: 50% !important;
   inset: auto !important;
