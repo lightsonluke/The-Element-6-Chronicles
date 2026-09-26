@@ -57,3 +57,18 @@ Object.assign(DOWN_HEAVIES, {
   g2_twinfoxes: { name:'Closing Foxfire', type:'gen2DownHeavy', range:145, damage:23, color:'#FF8A2A', duration:26 },
   g2_utsuro: { name:'Hollow Circle', type:'gen2DownHeavy', range:155, damage:25, color:'#7D4AA5', duration:27 },
 });
+
+// Generation III — authored Down Heavy metadata; exact collision is supplied by gen3AttackAnims.js.
+Object.assign(DOWN_HEAVIES, {
+  g3_takeshi:{name:'Sand Burial',type:'gen3DownHeavy',range:125,damage:25,color:'#D8B27A',duration:28},
+  g3_aiko:{name:'Rib Cage',type:'gen3DownHeavy',range:130,damage:25,color:'#EDE2D2',duration:28},
+  g3_haru:{name:'Glass Floor',type:'gen3DownHeavy',range:150,damage:24,color:'#BDEBFF',duration:27},
+  g3_chiyo:{name:'Toxic Pool',type:'gen3DownHeavy',range:145,damage:25,color:'#76D63A',duration:28},
+  g3_emi:{name:'Shock Response',type:'gen3DownHeavy',range:125,damage:23,color:'#D65A6A',duration:26},
+  g3_nozomi:{name:'Briar Cage',type:'gen3DownHeavy',range:155,damage:25,color:'#4FAE46',duration:28},
+  g3_masaru:{name:'Ash Collapse',type:'gen3DownHeavy',range:145,damage:25,color:'#9B9084',duration:28},
+  g3_ryo:{name:'Vanishing Ground',type:'gen3DownHeavy',range:150,damage:24,color:'#C9D9E1',duration:27},
+  g3_souta:{name:'Ash Wave',type:'gen3DownHeavy',range:150,damage:23,color:'#B9A99B',duration:27},
+  g3_ogata:{name:'Overload Field',type:'gen3DownHeavy',range:145,damage:25,color:'#6CB9FF',duration:28},
+  g3_kanenobu:{name:'Suppression Order',type:'gen3DownHeavy',range:145,damage:25,color:'#D8B33F',duration:28},
+});

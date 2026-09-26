@@ -7,6 +7,7 @@ import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { DOWN_HEAVIES } from './downHeavies.js';
 import { getGen2Hitboxes } from './gen2AttackAnims.js';
+import { getGen3Hitboxes } from './gen3AttackAnims.js';
 
 const TAU = Math.PI * 2;
 
@@ -132,6 +133,26 @@ export function getActiveSpecHitboxes(attacker) {
       return h;
     });
   }
+  if (String(attacker?.char?.id || '').startsWith('g3_')) {
+    let mk = data.sigType || data.moveKey || '';
+    if (data.isSuper) mk = 'sp';
+    else if (data.isHeavy) {
+      if (mk === 'downHeavy' || mk === 'down' || data.isGroundPound) mk = 'dh';
+      else if (mk === 'upHeavy' || mk === 'upheavy' || mk === 'aerialHeavy' || mk === 'aerial' || data.isAerialHeavy) mk = 'uh';
+      else mk = 'sh';
+    } else if (mk === 'up' || mk === 'upSignature') mk = 'us';
+    else if (mk === 'down' || mk === 'downSignature') mk = 'ds';
+    else mk = 'ss';
+    const localBoxes = getGen3Hitboxes(attacker.char.id, mk, t, attacker.facing || 1);
+    const ox = Number(attacker.x) || 0, oy = Number(attacker.y) || 0;
+    return localBoxes.map(h => {
+      if (h.shape === 'circle' || h.shape === 'box') return { ...h, x: ox + h.x, y: oy + h.y };
+      if (h.shape === 'capsule') return { ...h, x1: ox + h.x1, y1: oy + h.y1, x2: ox + h.x2, y2: oy + h.y2 };
+      if (h.shape === 'polygon') return { ...h, points: h.points.map(([px, py]) => [ox + px, oy + py]) };
+      return h;
+    });
+  }
+
   const spec = data.spec || getAttackSpecForData(attacker.char?.id, data); if (!spec) return [];
   const f = attacker.facing || 1, x = attacker.x, y = attacker.y;
   const out = [];

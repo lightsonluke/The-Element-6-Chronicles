@@ -8,6 +8,7 @@ import { drawSuper } from './attackSupers.js';
 import { drawUniqueSuper } from './uniqueSupers.js';
 import { PARTICLES } from './charAttackParticles.js';
 import { drawGen2Attack, drawGen2Super } from './gen2AttackAnims.js';
+import { drawGen3Attack, drawGen3Super } from './gen3AttackAnims.js';
 
 const SUPER_W = 1200, SUPER_H = 700;
 
@@ -34,6 +35,10 @@ function getAttackKey(attack, attackKey) {
 export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power) {
   if (String(charId || '').startsWith('g2_')) {
     drawGen2Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
+    return;
+  }
+  if (String(charId || '').startsWith('g3_')) {
+    drawGen3Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
     return;
   }
 
@@ -82,6 +87,10 @@ export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, atta
 export function drawCharSuper(ctx, x, y, color, p, charId, facing = 1) {
   if (String(charId || '').startsWith('g2_')) {
     drawGen2Super(ctx, x, y, color, p, charId, facing);
+    return;
+  }
+  if (String(charId || '').startsWith('g3_')) {
+    drawGen3Super(ctx, x, y, color, p, charId, facing);
     return;
   }
   const config = getConfig(charId, '', color);

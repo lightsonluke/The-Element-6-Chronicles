@@ -26,3 +26,18 @@ Object.assign(UP_HEAVIES, {
   g2_twinfoxes: { name:'Fox Launch', type:'gen2UpHeavy', range:165, damage:23, color:'#FF8A2A', duration:26 },
   g2_utsuro: { name:'Hollow Arm Rise', type:'gen2UpHeavy', range:170, damage:25, color:'#7D4AA5', duration:27 },
 });
+
+// Generation III — authored Up Heavy metadata; exact collision is supplied by gen3AttackAnims.js.
+Object.assign(UP_HEAVIES, {
+  g3_takeshi:{name:'Sand Pillar',type:'gen3UpHeavy',range:175,damage:24,color:'#D8B27A',duration:28},
+  g3_aiko:{name:'Spine Lance',type:'gen3UpHeavy',range:180,damage:25,color:'#EDE2D2',duration:27},
+  g3_haru:{name:'Glass Cathedral',type:'gen3UpHeavy',range:170,damage:24,color:'#BDEBFF',duration:28},
+  g3_chiyo:{name:'Venom Column',type:'gen3UpHeavy',range:175,damage:24,color:'#76D63A',duration:27},
+  g3_emi:{name:'Vital Surge',type:'gen3UpHeavy',range:155,damage:23,color:'#D65A6A',duration:25},
+  g3_nozomi:{name:'Vine Tower',type:'gen3UpHeavy',range:175,damage:24,color:'#4FAE46',duration:28},
+  g3_masaru:{name:'Ash Column',type:'gen3UpHeavy',range:180,damage:24,color:'#9B9084',duration:28},
+  g3_ryo:{name:'Cloud Break',type:'gen3UpHeavy',range:170,damage:24,color:'#C9D9E1',duration:27},
+  g3_souta:{name:'Ash Spiral',type:'gen3UpHeavy',range:160,damage:22,color:'#B9A99B',duration:27},
+  g3_ogata:{name:'Extraction Column',type:'gen3UpHeavy',range:180,damage:25,color:'#6CB9FF',duration:28},
+  g3_kanenobu:{name:'Guard Formation',type:'gen3UpHeavy',range:175,damage:25,color:'#D8B33F',duration:29},
+});
