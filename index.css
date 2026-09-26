@@ -108,125 +108,62 @@
     background-attachment: fixed;
   }
 }
-/* Shared, real match viewport. Menus retain their normal centered layout. */
-.el6-match-viewport {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  width: 100vw;
-  height: 100dvh;
-  background: #060615;
-  overflow: hidden;
-}
-.el6-match-canvas {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  width: 100vw !important;
-  height: 100dvh !important;
-  max-width: none !important;
-  max-height: none !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  aspect-ratio: auto !important;
-  object-fit: contain;
-  image-rendering: auto;
-}
-
-/* Unified full-screen match surface for every fight/sport/online match. */
-.el6-match-viewport {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  width: 100vw;
-  height: 100dvh;
-  min-height: 100dvh;
-  background: #060615;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.el6-match-viewport > canvas,
-.el6-match-viewport .el6-match-canvas,
-.el6-match-viewport canvas {
-  width: min(100vw, 177.7778dvh) !important;
-  height: min(100dvh, 56.25vw) !important;
-  max-width: none !important;
-  max-height: none !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  aspect-ratio: 16 / 9 !important;
-  object-fit: contain;
-  flex: 0 0 auto;
-  position: absolute !important;
-  left: 50% !important;
-  top: 50% !important;
-  transform: translate(-50%, -50%) !important;
-}
-.el6-match-ui {
-  position: absolute !important;
-  inset: 0;
-  z-index: 60;
-  pointer-events: none;
-}
-.el6-match-ui > * { pointer-events: auto; }
-.el6-match-pause-button {
-  position: absolute !important;
-  top: max(12px, env(safe-area-inset-top));
-  left: max(12px, env(safe-area-inset-left));
-  z-index: 80;
-}
-.el6-match-overlay {
-  position: absolute !important;
-  inset: 0;
-  z-index: 70;
-}
-
-
 /* ========================================================================
-   MATCH UI LAYERING — gameplay is always the bottom layer.
-   Pause controls and the pause menu must remain above the real match surface.
+   MATCH VIEWPORT — true fullscreen letterboxed 16:9 surface.
+   The DOM viewport is always the full browser. The game canvas itself is
+   centered and constrained to exactly 16:9, so it can never occupy only the
+   upper-left portion of the screen or stretch to a non-16:9 shape.
    ======================================================================== */
+html, body, #root { width: 100%; min-width: 100%; height: 100%; min-height: 100%; margin: 0; }
+body { overflow: hidden; }
+
 .el6-match-viewport {
-  isolation: isolate;
   position: fixed !important;
   inset: 0 !important;
-  z-index: 40 !important;
   width: 100vw !important;
   height: 100dvh !important;
+  min-width: 100vw !important;
   min-height: 100dvh !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   overflow: hidden !important;
+  isolation: isolate !important;
+  z-index: 40 !important;
+  background: #060615 !important;
 }
 
-/* Actual match rendering: bottom layer. */
+/* 16:9 gameplay surface. Letterboxing is intentional on ultrawide/tall screens. */
 .el6-match-viewport > canvas,
-.el6-match-viewport > .el6-match-canvas,
-.el6-match-viewport canvas.el6-match-canvas {
+.el6-match-viewport canvas.el6-match-canvas,
+.el6-match-viewport .el6-match-canvas {
   position: absolute !important;
   left: 50% !important;
   top: 50% !important;
   inset: auto !important;
   transform: translate(-50%, -50%) !important;
-  z-index: 0 !important;
-  width: min(100vw, 177.7778dvh) !important;
-  height: min(100dvh, 56.25vw) !important;
+  width: min(100vw, calc(100dvh * 16 / 9)) !important;
+  height: min(100dvh, calc(100vw * 9 / 16)) !important;
+  aspect-ratio: 16 / 9 !important;
   max-width: none !important;
   max-height: none !important;
-  aspect-ratio: 16 / 9 !important;
-  object-fit: contain !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
+  object-fit: fill !important;
+  z-index: 0 !important;
+  flex: 0 0 auto !important;
 }
 
-/* Non-pause match overlays can sit above gameplay, but below pause UI. */
-.el6-match-viewport > .el6-match-overlay,
-.el6-match-viewport > .absolute:not(.el6-pause-overlay-layer):not(.el6-match-pause-button):not(.el6-match-control-layer),
-.el6-match-viewport > div > .absolute:not(.el6-pause-overlay-layer) {
-  z-index: 10;
+.el6-match-ui {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 60 !important;
+  pointer-events: none !important;
 }
+.el6-match-ui > * { pointer-events: auto !important; }
 
-/* Match control row (training SETTINGS + PAUSE): same top UI layer as the pause control. */
 .el6-match-control-layer {
   position: absolute !important;
   top: max(12px, env(safe-area-inset-top)) !important;
@@ -234,19 +171,6 @@
   z-index: 300 !important;
   pointer-events: auto !important;
 }
-
-/* Pause menu: guaranteed above the actual match and other match overlays. */
-.el6-pause-overlay-layer {
-  position: absolute !important;
-  inset: 0 !important;
-  z-index: 200 !important;
-  pointer-events: auto !important;
-}
-.el6-pause-overlay-layer > * {
-  pointer-events: auto !important;
-}
-
-/* Pause button: highest match-control layer. */
 .el6-match-pause-button {
   position: absolute !important;
   top: max(12px, env(safe-area-inset-top)) !important;
@@ -254,13 +178,20 @@
   z-index: 300 !important;
   pointer-events: auto !important;
 }
-
-/* Keep the pause control above any generic absolute/fixed gameplay element. */
-.el6-match-viewport .el6-match-pause-button {
-  z-index: 300 !important;
+.el6-match-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 70 !important;
 }
 
-/* Global pause portals intentionally render outside every match stacking context. */
+/* Pause menus are always above gameplay and every normal match overlay. */
+.el6-pause-overlay-layer {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483646 !important;
+  pointer-events: auto !important;
+}
+.el6-pause-overlay-layer > * { pointer-events: auto !important; }
 .el6-global-pause-layer {
   position: fixed !important;
   inset: 0 !important;
@@ -268,14 +199,11 @@
   pointer-events: auto !important;
   isolation: isolate !important;
 }
-.el6-global-pause-layer > * {
-  pointer-events: auto !important;
-}
+.el6-global-pause-layer > * { pointer-events: auto !important; }
 .el6-global-pause-layer .el6-pause-overlay-layer {
   position: fixed !important;
   inset: 0 !important;
   z-index: 2147483646 !important;
-  pointer-events: auto !important;
 }
 .el6-global-pause-button-layer {
   position: fixed !important;
@@ -292,4 +220,27 @@
   left: max(12px, env(safe-area-inset-left)) !important;
   z-index: 2147483647 !important;
   pointer-events: auto !important;
+}
+
+/* Controller navigation has its own visible focus state. */
+.el6-controller-focus,
+[data-el6-controller-focus="true"] {
+  outline: 4px solid #FFD447 !important;
+  outline-offset: 4px !important;
+  box-shadow: 0 0 0 2px rgba(255,212,71,.25), 0 0 18px rgba(255,212,71,.65) !important;
+  position: relative;
+  z-index: 500 !important;
+}
+button.el6-controller-focus,
+a.el6-controller-focus,
+select.el6-controller-focus,
+input.el6-controller-focus { filter: brightness(1.12); }
+
+@media (orientation: portrait) {
+  .el6-match-viewport > canvas,
+  .el6-match-viewport canvas.el6-match-canvas,
+  .el6-match-viewport .el6-match-canvas {
+    width: 100vw !important;
+    height: calc(100vw * 9 / 16) !important;
+  }
 }

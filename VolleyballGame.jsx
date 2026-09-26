@@ -9,6 +9,7 @@ import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
 import PauseMenu from './PauseMenu.jsx';
 import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
+import { getKeybinds, getSoloKeybinds } from './keybinds.js';
 
 const charFor = (id, element) => { const c = ALL_CHARS.find(c => c.id === id); if (!c) return null; if (element && element !== 'basic') return { ...c, stats: applyElement(c.stats || {}, element) }; return c; };
 

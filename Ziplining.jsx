@@ -8,6 +8,7 @@ import { drawSportChar } from './sportDraw.jsx';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { readGamepadInput } from './controllerProfiles.js';
+import { getKeybinds } from './keybinds.js';
 import { applyElement } from './elements.js';
 import ElementSelect from './ElementSelect.jsx';
 import ZiplineLeaderboard from './ZiplineLeaderboard.jsx';
@@ -101,12 +102,13 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
   useEffect(() => {
     if (phase !== 'play') return;
     const kd = (e) => {
-      const k = e.key.toLowerCase();
-      if (k === 'escape' || k === 'p') { setPaused(p => !p); return; }
-      if ((k === 'arrowup' || k === 'w') && !keysRef.current[k]) edgeRef.current.up = true;
-      if ((k === 'arrowdown' || k === 's') && !keysRef.current[k]) edgeRef.current.down = true;
-      keysRef.current[k] = true;
-      if (['ArrowUp', 'ArrowDown', ' '].includes(e.key)) e.preventDefault();
+      const k = e.key; const kl = k.toLowerCase();
+      if (kl === 'escape' || kl === 'p') { setPaused(p => !p); return; }
+      const b = getKeybinds(settings).p1;
+      if (String(b.sig || '').toLowerCase() === kl && !keysRef.current[kl]) edgeRef.current.up = true;
+      if (String(b.power || '').toLowerCase() === kl && !keysRef.current[kl]) edgeRef.current.down = true;
+      keysRef.current[kl] = true;
+      e.preventDefault();
     };
     const ku = (e) => { keysRef.current[e.key.toLowerCase()] = false; };
     window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
@@ -124,8 +126,8 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
       if (paused || s.over) { draw(ctx, s); return; }
       const gp = settings.controllerEnabled !== false ? readGamepadInput(0) : null;
       if (gp) {
-        if (gp.up && !gpPrevRef.current.up) edgeRef.current.up = true;
-        if (gp.down && !gpPrevRef.current.down) edgeRef.current.down = true;
+        if (gp.sig && !gpPrevRef.current.sig) edgeRef.current.up = true;
+        if (gp.power && !gpPrevRef.current.power) edgeRef.current.down = true;
       }
       gpPrevRef.current = { up: gp?.up, down: gp?.down };
       update(s, { upEdge: edgeRef.current.up, downEdge: edgeRef.current.down });

@@ -337,7 +337,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
           drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || renderColor, f.attackData.isNormal, f.char.id, f.char.power, f.powerActive);
         }
         if (f.attackData && f.state === 'superAttack') {
-          drawSuperEffect(ctx, f.x, f.y, renderColor, f.attackData.progress, f.char.superMove?.name, f.char.id);
+          drawSuperEffect(ctx, f.x, f.y, renderColor, f.attackData.progress, f.char.superMove?.name, f.char.id, f.facing);
         }
         if (f.hitEffects) {
           f.hitEffects = f.hitEffects.filter(he => drawHitSparks(ctx, he.x, he.y, he.color, f.frame, he.spawnFrame));
@@ -394,7 +394,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
         {battleTitle && <span className="text-[10px] font-heading text-accent tracking-wider">{battleTitle}</span>}
         <span className="text-[10px] text-muted-foreground font-body">Arrows · , sig · ,+ '↑' recovery · . power · l side heavy · l+ '↓' down/pound · / super</span>
       </div>
-      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H} className="border-2 border-destructive/50 rounded-lg shadow-2xl" style={{ maxWidth: '100%' }} />
+      <canvas ref={canvasRef} width={W} height={H} className="border-2 border-destructive/50 rounded-lg shadow-2xl" style={{ maxWidth: '100%' }} />
       {result && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-lg gap-4">
           <span className={`text-4xl font-heading ${result === 'narrative' || result === 'win' ? 'text-accent' : 'text-destructive'}`}>

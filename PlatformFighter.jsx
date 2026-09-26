@@ -891,7 +891,6 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
     let prevF1Grounded = true, prevF2Grounded = true, prevF2Power = 0;
     let prevStocks1 = f1.stocks, prevStocks2 = f2.stocks;
     let prevGpStart = false;
-    let prevGpEmote1 = 0, prevGpEmote2 = 0;
   let killFeed = [];
     let killFxEffects = []; // { x, y, color, progress, fxId }
     // Emote state is stored on each fighter: f.emote = { id, timer, maxTimer, progress }
@@ -1632,7 +1631,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           const crossoverAttackColor = getCrossoverAttackColor(f.char.id, equippedCrossovers);
           drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, moveColor || crossoverAttackColor || f.attackData.color || renderColor, f.attackData.isNormal, effId, f.char.power, f.powerActive);
         }
-        if (f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, crossoverColors?.super || renderColor, f.attackData.progress, f.char.superMove?.name, effId);
+        if (f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, crossoverColors?.super || renderColor, f.attackData.progress, f.char.superMove?.name, effId, f.facing);
         if (f.hitEffects) f.hitEffects = f.hitEffects.filter(he => drawHitSparks(ctx, he.x, he.y, he.color, f.frame, he.spawnFrame));
         // Nametag (toggleable)
         if (settings.showNametags !== false) {
@@ -1930,7 +1929,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
       <canvas
-        data-e6-game-canvas="true" ref={canvasRef} width={W} height={H}
+        ref={canvasRef} width={W} height={H}
         className="el6-match-canvas"
       />
       {countdown > 0 && !settings.hideCountdown && (

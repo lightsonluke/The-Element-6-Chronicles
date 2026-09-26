@@ -1,5 +1,5 @@
-// Generation I Up Heavy attacks. The normal heavy button + up direction selects
-// these moves; characters outside Gen I fall back to their existing heavy rules.
+// Generation I Up Heavy moves. They use the same authored animation/hitbox
+// pipeline as signatures instead of falling back to the generic heavy box.
 export const UP_HEAVIES = {
   g1_thunder: { name:'Rising Lightning Trio', type:'gen1UpHeavy', range:190, damage:23, color:'#FFFF44', duration:24 },
   g1_fire: { name:'Spinning Fire Wheel', type:'gen1UpHeavy', range:120, damage:24, color:'#FF6600', duration:24 },

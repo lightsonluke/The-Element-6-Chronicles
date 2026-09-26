@@ -1,162 +1,102 @@
 import { useEffect, useRef } from 'react';
 import { readGamepadInput } from './controllerProfiles.js';
 
-// Controller menu navigation — lets a gamepad D-pad/stick move focus between
-// on-screen buttons and activate them with the confirm button (A/Cross).
-// Works on every menu screen (disabled during active gameplay).
-//
-// Uses 2D SPATIAL NAVIGATION: finds the nearest focusable element in the
-// requested direction based on screen position, enabling true grid/column
-// navigation across menus, character selects, and on-screen keyboards.
-//
-// Mapping (same as the active controller profile):
-//   D-pad / Left stick → move focus up/down/left/right (spatial)
-//   A / Cross (jump)   → confirm (click focused button)
-//   B / Circle (power) → back (dispatch Escape)
-//   Start (start)      → also confirms (handy on some controllers)
-
-const FOCUSABLE = 'button:not([disabled]):not([hidden]), a[href]:not([hidden]), input:not([disabled]):not([hidden]), select:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])';
+const FOCUSABLE = 'button:not([disabled]):not([hidden]), a[href]:not([hidden]), input:not([disabled]):not([hidden]), select:not([disabled]):not([hidden]), textarea:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])';
 
 function getVisibleFocusable() {
-  const els = Array.from(document.querySelectorAll(FOCUSABLE));
-  return els.filter((el) => {
-    const rect = el.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return false;
-    const style = window.getComputedStyle(el);
-    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-    return true;
+  return Array.from(document.querySelectorAll(FOCUSABLE)).filter(el => {
+    const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return false;
+    const st = window.getComputedStyle(el);
+    return st.display !== 'none' && st.visibility !== 'hidden' && st.opacity !== '0';
   });
 }
 
-// 2D spatial navigation — finds nearest element in the given direction.
-// Uses center-point distance with cross-axis penalty so navigation feels
-// natural in grids (character selects), columns (menus), and on-screen keyboards.
-function navigateFocusSpatial(direction) {
-  const focusable = getVisibleFocusable();
-  if (focusable.length === 0) return;
-  const current = document.activeElement;
-  const currentIdx = focusable.indexOf(current);
-
-  if (currentIdx === -1 || !current || !focusable.includes(current)) {
-    focusable[0].focus();
-    focusable[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    return;
-  }
-
-  const currentRect = current.getBoundingClientRect();
-  const currentCx = currentRect.left + currentRect.width / 2;
-  const currentCy = currentRect.top + currentRect.height / 2;
-
-  let best = null;
-  let bestScore = Infinity;
-
-  for (let i = 0; i < focusable.length; i++) {
-    if (i === currentIdx) continue;
-    const el = focusable[i];
-    const rect = el.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dx = cx - currentCx;
-    const dy = cy - currentCy;
-
-    let valid = false;
-    let primaryDist = 0;
-    let crossDist = 0;
-
-    if (direction === 'up') {
-      valid = dy < -2;
-      primaryDist = -dy;
-      crossDist = Math.abs(dx);
-    } else if (direction === 'down') {
-      valid = dy > 2;
-      primaryDist = dy;
-      crossDist = Math.abs(dx);
-    } else if (direction === 'left') {
-      valid = dx < -2;
-      primaryDist = -dx;
-      crossDist = Math.abs(dy);
-    } else if (direction === 'right') {
-      valid = dx > 2;
-      primaryDist = dx;
-      crossDist = Math.abs(dy);
-    }
-
-    if (!valid) continue;
-
-    // Score: prioritize primary axis distance, penalize cross-axis offset.
-    // Weighting of 1.5 on cross-axis makes grid navigation snap to columns
-    // while still allowing diagonal movement when no direct neighbor exists.
-    const score = primaryDist + crossDist * 1.5;
-    if (score < bestScore) {
-      bestScore = score;
-      best = el;
-    }
-  }
-
-  if (best) {
-    best.focus();
-    best.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+function markControllerFocus(el) {
+  document.querySelectorAll('.el6-controller-focus,[data-el6-controller-focus="true"]').forEach(node => {
+    node.classList.remove('el6-controller-focus');
+    node.removeAttribute('data-el6-controller-focus');
+  });
+  if (el) {
+    el.classList.add('el6-controller-focus');
+    el.setAttribute('data-el6-controller-focus', 'true');
   }
 }
 
-function activateFocused() {
+function focusElement(el) {
+  if (!el) return;
+  el.focus({ preventScroll: true });
+  markControllerFocus(el);
+  el.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+}
+
+function spatialMove(direction) {
+  const els = getVisibleFocusable();
+  if (!els.length) return;
+  const current = document.activeElement;
+  if (!current || !els.includes(current)) {
+    focusElement(els[0]);
+    return;
+  }
+  const a = current.getBoundingClientRect();
+  const acx = a.left + a.width / 2, acy = a.top + a.height / 2;
+  let best = null, bestScore = Infinity;
+  for (const el of els) {
+    if (el === current) continue;
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const dx = cx - acx, dy = cy - acy;
+    let valid = false, primary = 0, cross = 0;
+    if (direction === 'up') { valid = dy < -3; primary = -dy; cross = Math.abs(dx); }
+    if (direction === 'down') { valid = dy > 3; primary = dy; cross = Math.abs(dx); }
+    if (direction === 'left') { valid = dx < -3; primary = -dx; cross = Math.abs(dy); }
+    if (direction === 'right') { valid = dx > 3; primary = dx; cross = Math.abs(dy); }
+    if (!valid) continue;
+    const score = primary + cross * 1.35 + Math.hypot(dx, dy) * 0.08;
+    if (score < bestScore) { bestScore = score; best = el; }
+  }
+  if (best) focusElement(best);
+}
+
+function activate() {
   const el = document.activeElement;
   if (!el) return;
-  if (el.tagName === 'BUTTON' || el.tagName === 'A' || el.getAttribute('role') === 'button') {
-    el.click();
-  } else if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
-    el.focus();
-  } else {
-    const f = getVisibleFocusable();
-    if (f[0]) { f[0].focus(); f[0].click(); }
-  }
+  if (el.matches('button,a[href],[role="button"]')) el.click();
+  else if (el.matches('input,select,textarea')) el.focus();
 }
 
 export function useGamepadMenuNav(enabled = true) {
-  const lastDir = useRef({ up: false, down: false, left: false, right: false });
-  const lastConfirm = useRef(false);
-  const lastBack = useRef(false);
+  const previous = useRef({ up:false, down:false, left:false, right:false, confirm:false, back:false, start:false });
+  const repeat = useRef({ up:0, down:0, left:0, right:0 });
 
   useEffect(() => {
     if (!enabled) return;
-    let raf;
-    let repeatTimer = 0;
-
+    let raf = 0;
     const tick = () => {
-      if (window.__el6ControllerCapture || (window.__el6GameplayActive && !window.__el6PauseMenuOpen)) {
-        raf = requestAnimationFrame(tick);
-        return;
-      }
-      const gp = readGamepadInput(0);
-      if (gp) {
-        const dir = { up: gp.up, down: gp.down, left: gp.left, right: gp.right };
-        const confirm = !!(gp.confirm ?? gp.jump);
-        const back = !!(gp.back ?? gp.power);
-        const start = !!gp.start;
-
-        repeatTimer++;
-        for (const d of ['up', 'down', 'left', 'right']) {
-          if (dir[d] && !lastDir.current[d]) {
-            navigateFocusSpatial(d);
-            repeatTimer = 0;
+      const menuOpen = !!window.__el6PauseMenuOpen || !!document.querySelector('.el6-pause-overlay-layer');
+      const gameplay = !!window.__el6GameplayActive;
+      if (!window.__el6ControllerCapture && (!gameplay || menuOpen)) {
+        const gp = readGamepadInput(0);
+        if (gp) {
+          const dirs = { up:!!gp.up, down:!!gp.down, left:!!gp.left, right:!!gp.right };
+          for (const d of Object.keys(dirs)) {
+            if (dirs[d] && !previous.current[d]) { spatialMove(d); repeat.current[d] = 0; }
+            else if (dirs[d]) { repeat.current[d]++; if (repeat.current[d] >= 24) { spatialMove(d); repeat.current[d] = 18; } }
+            else repeat.current[d] = 0;
+            previous.current[d] = dirs[d];
           }
-          if (dir[d] && lastDir.current[d] && repeatTimer > 30) {
-            navigateFocusSpatial(d);
-            repeatTimer = 25;
-          }
-          if (!dir[d]) lastDir.current[d] = false;
-          else lastDir.current[d] = true;
-        }
+          const confirm = !!(gp.confirm ?? gp.jump);
+          const back = !!(gp.back ?? gp.power);
+          const start = !!gp.start;
+          if ((confirm || start) && !previous.current.confirm && !previous.current.start) activate();
+          if (back && !previous.current.back) window.dispatchEvent(new KeyboardEvent('keydown', { key:'Escape', bubbles:true, cancelable:true }));
+          previous.current.confirm = confirm; previous.current.back = back; previous.current.start = start;
 
-        if ((confirm || start) && !lastConfirm.current) {
-          activateFocused();
+          // If the controller is on a menu and nothing is focused, immediately
+          // expose a visible target instead of waiting for the first direction.
+          const visible = getVisibleFocusable();
+          if (visible.length && !visible.includes(document.activeElement)) focusElement(visible[0]);
         }
-        lastConfirm.current = confirm || start;
-
-        if (back && !lastBack.current) {
-          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
-        }
-        lastBack.current = back;
       }
       raf = requestAnimationFrame(tick);
     };

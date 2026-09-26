@@ -36,18 +36,20 @@ function getAttackKey(attack, attackKey) {
 
 // ── Main entry: draw sig/heavy attack with per-character config ──
 export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power) {
-  const config = getConfig(charId, power, color);
-  if (!config) return;
-
   const key = getAttackKey(attack, attackKey);
-  const cfg = config[key];
-  if (!cfg) return;
 
-  if (charId.startsWith('g1_')) {
+  // Generation I is completely hand-authored. Route it before looking up the
+  // generic config so Up Heavy (a separate key) can never silently disappear.
+  if (charId?.startsWith('g1_')) {
     drawGen1Attack(ctx, x, y, color, p, facing, charId, key);
     ctx.shadowBlur = 0;
     return;
   }
+
+  const config = getConfig(charId, power, color);
+  if (!config) return;
+  const cfg = config[key];
+  if (!cfg) return;
 
   const shapeType = cfg[0];
   const isHeavy = attack.isHeavy || false;
@@ -94,11 +96,8 @@ export function drawCharSuper(ctx, x, y, color, p, charId, facing = 1) {
   }
 
   // ── Hand-crafted unique supers: route directly to the per-character animation ──
-  if (charId.startsWith('g1_')) {
-    ctx.save();
-    ctx.translate(x, y); ctx.scale(2.85, 2.85); ctx.translate(-x, -y);
+  if (charId?.startsWith('g1_')) {
     drawGen1Super(ctx, x, y, p, facing, charId);
-    ctx.restore();
     ctx.shadowBlur = 0;
     return;
   }

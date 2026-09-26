@@ -343,7 +343,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
           drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || renderColor, f.attackData.isNormal, f.char.id, f.char.power, f.powerActive);
         }
         if (f.attackData && f.state === 'superAttack') {
-          drawSuperEffect(ctx, f.x, f.y, renderColor, f.attackData.progress, f.char.superMove?.name, f.char.id);
+          drawSuperEffect(ctx, f.x, f.y, renderColor, f.attackData.progress, f.char.superMove?.name, f.char.id, f.facing);
         }
         if (f.hitEffects) {
           f.hitEffects = f.hitEffects.filter(he => drawHitSparks(ctx, he.x, he.y, he.color, f.frame, he.spawnFrame));
@@ -402,7 +402,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
       </div>
       <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="absolute top-3 right-3 z-20 px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
       {paused && <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 pointer-events-none"><div className="bg-card border-2 border-accent rounded-xl px-8 py-6 text-center"><p className="font-heading text-3xl text-accent">PAUSED</p><p className="text-xs text-muted-foreground mt-2">Press ESC or P to resume.</p></div></div>}
-      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H} className="border-2 border-destructive/50 rounded-lg shadow-2xl" style={{ maxWidth: '100%' }} />
+      <canvas ref={canvasRef} width={W} height={H} className="border-2 border-destructive/50 rounded-lg shadow-2xl" style={{ maxWidth: '100%' }} />
       {result && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-lg gap-4">
           <span className={`text-4xl font-heading ${result === 'narrative' || result === 'win' ? 'text-accent' : 'text-destructive'}`}>

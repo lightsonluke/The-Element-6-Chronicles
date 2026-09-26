@@ -4,6 +4,7 @@ import { drawSportChar } from './sportDraw.jsx';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { readGamepadInput } from './controllerProfiles.js';
+import { getKeybinds } from './keybinds.js';
 import { applyElement } from './elements.js';
 import { fmtTime } from './RockClimbLeaderboard.jsx';
 import ElementSelect from './ElementSelect.jsx';
@@ -167,20 +168,22 @@ export default function RockClimbing2P({ onExit, onAward, unlockedIds = ['yellow
   useEffect(() => {
     if (phase !== 'play') return;
     const kd = e => {
-      const k = e.key.toLowerCase();
-      if (k === 'escape' || k === 'p') { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
+      const k = e.key; const kl = k.toLowerCase();
+      if (kl === 'escape' || kl === 'p') { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
       if (['F5', 'F12'].includes(e.key)) return;
-      if (k === 'arrowup' && !keysRef.current[k]) edge1Ref.current.jump = true;
-      if (k === 'arrowdown' && !keysRef.current[k]) edge1Ref.current.down = true;
-      if (k === 'w' && !keysRef.current[k]) edge2Ref.current.jump = true;
-      if (k === 's' && !keysRef.current[k]) edge2Ref.current.down = true;
-      keysRef.current[k] = true;
+      const kb = getKeybinds(settings);
+      const same = (b, action) => String(b[action] || '').toLowerCase() === kl;
+      if (same(kb.p1, 'sig') && !keysRef.current[kl]) edge1Ref.current.jump = true;
+      if (same(kb.p1, 'down') && !keysRef.current[kl]) edge1Ref.current.down = true;
+      if (same(kb.p2, 'sig') && !keysRef.current[kl]) edge2Ref.current.jump = true;
+      if (same(kb.p2, 'down') && !keysRef.current[kl]) edge2Ref.current.down = true;
+      keysRef.current[kl] = true;
       e.preventDefault();
     };
     const ku = e => { keysRef.current[e.key.toLowerCase()] = false; };
     window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
     return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); };
-  }, [phase, onExit]);
+  }, [phase, onExit, settings]);
 
   useEffect(() => {
     if (phase !== 'play') return;
@@ -197,8 +200,8 @@ export default function RockClimbing2P({ onExit, onAward, unlockedIds = ['yellow
       if (gp2) { if (gp2.sig && !gpPrevRef.current.g2s) edge2Ref.current.jump = true; if (gp2.down && !gpPrevRef.current.g2d) edge2Ref.current.down = true; }
       gpPrevRef.current = { g1s: gp1?.sig, g1d: gp1?.down, g2s: gp2?.sig, g2d: gp2?.down };
 
-      updatePlayer(s, s.players[0], { jump: edge1Ref.current.jump, down: edge1Ref.current.down, leftHeld: keysRef.current['arrowleft'], rightHeld: keysRef.current['arrowright'] }, 0, 1);
-      updatePlayer(s, s.players[1], { jump: edge2Ref.current.jump, down: edge2Ref.current.down, leftHeld: keysRef.current['a'], rightHeld: keysRef.current['d'] }, 1, 0);
+      updatePlayer(s, s.players[0], { jump: edge1Ref.current.jump, down: edge1Ref.current.down, leftHeld: keysRef.current[String(getKeybinds(settings).p1.left).toLowerCase()] || false, rightHeld: keysRef.current[String(getKeybinds(settings).p1.right).toLowerCase()] || false }, 0, 1);
+      updatePlayer(s, s.players[1], { jump: edge2Ref.current.jump, down: edge2Ref.current.down, leftHeld: keysRef.current[String(getKeybinds(settings).p2.left).toLowerCase()] || false, rightHeld: keysRef.current[String(getKeybinds(settings).p2.right).toLowerCase()] || false }, 1, 0);
       edge1Ref.current.jump = edge1Ref.current.down = false;
       edge2Ref.current.jump = edge2Ref.current.down = false;
 

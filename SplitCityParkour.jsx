@@ -8,6 +8,7 @@ import { drawSportChar } from './sportDraw.jsx';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { readGamepadInput } from './controllerProfiles.js';
+import { getKeybinds } from './keybinds.js';
 import ParkourLeaderboard from './ParkourLeaderboard.jsx';
 import { applyElement, getCharLevelData } from './elements.js';
 import ElementSelect from './ElementSelect.jsx';
@@ -229,14 +230,13 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
   // ── Input ──
   useEffect(() => {
     if (phase !== 'play') return;
-    const isJump = k => k === ' ' || k === 'arrowup' || k === 'w';
-    const isDown = k => k === 'arrowdown' || k === 's';
     const kd = e => {
-      const k = e.key.toLowerCase();
-      if (k === 'escape' || k === 'p') { e.preventDefault(); pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
+      const k = e.key; const kl = k.toLowerCase();
+      if (kl === 'escape' || kl === 'p') { e.preventDefault(); pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
       if (['F5', 'F12'].includes(e.key)) return;
-      if (isJump(k) && !keysRef.current[k]) jumpEdgeRef.current = true;
-      keysRef.current[k] = true;
+      const b = getKeybinds(settings).p1;
+      if (String(b.sig || '').toLowerCase() === kl && !keysRef.current[kl]) jumpEdgeRef.current = true;
+      keysRef.current[kl] = true;
       e.preventDefault();
     };
     const ku = e => { keysRef.current[e.key.toLowerCase()] = false; };
@@ -262,10 +262,10 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
 
       update(s, {
         jumpPressed: jumpEdgeRef.current,
-        upHeld: keysRef.current['arrowup'] || keysRef.current['w'] || (gp && gp.up),
-        downHeld: keysRef.current['arrowdown'] || keysRef.current['s'] || (gp && gp.down),
-        rightHeld: keysRef.current['arrowright'] || keysRef.current['d'] || (gp && gp.right),
-        leftHeld: keysRef.current['arrowleft'] || keysRef.current['a'] || (gp && gp.left),
+        upHeld: (gp && gp.up) || false,
+        downHeld: keysRef.current[String(getKeybinds(settings).p1.down).toLowerCase()] || (gp && gp.down),
+        rightHeld: keysRef.current[String(getKeybinds(settings).p1.right).toLowerCase()] || (gp && gp.right),
+        leftHeld: keysRef.current[String(getKeybinds(settings).p1.left).toLowerCase()] || (gp && gp.left),
       });
       jumpEdgeRef.current = false;
       draw(ctx, s, charId, customCharsData, equippedSkins, equippedAccessories);

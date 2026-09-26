@@ -8,7 +8,7 @@ import { UP_HEAVIES } from './upHeavies.js';
 import { drawWhip } from './whipRenderer.js';
 import { activateGenPower, updateGenProjectiles, onGenPowerExpire } from './genPowers.js';
 import { updateMovementAbilities, onMovementAbilityLanded, resetMovementAbilityState } from './movementAbilities.js';
-import { getAttackSpecForData, getActiveSpecHitboxes, specKnockbackVector } from './attackSpecs.js';
+import { getAttackSpecForData, getActiveSpecHitboxes, hitboxIntersectsBody, specKnockbackVector } from './attackSpecs.js';
 
 export const GRAVITY = 0.42;
 export const JUMP_FORCE = -14.5;
@@ -1417,7 +1417,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     if (inputs.superMove && !inputs._superConsumed && fighter.superMeter >= fighter.maxSuper) {
       inputs._superConsumed = true;
       fighter.superMeter = 0;
-      const sm = fighter.char.superMove;
+      const sm = fighter.char?.superMove || { name: 'Super', duration: 42, damage: 30, color: fighter.char?.color || '#FFFFFF' };
       fighter.state = 'superAttack';
       const dur = Math.min(sm?.duration || 50, 55);
       fighter.attackTimer = dur;
@@ -1833,6 +1833,7 @@ export function checkHit(attacker, defender) {
   // Legacy supers use a generous distance check. Hand-authored supers below
   // use their exact active geometry instead.
   const hasExactSuper = attacker.attackData.isSuper && getActiveSpecHitboxes(attacker).length > 0;
+  if (attacker.attackData.isSuper && attacker.char?.id?.startsWith('g1_') && !hasExactSuper) return false;
   if (attacker.attackData.isSuper && !hasExactSuper) {
     const sdx = defender.x - attacker.x;
     const sdy = defender.y - attacker.y;
@@ -1843,17 +1844,7 @@ export function checkHit(attacker, defender) {
   // move that supplies a spec. This keeps collision locked to the actual visual.
   const specHitboxes = getActiveSpecHitboxes(attacker);
   if (specHitboxes.length) {
-    const dBW = 32, dBH = 72;
-    const dBX = defender.x, dBY = defender.y - 36;
-    const pointIn = (px, py, r) => Math.hypot(px - dBX, py - dBY) <= r + Math.max(dBW, dBH) * 0.25;
-    const boxHit = hb => (hb.x - hb.w / 2) < (dBX + dBW / 2) && (hb.x + hb.w / 2) > (dBX - dBW / 2) && (hb.y - hb.h / 2) < (dBY + dBH / 2) && (hb.y + hb.h / 2) > (dBY - dBH / 2);
-    const capsuleHit = hb => {
-      const vx = hb.x2 - hb.x1, vy = hb.y2 - hb.y1, len2 = vx * vx + vy * vy || 1;
-      const t = Math.max(0, Math.min(1, ((dBX - hb.x1) * vx + (dBY - hb.y1) * vy) / len2));
-      const px = hb.x1 + vx * t, py = hb.y1 + vy * t;
-      return Math.hypot(dBX - px, dBY - py) <= hb.r + 24;
-    };
-    return specHitboxes.some(hb => hb.shape === 'circle' ? pointIn(hb.x, hb.y, hb.r) : hb.shape === 'box' ? boxHit(hb) : capsuleHit(hb));
+    return specHitboxes.some(hb => hitboxIntersectsBody(hb, defender));
   }
 
   // ── Fallback AABB hitbox collision ──

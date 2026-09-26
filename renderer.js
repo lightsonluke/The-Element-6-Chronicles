@@ -957,16 +957,18 @@ export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isN
     return;
   }
 
-  // Subtle glow for heavy attacks — small, not a giant ball
-  if (attack.isHeavy) {
-    ctx.globalAlpha = (1 - progress) * 0.3;
-    drawSigGlowRing(ctx, x, y - 15, color, 35 + progress * 10);
-    ctx.globalAlpha = 1;
+  const isGen1 = String(charId || '').startsWith('g1_');
+  // Generic glow is intentionally disabled for Gen I: every visible attack
+  // shape is authored directly, so there is no misleading extra hitbox-looking ring.
+  if (!isGen1) {
+    if (attack.isHeavy) {
+      ctx.globalAlpha = (1 - progress) * 0.3;
+      drawSigGlowRing(ctx, x, y - 15, color, 35 + progress * 10);
+      ctx.globalAlpha = 1;
+    }
+    ctx.globalAlpha = (1 - progress) * 0.2;
+    drawSigGlowRing(ctx, x, y - 15, color, attack.isHeavy ? 30 + progress * 10 : 25 + progress * 8);
   }
-
-  // Very subtle sig glow — not a dominant ball
-  ctx.globalAlpha = (1 - progress) * 0.2;
-  drawSigGlowRing(ctx, x, y - 15, color, attack.isHeavy ? 30 + progress * 10 : 25 + progress * 8);
   ctx.globalAlpha = Math.max(0, 1 - progress * 1.2);
 
   const p = progress;
@@ -974,18 +976,19 @@ export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isN
   // UNIQUE per-character animation — every heavy/sig is visually distinct
   const attackKey = attack.sigType || (attack.isHeavy ? 'heavy' : 'side');
 
-  // Scale up sigs and down sigs by 30% for more visual presence
-  const isUpOrDownSig = (attack.sigType === 'up' || attack.sigType === 'aerial' ||
-                         attack.sigType === 'down' || attack.sigType === 'downNormal') && !attack.isNormal;
-  if (isUpOrDownSig) {
-    ctx.save();
-    ctx.translate(x, y - 15);
-    ctx.scale(1.3, 1.3);
-    ctx.translate(-x, -(y - 15));
+  // Generation I hitboxes are authored directly against the final animation.
+  // Do not apply the old generic 1.3x visual-only scale or the collision would drift.
+  if (String(charId || '').startsWith('g1_')) {
     drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power);
-    ctx.restore();
   } else {
-    drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power);
+    const isUpOrDownSig = (attack.sigType === 'up' || attack.sigType === 'aerial' ||
+                           attack.sigType === 'down' || attack.sigType === 'downNormal') && !attack.isNormal;
+    if (isUpOrDownSig) {
+      ctx.save();
+      ctx.translate(x, y - 15); ctx.scale(1.3, 1.3); ctx.translate(-x, -(y - 15));
+      drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power);
+      ctx.restore();
+    } else drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power);
   }
 
   ctx.shadowBlur = 0;
@@ -1131,76 +1134,43 @@ function drawNormalAttack(ctx, x, y, attack, progress, facing, color) {
   ctx.globalAlpha = 1;
 }
 
-export function drawSuperEffect(ctx, x, y, color, progress, charName = '', charId = '') {
+export function drawSuperEffect(ctx, x, y, color, progress, charName = '', charId = '', facing = 1) {
   ctx.save();
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 35;
+  const isG1 = String(charId || '').startsWith('g1_');
+  try {
+    // Small local activation flash only. There is deliberately NO universal
+    // circular hitbox visual: the hitbox is defined by the actual super shape.
+    if (progress < 0.1) {
+      ctx.globalAlpha = (0.1 - progress) / 0.1 * 0.28;
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(x, y - 18, 70, 0, Math.PI * 2); ctx.fill();
+    }
 
-  // Local flash around the player (NOT full-screen)
-  if (progress < 0.1) {
-    ctx.globalAlpha = (0.1 - progress) / 0.1 * 0.5;
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(x, y - 18, 120, 0, Math.PI * 2);
-    ctx.fill();
+    if (isG1) {
+      // Gen I supers are authored at their final world scale so the visual and
+      // exact collision geometry occupy the same pixels.
+      drawCharSuper(ctx, x, y, color, progress, charId, facing || 1);
+    } else {
+      ctx.beginPath();
+      ctx.arc(x, y - 18, 220, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.translate(x, y - 18);
+      ctx.scale(0.35, 0.35);
+      ctx.translate(-x, -(y - 18));
+      drawCharSuper(ctx, x, y, color, progress, charId, facing || 1);
+    }
+  } catch (err) {
+    // A malformed optional character super must never crash the match renderer.
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - progress) * 0.55;
+    ctx.fillStyle = color || '#FFFFFF';
+    ctx.beginPath(); ctx.arc(x, y - 36, 24 + progress * 30, 0, Math.PI * 2); ctx.fill();
   }
-
-  // ── Universal super-move hitbox ring (same for every character) ──
-  // A detailed ring in the character's color that indicates the super's
-  // area of effect. Pulses outward and fades as the super progresses.
-  const ringR = 180;
-  const ringAlpha = Math.max(0, 1 - progress * 1.1);
-  ctx.save();
-  ctx.globalAlpha = ringAlpha * 0.85;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 4;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 20;
-  ctx.beginPath();
-  ctx.arc(x, y - 18, ringR, 0, Math.PI * 2);
-  ctx.stroke();
-  // Inner accent ring
-  ctx.globalAlpha = ringAlpha * 0.5;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(x, y - 18, ringR - 12, 0, Math.PI * 2);
-  ctx.stroke();
-  // Tick marks around the ring for detail
-  ctx.globalAlpha = ringAlpha * 0.7;
-  ctx.lineWidth = 3;
-  for (let i = 0; i < 12; i++) {
-    const ang = (i / 12) * Math.PI * 2 + progress * 2;
-    const r1 = ringR - 6, r2 = ringR + 6;
-    ctx.beginPath();
-    ctx.moveTo(x + Math.cos(ang) * r1, y - 18 + Math.sin(ang) * r1);
-    ctx.lineTo(x + Math.cos(ang) * r2, y - 18 + Math.sin(ang) * r2);
-    ctx.stroke();
-  }
-  // Expanding pulse ring
-  const pulseR = ringR * (0.4 + progress * 0.8);
-  ctx.globalAlpha = ringAlpha * 0.3 * (1 - progress);
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  ctx.arc(x, y - 18, pulseR, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.restore();
-
-  // Clip + scale: supers stay around the player, not the whole screen
-  ctx.beginPath();
-  ctx.arc(x, y - 18, 220, 0, Math.PI * 2);
-  ctx.clip();
-  ctx.translate(x, y - 18);
-  ctx.scale(0.35, 0.35);
-  ctx.translate(-x, -(y - 18));
-
-  // Route to per-character super animation (data-driven theme system)
-  drawCharSuper(ctx, x, y, color, progress, charId, facing);
-
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
   ctx.restore();
 }
-
 // Yellow — Sonic Overdrive: speed rings erupting outward, horizontal lightning streaks
 function drawSuper_Yellow(ctx, x, y, color, p) {
   const alpha = 1 - p;

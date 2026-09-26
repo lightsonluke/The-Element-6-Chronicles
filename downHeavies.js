@@ -39,4 +39,10 @@ export const DOWN_HEAVIES = {
   life: { name: 'Genesis Slam', desc: 'Life energy erupts on impact', damage: 28, range: 145, duration: 27, color: '#44FF44', type: 'groundSlam', knockback: 1.6 },
   death: { name: 'Final Slam', desc: 'Death energy silences the ground', damage: 30, range: 150, duration: 28, color: '#AAAAAA', type: 'groundSlam', knockback: 1.7 },
   mercy: { name: 'Balance Slam', desc: 'Equilibrium wave on impact', damage: 27, range: 145, duration: 27, color: '#FF99DD', type: 'groundSlam', knockback: 1.6 },
+  // Generation I — hand-authored Down Heavies
+  g1_thunder: { name:'Orbiting Lightning Ball', desc:'A lightning ball circles the hero once and returns to its starting point.', damage:22, range:100, duration:24, color:'#FFFF44', type:'gen1DownHeavy', knockback:1.4 },
+  g1_fire: { name:'Five Burning Cracks', desc:'Five ground cracks travel outward and erupt at their ends.', damage:21, range:120, duration:26, color:'#FF6600', type:'gen1DownHeavy', knockback:1.4 },
+  g1_water: { name:'Bouncing Water Sphere', desc:'A water sphere is kicked down, bounces, then bursts upward.', damage:21, range:96, duration:24, color:'#3399CC', type:'gen1DownHeavy', knockback:1.35 },
+  g1_grass: { name:'Returning Vine', desc:'A giant vine slams down, bounces, then coils back toward the hero.', damage:21, range:118, duration:25, color:'#44AA44', type:'gen1DownHeavy', knockback:1.35 },
+  g1_ice: { name:'Sliding Ice Block', desc:'An ice block slides forward, cracks, and splits into two diagonal pieces.', damage:22, range:128, duration:24, color:'#AAEEFF', type:'gen1DownHeavy', knockback:1.4 },
 };
