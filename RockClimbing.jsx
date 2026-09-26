@@ -754,8 +754,8 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
-        <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause</button>
+        <button onClick={onExit} className="el6-rockclimb-quit-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-rockclimb-pause-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause</button>
         <span className="text-[10px] text-muted-foreground font-body"><GameIcon emoji="↑" size={14} />/W/SPACE: Launch (time the arrow!) · <GameIcon emoji="↓" size={14} />/S: Let go · <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} />/AD: Steer while falling · ESC/P: Pause</span>
       </div>
       {paused && (

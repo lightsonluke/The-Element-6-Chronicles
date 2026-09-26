@@ -119,7 +119,18 @@ export function getActiveSpecHitboxes(attacker) {
     } else if (mk === 'up' || mk === 'upSignature') mk = 'us';
     else if (mk === 'down' || mk === 'downSignature') mk = 'ds';
     else mk = 'ss';
-    return getGen2Hitboxes(attacker.char.id, mk, t, attacker.facing || 1);
+    const localBoxes = getGen2Hitboxes(attacker.char.id, mk, t, attacker.facing || 1);
+    // Generation II hitboxes are authored in the same local coordinate space as
+    // their attack drawings. Convert that local geometry into fighter/world
+    // coordinates here; otherwise the overlay/collision system renders them at
+    // the canvas origin (top-left).
+    const ox = Number(attacker.x) || 0, oy = Number(attacker.y) || 0;
+    return localBoxes.map(h => {
+      if (h.shape === 'circle' || h.shape === 'box') return { ...h, x: ox + h.x, y: oy + h.y };
+      if (h.shape === 'capsule') return { ...h, x1: ox + h.x1, y1: oy + h.y1, x2: ox + h.x2, y2: oy + h.y2 };
+      if (h.shape === 'polygon') return { ...h, points: h.points.map(([px, py]) => [ox + px, oy + py]) };
+      return h;
+    });
   }
   const spec = data.spec || getAttackSpecForData(attacker.char?.id, data); if (!spec) return [];
   const f = attacker.facing || 1, x = attacker.x, y = attacker.y;

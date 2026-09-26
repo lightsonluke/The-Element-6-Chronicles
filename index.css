@@ -257,3 +257,36 @@ input.el6-controller-focus { filter: brightness(1.12); }
 .el6-sport-quit-bottom-right { position: fixed !important; right: max(12px, env(safe-area-inset-right)) !important; bottom: max(12px, env(safe-area-inset-bottom)) !important; z-index: 2147483647 !important; }
 .el6-sport-pause-bottom-right { position: fixed !important; right: max(12px, env(safe-area-inset-right)) !important; bottom: max(52px, calc(env(safe-area-inset-bottom) + 40px)) !important; z-index: 2147483647 !important; }
 .el6-dodgeball-controls { position: fixed !important; top: max(12px, env(safe-area-inset-top)) !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 2147483646 !important; pointer-events: none !important; }
+
+/* Current-match UI positioning fixes requested for specific sports. */
+.el6-rockclimb-quit-bottom-right,
+.el6-rockclimb-pause-bottom-right {
+  position: fixed !important;
+  right: max(12px, env(safe-area-inset-right)) !important;
+  z-index: 2147483647 !important;
+}
+.el6-rockclimb-quit-bottom-right { bottom: max(12px, env(safe-area-inset-bottom)) !important; }
+.el6-rockclimb-pause-bottom-right { bottom: max(52px, calc(env(safe-area-inset-bottom) + 40px)) !important; }
+.el6-banger-pause-button {
+  position: fixed !important;
+  inset: auto !important;
+  right: max(12px, env(safe-area-inset-right)) !important;
+  bottom: max(52px, calc(env(safe-area-inset-bottom) + 40px)) !important;
+  width: max-content !important;
+  height: max-content !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  pointer-events: auto !important;
+}
+.el6-dodgeball-match-controls {
+  position: fixed !important;
+  top: max(12px, env(safe-area-inset-top)) !important;
+  right: max(12px, env(safe-area-inset-right)) !important;
+  z-index: 2147483647 !important;
+}
+.el6-dodgeball-player-labels {
+  position: fixed !important;
+  top: max(12px, env(safe-area-inset-top)) !important;
+  left: max(12px, env(safe-area-inset-left)) !important;
+  z-index: 2147483646 !important;
+}

@@ -583,7 +583,7 @@ export default function DodgeballGame({
   return (
     <div className="flex flex-col items-center gap-2 w-full">
       <div className="flex justify-between items-center w-full max-w-[1100px]">
-        <div className="flex gap-2 items-center">
+        <div className="el6-dodgeball-player-labels flex gap-2 items-center">
           <span className="font-heading text-xs px-2 py-1 rounded" style={{ background: p1TeamColor + '33', color: p1TeamColor }}>
             {p1IsCPU ? 'CPU' : 'P1'}: {stRef.current.p1.char.name}
           </span>
@@ -591,7 +591,7 @@ export default function DodgeballGame({
             {p2IsCPU ? 'CPU' : 'P2'}: {stRef.current.p2.char.name}
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="el6-dodgeball-match-controls flex gap-2">
           <button onClick={() => setPaused(p => !p)} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs">{paused ? '▶ RESUME' : '⏸ PAUSE'}</button>
           <button onClick={onQuit} className="px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs">QUIT</button>
         </div>

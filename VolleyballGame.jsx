@@ -328,11 +328,14 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
   // Game loop
   useEffect(() => {
     if (!started) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d') || null;
+    // The canvas is rendered through a portal. Reacquire the DOM node/context
+    // every frame so a portal remount can never leave the match with a stale
+    // null context and make the game appear frozen.
     let raf; let last = performance.now();
     const loop = (now) => {
       last = now;
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext('2d') || null;
       if (remoteStateRef.current) {
         st.current = remoteStateRef.current;
         if (ctx) draw(ctx, st.current, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories);

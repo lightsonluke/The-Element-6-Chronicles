@@ -207,12 +207,101 @@ function utsuro(ctx,p){
   hollow(55,-45,28,0,pulse(p));
 }
 
+function attackDetail(ctx, charId, move, p, c) {
+  const q = smooth(pulse(p));
+  const hi = '#FFFFFF';
+  if (charId === 'g2_renji') {
+    const metalC = '#DDE5EA';
+    if (move !== 'sp') {
+      ring(ctx, 18, -46, 17 + q * 7, 10 + q * 4, metalC, .35 * q, 2);
+      for (let i = 0; i < 3; i++) stroke(ctx, [[28 + i * 4, -54 + i * 5], [42 + i * 8, -58 + i * 5]], hi, 1.5, .4 * q);
+    }
+    if (move === 'sh' || move === 'uh') {
+      blade(ctx, 18, -48, 48 + q * 20, 8, metalC, .45 * q, -.18);
+      spark(ctx, 40 + q * 35, -52, 12, metalC, .65 * q, 6);
+    }
+  } else if (charId === 'g2_kaito') {
+    for (let i = 0; i < 4; i++) {
+      const a = -1.8 + i * .65 + p * 1.2;
+      flame(ctx, Math.cos(a) * 22, -48 + Math.sin(a) * 22, 7 + i, c, .35 * q, a + Math.PI / 2);
+    }
+    if (move === 'sp') ring(ctx, 0, -48, 55 + q * 20, 38 + q * 12, hi, .3 * q, 3);
+  } else if (charId === 'g2_hana') {
+    const r = 24 + q * 28;
+    ring(ctx, 0, -45, r, r * .55, '#E9FBFF', .4 * q, 2);
+    water(ctx, [[-r, -45], [-r * .35, -55 - q * 12], [r * .2, -38 + q * 8], [r, -48]], c, 3, .55 * q);
+    if (move === 'us' || move === 'uh') water(ctx, [[-10,-30],[0,-70-q*30],[10,-30]], hi, 2, .5*q);
+  } else if (charId === 'g2_daigo') {
+    if (move !== 'sp') {
+      stone(ctx, -20, -22, 18 + q * 10, 12 + q * 8, c, .42 * q, -.25);
+      stone(ctx, 35, -20, 14 + q * 8, 10 + q * 7, '#D7C4A8', .32 * q, .3);
+    }
+    if (move === 'dh' || move === 'sp') {
+      for (let i = 0; i < 5; i++) circle(ctx, -45 + i * 22, -8 - q * 14, 2.5 + q * 2, '#E3D4BC', .55 * q);
+    }
+  } else if (charId === 'g2_suzu') {
+    const a = -1.2 + p * 2.5;
+    gust(ctx, 18 + Math.cos(a) * 35, -46 + Math.sin(a) * 25, 28 + q * 20, c, .45 * q, a);
+    stroke(ctx, [[-8,-52],[18,-46],[45,-50]], hi, 2, .35 * q);
+  } else if (charId === 'g2_mai') {
+    shadow(ctx, 0, -46, 38 + q * 16, 28 + q * 10, '#171322', .35 * q);
+    for (let i = 0; i < 3; i++) {
+      const yy = -58 + i * 12;
+      stroke(ctx, [[-18,yy],[18,yy + Math.sin(p*8+i)*5]], hi, 2, .25 * q);
+    }
+    if (move === 'uh' || move === 'sp') ring(ctx, 0, -48, 55 + q * 20, 42 + q * 12, c, .35 * q, 3);
+  } else if (charId === 'g2_osamu') {
+    for (let i = 0; i < 3; i++) soundRing(ctx, 18 + i * 16, -48 + i * 3, 8 + q * 5, i % 2 ? hi : c, .3 * q);
+    if (move === 'sp') { for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; stroke(ctx, [[Math.cos(a)*35,-48+Math.sin(a)*22],[Math.cos(a)*55,-48+Math.sin(a)*34]], hi, 2, .28*q); } }
+  } else if (charId === 'g2_yui') {
+    for (let i = 0; i < 5; i++) {
+      const a = i / 5 * TAU + p * 2;
+      star(ctx, Math.cos(a) * (24 + q * 18), -48 + Math.sin(a) * (16 + q * 12), 4 + q * 3, i % 2 ? hi : c, .5 * q, a);
+    }
+    ring(ctx, 0, -48, 32 + q * 20, 20 + q * 10, hi, .3 * q, 2);
+  } else if (charId === 'g2_ibuki') {
+    const a = p * TAU;
+    for (let i = 0; i < 6; i++) {
+      const r = 18 + i * 8 + q * 18;
+      circle(ctx, Math.cos(a + i) * r, -45 + Math.sin(a + i) * r * .6, 3.5, i % 2 ? hi : c, .45 * q);
+    }
+    ring(ctx, 0, -45, 36 + q * 18, 24 + q * 12, '#FFB7C9', .28 * q, 2);
+  } else if (charId === 'g2_nishikawa') {
+    const sway = Math.sin(p * TAU) * 10;
+    for (let i = -2; i <= 2; i++) {
+      thread(ctx, [[i * 12, -34], [i * 18 + sway, -55], [i * 28 + sway * .4, -78]], i % 2 ? hi : c, .35 * q, 2);
+    }
+    if (move === 'sp') ring(ctx, 0, -48, 70 + q * 20, 48 + q * 12, hi, .28 * q, 2);
+  } else if (charId === 'g2_itto') {
+    stroke(ctx, [[16,-54],[48 + q * 75,-58 + Math.sin(p*4)*4]], hi, 2, .5 * q);
+    stroke(ctx, [[18,-40],[54 + q * 90,-36 + Math.sin(p*5)*3]], c, 1.5, .35 * q);
+    if (move === 'ss' || move === 'sh' || move === 'sp') spark(ctx, 55 + q * 80, -48, 16, hi, .65 * q, 8);
+  } else if (charId === 'g2_twinfoxes') {
+    for (const side of [-1, 1]) {
+      const fx = side * (20 + q * 22), fy = -48 - q * 18;
+      circle(ctx, fx, fy, 9, side < 0 ? c : '#FFD77A', .4 * q);
+      flame(ctx, fx + side * 8, fy - 4, 7, side < 0 ? c : '#FFD77A', .45 * q, side * .3);
+    }
+    if (move === 'sp') ring(ctx, 0, -48, 58 + q * 30, 40 + q * 18, hi, .3 * q, 3);
+  } else if (charId === 'g2_utsuro') {
+    for (let i = 0; i < 4; i++) {
+      const a = i / 4 * TAU + p * 2;
+      const r = 28 + q * 24;
+      stroke(ctx, [[Math.cos(a)*12,-48+Math.sin(a)*10],[Math.cos(a)*r,-48+Math.sin(a)*r*.65]], hi, 2.5, .28*q);
+    }
+    ring(ctx, 0, -48, 42 + q * 20, 30 + q * 14, c, .25 * q, 2);
+  }
+}
+
 const ANIM = { g2_renji:renji,g2_kaito:kaito,g2_hana:hana,g2_daigo:daigo,g2_suzu:suzu,g2_mai:mai,g2_osamu:osamu,g2_yui:yui,g2_ibuki:ibuki,g2_nishikawa:nishikawa,g2_itto:itto,g2_twinfoxes:foxes,g2_utsuro:utsuro };
 
 export function drawGen2Attack(ctx,x,y,color,p,facing,charId,moveKey){
   const fn=ANIM[charId]; if(!fn) return false;
   ctx.save(); ctx.translate(x,y); ctx.scale(facing||1,1);
   ctx.globalAlpha=1; glow(ctx,color||'#fff',10);
+  // Extra authored detail layer: weapon edges, particles, motion traces and
+  // character-specific visual signatures, kept entirely in local attack space.
+  attackDetail(ctx, charId, moveKey, clamp01(p), color||'#fff');
   fn.call(moveKey,ctx,clamp01(p));
   // Fine recovery sparks make the animation read as a complete frame sequence.
   if(p>.82){ctx.globalAlpha=(1-p)*5; for(let i=0;i<4;i++) circle(ctx,(i-1.5)*12,-35-i*5,2,color||'#fff',.7);}
