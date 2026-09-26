@@ -311,7 +311,7 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
 
   // ── Playing ──
   return (
-    <div className="relative flex flex-col items-center gap-2 w-full">
+    <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
         <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
         <span className="text-[10px] text-muted-foreground font-body"><GameIcon emoji="↑" size={14} />/W: Zipline up · <GameIcon emoji="↓" size={14} />/S: Zipline down · ESC: Pause — survive as long as you can!</span>
@@ -326,7 +326,7 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
           </div>
         </div>
       )}
-      <canvas ref={canvasRef} width={W} height={H} className="rounded-lg shadow-2xl w-full"
+      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H} className="rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#8fc69a' }} />
     </div>
   );

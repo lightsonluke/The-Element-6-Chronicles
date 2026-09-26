@@ -751,7 +751,7 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
 
   // ── Playing ──
   return (
-    <div className="relative flex flex-col items-center gap-2 w-full">
+    <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
         <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause</button>
@@ -766,7 +766,7 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
           </div>
         </div>
       )}
-      <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas"
+      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H} className="el6-match-canvas"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#0e1a14' }} />
     </div>
   );

@@ -12,6 +12,18 @@ function safeCoord(v, fallback = 0) {
   return Math.max(-FREEHAND_COORD_LIMIT, Math.min(FREEHAND_COORD_LIMIT, n));
 }
 
+function sanitizeFreehandMotion(motion) {
+  if (!motion || typeof motion !== 'object') return null;
+  const out = {};
+  for (const k of ['type','axis','range','speed','phase','amplitude','period','loop']) {
+    const v = motion[k];
+    if ((k === 'type' || k === 'axis') && typeof v === 'string' && v.length < 40) out[k] = v;
+    else if (k === 'loop' && typeof v === 'boolean') out[k] = v;
+    else if (typeof v === 'number' && Number.isFinite(v)) out[k] = Math.max(-100000, Math.min(100000, v));
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 export function sanitizeFreehandPoints(points, maxPoints = MAX_FREEHAND_POINTS) {
   if (!Array.isArray(points) || points.length === 0) return [];
   const clean = [];
@@ -42,7 +54,7 @@ export function sanitizeFreehandStroke(stroke, maxPoints = MAX_FREEHAND_POINTS) 
     material: stroke.material || 'normal',
     diameter: Math.max(4, Math.min(300, Number(stroke.diameter) || 36)),
     points,
-    ...(stroke.motion && typeof stroke.motion === 'object' ? { motion: stroke.motion } : {}),
+    ...(sanitizeFreehandMotion(stroke.motion) ? { motion: sanitizeFreehandMotion(stroke.motion) } : {}),
   };
 }
 
@@ -56,7 +68,7 @@ export function buildFreehandCollisionPlatforms(strokes = [], maxSegments = MAX_
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   const allocations = weights.map(w => Math.max(1, Math.floor((w / totalWeight) * maxSegments)));
   let allocated = allocations.reduce((a, b) => a + b, 0);
-  for (let i = 0; allocated < maxSegments; i = (i + 1) % allocations.length) {
+  for (let i = 0, guard = 0; allocated < maxSegments && guard++ < 10000; i = (i + 1) % allocations.length) {
     allocations[i]++;
     allocated++;
   }

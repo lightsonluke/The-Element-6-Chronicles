@@ -4,9 +4,11 @@
 import { getPowerEffect, SINGLE_RANDOM_POWER_CHARS } from './powerEffects.js';
 import { applyShikigamiStat } from './shikigami.js';
 import { DOWN_HEAVIES } from './downHeavies.js';
+import { UP_HEAVIES } from './upHeavies.js';
 import { drawWhip } from './whipRenderer.js';
 import { activateGenPower, updateGenProjectiles, onGenPowerExpire } from './genPowers.js';
 import { updateMovementAbilities, onMovementAbilityLanded, resetMovementAbilityState } from './movementAbilities.js';
+import { getAttackSpecForData, getActiveSpecHitboxes, specKnockbackVector } from './attackSpecs.js';
 
 export const GRAVITY = 0.42;
 export const JUMP_FORCE = -14.5;
@@ -1211,7 +1213,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
     // Flying (White)
     if (fighter.canFly) {
-      if (inputs.jump && !fighter.jumpHeld) {
+      if (inputs.jump && !fighter.jumpHeld && !(inputs.heavy && UP_HEAVIES[fighter.char.id])) {
         fighter.vy = JUMP_FORCE * 0.7;
         fighter.jumpHeld = true;
         fighter.isFlying = true;
@@ -1219,7 +1221,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     }
 
     // ── Jump with variable height (Brawlhalla-style) — edge-detected via fighter.jumpHeld ──
-    if (inputs.jump && !fighter.jumpHeld) {
+    if (inputs.jump && !fighter.jumpHeld && !(inputs.heavy && UP_HEAVIES[fighter.char.id])) {
       fighter.jumpHeld = true;
       fighter.jumpCutApplied = false;
       const useGroundJump = fighter.coyoteTime > 0 && fighter.jumps >= fighter.maxJumps;
@@ -1276,6 +1278,19 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     if (!inputs.jump) fighter.jumpHeld = false;
 
     // ── Heavy Attack ──
+    // Up + heavy = character-specific Generation I Up Heavy.
+    if (inputs.heavy && inputs.up && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && UP_HEAVIES[fighter.char.id]) {
+      inputs._heavyConsumed = true;
+      const upHeavy = UP_HEAVIES[fighter.char.id];
+      fighter.state = 'attacking';
+      const dur = Math.min(upHeavy.duration || 24, 30);
+      fighter.attackTimer = dur;
+      fighter.attackData = { ...upHeavy, duration: dur, sigType: 'upHeavy', hitApplied: false, progress: 0, isHeavy: true };
+      fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
+      fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
+      fighter.vy = 0;
+      fighter.moveStats.heavy++;
+    }
     // Air + down + heavy = Ground Pound (slam down with AoE)
     if (inputs.heavy && inputs.down && !fighter.grounded && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && fighter.groundPoundCooldown <= 0) {
       inputs._heavyConsumed = true;
@@ -1296,6 +1311,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         const dur = Math.min(downHeavy.duration, 28);
         fighter.attackTimer = dur;
         fighter.attackData = { ...downHeavy, duration: dur, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true };
+        fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
         fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
         fighter.vy = 0;
         fighter.moveStats.downHeavy++;
@@ -1310,6 +1326,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         const dur = Math.min(heavy.duration, 30);
         fighter.attackTimer = dur;
         fighter.attackData = { ...heavy, duration: dur, sigType: 'heavy', hitApplied: false, progress: 0, isHeavy: true };
+        fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
         fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
         if (fighter.grounded) fighter.vy = 0;
         if (heavy.hasArmor) fighter.invincible = Math.max(fighter.invincible, 8);
@@ -1325,8 +1342,27 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       // Recovery attack: sig + up in air = launch up with damage + knockback (air-only, cooldown-gated AND limited to once per airtime so it can't be spammed to fly infinitely)
       if (!fighter.grounded && inputs.up && fighter.recoveryCooldown <= 0 && fighter.recoveryAirUses < 1) {
         fighter.state = 'attacking';
-        fighter.attackTimer = 16;
-        fighter.attackData = { name: 'Recovery', type: 'recovery', duration: 16, damage: 12, range: 110, color: fighter.char.color, sigType: 'up', hitApplied: false, progress: 0, isRecovery: true };
+
+        // Recovery intentionally uses the character's exact Up Signature move data.
+        // This keeps the recovery animation, timing, hitbox profile, damage/range
+        // metadata, and per-character Gen 1 animation identical to Up Signature.
+        // The only recovery-specific behavior is the upward launch/cooldown.
+        const upSig = fighter.char.signatures?.up;
+        const recoveryDuration = Math.min(upSig?.duration || 16, 28);
+        fighter.attackTimer = recoveryDuration;
+        fighter.attackData = {
+          ...(upSig || {}),
+          name: upSig?.name || 'Recovery',
+          type: 'recovery',
+          duration: recoveryDuration,
+          color: upSig?.color || fighter.char.color,
+          sigType: 'up',
+          hitApplied: false,
+          progress: 0,
+          isRecovery: true,
+          recoveryAnimationKey: 'us',
+        };
+        fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
         fighter.vy = -14;
         fighter.hitstun = 0;
         fighter.recoveryCooldown = 40 * (fighter.statControlRecoveryMul || 1);
@@ -1358,6 +1394,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
           const dur = Math.min(sig.duration, 28);
           fighter.attackTimer = dur;
           fighter.attackData = { ...sig, duration: dur, sigType, hitApplied: false, progress: 0 };
+          fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
           fighter.sigCooldown = SIG_COOLDOWN * (fighter.statControlRecoveryMul || 1);
           fighter.vy = 0;
           if (sigType === 'side') fighter.moveStats.sigSide++;
@@ -1385,6 +1422,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       const dur = Math.min(sm?.duration || 50, 55);
       fighter.attackTimer = dur;
       fighter.attackData = { ...(sm || {}), duration: dur, sigType: 'super', hitApplied: false, progress: 0, isSuper: true };
+      fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
       fighter.moveStats.super++;
     }
     if (!inputs.superMove) inputs._superConsumed = false;
@@ -1792,14 +1830,33 @@ export function checkHit(attacker, defender) {
   const p = attacker.attackData.progress;
   if (p < 0.08 || p > 0.85) return false;
 
-  // Super moves use generous distance check
-  if (attacker.attackData.isSuper) {
+  // Legacy supers use a generous distance check. Hand-authored supers below
+  // use their exact active geometry instead.
+  const hasExactSuper = attacker.attackData.isSuper && getActiveSpecHitboxes(attacker).length > 0;
+  if (attacker.attackData.isSuper && !hasExactSuper) {
     const sdx = defender.x - attacker.x;
     const sdy = defender.y - attacker.y;
     return Math.sqrt(sdx * sdx + sdy * sdy) < 240;
   }
 
-  // ── AABB hitbox collision — attacks only hit if the hitbox overlaps the defender's body ──
+  // Hand-authored spec hitboxes take precedence for Generation I and any future
+  // move that supplies a spec. This keeps collision locked to the actual visual.
+  const specHitboxes = getActiveSpecHitboxes(attacker);
+  if (specHitboxes.length) {
+    const dBW = 32, dBH = 72;
+    const dBX = defender.x, dBY = defender.y - 36;
+    const pointIn = (px, py, r) => Math.hypot(px - dBX, py - dBY) <= r + Math.max(dBW, dBH) * 0.25;
+    const boxHit = hb => (hb.x - hb.w / 2) < (dBX + dBW / 2) && (hb.x + hb.w / 2) > (dBX - dBW / 2) && (hb.y - hb.h / 2) < (dBY + dBH / 2) && (hb.y + hb.h / 2) > (dBY - dBH / 2);
+    const capsuleHit = hb => {
+      const vx = hb.x2 - hb.x1, vy = hb.y2 - hb.y1, len2 = vx * vx + vy * vy || 1;
+      const t = Math.max(0, Math.min(1, ((dBX - hb.x1) * vx + (dBY - hb.y1) * vy) / len2));
+      const px = hb.x1 + vx * t, py = hb.y1 + vy * t;
+      return Math.hypot(dBX - px, dBY - py) <= hb.r + 24;
+    };
+    return specHitboxes.some(hb => hb.shape === 'circle' ? pointIn(hb.x, hb.y, hb.r) : hb.shape === 'box' ? boxHit(hb) : capsuleHit(hb));
+  }
+
+  // ── Fallback AABB hitbox collision ──
   const baseRange = (attacker.attackData.range || 80) * (attacker.rangeBoost || 1);
   const facing = attacker.facing;
   const st = attacker.attackData.sigType;
@@ -1870,7 +1927,13 @@ export function applyHit(attacker, defender) {
   const kb = dmg * kbFactor * kbMul * kbBase * (attacker.knockbackMul || 1) * KNOCKBACK_SCALE * (1 - (defender.knockbackReduction || 0));
   const st = attacker.attackData.sigType;
 
-  if (attacker.attackData.isGroundPound) {
+  const spec = attacker.attackData.spec || getAttackSpecForData(attacker.char?.id, attacker.attackData);
+  if (spec?.knockback) {
+    const dir = specKnockbackVector(attacker, defender, spec.knockback);
+    const mag = kb * (spec.kind === 'super' ? 1.15 : 1);
+    defender.vx = dir.x * mag;
+    defender.vy = dir.y * mag;
+  } else if (attacker.attackData.isGroundPound) {
     defender.vy = -kb * 0.5;
     defender.vx = (defender.x > attacker.x ? 1 : -1) * kb * 1.5;
   } else if (attacker.attackData.isRecovery) {

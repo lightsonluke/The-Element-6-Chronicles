@@ -8,6 +8,7 @@ import { readGamepadInput } from './controllerProfiles.js';
 import { reportOnlineSportResult, leaveOnlineSport } from './sportsOnline.js';
 import { supabase } from './supabaseClient.js';
 import ActualSportsOnlineMatch from './ActualSportsOnlineMatch.jsx';
+import PauseMenu from './PauseMenu.jsx';
 
 const FRAME_MS = 1000 / 60;
 const EMPTY = { left:false, right:false, up:false, down:false, jump:false, sig:false, heavy:false, power:false };
@@ -20,7 +21,7 @@ export default function SportsRollbackArena({ match, players, settings = {}, onE
     return <ActualSportsOnlineMatch match={match} players={players} settings={settings} onEnd={onEnd} />;
   }
   const canvasRef = useRef(null); const sessionRef = useRef(null); const transportRef = useRef(null); const pausedForSync = useRef(false);
-  const [status, setStatus] = useState('CONNECTING…'); const [result, setResult] = useState(null); const [me, setMe] = useState(null); const [syncing, setSyncing] = useState(false);
+  const [status, setStatus] = useState('CONNECTING…'); const [result, setResult] = useState(null); const [me, setMe] = useState(null); const [syncing, setSyncing] = useState(false); const [paused, setPaused] = useState(false);
   useEffect(() => { supabase.auth.getUser().then(({ data }) => setMe(data.user || null)); }, []);
   useEffect(() => {
     if (!match?.id || !me?.id || !players?.length) return undefined;
@@ -53,5 +54,5 @@ export default function SportsRollbackArena({ match, players, settings = {}, onE
   const finish = async () => { const mine=players.find(p=>p.user_id===me?.id); try { if(result?.forfeit) await leaveOnlineSport(match.id); else await reportOnlineSportResult({matchId:match.id,winnerTeam:result.winnerTeam,finalFrame:result.frame,checksum:result.checksum}); } catch {} onEnd?.({won:mine?.team===result?.winnerTeam,sport:match.mode.split('_')[0],characterId:mine?.character_id,forfeited:!!result?.forfeit}); };
   const quit = async () => { try { await leaveOnlineSport(match?.id); } catch {} onEnd?.({won:false,sport:match?.mode?.split('_')[0],forfeited:true}); };
   if(result) return <div className="el6-match-viewport text-center space-y-5"><h2 className="text-4xl font-heading text-accent">{result.forfeit ? 'OPPONENT LEFT · YOU WIN!' : `TEAM ${result.winnerTeam} WINS!`}</h2><button onClick={finish} className="px-6 py-3 bg-primary rounded font-heading">CONTINUE</button></div>;
-  return <div className="el6-match-viewport w-full max-w-5xl text-center"><div className="flex justify-between mb-2"><button onClick={quit} className="px-3 py-1 bg-secondary rounded text-xs">FORFEIT</button><p className="font-heading text-accent">{status}</p></div><div className="relative"><canvas ref={canvasRef} width={WIDTH} height={HEIGHT} className="w-full border-2 border-primary rounded-lg" />{syncing && <div className="absolute inset-0 grid place-items-center bg-black/70 font-heading text-accent text-xl">SYNCING MATCH…</div>}</div><p className="text-xs text-muted-foreground mt-2">Automatic checksum checks keep every player on the same confirmed frame.</p></div>;
+  return <div className="el6-match-viewport w-full max-w-5xl text-center"><div className="flex justify-between mb-2"><button onClick={quit} className="px-3 py-1 bg-secondary rounded text-xs">FORFEIT</button><p className="font-heading text-accent">{status}</p><button onClick={() => setPaused(v => !v)} className="px-3 py-1 bg-secondary rounded text-xs">{paused ? 'RESUME' : 'PAUSE'}</button></div><div className="relative"><canvas data-e6-game-canvas="true" ref={canvasRef} width={WIDTH} height={HEIGHT} className="w-full border-2 border-primary rounded-lg" />{syncing && <div className="absolute inset-0 grid place-items-center bg-black/70 font-heading text-accent text-xl">SYNCING MATCH…</div>}</div>{paused && <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75"><PauseMenu onResume={() => setPaused(false)} onQuit={quit} /></div>}<p className="text-xs text-muted-foreground mt-2">Automatic checksum checks keep every player on the same confirmed frame.</p></div>;
 }

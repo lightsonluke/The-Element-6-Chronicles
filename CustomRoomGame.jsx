@@ -662,7 +662,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Leave</button>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
       </div>
-      <canvas ref={canvasRef} width={W} height={H}
+      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H}
         className="el6-match-canvas"
         style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
       />

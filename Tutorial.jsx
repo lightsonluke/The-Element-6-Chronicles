@@ -116,7 +116,7 @@ export default function Tutorial({ onBack }) {
   if (fighting) {
     return (
       <div className="w-full flex flex-col items-center gap-2">
-        <div className="w-full max-w-[1280px] bg-card border-2 border-accent rounded-xl p-3 mb-2">
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 w-[min(96vw,1280px)] bg-card/95 border-2 border-accent rounded-xl p-3 shadow-2xl z-[2147483640] pointer-events-auto">
           <div className="flex justify-between items-center mb-2">
             <div><div className="text-[9px] font-heading text-primary tracking-widest">{cur.section}</div><h3 className="font-heading text-accent text-lg">TUTORIAL — Step {step + 1}/{STEPS.length}: {cur.title}</h3></div>
             <div className="flex gap-2">
@@ -131,14 +131,14 @@ export default function Tutorial({ onBack }) {
             ))}
           </div>
         </div>
-        <PlatformFighter
+        <div className="w-full pt-36"><PlatformFighter
           p1Char={HEROES[0].id} p2Char={VILLAINS[0].id} p2IsCPU
           gameMode="regular" selectedMap="traininggrounds" cpuDifficulty="beginner"
           dummy infiniteSuper
           onEnd={() => setFighting(false)}
-        />
+        /></div>
         {cur.last && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[2147483641]">
             <div className="bg-card border-2 border-accent rounded-xl p-8 text-center">
               <p className="text-3xl font-heading text-accent mb-4"><GameIcon emoji="🎓" size={14} /> TUTORIAL COMPLETE!</p>
               <p className="text-foreground font-body mb-4">You're ready to fight. Go show them what you've learned!</p>

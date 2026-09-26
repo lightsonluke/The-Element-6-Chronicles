@@ -46,11 +46,18 @@ export default function ClipsScreen({
     };
 
     refresh();
-    window.addEventListener('clipSaved', refresh);
+    const onRefresh = () => refresh();
+    window.addEventListener('clipSaved', onRefresh);
+    window.addEventListener('focus', onRefresh);
+    window.addEventListener('pageshow', onRefresh);
+    document.addEventListener('visibilitychange', onRefresh);
 
     return () => {
       alive = false;
-      window.removeEventListener('clipSaved', refresh);
+      window.removeEventListener('clipSaved', onRefresh);
+      window.removeEventListener('focus', onRefresh);
+      window.removeEventListener('pageshow', onRefresh);
+      document.removeEventListener('visibilitychange', onRefresh);
     };
   }, [externalClips]);
 
@@ -65,11 +72,15 @@ export default function ClipsScreen({
         try {
           const blob = await getClipBlob(clip.id);
           const previewBlob = await getClipPreviewBlob(clip.id).catch(() => blob);
+          // The saved clip is the canonical playback source. Older records may
+          // contain a WebM preview alongside an MP4 main blob; never prefer that
+          // stale preview because it can leave the player stuck on Loading.
+          const playbackBlob = blob;
           if (!blob || blob.size < 1000) continue;
 
           next[clip.id] = {
             blob,
-            previewBlob,
+            previewBlob: playbackBlob,
             mime: blob.type || clip.mime || 'video/mp4',
             extension: extensionForMime(blob.type || clip.mime),
           };

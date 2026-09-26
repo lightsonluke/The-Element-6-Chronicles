@@ -319,6 +319,13 @@ export default function UniversalCharacterSelect({
   const [p2IsCPU, setP2IsCPU] = useState(true);
   const [difficulty, setDifficulty] = useState(defaultCPUDifficulty);
   const [hoveredId, setHoveredId] = useState(null);
+  // Team assignment for multi-player sports. Defaults to alternating slots,
+  // but every real player/bot slot can be moved between Team 1 and Team 2.
+  const [teamAssignments, setTeamAssignments] = useState(() => {
+    const a = {};
+    for (let i = 0; i < playerCount; i++) a[i] = i % 2 === 0 ? 1 : 2;
+    return a;
+  });
 
   // Backward-compatible aliases
   const p1 = picks[0];
@@ -426,7 +433,7 @@ export default function UniversalCharacterSelect({
     picks.forEach((p, i) => { if (shikigami[i]) shikigamiOverride[p] = shikigami[i]; });
     // Pass all picks; extra picks (P3+) are appended after the standard 6 args.
     // Shikigami override map is always the final argument.
-    onStart?.(p1, p2, playerCount >= 2 ? p2IsCPU : true, difficulty, p1Element, p2Element, ...picks.slice(2), shikigamiOverride);
+    onStart?.(p1, p2, playerCount >= 2 ? p2IsCPU : true, difficulty, p1Element, p2Element, ...picks.slice(2), teamMode ? teamAssignments : null, shikigamiOverride);
   };
   const handlePickShikigami = (id) => {
     const idx = (playerCount === 1 || rankedRandom) ? 0 : selecting - 1;
@@ -473,6 +480,31 @@ export default function UniversalCharacterSelect({
             sfx.click();
             setPicks(prev => { const next = [...prev]; next[selecting - 1] = random; return next; });
           }} className="px-2 py-1 rounded font-heading text-[10px] bg-primary/40 text-primary-foreground"><GameIcon emoji="🎲" size={14} /> RANDOM</button>
+        </div>
+      )}
+
+      {teamMode && playerCount > 2 && (
+        <div className="bg-card/60 border border-border rounded-lg p-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[9px] font-heading text-accent">TEAM ASSIGNMENT</span>
+            <span className="text-[8px] text-muted-foreground">Move any player or bot between teams before starting.</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {Array.from({ length: playerCount }).map((_, i) => {
+              const team = teamAssignments[i] || (i % 2 === 0 ? 1 : 2);
+              const label = i === 0 ? 'P1' : i === 1 ? (p2IsCPU ? 'CPU' : 'P2') : `P${i + 1}`;
+              return (
+                <button key={i} onClick={() => setTeamAssignments(prev => {
+                  const next = { ...prev, [i]: team === 1 ? 2 : 1 };
+                  const t1 = Object.values(next).filter(v => v === 1).length;
+                  const t2 = Object.values(next).filter(v => v === 2).length;
+                  return t1 && t2 ? next : prev;
+                })} className={`px-2 py-1 rounded border text-[8px] font-heading ${team === 1 ? 'border-primary bg-primary/20 text-primary' : 'border-destructive bg-destructive/15 text-destructive'}`}>
+                  {label} → TEAM {team}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 

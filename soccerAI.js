@@ -491,7 +491,7 @@ export function soccerAI(fighter, ball, opponent, difficultyKey = 'regular', per
   fighter.aiTimer--;
   const alwaysUpdate = difficultyKey === 'honored' || difficultyKey === 'insane';
   if (fighter.aiTimer > 0 && !alwaysUpdate) return fighter.aiAction || {};
-  fighter.aiTimer = Math.max(params.react, Math.floor(diff.reactionTime * 0.15 + Math.random() * diff.reactionTime * 0.1));
+  fighter.aiTimer = Math.max(1, Math.min(params.react, Math.floor(diff.reactionTime * 0.15 + Math.random() * diff.reactionTime * 0.08)));
 
   // ── Analyze everything ──
   const ballState = analyzeBall(ball);
@@ -684,6 +684,28 @@ export function soccerAI(fighter, ball, opponent, difficultyKey = 'regular', per
     // Jump if ball is high enough to walk under
     const oppBelowBall = oppState && oppState.grounded && Math.abs(oppState.x - ball.x) < 60;
     if (ball.y < fighter.y - 30 && !(oppBelowBall && skill)) inputs.jump = true;
+    fighter.aiAction = inputs; return inputs;
+  }
+
+  // ── 10.5. CLOSE-CONTACT EXECUTION: never stand beside a reachable ball.
+  // This deterministic branch makes the bot actually convert possession into a
+  // kick instead of waiting for a low-probability skill roll. It still uses
+  // difficulty for shot selection, not for whether the bot understands the ball.
+  if (selfState.distToBall < 62 && skill) {
+    const attackDir = selfState.attackGoalX > fighter.x ? 1 : -1;
+    if (attackDir > 0) { inputs.right = true; inputs.left = false; }
+    else { inputs.left = true; inputs.right = false; }
+    if (ball.y < fighter.y - 45 && fighter.grounded) inputs.jump = true;
+    const goalPressure = selfState.distToAttackGoal < 430 || mustScore;
+    if (fighter.superMeter >= fighter.maxSuper && goalPressure && Math.random() < (0.12 + params.shotAcc * 0.38)) {
+      inputs.superMove = true;
+    } else if (fighter.powerCooldown <= 0 && goalPressure && Math.random() < (0.20 + params.shotAcc * 0.45)) {
+      inputs.power = true;
+    } else {
+      inputs.sig = true;
+      if (ball.y > fighter.y + 18) inputs.down = true;
+      else if (ball.y < fighter.y - 55) inputs.jump = true;
+    }
     fighter.aiAction = inputs; return inputs;
   }
 

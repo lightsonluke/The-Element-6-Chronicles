@@ -13,6 +13,9 @@ import {
 import { music } from './music.js';
 
 let sourceCanvas = null;
+let captureCanvas = null;
+let captureCtx = null;
+let captureRaf = 0;
 let sourceStream = null;
 let recorder = null;
 let recording = false;
@@ -70,6 +73,37 @@ function trimBuffer(referenceTime = performance.now()) {
     chunkBytes -= chunks[1].size;
     chunks.splice(1, 1);
   }
+}
+
+function stopCaptureMirror() {
+  if (captureRaf) cancelAnimationFrame(captureRaf);
+  captureRaf = 0;
+  captureCtx = null;
+  captureCanvas = null;
+}
+
+function startCaptureMirror(canvas) {
+  stopCaptureMirror();
+  captureCanvas = document.createElement('canvas');
+  captureCanvas.width = 1280;
+  captureCanvas.height = 720;
+  captureCtx = captureCanvas.getContext('2d', { alpha: false });
+  const draw = () => {
+    if (!captureCanvas || !captureCtx || !sourceCanvas || sourceCanvas !== canvas) return;
+    const sw = Math.max(1, sourceCanvas.width || 1280);
+    const sh = Math.max(1, sourceCanvas.height || 720);
+    const scale = Math.min(1280 / sw, 720 / sh);
+    const dw = sw * scale;
+    const dh = sh * scale;
+    const dx = (1280 - dw) / 2;
+    const dy = (720 - dh) / 2;
+    captureCtx.fillStyle = '#000';
+    captureCtx.fillRect(0, 0, 1280, 720);
+    captureCtx.drawImage(sourceCanvas, 0, 0, sw, sh, dx, dy, dw, dh);
+    captureRaf = requestAnimationFrame(draw);
+  };
+  captureRaf = requestAnimationFrame(draw);
+  return captureCanvas;
 }
 
 function attachRecordingAudioTrack() {
@@ -165,8 +199,8 @@ async function convertToMP4(webmBlob) {
   const input = new Input({ source: new BlobSource(webmBlob), formats: ALL_FORMATS });
   const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() });
 
-  const width = sourceCanvas?.videoWidth || sourceCanvas?.width || 1280;
-  const height = sourceCanvas?.videoHeight || sourceCanvas?.height || 720;
+  const width = 1280;
+  const height = 720;
   const videoOK = await canEncodeVideo('avc', { width, height, frameRate: FPS, quality: new Quality({ bitrate: VIDEO_BITRATE }) });
   if (!videoOK) throw new Error('H.264/AVC encoding is unavailable in this browser');
 
@@ -196,12 +230,13 @@ async function convertToMP4(webmBlob) {
 }
 
 export function initClipRecorder(canvas) {
-  if (!canvas || typeof canvas.captureStream !== 'function' || !window.MediaRecorder) return false;
+  if (!canvas || !window.MediaRecorder || typeof document === 'undefined') return false;
   if (recording && sourceCanvas === canvas && recorder && recorder.state !== 'inactive') return true;
   stopClipRecorder();
   try {
     sourceCanvas = canvas;
-    sourceStream = canvas.captureStream(FPS);
+    const mirror = startCaptureMirror(canvas);
+    sourceStream = mirror.captureStream(FPS);
     if (!sourceStream?.getVideoTracks?.().length) throw new Error('Canvas video track unavailable');
     recording = true;
     generation += 1;
@@ -249,7 +284,7 @@ export function saveClip() {
     window.__e6ClipRecorderReady = true;
     return {
       blob: outputBlob,
-      previewBlob: snapshot.blob,
+      previewBlob: outputBlob,
       mime: outputMime,
       extension: outputExtension,
       duration: snapshot.duration,
@@ -282,6 +317,7 @@ export function isClipRecorderActive() { return Boolean(recording && recorder &&
 
 export function stopClipRecorder() {
   recording = false;
+  stopCaptureMirror();
   generation += 1;
   const oldRecorder = recorder;
   recorder = null;

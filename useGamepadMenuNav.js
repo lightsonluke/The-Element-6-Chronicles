@@ -123,7 +123,7 @@ export function useGamepadMenuNav(enabled = true) {
     let repeatTimer = 0;
 
     const tick = () => {
-      if (window.__el6ControllerCapture || window.__el6GameplayActive) {
+      if (window.__el6ControllerCapture || (window.__el6GameplayActive && !window.__el6PauseMenuOpen)) {
         raf = requestAnimationFrame(tick);
         return;
       }

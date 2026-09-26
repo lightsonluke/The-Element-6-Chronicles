@@ -431,7 +431,7 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
         </MatchPauseButtonPortal>
       </div>
-      <canvas ref={canvasRef} width={W} height={H}
+      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H}
         className="border-2 border-border rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />
       {countdown > 0 && !settings?.hideCountdown && (

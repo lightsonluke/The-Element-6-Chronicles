@@ -208,8 +208,9 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
       const teamKey = side === 1 ? 't1' : 't2';
       const p = s[teamKey][s[ak]];
       if (!p || p.diveCD > 0 || p.diving || !p.onGround) return;
-      const leftKey = side === 1 ? 'arrowleft' : 'a';
-      const rightKey = side === 1 ? 'arrowright' : 'd';
+      const binds = side === 1 ? (p2IsCPU && soloKb ? soloKb : kb.p1) : kb.p2;
+      const leftKey = String(binds.left).toLowerCase();
+      const rightKey = String(binds.right).toLowerCase();
       const gp = gpRef.current[side === 1 ? 0 : 1] || {};
       let dir = 0;
       if (keysRef.current[leftKey] || gp.left) dir = -1;
@@ -220,17 +221,23 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
       sfx.hit();
     };
 
-    // Per-device scheme: translate local keys to the role's native scheme before processing/relaying
-    const VB_P1_TO_P2 = { 'arrowleft': 'a', 'arrowright': 'd', 'arrowup': 'w', ',': 'x', '.': 'c', '/': 'v', 'l': 'f' };
-    const VB_P2_TO_P1 = { 'a': 'arrowleft', 'd': 'arrowright', 'w': 'arrowup', 'x': ',', 'c': '.', 'v': '/', 'f': 'l' };
+    // Sports use the same logical attack controls as Fight Mode.
+    // Default mapping therefore stays ,/.//l for P1 and v/c/x/f for P2,
+    // while custom Fight Mode bindings automatically carry into volleyball.
+    const kb = getKeybinds(settings);
+    const soloKb = getSoloKeybinds(settings);
+    const bindFor = side => (side === 1 && p2IsCPU && soloKb ? soloKb : kb[side === 1 ? 'p1' : 'p2']);
     const resolveKey = (key) => {
       if (!lanConnection || remoteKeysProc.current) return key;
       const scheme = localScheme || (lanRole === 'host' ? 'p1' : 'p2');
       const toScheme = lanRole === 'host' ? 'p1' : 'p2';
       if (scheme === toScheme) return key;
+      const fromBinds = scheme === 'p1' ? kb.p1 : kb.p2;
+      const toBinds = toScheme === 'p1' ? kb.p1 : kb.p2;
       const kl = key.toLowerCase();
-      if (scheme === 'p1' && toScheme === 'p2') return VB_P1_TO_P2[kl] || key;
-      if (scheme === 'p2' && toScheme === 'p1') return VB_P2_TO_P1[kl] || key;
+      for (const action of ['left','right','jump','down','sig','power','superMove','heavy']) {
+        if (String(fromBinds[action] || '').toLowerCase() === kl) return toBinds[action] || key;
+      }
       return key;
     };
     const kd = e => {
@@ -242,30 +249,23 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
         return;
       }
       if (['F5','F12'].includes(e.key)) return;
-      // Switch works in ANY phase (serve or rally) — handle FIRST so it's never blocked
-      if (k === '/' && !is1v1) { tryHit(1, 'switch'); e.preventDefault(); return; }
-      if (!p2IsCPU && !is1v1 && k === 'v') { tryHit(2, 'switch'); e.preventDefault(); return; }
-      if (p2IsCPU && !is1v1 && k === 'v') { tryHit(1, 'switch'); e.preventDefault(); return; }
-      // P1: , = serve/bump, . = set/spike (air)
-      if (k === ',' && st.current.phase === 'serve' && (p2IsCPU || st.current.serverSide === 1)) {
-        tryHit(1, 'serve'); e.preventDefault(); return;
-      }
-      if (k === ',') tryHit(1, 'bump');
-      else if (k === '.') { const p = st.current.t1[st.current.active1]; tryHit(1, p.jump > 0 ? 'spike' : 'set'); }
-      if (p2IsCPU) {
-        if (k === 'x' && st.current.phase === 'serve' && st.current.serverSide === 1) { tryHit(1, 'serve'); e.preventDefault(); return; }
-        if (k === 'x') tryHit(1, 'bump');
-        else if (k === 'c') { const p = st.current.t1[st.current.active1]; tryHit(1, p.jump > 0 ? 'spike' : 'set'); }
-        if (k === 'f') tryDive(1);
-      }
-      // P2: X = serve/bump, C = set/spike (air)
-      if (!p2IsCPU) {
-        if (k === 'x' && st.current.phase === 'serve' && st.current.serverSide === 2) { tryHit(2, 'serve'); e.preventDefault(); return; }
-        if (k === 'x') tryHit(2, 'bump');
-        else if (k === 'c') { const p = st.current.t2[st.current.active2]; tryHit(2, p.jump > 0 ? 'spike' : 'set'); }
-        if (k === 'f') tryDive(2);
-      }
-      if (k === 'l') tryDive(1);
+      const b1 = bindFor(1);
+      const b2 = kb.p2;
+      const k1 = { sig: String(b1.sig).toLowerCase(), set: String(b1.power).toLowerCase(), switch: String(b1.superMove).toLowerCase(), dive: String(b1.heavy).toLowerCase() };
+      const k2 = { sig: String(b2.sig).toLowerCase(), set: String(b2.power).toLowerCase(), switch: String(b2.superMove).toLowerCase(), dive: String(b2.heavy).toLowerCase() };
+      const sideForKey = (side, keys) => {
+        if (keys.switch === k) { if (!is1v1) tryHit(side, 'switch'); return true; }
+        if (keys.sig === k) {
+          if (st.current.phase === 'serve' && (p2IsCPU || st.current.serverSide === side)) tryHit(side, 'serve');
+          else tryHit(side, 'bump');
+          return true;
+        }
+        if (keys.set === k) { const p = st.current[side === 1 ? 't1' : 't2'][st.current[side === 1 ? 'active1' : 'active2']]; tryHit(side, p.jump > 0 ? 'spike' : 'set'); return true; }
+        if (keys.dive === k) { tryDive(side); return true; }
+        return false;
+      };
+      if (sideForKey(1, k1)) { e.preventDefault(); return; }
+      if (!p2IsCPU && !is1v1 && sideForKey(2, k2)) { e.preventDefault(); return; }
       e.preventDefault();
     };
     const ku = e => { const rk = resolveKey(e.key); keysRef.current[rk.toLowerCase()] = false; if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: false }); };
@@ -296,15 +296,14 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
               if (st.current.phase === 'serve' && (p2IsCPU || st.current.serverSide === side)) tryHit(side, 'serve');
               else tryHit(side, 'bump');
             }
-            // Set/spike (heavy button) — spike if airborne, else set
-            if (gp.heavy && !prev.heavy) {
+            // Set/spike = Fight Mode Power binding
+            if (gp.power && !prev.power) {
               const p = st.current[side === 1 ? 't1' : 't2'][st.current[side === 1 ? 'active1' : 'active2']];
               tryHit(side, p.jump > 0 ? 'spike' : 'set');
             }
-            // Switch (power button) — only in 2v2
-            if (gp.power && !prev.power && !is1v1) tryHit(side, 'switch');
-            // Dive (super button) + direction
-            if (gp.superMove && !prev.superMove) tryDive(side);
+            // Switch = Fight Mode Super binding; Dive = Fight Mode Heavy binding
+            if (gp.superMove && !prev.superMove && !is1v1) tryHit(side, 'switch');
+            if (gp.heavy && !prev.heavy) tryDive(side);
           }
           gpPrevRef.current[slot] = gp ? { sig: gp.sig, heavy: gp.heavy, power: gp.power, superMove: gp.superMove } : {};
         }
@@ -1173,7 +1172,7 @@ export default function VolleyballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, 
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
       </MatchPauseButtonPortal>
       {paused && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></MatchPausePortal>}
-      <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas" />
+      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H} className="el6-match-canvas" />
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>

@@ -216,10 +216,13 @@ function drawSpike(ctx,p,frame) {
 
 function drawConveyor(ctx,p,frame) {
   const {x,y,w,h}=p;ctx.save();
+  const dir = Number(p.conveyorDir || p.direction || p.move?.dir || p.move?.direction || p.motion?.dir || p.motion?.direction || 1) >= 0 ? 1 : -1;
   ctx.fillStyle='#292D34';rr(ctx,x,y+h*.18,w,h*.64,5);ctx.fill();
   ctx.fillStyle='#B9782A';ctx.fillRect(x,y+h*.12,w,4);ctx.fillRect(x,y+h*.82,w,4);
-  const off=(frame*2)%30;for(let xx=x-30+off;xx<x+w+30;xx+=30){ctx.fillStyle='#555E69';ctx.beginPath();ctx.arc(xx,y+h*.5,8,0,TAU);ctx.fill();ctx.strokeStyle='#C8D0D8';ctx.lineWidth=1;ctx.stroke();}
-  ctx.strokeStyle='#D99B4A';ctx.lineWidth=2;for(let xx=x-15+off;xx<x+w+15;xx+=30){ctx.beginPath();ctx.moveTo(xx,y+h*.3);ctx.lineTo(xx+12,y+h*.5);ctx.lineTo(xx,y+h*.7);ctx.stroke();}
+  const off=((frame*2*dir)%30+30)%30;
+  for(let xx=x-30+off;xx<x+w+30;xx+=30){ctx.fillStyle='#555E69';ctx.beginPath();ctx.arc(xx,y+h*.5,8,0,TAU);ctx.fill();ctx.strokeStyle='#C8D0D8';ctx.lineWidth=1;ctx.stroke();}
+  ctx.strokeStyle='#D99B4A';ctx.lineWidth=2;
+  for(let xx=x-15+off;xx<x+w+15;xx+=30){ctx.beginPath();ctx.moveTo(xx,y+h*.3);ctx.lineTo(xx+dir*12,y+h*.5);ctx.lineTo(xx,y+h*.7);ctx.stroke();}
   ctx.restore();
 }
 

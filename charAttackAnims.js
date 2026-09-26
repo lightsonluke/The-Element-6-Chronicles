@@ -7,6 +7,7 @@ import { drawJab, drawSlash, drawWhip, drawLaunch, drawGround, drawSlam, drawCha
 import { drawSuper } from './attackSupers.js';
 import { drawUniqueSuper } from './uniqueSupers.js';
 import { PARTICLES } from './charAttackParticles.js';
+import { drawGen1Attack, drawGen1Super } from './gen1AttackAnims.js';
 
 const SUPER_W = 1200, SUPER_H = 700;
 
@@ -18,8 +19,13 @@ function getConfig(charId, power, color) {
 
 // ── Map attack data to config key (ss/us/ds/sh/dh) ──
 function getAttackKey(attack, attackKey) {
+  // Recovery is deliberately the exact same animation as Up Signature.
+  // Keep this explicit so future recovery metadata cannot accidentally route
+  // it through a generic recovery animation.
+  if (attack?.isRecovery || attack?.recoveryAnimationKey === 'us') return 'us';
   const st = attack.sigType || attackKey || 'side';
   if (attack.isHeavy) {
+    if (st === 'upHeavy') return 'upHeavy';
     if (st === 'downHeavy' || st === 'down' || attack.isGroundPound) return 'dh';
     return 'sh';
   }
@@ -36,6 +42,12 @@ export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, atta
   const key = getAttackKey(attack, attackKey);
   const cfg = config[key];
   if (!cfg) return;
+
+  if (charId.startsWith('g1_')) {
+    drawGen1Attack(ctx, x, y, color, p, facing, charId, key);
+    ctx.shadowBlur = 0;
+    return;
+  }
 
   const shapeType = cfg[0];
   const isHeavy = attack.isHeavy || false;
@@ -72,7 +84,7 @@ export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, atta
 }
 
 // ── Main entry: draw super with per-character config ──
-export function drawCharSuper(ctx, x, y, color, p, charId) {
+export function drawCharSuper(ctx, x, y, color, p, charId, facing = 1) {
   const config = getConfig(charId, '', color);
   if (!config || !config.sp) {
     // Fallback: generic burst
@@ -82,6 +94,15 @@ export function drawCharSuper(ctx, x, y, color, p, charId) {
   }
 
   // ── Hand-crafted unique supers: route directly to the per-character animation ──
+  if (charId.startsWith('g1_')) {
+    ctx.save();
+    ctx.translate(x, y); ctx.scale(2.85, 2.85); ctx.translate(-x, -y);
+    drawGen1Super(ctx, x, y, p, facing, charId);
+    ctx.restore();
+    ctx.shadowBlur = 0;
+    return;
+  }
+
   if (config.sp[0] === 'unique') {
     drawUniqueSuper(ctx, x, y, p, config.sp[1] || color, charId, SUPER_W, SUPER_H);
     ctx.shadowBlur = 0;

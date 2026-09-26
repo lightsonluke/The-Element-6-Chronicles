@@ -120,19 +120,22 @@ export default function BangerMode({
       teamMode={true}
       charMastery={charMastery}
       defaultCPUDifficulty={difficulty}
-      onStart={(c1, c2, p2cpu, diff, _p1el, _p2el, ...extraPicks) => {
-        // Last item in extraPicks is the shikigamiOverride map — filter it out (only string IDs are characters)
-        const charPicks = extraPicks.filter(p => typeof p === 'string');
-        // Distribute picks to teams: P1,P3,P5 → Team 1; P2,P4,P6 → Team 2
-        let t1 = [c1]; let t2 = [c2];
-        for (let i = 0; i < charPicks.length; i++) {
-          if (i % 2 === 0) t1.push(charPicks[i]); else t2.push(charPicks[i]);
-        }
-        // In offline CPU matches, fill every CPU-controlled position from the
-        // full roster, including characters the local player has not unlocked.
+      onStart={(c1, c2, p2cpu, diff, _p1el, _p2el, ...extra) => {
+        const assignment = extra.find(v => v && typeof v === 'object' && !Array.isArray(v) && Object.values(v).every(n => n === 1 || n === 2));
+        const charPicks = extra.filter(p => typeof p === 'string');
+        const ordered = [c1, c2, ...charPicks];
+        let t1 = [], t2 = [];
+        ordered.forEach((id, i) => {
+          const team = assignment?.[i] || (i % 2 === 0 ? 1 : 2);
+          (team === 1 ? t1 : t2).push(id);
+        });
+        // In offline CPU matches, preserve the chosen team placement while
+        // filling every bot slot from the complete roster.
         if (p2cpu) {
-          const teamOne = fillTeam(c1, []);
-          const teamTwo = fillTeam('', teamOne.team);
+          const main1 = t1[0] || c1;
+          const main2 = t2[0] || c2;
+          const teamOne = fillTeam(main1, []);
+          const teamTwo = fillTeam(main2, teamOne.team);
           t1 = teamOne.team; t2 = teamTwo.team;
         }
         setTeam1(t1); setTeam2(t2);

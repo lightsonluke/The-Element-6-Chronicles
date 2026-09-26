@@ -436,6 +436,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
     let lastTime = performance.now();
     let shakeMag = 0;
     let prevGpStart = false;
+    let prevGpEmote1 = 0, prevGpEmote2 = 0;
     const attackMul = headSoccer ? 2.0 : 1.0;
 
     const loop = (now) => {
@@ -458,6 +459,17 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
       const ts = inSlowMo ? 0.3 : 1;
       lastTime = now;
       const { f1, f2, ball } = gameRef.current;
+      const emoteFromPad = (fighter, gp, player, mode, previous) => {
+        const slot = gp?.emoteSlot || 0;
+        if (slot && slot !== previous && fighter?.grounded && !fighter.emote) {
+          const emote = getEmoteForKey(String(slot), equippedEmotes, player, mode);
+          if (emote) fighter.emote = { id: emote.id, timer: emote.duration, maxTimer: emote.duration, progress: 0, key: String(slot) };
+        }
+        return slot;
+      };
+      prevGpEmote1 = emoteFromPad(f1, _gp1, 1, (teamMode || (!p1IsCPU && !p2IsCPU)) ? 'coop' : 'solo', prevGpEmote1);
+      if (!p2IsCPU && !p1IsCPU) prevGpEmote2 = emoteFromPad(f2, _gp2, 2, 'coop', prevGpEmote2);
+      else prevGpEmote2 = _gp2?.emoteSlot || 0;
       // Guests predict locally between packets, then use the authoritative host
       // snapshot as a correction point. This keeps both canvases on the same
       // field position even when packets arrive late or a ball collision differs.
@@ -1360,7 +1372,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         {!tournamentMode && <button onClick={finishQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Menu</button>}
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className={`px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80 ${tournamentMode ? 'ml-auto' : ''}`}>Pause (ESC)</button>
       </div>
-      <canvas ref={canvasRef} width={W} height={H}
+      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H}
         className="el6-match-canvas"
         style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
       />

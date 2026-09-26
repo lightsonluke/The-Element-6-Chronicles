@@ -1194,7 +1194,7 @@ export function drawSuperEffect(ctx, x, y, color, progress, charName = '', charI
   ctx.translate(-x, -(y - 18));
 
   // Route to per-character super animation (data-driven theme system)
-  drawCharSuper(ctx, x, y, color, progress, charId);
+  drawCharSuper(ctx, x, y, color, progress, charId, facing);
 
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;

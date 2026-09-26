@@ -42,53 +42,53 @@ export const CHAR_ATTACKS = {
 
   // Thunder — Lightning
   'g1_thunder': {
-    ss: ['jab', 'bolt', '#FFFF44', 0.8, 'crackle'],          // Static Rush: narrow streak dashes forward, spark burst
-    us: ['launch', 'bolt', '#FFFF44', 1.0, 'coil'],         // Skyhook: bolt above pulls up, arcs below
-    ds: ['ground', 'bolt', '#FFFF44', 0.7, 'fissure'],      // Grounded Storm: floor lightning forks, converges up
-    sh: ['slash', 'bolt', '#FFFF44', 1.4, 'crackle'],       // Mountain Split: three staggered horizontal cuts (largest)
-    dh: ['slam', 'bolt', '#FFFF44', 1.3, 'fissure'],
+    ss: ['jab', 'bolt', '#FFFF44', 0.85, 'zigzag-bolt'],
+    us: ['arcAround', 'bolt', '#FFFF44', 1.0, 'moving-point-circle'],
+    ds: ['radial', 'bolt', '#FFFF44', 0.72, 'small-dome'],
+    sh: ['jab', 'bolt', '#FFFF44', 1.45, 'large-zigzag-bolt'],
+    dh: ['arcAround', 'bolt', '#FFFF44', 1.3, 'orbiting-ball'],
     sp: ['unique', '#FFFF44', 'bolt'],
-    pb: ['jab', 'bolt', '#FFFF44', 0.7, 'crackle']          // Lightning Call: warning mark, one bolt
+    pb: ['jab', 'bolt', '#FFFF44', 0.7, 'crackle']
   },
   // Fire — Flame
   'g1_fire': {
-    ss: ['jab', 'flame', '#FF6600', 0.9, 'wreath'],         // Flame Wheel: rolling ring of fire forward, low hit
-    us: ['launch', 'flame', '#FF6600', 1.0, 'burst'],       // Rising Ember: fire geyser, two curling side flames
-    ds: ['ground', 'flame', '#FF6600', 0.7, 'pillar'],      // Firefall: compact ground flame patch bursts up
-    sh: ['slash', 'flame', '#FF6600', 1.4, 'wreath'],       // Inferno Breaker: huge flame fist sweeps sideways (largest)
-    dh: ['slam', 'flame', '#FF6600', 1.3, 'ring'],
+    ss: ['jab', 'flame', '#FF6600', 0.9, 'elbow-hook'],
+    us: ['arcAround', 'flame', '#FF6600', 1.0, 'flaming-hook'],
+    ds: ['ground', 'flame', '#FF6600', 0.72, 'ember-stamp'],
+    sh: ['slash', 'flame', '#FF6600', 1.45, 'flaming-gauntlet-hook'],
+    dh: ['ground', 'flame', '#FF6600', 1.3, 'five-cracks'],
     sp: ['unique', '#FF6600', 'flame'],
-    pb: ['jab', 'flame', '#FF6600', 0.8, 'ember']           // Flame Burst: small fireball, explodes on contact
+    pb: ['jab', 'flame', '#FF6600', 0.8, 'ember']
   },
   // Water — Tide
   'g1_water': {
-    ss: ['whip', 'liquid', '#3399CC', 0.9, 'wave'],         // Current Strike: short stream carries forward into wave
-    us: ['launch', 'liquid', '#3399CC', 1.0, 'spout'],      // Rising Tide: water column up, bursts droplets
-    ds: ['ground', 'liquid', '#3399CC', 0.7, 'wave'],      // Floodstep: low surge forward, pops up at end
-    sh: ['slash', 'liquid', '#3399CC', 1.3, 'blade'],       // Breaker Arc: thick curved water blade whips across (largest)
-    dh: ['slam', 'liquid', '#3399CC', 1.3, 'wave'],
+    ss: ['whip', 'liquid', '#3399CC', 0.9, 'curved-tip'],
+    us: ['whip', 'liquid', '#3399CC', 1.0, 'spinning-ring'],
+    ds: ['ground', 'liquid', '#3399CC', 0.72, 'twin-splashes'],
+    sh: ['slash', 'liquid', '#3399CC', 1.4, 'crescent-blade'],
+    dh: ['slam', 'liquid', '#3399CC', 1.3, 'bouncing-sphere'],
     sp: ['unique', '#3399CC', 'liquid'],
-    pb: ['whip', 'liquid', '#3399CC', 1.0, 'yank']          // Water Whip: tendril lashes, pulls opponent closer
+    pb: ['whip', 'liquid', '#3399CC', 1.0, 'yank']
   },
   // Grass — Growth
   'g1_grass': {
-    ss: ['whip', 'plant', '#44AA44', 0.9, 'thorn'],         // Thorn Sweep: low fan of thin thorn vines forward
-    us: ['launch', 'plant', '#44AA44', 1.0, 'vine'],        // Vine Lift: vertical vine coils, launches up
-    ds: ['ground', 'plant', '#44AA44', 0.8, 'roots'],       // Root Snare: roots burst from floor, briefly hold
-    sh: ['slam', 'plant', '#44AA44', 1.4, 'hammer'],        // Verdant Hammer: wooden hammer crashes sideways (largest)
-    dh: ['slam', 'plant', '#44AA44', 1.3, 'tree'],
+    ss: ['jab', 'plant', '#44AA44', 0.9, 'wooden-jab'],
+    us: ['launch', 'plant', '#44AA44', 1.0, 'three-leaf-propeller'],
+    ds: ['whip', 'plant', '#44AA44', 0.8, 'thorn-snap'],
+    sh: ['slam', 'plant', '#44AA44', 1.45, 'petal-flower'],
+    dh: ['whip', 'plant', '#44AA44', 1.3, 'returning-vine'],
     sp: ['unique', '#44AA44', 'plant', 'overgrowth'],
-    pb: ['whip', 'plant', '#44AA44', 1.0, 'vine']           // Vine Strike: one fast vine from ground, hits, retracts
+    pb: ['whip', 'plant', '#44AA44', 1.0, 'vine']
   },
   // Ice — Frost
   'g1_ice': {
-    ss: ['slash', 'crystal', '#AAEEFF', 0.9, 'frost'],      // Frost Drift: thin ice trail slides into low frosted strike
-    us: ['launch', 'crystal', '#AAEEFF', 1.0, 'pillar'],    // Ice Pillar: sharp pillar erupts below, launches up
-    ds: ['ground', 'crystal', '#AAEEFF', 0.7, 'frost'],    // Freeze Line: frost line along floor, briefly slows
-    sh: ['slash', 'crystal', '#AAEEFF', 1.4, 'blade'],      // Glacier Edge: long crystal blade, one precise ice cut (largest)
-    dh: ['slam', 'crystal', '#AAEEFF', 1.3, 'freeze'],
+    ss: ['slash', 'crystal', '#AAEEFF', 0.9, 'forearm-blade'],
+    us: ['launch', 'crystal', '#AAEEFF', 1.0, 'throwing-shard'],
+    ds: ['ground', 'crystal', '#AAEEFF', 0.72, 'shattered-plate'],
+    sh: ['slash', 'crystal', '#AAEEFF', 1.45, 'ice-hammer'],
+    dh: ['jab', 'crystal', '#AAEEFF', 1.3, 'sliding-block-split'],
     sp: ['unique', '#AAEEFF', 'crystal'],
-    pb: ['barrier', 'crystal', '#AAEEFF', 1.0, 'freeze']    // Ice Wall: short wall forms ahead, blocks, melts
+    pb: ['barrier', 'crystal', '#AAEEFF', 1.0, 'freeze']
   },
 
   // ═══════════════════════════════════════════════════════════════

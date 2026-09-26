@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import GameIcon from "./GameIcon.jsx";
 
 const CONTROLS = [
@@ -29,6 +29,12 @@ const CONTROLS = [
 ];
 
 export default function PauseMenu({ onResume, onQuit, tournamentMode = false, onSimRest, onEndNow, online = false }) {
+  const resumeRef = useRef(null);
+  useEffect(() => {
+    window.__el6PauseMenuOpen = true;
+    requestAnimationFrame(() => resumeRef.current?.focus());
+    return () => { window.__el6PauseMenuOpen = false; };
+  }, []);
   return (
     <div className="el6-pause-overlay-layer flex flex-col items-center justify-center bg-black/80 rounded-lg backdrop-blur-sm">
       <div className="bg-card border border-border rounded-2xl p-8 w-[520px] shadow-2xl">
@@ -58,6 +64,7 @@ export default function PauseMenu({ onResume, onQuit, tournamentMode = false, on
 
         <div className="flex gap-3 justify-center flex-wrap">
           <button
+            ref={resumeRef}
             onClick={onResume}
             className="px-8 py-3 bg-primary text-primary-foreground font-heading text-sm rounded-lg hover:opacity-90 transition tracking-wider"
           >

@@ -8,6 +8,7 @@ import { applyElement } from './elements.js';
 import { fmtTime } from './RockClimbLeaderboard.jsx';
 import ElementSelect from './ElementSelect.jsx';
 import GameIcon from "./GameIcon.jsx";
+import PauseMenu from './PauseMenu.jsx';
 
 // ── 2-Player Couch Split-Screen Rock Climbing ──
 // Mechanically IDENTICAL to single-player: directional launch system (oscillating
@@ -128,6 +129,8 @@ export default function RockClimbing2P({ onExit, onAward, unlockedIds = ['yellow
   const [p1El, setP1El] = useState('basic');
   const [p2El, setP2El] = useState('basic');
   const [result, setResult] = useState(null);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
   const stRef = useRef(null);
   const keysRef = useRef({});
   const edge1Ref = useRef({ jump: false, down: false });
@@ -165,7 +168,7 @@ export default function RockClimbing2P({ onExit, onAward, unlockedIds = ['yellow
     if (phase !== 'play') return;
     const kd = e => {
       const k = e.key.toLowerCase();
-      if (k === 'escape' || k === 'p') { onExit?.(); return; }
+      if (k === 'escape' || k === 'p') { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
       if (['F5', 'F12'].includes(e.key)) return;
       if (k === 'arrowup' && !keysRef.current[k]) edge1Ref.current.jump = true;
       if (k === 'arrowdown' && !keysRef.current[k]) edge1Ref.current.down = true;
@@ -187,6 +190,7 @@ export default function RockClimbing2P({ onExit, onAward, unlockedIds = ['yellow
     const loop = (now) => {
       const s = stRef.current; if (!s) { raf = requestAnimationFrame(loop); return; }
       const dt = Math.min((now - last) / 1000, 0.05); last = now;
+      if (pausedRef.current) { draw(ctx, s, [p1Char, p2Char], customCharsData, equippedSkins, equippedAccessories); raf = requestAnimationFrame(loop); return; }
       const gp1 = settings.controllerEnabled !== false ? readGamepadInput(0) : null;
       const gp2 = settings.controllerEnabled !== false ? readGamepadInput(1) : null;
       if (gp1) { if (gp1.sig && !gpPrevRef.current.g1s) edge1Ref.current.jump = true; if (gp1.down && !gpPrevRef.current.g1d) edge1Ref.current.down = true; }
@@ -401,15 +405,17 @@ export default function RockClimbing2P({ onExit, onAward, unlockedIds = ['yellow
   }
 
   return (
-    <div className="relative flex flex-col items-center gap-2 w-full">
+    <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
         <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-        <span className="text-[10px] text-muted-foreground font-body">P1: <GameIcon emoji="↑" size={14} />/<GameIcon emoji="↓" size={14} />/<GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} /> · P2: W/S/A/D · ESC: Quit — time the arrow to launch!</span>
+        <span className="text-[10px] text-muted-foreground font-body">P1: <GameIcon emoji="↑" size={14} />/<GameIcon emoji="↓" size={14} />/<GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} /> · P2: W/S/A/D · ESC/P: Pause — time the arrow to launch!</span>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs">{paused ? '▶ Resume' : '⏸ Pause'}</button>
       </div>
+      {paused && <div className="absolute inset-0 z-[120] flex items-center justify-center bg-black/75"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onExit} /></div>}
       {/* Side-by-side split-screen: two 900×720 viewports, left & right.
           The whole canvas scales down to fit the width, so each view keeps its
           proper proportions (smaller, never squished). */}
-      <canvas ref={canvasRef} width={VW * 2} height={VH} className="rounded-lg shadow-2xl w-full"
+      <canvas data-e6-game-canvas="true" ref={canvasRef} width={VW * 2} height={VH} className="rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: VW * 2 + 'px', aspectRatio: `${VW * 2} / ${VH}`, height: 'auto', background: '#0e1a14' }} />
     </div>
   );

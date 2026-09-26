@@ -150,15 +150,19 @@
 .el6-match-viewport > canvas,
 .el6-match-viewport .el6-match-canvas,
 .el6-match-viewport canvas {
-  width: 100vw !important;
-  height: 100dvh !important;
+  width: min(100vw, 177.7778dvh) !important;
+  height: min(100dvh, 56.25vw) !important;
   max-width: none !important;
   max-height: none !important;
   border: 0 !important;
   border-radius: 0 !important;
-  aspect-ratio: auto !important;
+  aspect-ratio: 16 / 9 !important;
   object-fit: contain;
   flex: 0 0 auto;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
 }
 .el6-match-ui {
   position: absolute !important;
@@ -200,12 +204,17 @@
 .el6-match-viewport > .el6-match-canvas,
 .el6-match-viewport canvas.el6-match-canvas {
   position: absolute !important;
-  inset: 0 !important;
+  left: 50% !important;
+  top: 50% !important;
+  inset: auto !important;
+  transform: translate(-50%, -50%) !important;
   z-index: 0 !important;
-  width: 100vw !important;
-  height: 100dvh !important;
+  width: min(100vw, 177.7778dvh) !important;
+  height: min(100dvh, 56.25vw) !important;
   max-width: none !important;
   max-height: none !important;
+  aspect-ratio: 16 / 9 !important;
+  object-fit: contain !important;
   border: 0 !important;
   border-radius: 0 !important;
 }

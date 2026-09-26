@@ -129,6 +129,11 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
     let myHitSeq = 0;
     let finishedFlag = false;
     let rateLimitedUntil = 0;
+    let lastRemoteAt = Date.now();
+    let lastSyncRequestAt = 0;
+    let syncRequestSeq = 0;
+    let lastHandledSyncRequest = 0;
+    let forceStateSend = () => {};
     const checkRateLimit = (e) => { if (String(e?.message || e).match(/rate/i)) rateLimitedUntil = Date.now() + 2000; };
 
     // ── Subscribe to entity updates (real-time push) ──
@@ -139,8 +144,15 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
       // Read opponent's authoritative state into the snapshot buffer
       const oppState = isHost ? ev.data.guest_state : ev.data.host_state;
       if (oppState && oppState._tick !== undefined) {
+        lastRemoteAt = Date.now();
         const added = snapBuffer.add(oppState._tick, oppState, Date.now());
         if (added) diag.recordSnapshot(oppState._tick, Date.now() - (oppState._time || Date.now()));
+      }
+
+      const remoteReq = isHost ? ev.data.guest_sync_request : ev.data.host_sync_request;
+      if (isHost && remoteReq?.seq && remoteReq.seq !== lastHandledSyncRequest) {
+        lastHandledSyncRequest = remoteReq.seq;
+        forceStateSend();
       }
 
       // Apply incoming hit event from the opponent (their attack hit me)
@@ -172,7 +184,13 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
         conn.heartbeat();
 
         const oppState = isHost ? m.guest_state : m.host_state;
-        if (oppState && oppState._tick !== undefined) snapBuffer.add(oppState._tick, oppState, Date.now());
+        if (oppState && oppState._tick !== undefined) { lastRemoteAt = Date.now(); snapBuffer.add(oppState._tick, oppState, Date.now()); }
+
+        const remoteReq = isHost ? m.guest_sync_request : m.host_sync_request;
+        if (isHost && remoteReq?.seq && remoteReq.seq !== lastHandledSyncRequest) {
+          lastHandledSyncRequest = remoteReq.seq;
+          forceStateSend();
+        }
 
         const inHit = isHost ? m.guest_hit : m.host_hit;
         if (inHit) {
@@ -207,6 +225,7 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
       const patch = isHost ? { host_state: state } : { guest_state: state };
       try { db.entities.OnlineMatch.update(matchId, patch).catch(checkRateLimit); } catch {}
     };
+    forceStateSend = sendMyState;
 
     // ── Send a hit event (my attack landed on the opponent) ──
     const sendHit = (dmg, kx, ky, stun, color) => {
@@ -235,7 +254,9 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
 
     let lastTime = performance.now();
     let shakeMag = 0;
+    let cameraX = 640, cameraY = 360, cameraZoom = 1;
     let frameCount = 0;
+    let prevGpEmote = 0;
     const kb = getKeybinds(settings);
 
     const loop = (now) => {
@@ -259,6 +280,12 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
       // ── Read local input (zeroed while paused — soft pause: game continues, you stand still) ──
       const _gpEnabled = settings?.controllerEnabled !== false;
       const gp1 = _gpEnabled ? readGamepadInput(0) : null;
+      const emoteSlot = gp1?.emoteSlot || 0;
+      if (emoteSlot && emoteSlot !== prevGpEmote && localF.grounded && !localF.emote) {
+        const emote = getEmoteForKey(String(emoteSlot), equippedEmotes, 1, 'online');
+        if (emote) localF.emote = { id: emote.id, timer: emote.duration, maxTimer: emote.duration, progress: 0, key: String(emoteSlot) };
+      }
+      prevGpEmote = emoteSlot;
       let input = pausedRef.current ? NO_INPUT : mergeGp(readPlayerInput(keys, kb.p1), gp1);
       // Emote movement lock — if emote active, force no input
       if (localF.emote && localF.emote.timer > 0) input = NO_INPUT;
@@ -318,6 +345,12 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
         remote.emote = interpState.emote || null;
       }
 
+      // If a peer stops receiving snapshots, ask the host for a fresh full state.
+      if (!isHost && Date.now() - lastRemoteAt > 900 && Date.now() - lastSyncRequestAt > 1000 && Date.now() >= rateLimitedUntil) {
+        syncRequestSeq++; lastSyncRequestAt = Date.now();
+        try { db.entities.OnlineMatch.update(matchId, { guest_sync_request: { seq: syncRequestSeq, at: Date.now() } }).catch(checkRateLimit); } catch {}
+      }
+
       // Send my authoritative state at regular interval
       if (frameCount % SYNC_INTERVAL === 0) sendMyState();
 
@@ -329,8 +362,18 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
 
       ctx.clearRect(0, 0, W, H);
       drawBackground(ctx, W, H, localF.frame, 'splitcity');
+      const pairMidX = (localF.x + remote.x) * 0.5;
+      const pairDistance = Math.abs(localF.x - remote.x);
+      const targetZoom = Math.max(0.82, Math.min(1.05, 1.05 - Math.max(0, pairDistance - 260) / 900 * 0.23));
+      const halfView = W / (2 * targetZoom);
+      const targetCamX = Math.max(halfView, Math.min(W - halfView, pairMidX));
+      cameraX += (targetCamX - cameraX) * 0.12;
+      cameraZoom += (targetZoom - cameraZoom) * 0.10;
+      cameraY += (360 - cameraY) * 0.10;
       ctx.save();
-      ctx.translate(shakeX, shakeY);
+      ctx.translate(W / 2 + shakeX, H / 2 + shakeY);
+      ctx.scale(cameraZoom, cameraZoom);
+      ctx.translate(-cameraX, -cameraY);
       drawPlatforms(ctx, PLATFORMS, localF.frame, 'splitcity');
 
       const drawFighter = (f, charData, loadout, isLocal) => {
@@ -442,7 +485,7 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
         <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Forfeit</button>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
       </div>
-      <canvas ref={canvasRef} width={W} height={H}
+      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H}
         className="el6-match-canvas"
         style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
       />

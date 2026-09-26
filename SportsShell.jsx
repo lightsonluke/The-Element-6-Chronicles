@@ -362,18 +362,21 @@ export default function SportsShell({ sport, unlockedIds, favoriteId, equippedAc
         equippedElements={equippedElements}
         onEquipElement={onEquipElement}
         playerCount={teamSize * 2}
-        teamMode={teamSize > 1}
+        teamMode={teamSize > 1 && (mode === 'volleyball' || mode === 'banger')}
         charMastery={charMastery}
         defaultCPUDifficulty={difficulty}
-        onStart={(c1, c2, p2cpu, diff, _p1el, _p2el, ...extraPicks) => {
+        onStart={(c1, c2, p2cpu, diff, _p1el, _p2el, ...extra) => {
           setP2IsCPU(p2cpu); if (diff) setDifficulty(diff);
-          if (hasRoles && extraPicks.length > 0) {
-            // Distribute picks to teams: P1,P3,P5 → Team 1; P2,P4,P6 → Team 2
-            const t1 = [c1]; const t2 = [c2];
-            for (let i = 0; i < extraPicks.length; i++) {
-              if (i % 2 === 0) t1.push(extraPicks[i]); else t2.push(extraPicks[i]);
-            }
-            setP1(c1); setP2(c2);
+          const assignment = extra.find(v => v && typeof v === 'object' && !Array.isArray(v) && Object.values(v).every(n => n === 1 || n === 2));
+          const charPicks = extra.filter(v => typeof v === 'string');
+          if (hasRoles && charPicks.length > 0) {
+            const ordered = [c1, c2, ...charPicks];
+            const t1 = [], t2 = [];
+            ordered.forEach((id, i) => {
+              const team = assignment?.[i] || (i % 2 === 0 ? 1 : 2);
+              (team === 1 ? t1 : t2).push(id);
+            });
+            setP1(t1[0] || c1); setP2(t2[0] || c2);
             setP1Team(t1.slice(0, teamSize));
             setP2Team(t2.slice(0, teamSize));
             setP1Els(t1.slice(0, teamSize).map(id => equippedElements?.[id] || 'basic'));

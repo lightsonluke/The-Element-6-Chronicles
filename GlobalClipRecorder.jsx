@@ -22,41 +22,16 @@ function showToast(message) {
 }
 
 function findGameCanvas() {
-  const matchCanvas = document.querySelector('canvas.el6-match-canvas');
-
-  if (matchCanvas) {
-    const rect = matchCanvas.getBoundingClientRect();
-    const style = getComputedStyle(matchCanvas);
-
-    if (
-      rect.width > 0 &&
-      rect.height > 0 &&
-      style.display !== 'none' &&
-      style.visibility !== 'hidden' &&
-      Number(style.opacity) !== 0
-    ) {
-      return matchCanvas;
-    }
-  }
-
-  const visible = [...document.querySelectorAll('canvas')].filter(canvas => {
+  const candidates = [
+    ...document.querySelectorAll('canvas.el6-match-canvas, canvas[data-e6-game-canvas="true"]')
+  ];
+  const visible = candidates.filter(canvas => {
     const rect = canvas.getBoundingClientRect();
     const style = getComputedStyle(canvas);
-    const ratio = rect.width / Math.max(1, rect.height);
-    const looksLikeGameCanvas =
-      Math.abs(ratio - 16 / 9) < 0.08 &&
-      canvas.width >= 800 &&
-      canvas.height >= 450;
-
-    return (
-      looksLikeGameCanvas &&
-      style.display !== 'none' &&
-      style.visibility !== 'hidden' &&
-      Number(style.opacity) !== 0
-    );
+    return rect.width > 0 && rect.height > 0 &&
+      style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) !== 0;
   });
-
-  visible.sort((a, b) => b.width * b.height - a.width * a.height);
+  visible.sort((a, b) => (b.width * b.height) - (a.width * a.height));
   return visible[0] || null;
 }
 
@@ -110,11 +85,12 @@ export default function GlobalClipRecorder() {
     let cancelled = false;
 
     const start = () => {
-      if (cancelled || isClipRecorderActive()) return;
-
+      if (cancelled) return;
       const canvas = findGameCanvas();
       if (!canvas) return;
-
+      // Prematch animation canvases are deliberately not marked as match canvases.
+      // Once the real sport/BR canvas mounts, switch the recorder to it automatically.
+      if (canvasRef.current === canvas && isClipRecorderActive()) return;
       if (initClipRecorder(canvas)) {
         canvasRef.current = canvas;
         window.__e6ClipRecorderActive = true;

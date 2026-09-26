@@ -558,6 +558,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
 
     let lastTime = performance.now();
     let frameCount = 0;
+    let prevGpEmote = 0;
     let lastSentInput = null;
 
     const loop = (now) => {
@@ -570,6 +571,13 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
 
       // ── Local input (zeroed while paused — soft pause: game continues, you stand still) ──
       const gp = settings?.controllerEnabled !== false ? readGamepadInput(0) : null;
+      const emoteSlot = gp?.emoteSlot || 0;
+      const meFighter = fighters[0];
+      if (emoteSlot && emoteSlot !== prevGpEmote && meFighter?.grounded && !meFighter.emote) {
+        const emote = getEmoteForKey(String(emoteSlot), equippedEmotes, 1, 'solo');
+        if (emote) meFighter.emote = { id: emote.id, timer: emote.duration, maxTimer: emote.duration, progress: 0, key: String(emoteSlot) };
+      }
+      prevGpEmote = emoteSlot;
       const rawInput = mergeGp(readPlayerInput(keys, kb.p1), gp);
       const input = pausedRef.current ? { ...NO_INPUT } : rawInput;
 
@@ -824,7 +832,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
 
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
-      <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H}
+      <canvas data-e6-game-canvas="true" ref={canvasRef} width={VIEW_W} height={VIEW_H}
         className="el6-match-canvas" />
       {countdown > 0 && !settings?.hideCountdown && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">

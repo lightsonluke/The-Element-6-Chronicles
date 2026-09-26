@@ -212,6 +212,9 @@ export default function ControllerSettings({ onBack, settings, onSaveSettings })
         </div>
         <div className="bg-muted/30 rounded-lg p-3">
           <p className="text-xs font-heading text-primary mb-2">RIGHT STICK / TRIGGERS</p>
+          <div className="mb-2 rounded border border-accent/30 bg-accent/5 p-2 text-[10px] text-foreground">
+            <span className="font-heading text-accent">EMOTE WHEEL:</span> Right Stick — Up = 1, NE = 2, E = 3, SE = 4, Down = 5, SW = 6, W = 7, NW = 8.
+          </div>
           <p className="text-xs text-foreground mb-1">R-Stick Deadzone {active.rightStick.deadzone.toFixed(2)}</p>
           <input type="range" min={0} max={0.5} step={0.01} value={active.rightStick.deadzone} onChange={e => update('rightStick', { deadzone: +e.target.value })} className="w-full" />
           <p className="text-xs text-foreground mb-1 mt-2">Trigger Sensitivity {active.triggers.sensitivity.toFixed(2)}</p>

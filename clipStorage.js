@@ -1,7 +1,7 @@
 // Device-local clip persistence using IndexedDB.
 // Native browser recording only. No cloud upload and no media-processing library.
-// v3 intentionally uses a fresh store so previously malformed native recordings
-// cannot be mistaken for clips produced by the fixed recorder.
+// v4 stores the real output MIME/extension and uses the final MP4 as the playback preview.
+// This keeps clips valid after refresh and avoids WebM-preview/MP4-main mismatches.
 const DB_NAME = 'element6_clips_native_v4';
 const STORE = 'clips';
 const VERSION = 1;
@@ -39,11 +39,11 @@ export async function saveClipBlob(id, blob, meta = {}) {
       id,
       blob,
       created,
-      mime: 'video/webm',
-      extension: 'webm',
+      mime: meta.mime || blob.type || 'video/mp4',
+      extension: meta.extension || (String(meta.mime || blob.type || '').includes('mp4') ? 'mp4' : 'webm'),
       size: blob.size,
       duration: Number(meta.duration) || 30,
-      previewBlob: meta.previewBlob || null,
+      previewBlob: meta.previewBlob || blob,
     });
     tx.oncomplete = () => {
       db.close();

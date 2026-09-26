@@ -11,6 +11,7 @@ import { mergeBotCosmetics } from './botCosmetics.js';
 import { observeBot, botSkill } from './botIntelligence.js';
 import { drawMinimap, drawOnDeck } from './baseballOverlay.jsx';
 import GameIcon from "./GameIcon.jsx";
+import PauseMenu from './PauseMenu.jsx';
 import { toggleElementFullscreen } from './fullscreen.js';
 
 const charFor = (id, element) => {
@@ -274,7 +275,11 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
       const rk = resolveKey(e.key);
       const k = rk.toLowerCase(); keysRef.current[k] = true;
       if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: true });
-      if (e.key === 'Escape') { onQuit?.(); return; }
+      if (e.key === 'Escape' || e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        setPaused(v => !v);
+        return;
+      }
       if (['F5', 'F12'].includes(e.key)) return;
       const s = st.current;
       const humanBatting = s.batting === 1;  // P1 bats when batting===1
@@ -1091,7 +1096,7 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
   }, []);
 
   return (
-    <div ref={fullscreenRef} className="relative flex flex-col items-center gap-2 w-full">
+    <div ref={fullscreenRef} className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
 <button onClick={() => toggleElementFullscreen(fullscreenRef.current)} className="absolute top-3 right-3 z-50 px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">FULLSCREEN</button>
       <div className="w-full flex items-center justify-between gap-2 flex-wrap">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] font-body text-white/80 px-2">
@@ -1112,8 +1117,9 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
           </div>
         )}
       </div>
-      <canvas ref={canvasRef} width={W} height={H} className="rounded-lg shadow-2xl w-full"
+      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H} className="rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#1a3a2a' }} />
+      {paused && <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75"><PauseMenu onResume={() => setPaused(false)} onQuit={onQuit} /></div>}
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>

@@ -891,6 +891,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
     let prevF1Grounded = true, prevF2Grounded = true, prevF2Power = 0;
     let prevStocks1 = f1.stocks, prevStocks2 = f2.stocks;
     let prevGpStart = false;
+    let prevGpEmote1 = 0, prevGpEmote2 = 0;
   let killFeed = [];
     let killFxEffects = []; // { x, y, color, progress, fxId }
     // Emote state is stored on each fighter: f.emote = { id, timer, maxTimer, progress }
@@ -1929,7 +1930,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
       <canvas
-        ref={canvasRef} width={W} height={H}
+        data-e6-game-canvas="true" ref={canvasRef} width={W} height={H}
         className="el6-match-canvas"
       />
       {countdown > 0 && !settings.hideCountdown && (
