@@ -577,13 +577,14 @@ export default function BangerGame({
   }
 
   return (
-    <div className="el6-match-viewport relative">
-      <button onClick={onQuit} className="absolute top-3 left-3 z-[300] px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
+    <div className="relative flex flex-col items-center gap-2 w-full">
+      <button onClick={onQuit} className="self-start px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
       <MatchPauseButtonPortal>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
       </MatchPauseButtonPortal>
       {paused && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></MatchPausePortal>}
-      <canvas ref={canvasRef} width={CW} height={CH} className="el6-match-canvas" />
+      <canvas ref={canvasRef} width={CW} height={CH} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
+        style={{ width: '100%', maxWidth: CW + 'px', height: 'auto', aspectRatio: `${CW} / ${CH}`, background: '#080d1a' }} />
     </div>
   );
 }

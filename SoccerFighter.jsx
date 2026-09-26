@@ -1,3 +1,4 @@
+import { strategicSoccer } from './botStrategicBrain.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { HEROES } from './heroes.js';
 import { ALL_CHARS } from './allCharacters.js';
@@ -476,10 +477,10 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
       let _rawP1 = null, _rawP2 = null; // raw per-frame inputs (for low/high shot detection)
       const _gameCtx = { p1Score: scoreRef.current.p1, p2Score: scoreRef.current.p2, timer: (gameRef.current.maxTime || baseTime) - gameRef.current.timer, suddenDeath: suddenDeathRef.current };
       const strategicSoccerAI = (fighter, opp) => {
-        // Use the deterministic soccer controller directly. The previous strategic
-        // layer could overwrite a correct ball interception with a generic team
-        // behavior and was the main source of bots wandering or ignoring shots.
-        return soccerAI(fighter, ball, opp, cpuDifficulty, _bp, _gameCtx);
+        const base = soccerAI(fighter, ball, opp, cpuDifficulty, _bp, _gameCtx);
+        const nearestOpponent = opp;
+        const role = (teamMode && fighter === f1b) ? 'support' : (teamMode && fighter === f2b) ? 'support' : 'attacker';
+        return strategicSoccer(fighter, { ball, opponents: nearestOpponent ? [nearestOpponent] : [], teammates: [], nearestOpponent, role, ownGoal: fighter === f1 || fighter === f1b ? { x: 70, y: 620 } : { x: 1210, y: 620 }, enemyGoal: fighter === f1 || fighter === f1b ? { x: 1210, y: 620 } : { x: 70, y: 620 }, possession: ball?.lastTeam === (fighter === f1 || fighter === f1b ? 1 : 2) ? 'own' : 'enemy', score: { for: fighter === f1 || fighter === f1b ? scoreRef.current.p1 : scoreRef.current.p2, against: fighter === f1 || fighter === f1b ? scoreRef.current.p2 : scoreRef.current.p1 }, time: _gameCtx.timer }, cpuDifficulty, base);
       };
       // Botvbot: assign different personalities so one plays aggressive, the other defensive —
       // creates dynamic matches instead of both bots chasing the ball identically
@@ -1360,7 +1361,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className={`px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80 ${tournamentMode ? 'ml-auto' : ''}`}>Pause (ESC)</button>
       </div>
       <canvas ref={canvasRef} width={W} height={H}
-        className="el6-match-canvas"
+        className="el6-match-canvas el6-sport-canvas"
         style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
       />
       {countdown > 0 && (

@@ -1,6 +1,5 @@
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { drawSportChar } from './sportDraw.jsx';
 import { ALL_CHARS, TEAM_COLOR_P1, TEAM_COLOR_P2 } from './sports.js';
 import { applyElement } from './elements.js';
@@ -1175,17 +1174,13 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
     return () => { window.__el6GameplayActive = false; };
   }, []);
 
-  const gameCanvas = (
-    <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H} className="el6-match-canvas el6-screen-canvas" />
-  );
-
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
-      {typeof document !== 'undefined' ? createPortal(gameCanvas, document.body) : null}
       <MatchPauseButtonPortal>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
       </MatchPauseButtonPortal>
       {paused && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></MatchPausePortal>}
+      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H} className="el6-match-canvas el6-sport-canvas" />
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>

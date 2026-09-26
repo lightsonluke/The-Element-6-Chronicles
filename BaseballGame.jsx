@@ -5,14 +5,12 @@ import { drawSportChar } from './sportDraw.jsx';
 import { ALL_CHARS, TEAM_COLOR_P1, TEAM_COLOR_P2 } from './sports.js';
 import { applyElement } from './elements.js';
 import { readGamepadInput } from './controllerProfiles.js';
-import { getKeybinds } from './keybinds.js';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
 import { observeBot, botSkill } from './botIntelligence.js';
 import { drawMinimap, drawOnDeck } from './baseballOverlay.jsx';
 import GameIcon from "./GameIcon.jsx";
-import PauseMenu from './PauseMenu.jsx';
 import { toggleElementFullscreen } from './fullscreen.js';
 
 const charFor = (id, element) => {
@@ -276,41 +274,41 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
       const rk = resolveKey(e.key);
       const k = rk.toLowerCase(); keysRef.current[k] = true;
       if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: true });
-      if (e.key === 'Escape' || e.key.toLowerCase() === 'p') {
-        e.preventDefault();
-        setPaused(v => !v);
-        return;
-      }
+      if (e.key === 'Escape') { onQuit?.(); return; }
       if (['F5', 'F12'].includes(e.key)) return;
       const s = st.current;
-      const humanBatting = s.batting === 1;
-      const humanFielding = s.batting === 2;
-      const kb = getKeybinds(settings);
-      const p1 = kb.p1, p2 = kb.p2;
-      const is = (key, binds, action) => String(key || '').toLowerCase() === String(binds?.[action] || '').toLowerCase();
+      const humanBatting = s.batting === 1;  // P1 bats when batting===1
+      const humanFielding = s.batting === 2; // P1 fields when batting===2
 
-      // Fight Mode logical bindings: Signature = primary baseball action,
-      // Heavy = secondary/context action, Power = fielder switch.
-      if (is(rk, p1, 'sig') && humanFielding && s.phase === 'pitch') { doPitch(1); e.preventDefault(); return; }
-      if (is(rk, p1, 'sig') && humanBatting && s.phase === 'pitched') { doSwing(); e.preventDefault(); return; }
-      if (is(rk, p1, 'sig') && humanFielding && s.phase === 'fielding') { if (s.fieldBall.heldBy === s.controlledFielder) doThrow(); e.preventDefault(); return; }
-      if (is(rk, p1, 'power') && humanFielding && s.phase === 'fielding') { switchControl(); e.preventDefault(); return; }
-      if (is(rk, p1, 'sig') && humanBatting && s.phase === 'fielding') { runAdvance(); e.preventDefault(); return; }
-      if (is(rk, p1, 'heavy') && humanBatting && s.phase === 'pitched') { doBunt(); e.preventDefault(); return; }
-      if (is(rk, p1, 'heavy') && humanFielding && s.phase === 'fielding') { cycleNext(); e.preventDefault(); return; }
-      if (is(rk, p1, 'heavy') && humanBatting && s.phase === 'fielding') { runRetreat(); e.preventDefault(); return; }
+      // P1: , = pitch/swing/throw/switch (context-dependent), . = bunt / cycleNext / runRetreat
+      if (k === ',' && humanFielding && s.phase === 'pitch') { doPitch(1); e.preventDefault(); return; }
+      if (k === ',' && humanBatting && s.phase === 'pitched') { doSwing(); e.preventDefault(); return; }
+      if (k === ',' && humanFielding && s.phase === 'fielding') {
+        if (s.fieldBall.heldBy === s.controlledFielder) doThrow();
+        e.preventDefault(); return;
+      }
+      if (k === '/' && humanFielding && s.phase === 'fielding') { switchControl(); e.preventDefault(); return; }
+      if (k === ',' && humanBatting && s.phase === 'fielding') { runAdvance(); e.preventDefault(); return; }
+      if (k === '.' && humanBatting && s.phase === 'pitched') { doBunt(); e.preventDefault(); return; }
+      if (k === '.' && humanFielding && s.phase === 'fielding') { cycleNext(); e.preventDefault(); return; }
+      if (k === '.' && humanBatting && s.phase === 'fielding') { runRetreat(); e.preventDefault(); return; }
+      if (k === ' ' && humanBatting && s.phase === 'pitched') { doSwing(); e.preventDefault(); return; }
 
+      // P2 controls (human when not CPU): v = pitch/swing/throw/switch, c = bunt / cycleNext / runRetreat
       if (!p2IsCPU) {
         const p2Batting = s.batting === 2;
         const p2Fielding = s.batting === 1;
-        if (is(rk, p2, 'sig') && p2Fielding && s.phase === 'pitch') { doPitch(2); e.preventDefault(); return; }
-        if (is(rk, p2, 'sig') && p2Batting && s.phase === 'pitched') { doSwing(); e.preventDefault(); return; }
-        if (is(rk, p2, 'sig') && p2Fielding && s.phase === 'fielding') { if (s.fieldBall.heldBy === s.controlledFielder) doThrow(); e.preventDefault(); return; }
-        if (is(rk, p2, 'power') && p2Fielding && s.phase === 'fielding') { switchControl(); e.preventDefault(); return; }
-        if (is(rk, p2, 'sig') && p2Batting && s.phase === 'fielding') { runAdvance(); e.preventDefault(); return; }
-        if (is(rk, p2, 'heavy') && p2Batting && s.phase === 'pitched') { doBunt(); e.preventDefault(); return; }
-        if (is(rk, p2, 'heavy') && p2Fielding && s.phase === 'fielding') { cycleNext(); e.preventDefault(); return; }
-        if (is(rk, p2, 'heavy') && p2Batting && s.phase === 'fielding') { runRetreat(); e.preventDefault(); return; }
+        if (k === 'v' && p2Fielding && s.phase === 'pitch') { doPitch(2); e.preventDefault(); return; }
+        if (k === 'v' && p2Batting && s.phase === 'pitched') { doSwing(); e.preventDefault(); return; }
+        if (k === 'v' && p2Fielding && s.phase === 'fielding') {
+          if (s.fieldBall.heldBy === s.controlledFielder) doThrow();
+          e.preventDefault(); return;
+        }
+        if (k === 'x' && p2Fielding && s.phase === 'fielding') { switchControl(); e.preventDefault(); return; }
+        if (k === 'v' && p2Batting && s.phase === 'fielding') { runAdvance(); e.preventDefault(); return; }
+        if (k === 'c' && p2Batting && s.phase === 'pitched') { doBunt(); e.preventDefault(); return; }
+        if (k === 'c' && p2Fielding && s.phase === 'fielding') { cycleNext(); e.preventDefault(); return; }
+        if (k === 'c' && p2Batting && s.phase === 'fielding') { runRetreat(); e.preventDefault(); return; }
       }
       e.preventDefault();
     };
@@ -1093,7 +1091,7 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
   }, []);
 
   return (
-    <div ref={fullscreenRef} className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
+    <div ref={fullscreenRef} className="relative flex flex-col items-center gap-2 w-full">
 <button onClick={() => toggleElementFullscreen(fullscreenRef.current)} className="absolute top-3 right-3 z-50 px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">FULLSCREEN</button>
       <div className="w-full flex items-center justify-between gap-2 flex-wrap">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] font-body text-white/80 px-2">
@@ -1114,9 +1112,8 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
           </div>
         )}
       </div>
-      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H} className="rounded-lg shadow-2xl w-full"
+      <canvas ref={canvasRef} width={W} height={H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#1a3a2a' }} />
-      {paused && <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75"><PauseMenu onResume={() => setPaused(false)} onQuit={onQuit} /></div>}
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>

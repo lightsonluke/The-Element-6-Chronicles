@@ -580,8 +580,8 @@ export default function DodgeballGame({
   }
 
   return (
-    <div className="el6-match-viewport relative">
-      <div className="absolute top-3 left-3 right-3 z-[300] flex justify-between items-center pointer-events-auto">
+    <div className="flex flex-col items-center gap-2 w-full">
+      <div className="flex justify-between items-center w-full max-w-[1100px]">
         <div className="flex gap-2 items-center">
           <span className="font-heading text-xs px-2 py-1 rounded" style={{ background: p1TeamColor + '33', color: p1TeamColor }}>
             {p1IsCPU ? 'CPU' : 'P1'}: {stRef.current.p1.char.name}
@@ -595,8 +595,9 @@ export default function DodgeballGame({
           <button onClick={onQuit} className="px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs">QUIT</button>
         </div>
       </div>
-      <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas" />
-      <p className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[300] text-[10px] text-muted-foreground font-body text-center pointer-events-none whitespace-nowrap">
+      <canvas ref={canvasRef} width={W} height={H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
+        style={{ width: '100%', maxWidth: W + 'px', aspectRatio: `${W} / ${H}`, height: 'auto', background: '#15102a' }} />
+      <p className="text-[10px] text-muted-foreground font-body text-center">
         P1: <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} /> move · <GameIcon emoji="↑" size={14} /> jump · <GameIcon emoji="↓" size={14} /> fast-fall · <b>(.) power</b> pickup · <b>(,) sig</b> throw (<GameIcon emoji="↑" size={14} />/<GameIcon emoji="↓" size={14} />/neutral = high/low/straight) · <b>(/) super</b> · P2: WASD+v+c+x
       </p>
     </div>

@@ -129,52 +129,40 @@ body { overflow: hidden; }
   justify-content: center !important;
   overflow: hidden !important;
   isolation: isolate !important;
-  z-index: 40 !important;
+  z-index: 0 !important;
   background: #060615 !important;
 }
 
 
-/* Every gameplay canvas is a fixed 16:9 presentation surface. This intentionally
-   ignores the width of React/Tailwind parents so a match can never collapse into
-   a small top-left rectangle. */
-.el6-match-viewport > canvas[data-e6-game-canvas="true"],
-.el6-match-viewport > canvas.el6-match-canvas,
-.el6-match-viewport canvas.el6-match-canvas {
+/* Every gameplay canvas is a fixed, centered 16:9 presentation surface.
+   This is global so every sport and fight mode uses the exact same viewport
+   regardless of its React/Tailwind parent layout. */
+.el6-match-canvas,
+.el6-sport-canvas,
+.el6-fight-canvas {
   position: fixed !important;
   left: 50% !important;
   top: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  width: min(100vw, calc(100dvh * 16 / 9)) !important;
-  height: min(100dvh, calc(100vw * 9 / 16)) !important;
-  max-width: none !important;
-  max-height: none !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  aspect-ratio: 16 / 9 !important;
-  object-fit: fill !important;
-}
-
-/* 16:9 gameplay surface. Letterboxing is intentional on ultrawide/tall screens. */
-.el6-match-viewport > canvas,
-.el6-match-viewport canvas.el6-match-canvas,
-.el6-match-viewport .el6-match-canvas {
-  position: fixed !important;
-  left: 50% !important;
-  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
   inset: auto !important;
   transform: translate(-50%, -50%) !important;
   width: min(100vw, calc(100dvh * 16 / 9)) !important;
   height: min(100dvh, calc(100vw * 9 / 16)) !important;
-  aspect-ratio: 16 / 9 !important;
   max-width: none !important;
   max-height: none !important;
   min-width: 0 !important;
   min-height: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
+  aspect-ratio: 16 / 9 !important;
   object-fit: fill !important;
   z-index: 0 !important;
-  flex: 0 0 auto !important;
+  flex: none !important;
+}
+
+/* Match containers are only layout hosts; they must never become a layer
+   above pause/menu UI. */
+.el6-match-viewport {
+  z-index: 0 !important;
 }
 
 .el6-match-ui {
@@ -257,32 +245,21 @@ a.el6-controller-focus,
 select.el6-controller-focus,
 input.el6-controller-focus { filter: brightness(1.12); }
 
-@media (orientation: portrait) {
-  .el6-match-viewport > canvas,
-  .el6-match-viewport canvas.el6-match-canvas,
-  .el6-match-viewport .el6-match-canvas {
-    width: 100vw !important;
-    height: calc(100vw * 9 / 16) !important;
-  }
-}
 
-/* Global match canvas surface: these canvases are portaled to <body>, so their
-   position is always relative to the actual browser viewport in every game mode. */
-.el6-screen-canvas {
-  position: fixed !important;
-  left: 50% !important;
-  top: 50% !important;
-  right: auto !important;
-  bottom: auto !important;
-  inset: auto !important;
-  transform: translate(-50%, -50%) !important;
-  width: min(100vw, calc(100dvh * 16 / 9)) !important;
-  height: min(100dvh, calc(100vw * 9 / 16)) !important;
-  max-width: none !important;
-  max-height: none !important;
-  min-width: 0 !important;
+/* Character-select screens must remain independently scrollable so the bottom
+   START MATCH button is reachable even while the global page is locked. */
+.el6-character-select-scroll {
+  max-height: calc(100dvh - 24px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+  scrollbar-width: auto !important;
+  padding-bottom: 28px !important;
+  box-sizing: border-box !important;
   min-height: 0 !important;
-  aspect-ratio: 16 / 9 !important;
-  object-fit: fill !important;
-  z-index: 40 !important;
+}
+.el6-character-select-scroll::-webkit-scrollbar { width: 10px; }
+.el6-character-select-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.28);
+  border-radius: 999px;
 }

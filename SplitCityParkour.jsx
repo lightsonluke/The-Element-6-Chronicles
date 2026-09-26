@@ -8,7 +8,6 @@ import { drawSportChar } from './sportDraw.jsx';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { readGamepadInput } from './controllerProfiles.js';
-import { getKeybinds } from './keybinds.js';
 import ParkourLeaderboard from './ParkourLeaderboard.jsx';
 import { applyElement, getCharLevelData } from './elements.js';
 import ElementSelect from './ElementSelect.jsx';
@@ -230,13 +229,14 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
   // ── Input ──
   useEffect(() => {
     if (phase !== 'play') return;
+    const isJump = k => k === ' ' || k === 'arrowup' || k === 'w';
+    const isDown = k => k === 'arrowdown' || k === 's';
     const kd = e => {
-      const k = e.key; const kl = k.toLowerCase();
-      if (kl === 'escape' || kl === 'p') { e.preventDefault(); pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
+      const k = e.key.toLowerCase();
+      if (k === 'escape' || k === 'p') { e.preventDefault(); pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
       if (['F5', 'F12'].includes(e.key)) return;
-      const b = getKeybinds(settings).p1;
-      if (String(b.sig || '').toLowerCase() === kl && !keysRef.current[kl]) jumpEdgeRef.current = true;
-      keysRef.current[kl] = true;
+      if (isJump(k) && !keysRef.current[k]) jumpEdgeRef.current = true;
+      keysRef.current[k] = true;
       e.preventDefault();
     };
     const ku = e => { keysRef.current[e.key.toLowerCase()] = false; };
@@ -262,10 +262,10 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
 
       update(s, {
         jumpPressed: jumpEdgeRef.current,
-        upHeld: (gp && gp.up) || false,
-        downHeld: keysRef.current[String(getKeybinds(settings).p1.down).toLowerCase()] || (gp && gp.down),
-        rightHeld: keysRef.current[String(getKeybinds(settings).p1.right).toLowerCase()] || (gp && gp.right),
-        leftHeld: keysRef.current[String(getKeybinds(settings).p1.left).toLowerCase()] || (gp && gp.left),
+        upHeld: keysRef.current['arrowup'] || keysRef.current['w'] || (gp && gp.up),
+        downHeld: keysRef.current['arrowdown'] || keysRef.current['s'] || (gp && gp.down),
+        rightHeld: keysRef.current['arrowright'] || keysRef.current['d'] || (gp && gp.right),
+        leftHeld: keysRef.current['arrowleft'] || keysRef.current['a'] || (gp && gp.left),
       });
       jumpEdgeRef.current = false;
       draw(ctx, s, charId, customCharsData, equippedSkins, equippedAccessories);
@@ -573,14 +573,14 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
 
   // ── Playing ──
   return (
-    <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
+    <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
         <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>
         <span className="text-[10px] text-muted-foreground font-body">D/<GameIcon emoji="→" size={14} />: Run · SPACE: Jump/Wall-Jump · Walk into wall to climb · ESC/P: Pause</span>
       </div>
       {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onExit} /></div>}
-      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H} className="el6-match-canvas"
+      <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas el6-sport-canvas"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#0a1228' }} />
     </div>
   );
