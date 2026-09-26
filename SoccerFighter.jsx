@@ -1,6 +1,5 @@
 import { strategicSoccer } from './botStrategicBrain.js';
 import React, { useRef, useEffect, useState } from 'react';
-import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { HEROES } from './heroes.js';
 import { ALL_CHARS } from './allCharacters.js';
 import { VILLAINS } from './villains.js';
@@ -20,6 +19,7 @@ import { readGamepadInput } from './controllerProfiles.js';
 import { applyElement } from './elements.js';
 import { soccerAI, penaltyKeeperAI, penaltyShooterAI } from './soccerAI.js';
 
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 // Merge gamepad input with keyboard so both work simultaneously
 const mergeGp = (kb, gp) => gp ? {
   left: kb.left || gp.left, right: kb.right || gp.right,
@@ -1361,12 +1361,12 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         {!tournamentMode && <button onClick={finishQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Menu</button>}
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className={`px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80 ${tournamentMode ? 'ml-auto' : ''}`}>Pause (ESC)</button>
       </div>
-      {<GameCanvasPortal>
+      <GameCanvasPortal>
         <canvas ref={canvasRef} width={W} height={H}
-        className="el6-match-canvas el6-sport-canvas"
-        style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
-      />
-      </GameCanvasPortal>}
+                className="el6-match-canvas el6-sport-canvas"
+                style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
+              />
+      </GameCanvasPortal>
       {countdown > 0 && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>

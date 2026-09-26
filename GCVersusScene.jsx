@@ -6,6 +6,7 @@ import { ALL_CHARS_MAP } from './allCharacters.js';
 import { drawStickman } from './renderer.js';
 import { drawStageBackground } from './stageBackgrounds.js';
 
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 function hexToRgb(hex) {
   if (!hex || !hex.startsWith('#')) return { r: 100, g: 100, b: 200 };
   const n = parseInt(hex.slice(1), 16);
@@ -140,9 +141,11 @@ export default function GCVersusScene({ p1Char, p2Char, mode = 'versus', winner 
 
   return (
     <div className="relative flex flex-col items-center w-full">
-      <canvas ref={canvasRef} width={W} height={H}
-        className="border-2 border-border rounded-lg shadow-2xl w-full"
-        style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />
+      <GameCanvasPortal>
+        <canvas ref={canvasRef} width={W} height={H}
+                className="border-2 border-border rounded-lg shadow-2xl w-full"
+                style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />
+      </GameCanvasPortal>
       {mode === 'defeat' && (
         <button onClick={onContinue} className="mt-3 px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90">CONTINUE</button>
       )}

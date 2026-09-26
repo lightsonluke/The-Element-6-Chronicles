@@ -1,7 +1,6 @@
 import { strategicBanger } from './botStrategicBrain.js';
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
-import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { drawCourt } from './VolleyballGame.jsx';
 import { drawSportChar } from './sportDraw.jsx';
 import { ALL_CHARS, TEAM_COLOR_P1, TEAM_COLOR_P2 } from './sports.js';
@@ -16,6 +15,7 @@ import GameIcon from "./GameIcon.jsx";
 import PauseMenu from './PauseMenu.jsx';
 import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 // ── Banger — Element 6 Original ──
 // 3v3 elimination sport on the volleyball court (camera widened so all six stay
 // visible). A ball drops at the net; whichever side it falls to starts. The
@@ -24,7 +24,8 @@ import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx
 // direction. If your chip strikes an opponent before the floor, press Power to
 // call BANGER! and eliminate them. Net rises each BANGER. Last team standing wins.
 const COURT_W = 1100, COURT_H = 660;
-const CW = 1320, CH = 660, OFFSET_X = (CW - COURT_W) / 2; // wider camera
+const CW = 1320, CH = 660, OFFSET_X = (CW - COURT_W) / 2; // world coordinates
+const CANVAS_W = 1200, CANVAS_H = 675; // true 16:9 presentation bitmap
 const FLOOR = 540, NET_X = 550, COURT_LEFT = 40, COURT_RIGHT = 1060;
 const GRAV = 0.34;
 const SIDE_MID = { 1: (COURT_LEFT + NET_X) / 2, 2: (NET_X + COURT_RIGHT) / 2 };
@@ -461,6 +462,10 @@ export default function BangerGame({
   // ── draw ──
   function draw(ctx, s) {
     ctx.save();
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    const fit = Math.min(CANVAS_W / CW, CANVAS_H / CH);
+    ctx.translate((CANVAS_W - CW * fit) / 2, (CANVAS_H - CH * fit) / 2);
+    ctx.scale(fit, fit);
     ctx.fillStyle = '#080d1a'; ctx.fillRect(0, 0, CW, CH);
     ctx.translate(OFFSET_X, 0);
     if (s.shake > 0) ctx.translate((Math.random() - 0.5) * s.shake, (Math.random() - 0.5) * s.shake);
@@ -471,7 +476,8 @@ export default function BangerGame({
     drawTeam(ctx, s, 2, p2Chars, p2Elements, TEAM_COLOR_P2);
     drawBall(ctx, s);
     if (s.phase === 'aim') drawAimArrow(ctx, s);
-    ctx.restore();
+    ctx.save();
+    ctx.translate(-OFFSET_X, 0);
     drawHUD(ctx, s);
     if (s.bangerAnim > 0) {
       const a = s.bangerAnim / 70;
@@ -488,6 +494,8 @@ export default function BangerGame({
       ctx.textAlign = 'center'; ctx.fillStyle = '#FFD700'; ctx.font = 'bold 100px Orbitron';
       ctx.fillText(countdown > 0 ? String(countdown) : 'GO!', CW / 2, CH / 2 + 30);
     }
+    ctx.restore();
+    ctx.restore();
   }
 
   function drawNetBanger(ctx, topY, wobble) {
@@ -579,15 +587,15 @@ export default function BangerGame({
 
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
-      <button onClick={onQuit} className="self-start px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
+      <button onClick={onQuit} className="el6-sport-quit-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
       <MatchPauseButtonPortal>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button el6-sport-pause-bottom-right px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
       </MatchPauseButtonPortal>
       {paused && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></MatchPausePortal>}
-      {<GameCanvasPortal>
-        <canvas ref={canvasRef} width={CW} height={CH} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
-        style={{ width: '100%', maxWidth: CW + 'px', height: 'auto', aspectRatio: `${CW} / ${CH}`, background: '#080d1a' }} />
-      </GameCanvasPortal>}
+      <GameCanvasPortal>
+        <canvas ref={canvasRef} width={CANVAS_W} height={CANVAS_H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
+                style={{ width: '100%', maxWidth: CANVAS_W + 'px', height: 'auto', aspectRatio: '16 / 9', background: '#080d1a' }} />
+      </GameCanvasPortal>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   drawTimer, drawPlatforms, drawBackground, drawHitSparks,
   drawDoubleJumpParticles, drawSuperFlash, STAGE_MAPS,
 } from './renderer.js';
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { MAP_PLATFORMS } from './PlatformFighter';
 import { drawMaterialStroke } from './materials.js';
 import { sanitizeFreehandStroke } from './freehandSafe.js';
@@ -639,7 +640,7 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
         skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, 1, f.char.id, f.state, f.facing, f.powerActive));
         if (acc && !isBehindAccessory(acc.type)) drawAccessory(ctx, f.x, f.y, acc.type, accColor, f.frame, 1, f.char.id, f.state, f.facing, f.powerActive);
         if (f.attackData && f.state === 'attacking') drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || f.char.color, f.attackData.isNormal, f.char.id, f.char.power, f.powerActive);
-        if (f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, f.char.color, f.attackData.progress, f.char.superMove?.name, f.char.id, f.facing);
+        if (f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, f.char.color, f.attackData.progress, f.char.superMove?.name, f.char.id);
         if (f.hitEffects) f.hitEffects = f.hitEffects.filter(he => drawHitSparks(ctx, he.x, he.y, he.color, f.frame, he.spawnFrame));
       });
       fs.forEach(f => { if (f.stocks > 0) drawProjectiles(ctx, f); });
@@ -700,7 +701,9 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
         <button onClick={finishQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Menu</button>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
       </div>
-      <canvas ref={canvasRef} width={W} height={H} className="border-2 border-border rounded-lg shadow-2xl w-full" style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />
+      <GameCanvasPortal>
+        <canvas ref={canvasRef} width={W} height={H} className="border-2 border-border rounded-lg shadow-2xl w-full" style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />
+      </GameCanvasPortal>
       {countdown > 0 && !settings?.hideCountdown && (<div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg"><span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span></div>)}
       {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={finishQuit} />}
       {winner && (

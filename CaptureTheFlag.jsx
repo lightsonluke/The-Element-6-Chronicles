@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect } from 'react';
-import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { ALL_CHARS } from './sports.js';
 import { applyElement, getCharLevelData, getUnlockedElements } from './elements.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, loseStock, updateProjectiles, drawProjectiles } from './fighter.js';
@@ -15,6 +14,7 @@ import { getEmoteForKey } from './emoteSlots.js';
 import { drawEmote } from './emotes.js';
 import PauseMenu from "./PauseMenu.jsx";
 
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 const VIEW_W = 1280, VIEW_H = 720;
 const WORLD_W = 5600, WORLD_H = 840;
 
@@ -689,15 +689,15 @@ export default function CaptureTheFlag({
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2 max-w-[1280px]">
-        <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-        <button onClick={() => { setPaused(p => { const next = !p; if (gameRef.current) gameRef.current.running = !next; return next; }); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>
+        <button onClick={onExit} className="el6-sport-quit-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
+        <button onClick={() => { setPaused(p => { const next = !p; if (gameRef.current) gameRef.current.running = !next; return next; }); }} className="el6-sport-pause-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>
         <span className="text-[10px] text-muted-foreground font-body">Move: <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} />/AD · Jump: <GameIcon emoji="↑" size={14} />/W · Sig: J/K/L · Heavy: I · ESC: Pause · Sigs, Heavies &amp; Supers — no powers</span>
       </div>
       {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { setPaused(false); if (gameRef.current) gameRef.current.running = true; }} onQuit={onExit} /></div>}
-      {<GameCanvasPortal>
+      <GameCanvasPortal>
         <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
-        style={{ width: '100%', maxWidth: VIEW_W + 'px', aspectRatio: '16 / 9', height: 'auto' }} />
-      </GameCanvasPortal>}
+                style={{ width: '100%', maxWidth: VIEW_W + 'px', aspectRatio: '16 / 9', height: 'auto' }} />
+      </GameCanvasPortal>
     </div>
   );
 }

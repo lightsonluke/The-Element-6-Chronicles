@@ -2,7 +2,6 @@ import db from './localBackend';
 import { submitWorldScore } from './worldLeaderboards.js';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import GameCanvasPortal from './GameCanvasPortal.jsx';
 
 import { ALL_CHARS } from './sports.js';
 import { drawSportChar } from './sportDraw.jsx';
@@ -15,6 +14,7 @@ import ElementSelect from './ElementSelect.jsx';
 import GameIcon from "./GameIcon.jsx";
 import PauseMenu from "./PauseMenu.jsx";
 
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 // ── Canvas / physics constants ──
 const W = 1100, H = 620;
 const GRAV = 0.55;
@@ -577,14 +577,14 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
         <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-sport-pause-top-center px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>
         <span className="text-[10px] text-muted-foreground font-body">D/<GameIcon emoji="→" size={14} />: Run · SPACE: Jump/Wall-Jump · Walk into wall to climb · ESC/P: Pause</span>
       </div>
       {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onExit} /></div>}
-      {<GameCanvasPortal>
+      <GameCanvasPortal>
         <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas el6-sport-canvas"
-        style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#0a1228' }} />
-      </GameCanvasPortal>}
+                style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#0a1228' }} />
+      </GameCanvasPortal>
     </div>
   );
 }

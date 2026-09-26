@@ -6,6 +6,7 @@ import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { DOWN_HEAVIES } from './downHeavies.js';
+import { getGen2Hitboxes } from './gen2AttackAnims.js';
 
 const TAU = Math.PI * 2;
 
@@ -69,6 +70,7 @@ function moveFromKey(char, key) {
   if (k === 'side' || k === 'sidesignature' || k === 'ss') return char.signatures?.side || null;
   if (k === 'up' || k === 'upsignature' || k === 'us') return char.signatures?.up || null;
   if (k === 'down' || k === 'downsignature' || k === 'ds') return char.signatures?.down || null;
+  if (k === 'upheavy' || k === 'upHeavy' || k === 'uh' || k === 'aerialheavy') return char.upHeavy || char.up_heavy || null;
   if (k === 'heavy' || k === 'sideheavy' || k === 'sh') return char.heavyAttack || null;
   if (k === 'downheavy' || k === 'dh') return char.downHeavy || char.down_heavy || DOWN_HEAVIES[char.id] || null;
   return null;
@@ -106,8 +108,20 @@ function activeProgress(fighter) { return clamp01((clamp01(fighter?.attackData?.
 
 export function getActiveSpecHitboxes(attacker) {
   const data = attacker?.attackData; if (!data) return [];
-  const spec = data.spec || getAttackSpecForData(attacker.char?.id, data); if (!spec) return [];
   const t = activeProgress(attacker); if (t <= 0 || t >= 1) return [];
+  if (String(attacker?.char?.id || '').startsWith('g2_')) {
+    let mk = data.sigType || data.moveKey || '';
+    if (data.isSuper) mk = 'sp';
+    else if (data.isHeavy) {
+      if (mk === 'downHeavy' || mk === 'down' || data.isGroundPound) mk = 'dh';
+      else if (mk === 'upHeavy' || mk === 'upheavy' || mk === 'aerialHeavy' || mk === 'aerial' || data.isAerialHeavy) mk = 'uh';
+      else mk = 'sh';
+    } else if (mk === 'up' || mk === 'upSignature') mk = 'us';
+    else if (mk === 'down' || mk === 'downSignature') mk = 'ds';
+    else mk = 'ss';
+    return getGen2Hitboxes(attacker.char.id, mk, t, attacker.facing || 1);
+  }
+  const spec = data.spec || getAttackSpecForData(attacker.char?.id, data); if (!spec) return [];
   const f = attacker.facing || 1, x = attacker.x, y = attacker.y;
   const out = [];
   const C = (lx, ly, r) => out.push({shape:'circle', x:x + lx * f, y:y + ly, r});

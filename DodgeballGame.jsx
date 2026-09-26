@@ -1,6 +1,5 @@
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
-import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { ALL_CHARS, TEAM_COLOR_P1, TEAM_COLOR_P2 } from './sports.js';
 import { applyElement } from './elements.js';
 import { getKeybinds, readPlayerInput } from './keybinds.js';
@@ -11,6 +10,7 @@ import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
 import GameIcon from "./GameIcon.jsx";
 
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 // ── Dodgeball court (2D side-view, eye-level) ──
 const W = 1100, H = 600;
 const FLOOR = 524, CEIL = 48, LEFT = 44, RIGHT = 1056, CENTER = 550;
@@ -596,11 +596,11 @@ export default function DodgeballGame({
           <button onClick={onQuit} className="px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs">QUIT</button>
         </div>
       </div>
-      {<GameCanvasPortal>
+      <GameCanvasPortal>
         <canvas ref={canvasRef} width={W} height={H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
-        style={{ width: '100%', maxWidth: W + 'px', aspectRatio: `${W} / ${H}`, height: 'auto', background: '#15102a' }} />
-      </GameCanvasPortal>}
-      <p className="text-[10px] text-muted-foreground font-body text-center">
+                style={{ width: '100%', maxWidth: W + 'px', aspectRatio: `${W} / ${H}`, height: 'auto', background: '#15102a' }} />
+      </GameCanvasPortal>
+      <p className="el6-dodgeball-controls text-[10px] text-muted-foreground font-body text-center">
         P1: <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} /> move · <GameIcon emoji="↑" size={14} /> jump · <GameIcon emoji="↓" size={14} /> fast-fall · <b>(.) power</b> pickup · <b>(,) sig</b> throw (<GameIcon emoji="↑" size={14} />/<GameIcon emoji="↓" size={14} />/neutral = high/low/straight) · <b>(/) super</b> · P2: WASD+v+c+x
       </p>
     </div>

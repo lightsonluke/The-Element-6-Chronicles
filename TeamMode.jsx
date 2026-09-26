@@ -1,6 +1,5 @@
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useState, useEffect, useRef } from 'react';
-import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { ALL_CHARS } from './allCharacters.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, updateProjectiles, drawProjectiles, loseStock } from './fighter.js';
 import { getKeybinds, readPlayerInput, readSinglePlayerInput } from './keybinds.js';
@@ -23,6 +22,7 @@ import ElementSelect from './ElementSelect';
 import { applyElement } from './elements.js';
 import GameIcon from "./GameIcon.jsx";
 
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 const W = 1280, H = 720;
 
 const TEAM_PLATFORMS = [
@@ -637,12 +637,12 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
         <button onClick={finishQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Menu</button>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">Pause (ESC)</button>
       </div>
-      {<GameCanvasPortal>
+      <GameCanvasPortal>
         <canvas ref={canvasRef} width={W} height={H}
-        className="el6-fight-canvas border-2 border-border rounded-lg shadow-2xl w-full"
-        style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
-      />
-      </GameCanvasPortal>}
+                className="el6-fight-canvas border-2 border-border rounded-lg shadow-2xl w-full"
+                style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
+              />
+      </GameCanvasPortal>
       {countdown > 0 && !settings?.hideCountdown && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>

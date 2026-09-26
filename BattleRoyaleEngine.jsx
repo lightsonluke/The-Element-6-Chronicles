@@ -38,6 +38,7 @@ import { drawDestructiblePlatforms, drawMovementItems, drawHazards, drawObjects 
 import PauseMenu from './PauseMenu.jsx';
 import GameIcon from './GameIcon.jsx';
 
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 const ALL = ALL_CHARS;
 const getChar = (id) => ALL.find(c => c.id === id) || ALL[0];
 
@@ -496,7 +497,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
       }
       drawShikigamiFollower(ctx, f, equippedShikigamiRef.current?.[charData?.id], f.frame || 0, 1);
       if (f.attackData && f.state === 'attacking') drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || col, f.attackData.isNormal, charData?.id, charData?.power, f.powerActive);
-      if (f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, col, f.attackData.progress, charData?.superMove?.name, charData?.id, f.facing);
+      if (f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, col, f.attackData.progress, charData?.superMove?.name, charData?.id);
       if (f.hitEffects) f.hitEffects = f.hitEffects.filter(he => drawHitSparks(ctx, he.x, he.y, he.color, f.frame || 0, he.spawnFrame));
       // power projectiles
       drawProjectiles(ctx, f);
@@ -824,8 +825,10 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
 
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
-      <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H}
-        className="el6-match-canvas" />
+      <GameCanvasPortal>
+        <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H}
+                className="el6-match-canvas" />
+      </GameCanvasPortal>
       {countdown > 0 && !settings?.hideCountdown && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>

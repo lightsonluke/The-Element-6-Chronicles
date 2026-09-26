@@ -22,6 +22,7 @@ import { useClipRecorder } from './useClipRecorder.js';
 import { SeqNum, SnapshotBuffer, ConnectionState, NetDiagnostics, serializeFighter, applyRemoteHit } from './netCore.js';
 import GameIcon from "./GameIcon.jsx";
 
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 const mergeGp = (kb, gp) => gp ? {
   left: kb.left || gp.left, right: kb.right || gp.right,
   jump: kb.jump || gp.jump, up: kb.up || gp.up, down: kb.down || gp.down,
@@ -348,7 +349,7 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
         accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, charData), f.frame, 1, charData.id, f.state, f.facing, f.powerActive));
         drawShikigamiFollower(ctx, f, loadout?.equippedShikigami?.[charData.id], f.frame, 1);
         if (f.attackData && f.state === 'attacking') drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || charData.color, f.attackData.isNormal, charData.id, charData.power, f.powerActive);
-        if (f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, charData.color, f.attackData.progress, charData.superMove?.name, charData.id, f.facing);
+        if (f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, charData.color, f.attackData.progress, charData.superMove?.name, charData.id);
         if (f.hitEffects) f.hitEffects = f.hitEffects.filter(he => drawHitSparks(ctx, he.x, he.y, he.color, f.frame, he.spawnFrame));
         drawOnlineNameTag(ctx, f.x, f.y - 84, charData, isLocal ? myUsername : oppUsername);
       };
@@ -442,10 +443,12 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
         <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Forfeit</button>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
       </div>
-      <canvas ref={canvasRef} width={W} height={H}
-        className="el6-match-canvas"
-        style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
-      />
+      <GameCanvasPortal>
+        <canvas ref={canvasRef} width={W} height={H}
+                className="el6-match-canvas"
+                style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
+              />
+      </GameCanvasPortal>
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>

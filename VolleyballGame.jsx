@@ -1,6 +1,5 @@
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
-import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { drawSportChar } from './sportDraw.jsx';
 import { ALL_CHARS, TEAM_COLOR_P1, TEAM_COLOR_P2 } from './sports.js';
 import { applyElement } from './elements.js';
@@ -12,9 +11,11 @@ import PauseMenu from './PauseMenu.jsx';
 import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 import { getKeybinds, getSoloKeybinds } from './keybinds.js';
 
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 const charFor = (id, element) => { const c = ALL_CHARS.find(c => c.id === id); if (!c) return null; if (element && element !== 'basic') return { ...c, stats: applyElement(c.stats || {}, element) }; return c; };
 
 const W = 1100, H = 660;
+const CANVAS_W = 1200, CANVAS_H = 675;
 const FLOOR = 540;
 const NET_X = W / 2;
 const NET_TOP = 380; // taller net — more vertical play space
@@ -327,19 +328,19 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
   // Game loop
   useEffect(() => {
     if (!started) return;
-    const canvas = canvasRef.current; if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d') || null;
     let raf; let last = performance.now();
     const loop = (now) => {
       last = now;
       if (remoteStateRef.current) {
         st.current = remoteStateRef.current;
-        draw(ctx, st.current, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories);
+        if (ctx) draw(ctx, st.current, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories);
         raf = requestAnimationFrame(loop);
         return;
       }
       const s = st.current;
-      if (pausedRef.current && !remoteStateRef.current && !lanConnection) { draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories); raf = requestAnimationFrame(loop); return; }
+      if (pausedRef.current && !remoteStateRef.current && !lanConnection) { if (ctx) draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories); raf = requestAnimationFrame(loop); return; }
       s.frame++;
 
       if (s.phase === 'countdown') {
@@ -521,7 +522,7 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
       if (s.shake > 0) s.shake *= 0.85;
 
       if (onStateExportRef.current) onStateExportRef.current(s);
-      draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories);
+      if (ctx) draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -1181,9 +1182,9 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
       </MatchPauseButtonPortal>
       {paused && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></MatchPausePortal>}
-      {<GameCanvasPortal>
-        <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H} className="el6-match-canvas el6-sport-canvas" />
-      </GameCanvasPortal>}
+      <GameCanvasPortal>
+        <canvas data-e6-game-canvas="true" ref={canvasRef} width={CANVAS_W} height={CANVAS_H} className="el6-match-canvas el6-sport-canvas" onPointerDown={(e) => { e.preventDefault(); window.focus(); }} />
+      </GameCanvasPortal>
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
@@ -1197,6 +1198,10 @@ function draw(ctx, s, p1Chars, p2Chars, j1, j2, p2IsCPU, is1v1, equippedSkins, e
   const sx = (Math.random() - 0.5) * s.shake;
   const sy = (Math.random() - 0.5) * s.shake;
   ctx.save();
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+  const fit = Math.min(CANVAS_W / W, CANVAS_H / H);
+  ctx.translate((CANVAS_W - W * fit) / 2, (CANVAS_H - H * fit) / 2);
+  ctx.scale(fit, fit);
   ctx.translate(sx, sy);
 
   drawCourt(ctx);

@@ -16,6 +16,7 @@ import {
   drawStickman,
   drawSuperEffect,
 } from './renderer.js';
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { getKeybinds, readPlayerInput } from './keybinds.js';
 import { readGamepadInput } from './controllerProfiles.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
@@ -182,7 +183,7 @@ export default function RollbackOnlineFight({
       accessories.filter(accessory => !isBehindAccessory(accessory.type)).forEach(accessory => drawAccessory(ctx, fighter.x, fighter.y, accessory.type, skinColor && accessory.type === 'soccer_kit' ? skinColor : resolveAccColor(accessory, character), fighter.frame, 1, character.id, fighter.state, fighter.facing, fighter.powerActive));
       drawShikigamiFollower(ctx, fighter, loadout?.equippedShikigami?.[character.id], fighter.frame, 1);
       if (fighter.attackData && fighter.state === 'attacking') drawAttackEffect(ctx, fighter.x, fighter.y, fighter.attackData, fighter.attackData.progress, fighter.facing, fighter.attackData.color || character.color, fighter.attackData.isNormal, character.id, character.power, fighter.powerActive);
-      if (fighter.attackData && fighter.state === 'superAttack') drawSuperEffect(ctx, fighter.x, fighter.y, character.color, fighter.attackData.progress, character.superMove?.name, character.id, fighter.facing);
+      if (fighter.attackData && fighter.state === 'superAttack') drawSuperEffect(ctx, fighter.x, fighter.y, character.color, fighter.attackData.progress, character.superMove?.name, character.id);
       for (const effect of fighter.hitEffects || []) drawHitSparks(ctx, effect.x, effect.y, effect.color, fighter.frame, effect.spawnFrame);
       drawProjectiles(ctx, fighter);
       drawOnlineNameTag(ctx, fighter.x, fighter.y - 84, character, label);
@@ -436,7 +437,9 @@ export default function RollbackOnlineFight({
       {networkError && <p className="text-xs text-destructive font-body">{networkError}</p>}
       {resyncing && <div className="absolute inset-0 z-20 grid place-items-center bg-black/70 font-heading text-accent text-2xl">RESYNCING MATCH…</div>}
       <p className="text-[10px] text-muted-foreground font-body">Your device controls your selected fighter. Use Arrows, WASD, or your Settings custom control preset.</p>
-      <canvas ref={canvasRef} width={ONLINE_STAGE_WIDTH} height={ONLINE_STAGE_HEIGHT} className="el6-match-canvas" />
+      <GameCanvasPortal>
+        <canvas ref={canvasRef} width={ONLINE_STAGE_WIDTH} height={ONLINE_STAGE_HEIGHT} className="el6-match-canvas" />
+      </GameCanvasPortal>
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>

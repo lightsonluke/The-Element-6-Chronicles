@@ -231,3 +231,29 @@ input.el6-controller-focus { filter: brightness(1.12); }
   background: rgba(255,255,255,.28);
   border-radius: 999px;
 }
+
+
+/* Final shared match layering: gameplay is always the back layer; all React UI
+   and pause portals stay above it. */
+.el6-game-canvas-host { z-index: 5 !important; }
+.el6-game-canvas-host canvas {
+  position: relative !important;
+  left: auto !important; top: auto !important;
+  transform: none !important;
+  width: min(100vw, calc(100dvh * 16 / 9)) !important;
+  height: min(100dvh, calc(100vw * 9 / 16)) !important;
+  max-width: none !important; max-height: none !important;
+  aspect-ratio: 16 / 9 !important;
+  margin: 0 !important;
+  z-index: 1 !important;
+}
+.el6-match-viewport { z-index: 100 !important; }
+.el6-pause-overlay-layer,
+.el6-global-pause-layer,
+.el6-global-pause-button-layer,
+.el6-match-pause-button { z-index: 2147483647 !important; }
+.el6-pause-overlay-layer { position: fixed !important; inset: 0 !important; }
+.el6-sport-pause-top-center { position: fixed !important; top: max(12px, env(safe-area-inset-top)) !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 2147483647 !important; }
+.el6-sport-quit-bottom-right { position: fixed !important; right: max(12px, env(safe-area-inset-right)) !important; bottom: max(12px, env(safe-area-inset-bottom)) !important; z-index: 2147483647 !important; }
+.el6-sport-pause-bottom-right { position: fixed !important; right: max(12px, env(safe-area-inset-right)) !important; bottom: max(52px, calc(env(safe-area-inset-bottom) + 40px)) !important; z-index: 2147483647 !important; }
+.el6-dodgeball-controls { position: fixed !important; top: max(12px, env(safe-area-inset-top)) !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 2147483646 !important; pointer-events: none !important; }

@@ -17,6 +17,7 @@ import { getCharRenderColor, getSkinParts } from './skins.js';
 import { getEmoteForKey } from './emoteSlots.js';
 import { drawEmote } from './emotes.js';
 
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 const mergeGp = (kb, gp) => gp ? {
   left: kb.left || gp.left, right: kb.right || gp.right,
   jump: kb.jump || gp.jump, up: kb.up || gp.up, down: kb.down || gp.down,
@@ -611,10 +612,12 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
         <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">Forfeit</button>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">Pause (ESC)</button>
       </div>
-      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H}
-        className="border-2 border-border rounded-lg shadow-2xl w-full"
-        style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
-      />
+      <GameCanvasPortal>
+        <canvas ref={canvasRef} width={W} height={H}
+                className="border-2 border-border rounded-lg shadow-2xl w-full"
+                style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
+              />
+      </GameCanvasPortal>
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>

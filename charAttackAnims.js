@@ -7,7 +7,7 @@ import { drawJab, drawSlash, drawWhip, drawLaunch, drawGround, drawSlam, drawCha
 import { drawSuper } from './attackSupers.js';
 import { drawUniqueSuper } from './uniqueSupers.js';
 import { PARTICLES } from './charAttackParticles.js';
-import { drawGen1Attack, drawGen1Super } from './gen1AttackAnims.js';
+import { drawGen2Attack, drawGen2Super } from './gen2AttackAnims.js';
 
 const SUPER_W = 1200, SUPER_H = 700;
 
@@ -19,14 +19,10 @@ function getConfig(charId, power, color) {
 
 // ── Map attack data to config key (ss/us/ds/sh/dh) ──
 function getAttackKey(attack, attackKey) {
-  // Recovery is deliberately the exact same animation as Up Signature.
-  // Keep this explicit so future recovery metadata cannot accidentally route
-  // it through a generic recovery animation.
-  if (attack?.isRecovery || attack?.recoveryAnimationKey === 'us') return 'us';
   const st = attack.sigType || attackKey || 'side';
   if (attack.isHeavy) {
-    if (st === 'upHeavy') return 'upHeavy';
     if (st === 'downHeavy' || st === 'down' || attack.isGroundPound) return 'dh';
+    if (st === 'upHeavy' || st === 'upheavy' || st === 'aerialHeavy' || st === 'aerial' || attack.isAerialHeavy) return 'uh';
     return 'sh';
   }
   if (st === 'up' || st === 'aerial' || attack.isRecovery) return 'us';
@@ -36,18 +32,15 @@ function getAttackKey(attack, attackKey) {
 
 // ── Main entry: draw sig/heavy attack with per-character config ──
 export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power) {
-  const key = getAttackKey(attack, attackKey);
-
-  // Generation I is completely hand-authored. Route it before looking up the
-  // generic config so Up Heavy (a separate key) can never silently disappear.
-  if (charId?.startsWith('g1_')) {
-    drawGen1Attack(ctx, x, y, color, p, facing, charId, key);
-    ctx.shadowBlur = 0;
+  if (String(charId || '').startsWith('g2_')) {
+    drawGen2Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
     return;
   }
 
   const config = getConfig(charId, power, color);
   if (!config) return;
+
+  const key = getAttackKey(attack, attackKey);
   const cfg = config[key];
   if (!cfg) return;
 
@@ -87,6 +80,10 @@ export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, atta
 
 // ── Main entry: draw super with per-character config ──
 export function drawCharSuper(ctx, x, y, color, p, charId, facing = 1) {
+  if (String(charId || '').startsWith('g2_')) {
+    drawGen2Super(ctx, x, y, color, p, charId, facing);
+    return;
+  }
   const config = getConfig(charId, '', color);
   if (!config || !config.sp) {
     // Fallback: generic burst
@@ -96,12 +93,6 @@ export function drawCharSuper(ctx, x, y, color, p, charId, facing = 1) {
   }
 
   // ── Hand-crafted unique supers: route directly to the per-character animation ──
-  if (charId?.startsWith('g1_')) {
-    drawGen1Super(ctx, x, y, p, facing, charId);
-    ctx.shadowBlur = 0;
-    return;
-  }
-
   if (config.sp[0] === 'unique') {
     drawUniqueSuper(ctx, x, y, p, config.sp[1] || color, charId, SUPER_W, SUPER_H);
     ctx.shadowBlur = 0;

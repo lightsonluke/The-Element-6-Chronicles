@@ -25,6 +25,7 @@ import { openCustomRoomTransport } from './customRoomsOnline.js';
 import GameIcon from "./GameIcon.jsx";
 
 // Merge gamepad input with keyboard so both work simultaneously
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 const mergeGp = (kb, gp) => gp ? {
   left: kb.left || gp.left, right: kb.right || gp.right,
   jump: kb.jump || gp.jump, up: kb.up || gp.up, down: kb.down || gp.down,
@@ -528,7 +529,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive));
         if (acc && !isBehindAccessory(acc.type)) drawAccessory(ctx, f.x, f.y, acc.type, accColor, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive);
         if (f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
-          if (f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, charData.color, f.attackData.progress, charData.superMove?.name, charData.id, f.facing);
+          if (f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, charData.color, f.attackData.progress, charData.superMove?.name, charData.id);
           else drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || charData.color, f.attackData.isNormal, charData.id, charData.power, f.powerActive);
         }
         // Nametag
@@ -662,10 +663,12 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Leave</button>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
       </div>
-      <canvas ref={canvasRef} width={W} height={H}
-        className="el6-match-canvas"
-        style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
-      />
+      <GameCanvasPortal>
+        <canvas ref={canvasRef} width={W} height={H}
+                className="el6-match-canvas"
+                style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
+              />
+      </GameCanvasPortal>
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>

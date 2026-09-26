@@ -8,15 +8,15 @@ import { drawSportChar } from './sportDraw.jsx';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { readGamepadInput } from './controllerProfiles.js';
-import { getKeybinds } from './keybinds.js';
 import RockClimbLeaderboard, { fmtTime } from './RockClimbLeaderboard.jsx';
 import RockClimbing2P from './RockClimbing2P.jsx';
 import { applyElement } from './elements.js';
 import ElementSelect from './ElementSelect.jsx';
 import GameIcon from "./GameIcon.jsx";
 
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 // ── Canvas / world ──
-const W = 900, H = 720;
+const W = 1280, H = 720;
 const MW = 700;                 // mountain face width
 const MARGIN = (W - MW) / 2;
 const SUMMIT_HEIGHT = 7200;     // finite climb — summit at y = -SUMMIT_HEIGHT
@@ -302,9 +302,11 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
   // ── Input ──
   useEffect(() => {
     if (phase !== 'play') return;
+    const isJump = k => k === ' ' || k === 'arrowup' || k === 'w';
+    const isDown = k => k === 'arrowdown' || k === 's';
     const kd = e => {
-      const k = e.key; const kl = k.toLowerCase();
-      if (kl === 'escape' || kl === 'p') { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
+      const k = e.key.toLowerCase();
+      if (k === 'escape' || k === 'p') { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); return; }
       if (k === 'r') {
         initRun(charId, trackId);
         setResult(null);
@@ -315,16 +317,15 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
         return;
       }
       if (['F5', 'F12'].includes(e.key)) return;
-      const b = getKeybinds(settings).p1;
-      if (String(b.sig || '').toLowerCase() === kl && !keysRef.current[kl]) edgeRef.current.jump = true;
-      if (String(b.down || '').toLowerCase() === kl && !keysRef.current[kl]) edgeRef.current.down = true;
-      keysRef.current[kl] = true;
+      if (isJump(k) && !keysRef.current[k]) edgeRef.current.jump = true;
+      if (isDown(k) && !keysRef.current[k]) edgeRef.current.down = true;
+      keysRef.current[k] = true;
       e.preventDefault();
     };
     const ku = e => { keysRef.current[e.key.toLowerCase()] = false; };
     window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
     return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); };
-  }, [phase, onExit, initRun, charId, trackId, settings]);
+  }, [phase, onExit, initRun, charId, trackId]);
 
   // ── Loop ──
   useEffect(() => {
@@ -345,8 +346,8 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
 
       update(s, dt, {
         jump: edgeRef.current.jump, down: edgeRef.current.down,
-        leftHeld: keysRef.current[String(getKeybinds(settings).p1.left).toLowerCase()] || (gp && gp.left),
-        rightHeld: keysRef.current[String(getKeybinds(settings).p1.right).toLowerCase()] || (gp && gp.right),
+        leftHeld: keysRef.current['arrowleft'] || keysRef.current['a'] || (gp && gp.left),
+        rightHeld: keysRef.current['arrowright'] || keysRef.current['d'] || (gp && gp.right),
       });
       edgeRef.current.jump = edgeRef.current.down = false;
       draw(ctx, s, charId, customCharsData, equippedSkins, equippedAccessories);
@@ -751,7 +752,7 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
 
   // ── Playing ──
   return (
-    <div className="el6-match-viewport relative flex flex-col items-center gap-2 w-full">
+    <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
         <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause</button>
@@ -766,8 +767,10 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
           </div>
         </div>
       )}
-      <canvas data-e6-game-canvas="true" ref={canvasRef} width={W} height={H} className="el6-match-canvas"
-        style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#0e1a14' }} />
+      <GameCanvasPortal>
+        <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas"
+                style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#0e1a14' }} />
+      </GameCanvasPortal>
     </div>
   );
 }

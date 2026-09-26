@@ -1,8 +1,8 @@
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 // Grand Circuit match — box-stage fight with Split City backdrop.
 // 2 stocks, 85% reduced knockback, 500% damage = KO, 6-minute timer, harder super buildup.
 
 import React, { useRef, useEffect, useState } from 'react';
-import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 import { ALL_CHARS_MAP } from './allCharacters.js';
 import { createFighter, updateFighter, updateProjectiles, checkHit, applyHit, updateAI, loseStock } from './fighter.js';
@@ -432,11 +432,11 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
         </MatchPauseButtonPortal>
       </div>
-      {<GameCanvasPortal>
+      <GameCanvasPortal>
         <canvas ref={canvasRef} width={W} height={H}
-        className="el6-fight-canvas border-2 border-border rounded-lg shadow-2xl w-full"
-        style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />
-      </GameCanvasPortal>}
+                className="el6-fight-canvas border-2 border-border rounded-lg shadow-2xl w-full"
+                style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />
+      </GameCanvasPortal>
       {countdown > 0 && !settings?.hideCountdown && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg" style={{ maxWidth: '1280px' }}>
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
