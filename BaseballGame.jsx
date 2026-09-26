@@ -1,6 +1,7 @@
 import { strategicBaseball } from './botStrategicBrain.js';
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { drawSportChar } from './sportDraw.jsx';
 import { ALL_CHARS, TEAM_COLOR_P1, TEAM_COLOR_P2 } from './sports.js';
 import { applyElement } from './elements.js';
@@ -1112,8 +1113,10 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
           </div>
         )}
       </div>
-      <canvas ref={canvasRef} width={W} height={H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
+      {<GameCanvasPortal>
+        <canvas ref={canvasRef} width={W} height={H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#1a3a2a' }} />
+      </GameCanvasPortal>}
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>

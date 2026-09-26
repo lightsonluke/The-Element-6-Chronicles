@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { ALL_CHARS } from './sports.js';
 import { applyElement, getCharLevelData, getUnlockedElements } from './elements.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, loseStock, updateProjectiles, drawProjectiles } from './fighter.js';
@@ -693,8 +694,10 @@ export default function CaptureTheFlag({
         <span className="text-[10px] text-muted-foreground font-body">Move: <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} />/AD · Jump: <GameIcon emoji="↑" size={14} />/W · Sig: J/K/L · Heavy: I · ESC: Pause · Sigs, Heavies &amp; Supers — no powers</span>
       </div>
       {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { setPaused(false); if (gameRef.current) gameRef.current.running = true; }} onQuit={onExit} /></div>}
-      <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
+      {<GameCanvasPortal>
+        <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: VIEW_W + 'px', aspectRatio: '16 / 9', height: 'auto' }} />
+      </GameCanvasPortal>}
     </div>
   );
 }

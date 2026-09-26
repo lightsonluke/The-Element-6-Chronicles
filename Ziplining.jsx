@@ -2,6 +2,7 @@ import db from './localBackend';
 import { submitWorldScore } from './worldLeaderboards.js';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 
 import { ALL_CHARS } from './sports.js';
 import { drawSportChar } from './sportDraw.jsx';
@@ -326,8 +327,10 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
           </div>
         </div>
       )}
-      <canvas ref={canvasRef} width={W} height={H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
+      {<GameCanvasPortal>
+        <canvas ref={canvasRef} width={W} height={H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#8fc69a' }} />
+      </GameCanvasPortal>}
     </div>
   );
 

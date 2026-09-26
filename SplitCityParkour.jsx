@@ -2,6 +2,7 @@ import db from './localBackend';
 import { submitWorldScore } from './worldLeaderboards.js';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 
 import { ALL_CHARS } from './sports.js';
 import { drawSportChar } from './sportDraw.jsx';
@@ -580,8 +581,10 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
         <span className="text-[10px] text-muted-foreground font-body">D/<GameIcon emoji="→" size={14} />: Run · SPACE: Jump/Wall-Jump · Walk into wall to climb · ESC/P: Pause</span>
       </div>
       {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onExit} /></div>}
-      <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas el6-sport-canvas"
+      {<GameCanvasPortal>
+        <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas el6-sport-canvas"
         style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#0a1228' }} />
+      </GameCanvasPortal>}
     </div>
   );
 }

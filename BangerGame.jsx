@@ -1,6 +1,7 @@
 import { strategicBanger } from './botStrategicBrain.js';
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { drawCourt } from './VolleyballGame.jsx';
 import { drawSportChar } from './sportDraw.jsx';
 import { ALL_CHARS, TEAM_COLOR_P1, TEAM_COLOR_P2 } from './sports.js';
@@ -583,8 +584,10 @@ export default function BangerGame({
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
       </MatchPauseButtonPortal>
       {paused && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></MatchPausePortal>}
-      <canvas ref={canvasRef} width={CW} height={CH} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
+      {<GameCanvasPortal>
+        <canvas ref={canvasRef} width={CW} height={CH} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: CW + 'px', height: 'auto', aspectRatio: `${CW} / ${CH}`, background: '#080d1a' }} />
+      </GameCanvasPortal>}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { ALL_CHARS } from './sports.js';
 import { drawSportChar } from './sportDraw.jsx';
 import { sfx } from './sfx.js';
@@ -409,8 +410,10 @@ export default function RockClimbing2P({ onExit, onAward, unlockedIds = ['yellow
       {/* Side-by-side split-screen: two 900×720 viewports, left & right.
           The whole canvas scales down to fit the width, so each view keeps its
           proper proportions (smaller, never squished). */}
-      <canvas ref={canvasRef} width={VW * 2} height={VH} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
+      {<GameCanvasPortal>
+        <canvas ref={canvasRef} width={VW * 2} height={VH} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: VW * 2 + 'px', aspectRatio: `${VW * 2} / ${VH}`, height: 'auto', background: '#0e1a14' }} />
+      </GameCanvasPortal>}
     </div>
   );
 }
