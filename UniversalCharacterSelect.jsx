@@ -437,7 +437,7 @@ export default function UniversalCharacterSelect({
   const selectedIds = playerCount === 1 || rankedRandom ? [p1] : picks.slice(0, playerCount);
 
   return (
-    <div className="el6-character-select-scroll flex flex-col gap-2 w-full max-w-6xl mx-auto max-h-[calc(100dvh-24px)] overflow-y-auto overscroll-contain pr-1 pb-4" tabIndex={-1}>
+    <div className="el6-character-select-scroll flex flex-col gap-2 w-full max-w-6xl mx-auto h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] overflow-y-auto overflow-x-hidden overscroll-contain pr-2 pb-28" tabIndex={-1}>
       {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-heading text-foreground tracking-wider">{title}</h2>

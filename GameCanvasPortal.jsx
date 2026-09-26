@@ -1,7 +1,22 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 
-export default function GameCanvasPortal({ children }) {
+const HOST_ID = 'el6-game-canvas-host';
+
+function getHost() {
   if (typeof document === 'undefined' || !document.body) return null;
-  return createPortal(children, document.body);
+  let host = document.getElementById(HOST_ID);
+  if (!host) {
+    host = document.createElement('div');
+    host.id = HOST_ID;
+    host.className = 'el6-game-canvas-host';
+    document.body.appendChild(host);
+  }
+  return host;
+}
+
+export default function GameCanvasPortal({ children }) {
+  const host = getHost();
+  if (!host) return null;
+  return createPortal(children, host);
 }
