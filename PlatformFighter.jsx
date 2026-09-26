@@ -1,5 +1,6 @@
 import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
@@ -1971,13 +1972,17 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
     return () => { window.__el6GameplayActive = false; };
   }, [winner]);
 
+  const gameCanvas = (
+    <canvas
+      ref={canvasRef} width={W} height={H}
+      className="el6-match-canvas el6-screen-canvas"
+      style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(100vw, calc(100dvh * 16 / 9))', height: 'min(100dvh, calc(100vw * 9 / 16))', maxWidth: 'none', maxHeight: 'none', aspectRatio: '16 / 9', zIndex: 40 }}
+    />
+  );
+
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
-      <canvas
-        ref={canvasRef} width={W} height={H}
-        className="el6-match-canvas"
-        style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(100vw, calc(100dvh * 16 / 9))', height: 'min(100dvh, calc(100vw * 9 / 16))', maxWidth: 'none', maxHeight: 'none', aspectRatio: '16 / 9', zIndex: 0 }}
-      />
+      {typeof document !== 'undefined' ? createPortal(gameCanvas, document.body) : null}
       {countdown > 0 && !settings.hideCountdown && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>

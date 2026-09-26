@@ -265,3 +265,28 @@ input.el6-controller-focus { filter: brightness(1.12); }
     height: calc(100vw * 9 / 16) !important;
   }
 }
+
+/* Match canvas is portaled directly to <body> so no transformed/zoomed
+   application ancestor can become its fixed-position containing block. */
+.el6-screen-canvas {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(100vw, calc(100dvh * 16 / 9)) !important;
+  height: min(100dvh, calc(100vw * 9 / 16)) !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: 16 / 9 !important;
+  object-fit: fill !important;
+  z-index: 40 !important;
+  pointer-events: auto !important;
+}
+
+/* The match UI sits above the portaled canvas. */
+.el6-match-viewport {
+  background: transparent !important;
+  z-index: 41 !important;
+}
