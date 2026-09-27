@@ -14,6 +14,7 @@ import {
   STAGE_MAPS,
 } from './renderer.js';
 import GameCanvasPortal from './GameCanvasPortal.jsx';
+import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 import PauseMenu from './PauseMenu';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
@@ -1998,14 +1999,16 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
             SETTINGS
           </button>
         )}
-        <button
-          onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }}
-          className="el6-controller-pause-trigger px-3 py-1 bg-secondary/90 text-secondary-foreground rounded font-body text-xs hover:opacity-90"
-        >
-          PAUSE (ESC)
-        </button>
+        <MatchPauseButtonPortal>
+          <button
+            onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }}
+            className="el6-controller-pause-trigger px-3 py-1 bg-secondary/90 text-secondary-foreground rounded font-body text-xs hover:opacity-90"
+          >
+            PAUSE (ESC)
+          </button>
+        </MatchPauseButtonPortal>
       </div>
-      {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={gameMode === 'challenge' ? () => { pausedRef.current = false; setPaused(false); } : finishQuit} />}
+      {paused && !winner && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={gameMode === 'challenge' ? () => { pausedRef.current = false; setPaused(false); } : finishQuit} /></MatchPausePortal>}
       {trainingMode && !winner && trainingSettingsOverlay}
       {winner && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/78 rounded-lg gap-5">
