@@ -340,10 +340,17 @@ export function updateSandboxObjects(objects, fighters, platforms, dt, W, H, haz
 
     // Stage-material hazards apply to every item, including Ball.
     // These are intentionally handled independently from fighter-only hazard logic.
-    for (const p of platforms) {
-      if (p._deleted) continue;
+    // IMPORTANT: object half-extents must be defined before this loop. Older
+    // versions referenced hw/hh here before declaring them, so ANY custom
+    // stage containing an item could crash the match on the first frame.
+    const hw = Math.max(1, Number(obj.w) || 1) / 2;
+    const hh = Math.max(1, Number(obj.h) || 1) / 2;
+    for (const p of (Array.isArray(platforms) ? platforms : [])) {
+      if (!p || p._deleted) continue;
+      const px = Number(p.x), py = Number(p.y), pw = Number(p.w), ph = Number(p.h);
+      if (![px, py, pw, ph].every(Number.isFinite)) continue;
       const mat = p.material || 'normal';
-      if (obj.x + hw <= p.x || obj.x - hw >= p.x + p.w || obj.y + hh <= p.y || obj.y - hh >= p.y + p.h) continue;
+      if (obj.x + hw <= px || obj.x - hw >= px + pw || obj.y + hh <= py || obj.y - hh >= py + ph) continue;
       if (mat === 'lava') {
         obj.vx *= 0.88;
         obj.vy = Math.min(obj.vy, 5);
@@ -366,7 +373,7 @@ export function updateSandboxObjects(objects, fighters, platforms, dt, W, H, haz
         if (obj.vy > 4) obj.vy = 4;
         obj._hazardState = mat;
       } else if (mat === 'bounce' || mat === 'rubber') {
-        if (obj.vy >= 0 && obj.y + hh >= p.y && obj.y < p.y + p.h + 10) {
+        if (obj.vy >= 0 && obj.y + hh >= py && obj.y < py + ph + 10) {
           obj.vy = -Math.abs(obj.vy || 5) * 1.05;
           obj.grounded = false;
         }

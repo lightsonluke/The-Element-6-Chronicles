@@ -15,8 +15,10 @@ function getHost() {
   return host;
 }
 
-export default function GameCanvasPortal({ children }) {
+export default function GameCanvasPortal({ children, gameMode = null }) {
   const host = getHost();
   if (!host) return null;
+  if (gameMode) host.dataset.gameMode = String(gameMode);
+  else delete host.dataset.gameMode;
   return createPortal(children, host);
 }

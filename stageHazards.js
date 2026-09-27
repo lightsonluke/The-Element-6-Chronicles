@@ -103,18 +103,22 @@ export function buildHazardsFromStage(stageHazards) {
 
 // Convert editor objects (flat list) into the full gameplay shape.
 export function buildObjectsFromStage(stageObjects) {
-  if (!stageObjects) return [];
+  if (!Array.isArray(stageObjects)) return [];
   return stageObjects.map(o => {
-    const props = OBJ_PROPS[o.type] || OBJ_PROPS.heavy;
+    if (!o || typeof o !== 'object') return null;
+    const type = OBJ_PROPS[o.type] ? o.type : 'heavy';
+    const props = OBJ_PROPS[type];
+    const x = Number.isFinite(Number(o.x)) ? Number(o.x) : 0;
+    const y = Number.isFinite(Number(o.y)) ? Number(o.y) : 0;
     return {
-      type: o.type, x: o.x, y: o.y, vx: 0, vy: 0,
+      type, x, y, vx: 0, vy: 0,
       w: props.size, h: props.size, mass: props.mass, friction: props.friction,
       bounce: props.bounce, damage: props.damage, knockback: props.knockback,
       color: props.color, breakThreshold: props.breakThreshold, hitCount: 0,
-      grounded: false, _originX: o.x, _originY: o.y, _phase: 'idle', _phaseTimer: 0,
+      grounded: false, _originX: x, _originY: y, _phase: 'idle', _phaseTimer: 0,
       _hitIds: {}, _hitClearTimer: 0, _rot: 0,
     };
-  });
+  }).filter(Boolean);
 }
 
 export { drawHazards, drawObjects };
