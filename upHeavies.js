@@ -59,3 +59,31 @@ Object.assign(UP_HEAVIES, {
   lavender:{name:'Sky Platform',type:'gen5UpHeavy',range:170,damage:24,color:'#BB88DD',duration:27},
   amber:{name:'Clone Ladder',type:'gen5UpHeavy',range:165,damage:25,color:'#FFBB33',duration:28},
 });
+
+// Generation V — Characters 16-39. Geometry is supplied by gen5RestAttackAnims.js.
+Object.assign(UP_HEAVIES, {
+  black:{name:'Rising Bolts',type:'gen5RestUpHeavy',range:170,damage:26,color:'#FFFF44',duration:27},
+  magenta:{name:'Glue Pole',type:'gen5RestUpHeavy',range:170,damage:23,color:'#FF44AA',duration:28},
+  indigo:{name:'Vertical Flip',type:'gen5RestUpHeavy',range:170,damage:26,color:'#4B0082',duration:28},
+  maroon:{name:'Energy Column',type:'gen5RestUpHeavy',range:160,damage:26,color:'#800000',duration:27},
+  crimson:{name:'Element Lance',type:'gen5RestUpHeavy',range:180,damage:27,color:'#DC143C',duration:27},
+  scarlet:{name:'Phantom Column',type:'gen5RestUpHeavy',range:170,damage:26,color:'#FF2400',duration:28},
+  white:{name:'Vertical Rush',type:'gen5RestUpHeavy',range:180,damage:25,color:'#EEEEEE',duration:26},
+  silver:{name:'Steel Rising',type:'gen5RestUpHeavy',range:175,damage:27,color:'#C0C0C0',duration:28},
+  corpent:{name:'Rising Hammer',type:'gen5RestUpHeavy',range:180,damage:28,color:'#8B5A2B',duration:28},
+  magneto:{name:'Magnetic Launch',type:'gen5RestUpHeavy',range:175,damage:27,color:'#777777',duration:28},
+  willow:{name:'Tree Rise',type:'gen5RestUpHeavy',range:175,damage:26,color:'#398A3F',duration:29},
+  cable:{name:'Twin Whips',type:'gen5RestUpHeavy',range:175,damage:26,color:'#66CCFF',duration:27},
+  snodvor:{name:'Glacier Rise',type:'gen5RestUpHeavy',range:175,damage:27,color:'#A9E7FF',duration:28},
+  kirsten:{name:'Ignition Column',type:'gen5RestUpHeavy',range:170,damage:25,color:'#FF6A24',duration:27},
+  volt:{name:'Frequency Column',type:'gen5RestUpHeavy',range:175,damage:27,color:'#4A62B8',duration:28},
+  temple:{name:'Structural Collapse',type:'gen5RestUpHeavy',range:175,damage:27,color:'#7A4B32',duration:28},
+  nightmare:{name:'Falling Fear',type:'gen5RestUpHeavy',range:175,damage:27,color:'#A66CFF',duration:27},
+  hazel:{name:'Cursed Tree',type:'gen5RestUpHeavy',range:175,damage:26,color:'#355C35',duration:29},
+  whami:{name:'Giant Potion',type:'gen5RestUpHeavy',range:175,damage:27,color:'#C28A32',duration:27},
+  controller:{name:'Matter Orbit',type:'gen5RestUpHeavy',range:170,damage:27,color:'#6A4FB3',duration:28},
+  evil:{name:'Missing Space',type:'gen5RestUpHeavy',range:165,damage:28,color:'#111111',duration:27},
+  life:{name:'Growth Spiral',type:'gen5RestUpHeavy',range:175,damage:26,color:'#67D88A',duration:29},
+  death:{name:'Last Ascent',type:'gen5RestUpHeavy',range:175,damage:27,color:'#282044',duration:28},
+  mercy:{name:'Balance Rise',type:'gen5RestUpHeavy',range:170,damage:24,color:'#F2E8FF',duration:28},
+});

@@ -100,3 +100,31 @@ Object.assign(DOWN_HEAVIES, {
   lavender:{name:'Air Cage',type:'gen5DownHeavy',range:150,damage:24,color:'#BB88DD',duration:27},
   amber:{name:'Clone Collapse',type:'gen5DownHeavy',range:150,damage:25,color:'#FFBB33',duration:27},
 });
+
+// Generation V — Characters 16-39. Geometry is supplied by gen5RestAttackAnims.js.
+Object.assign(DOWN_HEAVIES, {
+  black:{name:'Orbiting Lightning',type:'gen5RestDownHeavy',range:150,damage:27,color:'#FFFF44',duration:27},
+  magenta:{name:'Adhesive Trap',type:'gen5RestDownHeavy',range:145,damage:23,color:'#FF44AA',duration:28},
+  indigo:{name:'Gravity Well',type:'gen5RestDownHeavy',range:145,damage:27,color:'#4B0082',duration:28},
+  maroon:{name:'Power Dump',type:'gen5RestDownHeavy',range:155,damage:27,color:'#800000',duration:27},
+  crimson:{name:'Element Armor',type:'gen5RestDownHeavy',range:145,damage:28,color:'#DC143C',duration:28},
+  scarlet:{name:'Spirit Circle',type:'gen5RestDownHeavy',range:150,damage:27,color:'#FF2400',duration:28},
+  white:{name:'Meteor Dive',type:'gen5RestDownHeavy',range:150,damage:26,color:'#EEEEEE',duration:26},
+  silver:{name:'Meteor Body',type:'gen5RestDownHeavy',range:155,damage:28,color:'#C0C0C0',duration:29},
+  corpent:{name:'Construction Drop',type:'gen5RestDownHeavy',range:155,damage:29,color:'#8B5A2B',duration:29},
+  magneto:{name:'Magnetic Pile',type:'gen5RestDownHeavy',range:155,damage:28,color:'#777777',duration:29},
+  willow:{name:'Root Cage',type:'gen5RestDownHeavy',range:150,damage:27,color:'#398A3F',duration:29},
+  cable:{name:'Electric Snare',type:'gen5RestDownHeavy',range:150,damage:27,color:'#66CCFF',duration:28},
+  snodvor:{name:'Icefall',type:'gen5RestDownHeavy',range:155,damage:28,color:'#A9E7FF',duration:28},
+  kirsten:{name:'Delayed Burn',type:'gen5RestDownHeavy',range:145,damage:27,color:'#FF6A24',duration:29},
+  volt:{name:'Resonance Slam',type:'gen5RestDownHeavy',range:155,damage:28,color:'#4A62B8',duration:28},
+  temple:{name:'Split Ground',type:'gen5RestDownHeavy',range:165,damage:28,color:'#7A4B32',duration:29},
+  nightmare:{name:'Dream Pit',type:'gen5RestDownHeavy',range:150,damage:27,color:'#A66CFF',duration:29},
+  hazel:{name:'Poison Garden',type:'gen5RestDownHeavy',range:150,damage:27,color:'#355C35',duration:29},
+  whami:{name:'Poison Mix',type:'gen5RestDownHeavy',range:150,damage:27,color:'#C28A32',duration:29},
+  controller:{name:'Compression',type:'gen5RestDownHeavy',range:150,damage:28,color:'#6A4FB3',duration:28},
+  evil:{name:'Erased Ground',type:'gen5RestDownHeavy',range:145,damage:29,color:'#111111',duration:28},
+  life:{name:'Rebirth Pulse',type:'gen5RestDownHeavy',range:155,damage:27,color:'#67D88A',duration:29},
+  death:{name:'End Point',type:'gen5RestDownHeavy',range:150,damage:28,color:'#282044',duration:29},
+  mercy:{name:'Compassion Field',type:'gen5RestDownHeavy',range:150,damage:24,color:'#F2E8FF',duration:28},
+});

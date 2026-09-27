@@ -12,6 +12,7 @@ import { drawGen2Attack, drawGen2Super } from './gen2AttackAnims.js';
 import { drawGen3Attack, drawGen3Super } from './gen3AttackAnims.js';
 import { drawGen4Attack, drawGen4Super } from './gen4AttackAnims.js';
 import { drawGen5Attack, drawGen5Super } from './gen5AttackAnims.js';
+import { drawGen5RestAttack, drawGen5RestSuper } from './gen5RestAttackAnims.js';
 
 const SUPER_W = 1200, SUPER_H = 700;
 
@@ -52,7 +53,15 @@ export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, atta
     drawGen4Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
     return;
   }
-  if (['yellow','blue','purple','orange','green','pink','grey','turquoise','olive','copper','emerald','pearl','red','lavender','amber'].includes(charId) || String(charId || '').startsWith('g5_')) {
+  if (['black,magenta,indigo,maroon,crimson,scarlet,white,silver,corpent,magneto,willow,cable,snodvor,kirsten,volt,temple,nightmare,hazel,whami,controller,evil,life,death,mercy'].includes(charId)) {
+    drawGen5RestAttack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
+    return;
+  }
+  if (['black,magenta,indigo,maroon,crimson,scarlet,white,silver,corpent,magneto,willow,cable,snodvor,kirsten,volt,temple,nightmare,hazel,whami,controller,evil,life,death,mercy'].includes(charId)) {
+    drawGen5RestSuper(ctx, x, y, p, facing, charId);
+    return;
+  }
+
     drawGen5Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
     return;
   }
