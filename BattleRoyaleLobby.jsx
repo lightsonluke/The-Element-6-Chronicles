@@ -46,6 +46,8 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
   const [role, setRole] = useState('host');
   const [match, setMatch] = useState(null);
   const [players, setPlayers] = useState([]);
+  const playersRef = useRef([]);
+  playersRef.current = players;
   const [countdown, setCountdown] = useState(MATCHMAKE_SECONDS);
   const [error, setError] = useState(null);
   // Host custom settings
@@ -114,22 +116,31 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
   }, [players, maxPlayers]);
 
   // Matchmaking countdown (host only): when it hits 0, fill bots + start.
+  // Do NOT restart this timer whenever the participant list refreshes. The lobby
+  // polls Supabase while players are joining, so putting `players` in this effect's
+  // dependency list resets the 60-second clock every refresh and can prevent it
+  // from ever reaching zero.
   useEffect(() => {
     if (phase !== 'queue' || role !== 'host' || !matchId) return;
     setCountdown(MATCHMAKE_SECONDS);
     deadlineRef.current = Date.now() + MATCHMAKE_SECONDS * 1000;
+    let finished = false;
     const t = setInterval(() => {
       const left = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
       setCountdown(left);
-      const realPlayers = Math.max(1, players.filter(p => !p.is_bot).length);
-      if (left <= 0 || realPlayers >= maxPlayers) {
+      const realPlayers = Math.max(1, playersRef.current.filter(p => !p.is_bot).length);
+      if (!finished && (left <= 0 || realPlayers >= maxPlayers)) {
+        finished = true;
         clearInterval(t);
         beginMatch();
       }
-    }, 500);
-    return () => clearInterval(t);
+    }, 250);
+    return () => {
+      finished = true;
+      clearInterval(t);
+    };
     // eslint-disable-next-line
-  }, [phase, role, matchId, players, maxPlayers]);
+  }, [phase, role, matchId, maxPlayers]);
 
   const findMatch = async (charId) => {
     if (!me) { setError('Not signed in.'); return; }
