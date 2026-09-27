@@ -255,6 +255,19 @@ input.el6-controller-focus { filter: brightness(1.12); }
 .el6-global-pause-layer,
 .el6-global-pause-button-layer,
 .el6-match-pause-button { z-index: 2147483647 !important; }
+.el6-global-pause-layer,
+.el6-global-pause-button-layer {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  pointer-events: none !important;
+  transform: none !important;
+  margin: 0 !important;
+  isolation: isolate !important;
+}
+.el6-global-pause-layer > *,
+.el6-global-pause-button-layer > * { pointer-events: auto !important; }
 .el6-pause-overlay-layer { position: fixed !important; inset: 0 !important; }
 .el6-sport-pause-top-center { position: fixed !important; top: max(12px, env(safe-area-inset-top)) !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 2147483647 !important; }
 .el6-sport-quit-bottom-right { position: fixed !important; right: max(12px, env(safe-area-inset-right)) !important; bottom: max(12px, env(safe-area-inset-bottom)) !important; z-index: 2147483647 !important; }

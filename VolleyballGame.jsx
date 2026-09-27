@@ -1182,11 +1182,39 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
     s.phase = 'serve'; s.phaseTimer = 0;
   }
 
-  // Suppress controller menu-nav for the entire match so the controller can't
-  // pause or leave — only the mouse/trackpad (or keyboard Esc) can.
+  // Keep the volleyball match viewport locked to the actual browser viewport.
+  // This prevents a parent/page scroll or focus adjustment from making the
+  // entire court appear to jump down/right immediately after entering.
   useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const previousOverflowX = document.body.style.overflowX;
+    const previousOverflowY = document.body.style.overflowY;
+    const previousScrollBehavior = document.documentElement.style.scrollBehavior;
+    document.body.style.overflow = 'hidden';
+    document.body.style.overflowX = 'hidden';
+    document.body.style.overflowY = 'hidden';
+    document.documentElement.style.scrollBehavior = 'auto';
+    window.scrollTo(0, 0);
+    const host = document.getElementById('el6-game-canvas-host');
+    if (host) {
+      host.style.position = 'fixed';
+      host.style.left = '0';
+      host.style.top = '0';
+      host.style.right = '0';
+      host.style.bottom = '0';
+      host.style.width = '100vw';
+      host.style.height = '100dvh';
+      host.style.margin = '0';
+      host.style.transform = 'none';
+    }
     window.__el6GameplayActive = true;
-    return () => { window.__el6GameplayActive = false; };
+    return () => {
+      window.__el6GameplayActive = false;
+      document.body.style.overflow = previousOverflow;
+      document.body.style.overflowX = previousOverflowX;
+      document.body.style.overflowY = previousOverflowY;
+      document.documentElement.style.scrollBehavior = previousScrollBehavior;
+    };
   }, []);
 
   return (
