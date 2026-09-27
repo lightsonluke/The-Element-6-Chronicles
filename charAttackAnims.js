@@ -7,6 +7,7 @@ import { drawJab, drawSlash, drawWhip, drawLaunch, drawGround, drawSlam, drawCha
 import { drawSuper } from './attackSupers.js';
 import { drawUniqueSuper } from './uniqueSupers.js';
 import { PARTICLES } from './charAttackParticles.js';
+import { drawGen1Attack, drawGen1Super } from './gen1AttackAnims.js';
 import { drawGen2Attack, drawGen2Super } from './gen2AttackAnims.js';
 import { drawGen3Attack, drawGen3Super } from './gen3AttackAnims.js';
 
@@ -33,8 +34,14 @@ function getAttackKey(attack, attackKey) {
 
 // ── Main entry: draw sig/heavy attack with per-character config ──
 export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power) {
+  const key = getAttackKey(attack, attackKey);
+  if (String(charId || '').startsWith('g1_')) {
+    drawGen1Attack(ctx, x, y, color, p, facing, charId, key === 'uh' ? 'upHeavy' : key);
+    ctx.shadowBlur = 0;
+    return;
+  }
   if (String(charId || '').startsWith('g2_')) {
-    drawGen2Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
+    drawGen2Attack(ctx, x, y, color, p, facing, charId, key);
     return;
   }
   if (String(charId || '').startsWith('g3_')) {
@@ -45,7 +52,6 @@ export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, atta
   const config = getConfig(charId, power, color);
   if (!config) return;
 
-  const key = getAttackKey(attack, attackKey);
   const cfg = config[key];
   if (!cfg) return;
 
@@ -85,6 +91,11 @@ export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, atta
 
 // ── Main entry: draw super with per-character config ──
 export function drawCharSuper(ctx, x, y, color, p, charId, facing = 1) {
+  if (String(charId || '').startsWith('g1_')) {
+    drawGen1Super(ctx, x, y, p, facing, charId);
+    ctx.shadowBlur = 0;
+    return;
+  }
   if (String(charId || '').startsWith('g2_')) {
     drawGen2Super(ctx, x, y, color, p, charId, facing);
     return;
