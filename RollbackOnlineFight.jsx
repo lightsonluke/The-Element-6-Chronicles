@@ -126,6 +126,7 @@ export default function RollbackOnlineFight({
     let readyTimer = null;
     let reconnectTimer = null;
     let lastReconnectAt = 0;
+    let resyncWatchdogAt = 0;
     let stopped = false;
     let finished = false;
     let resyncing = false;
@@ -291,6 +292,7 @@ export default function RollbackOnlineFight({
             if (resyncing || Date.now() - lastResyncAt < 1500) return;
             resyncing = true;
             lastResyncAt = Date.now();
+            resyncWatchdogAt = Date.now();
             resyncToken = Date.now();
             setResyncing(true);
             setConnectionText('RESYNCING…');
@@ -321,11 +323,13 @@ export default function RollbackOnlineFight({
             const token = Number(packet.token) || Date.now();
             resyncToken = token;
             resyncing = true;
+            resyncWatchdogAt = Date.now();
             setResyncing(true);
             setConnectionText('RESYNCING…');
             transport.sendControl('resync-state', { token, frame: session.getStats().currentFrame, state: session.getRenderableState() }).catch(() => {});
           } else if (packet.kind === 'resync-state' && packet.state) {
             resyncing = true;
+            resyncWatchdogAt = Date.now();
             resyncToken = Number(packet.token) || resyncToken || Date.now();
             lastResyncAt = Date.now();
             setResyncing(true);
@@ -356,6 +360,7 @@ export default function RollbackOnlineFight({
             if (!isHost && !resyncing && (frameGap > 8 || (packet.checksum && checksumState(packet.state) !== packet.checksum))) {
               resyncing = true;
               lastResyncAt = Date.now();
+              resyncWatchdogAt = Date.now();
               resyncToken = Number(packet.token) || Date.now();
               setResyncing(true);
               setConnectionText('RESYNCING…');
@@ -410,6 +415,25 @@ export default function RollbackOnlineFight({
             steps += 1;
           }
           const peerSilence = Date.now() - lastPeerMessageAt;
+          // Never leave the match permanently behind a RESYNCING overlay. If
+          // the resync handshake itself is lost, rebuild the Realtime topic and
+          // immediately request/send a fresh authoritative state.
+          if (resyncing && resyncWatchdogAt && Date.now() - resyncWatchdogAt > 3500 && Date.now() - lastReconnectAt > 5000) {
+            lastReconnectAt = Date.now();
+            transport.reconnect().then(ok => {
+              if (!ok || stopped) return;
+              lastPeerMessageAt = Date.now();
+              lastResyncAt = Date.now();
+              resyncWatchdogAt = Date.now();
+              resyncToken = Date.now();
+              setConnectionText('RESYNCING…');
+              if (isHost) {
+                transport.sendControl('resync-state', { token: resyncToken, frame: session.getStats().currentFrame, state: session.getRenderableState() }).catch(() => {});
+              } else {
+                transport.sendControl('resync-request', { token: resyncToken }).catch(() => {});
+              }
+            }).catch(() => {});
+          }
           if (peerSilence > 1800 && !resyncing) {
             setConnectionText('RESYNCING…');
             if (Date.now() - lastResyncAt > 1800) {
@@ -426,7 +450,7 @@ export default function RollbackOnlineFight({
           if (peerSilence > 4500 && Date.now() - lastReconnectAt > 5000) {
             lastReconnectAt = Date.now();
             reconnectTimer = transport.reconnect().then(ok => {
-              if (ok) { lastPeerMessageAt = Date.now(); setConnectionText('RECONNECTING…'); }
+              if (ok) { lastPeerMessageAt = Date.now(); setConnectionText('RESYNCING…'); resyncWatchdogAt = Date.now(); resyncToken = Date.now(); transport.sendControl(isHost ? 'resync-state' : 'resync-request', isHost ? { token: resyncToken, frame: session.getStats().currentFrame, state: session.getRenderableState() } : { token: resyncToken }).catch(() => {}); }
             }).catch(() => {});
           }
           if (peerSilence > 30000) { finishMatch(role); return; }
@@ -482,14 +506,16 @@ export default function RollbackOnlineFight({
 
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
-      <div className="flex justify-between items-center w-full px-1 max-w-[1280px]">
+      <div className="el6-online-match-topbar flex justify-between items-start gap-3">
         <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Forfeit</button>
-        <span className="text-[10px] font-heading text-accent">{connectionText}</span>
+        <div className="flex flex-col items-center gap-0.5 text-center">
+          <span className="text-[10px] font-heading text-accent">{connectionText}</span>
+          <span className="text-[9px] text-muted-foreground font-body">Your device controls your selected fighter. Use Arrows, WASD, or your Settings custom control preset.</span>
+        </div>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
       </div>
       {networkError && <p className="text-xs text-destructive font-body">{networkError}</p>}
       {resyncing && <div className="absolute inset-0 z-20 grid place-items-center bg-black/70 font-heading text-accent text-2xl">RESYNCING MATCH…</div>}
-      <p className="text-[10px] text-muted-foreground font-body">Your device controls your selected fighter. Use Arrows, WASD, or your Settings custom control preset.</p>
       <GameCanvasPortal>
         <canvas ref={canvasRef} width={ONLINE_STAGE_WIDTH} height={ONLINE_STAGE_HEIGHT} className="el6-match-canvas" />
       </GameCanvasPortal>

@@ -238,6 +238,10 @@ input.el6-controller-focus { filter: brightness(1.12); }
 /* Final shared match layering: gameplay is always the back layer; all React UI
    and pause portals stay above it. */
 .el6-game-canvas-host { z-index: 5 !important; }
+/* Custom Campaign gameplay must sit above the campaign shell, but below the
+   dedicated pause/menu portal layers. */
+.el6-game-canvas-host[data-game-mode="campaign"] { z-index: 1000 !important; }
+
 .el6-global-pause-button-layer { position: fixed !important; inset: 0 !important; z-index: 2147483647 !important; pointer-events: none !important; }
 .el6-global-pause-layer { position: fixed !important; inset: 0 !important; z-index: 2147483647 !important; pointer-events: auto !important; }
 
@@ -336,3 +340,15 @@ input.el6-controller-focus { filter: brightness(1.12); }
   transform: translateX(-50%) !important;
   z-index: 2147483645 !important;
 }
+
+.el6-online-match-topbar {
+  position: fixed !important;
+  top: max(8px, env(safe-area-inset-top)) !important;
+  left: 12px !important;
+  right: 12px !important;
+  width: auto !important;
+  max-width: none !important;
+  z-index: 2147483640 !important;
+  pointer-events: none !important;
+}
+.el6-online-match-topbar > * { pointer-events: auto !important; }

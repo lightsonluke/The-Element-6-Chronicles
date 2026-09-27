@@ -28,15 +28,15 @@ export default function TradeOfferModal({ mode = 'trade', peer, progress, userId
 
   // Fetch the peer's UserProgress to show their inventory
   useEffect(() => {
-    if (!peer?.id) return;
+    if (!peer?.user_id) return;
     (async () => {
       try {
-        const { data: rec } = await supabase.from('user_progress').select('progress_json').eq('user_id', peer.id).maybeSingle();
+        const { data: rec } = await supabase.from('user_progress').select('progress_json').eq('user_id', peer.user_id).maybeSingle();
         if (rec?.progress_json) setPeerProgress(rec.progress_json);
       } catch {}
       setLoading(false);
     })();
-  }, [peer?.id]);
+  }, [peer?.user_id]);
 
   const toggle = (side, category, id) => {
     const state = side === 'offer' ? offer : request;
