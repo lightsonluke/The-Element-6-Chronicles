@@ -940,7 +940,6 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
     let hitstop = 0, superImpactFlash = 0;
     let prevF1Grounded = true, prevF2Grounded = true, prevF2Power = 0;
     let prevStocks1 = f1.stocks, prevStocks2 = f2.stocks;
-    let prevGpStart = false;
   let killFeed = [];
     let killFxEffects = []; // { x, y, color, progress, fxId }
     // Emote state is stored on each fighter: f.emote = { id, timer, maxTimer, progress }
@@ -990,6 +989,10 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       if (!['F5', 'F12'].includes(e.key)) e.preventDefault();
     };
     const ku = e => { keysRef.current[e.key] = false; keysRef.current[e.key.toLowerCase()] = false; };
+    const onControllerSecondaryMenu = () => {
+      if (trainingMode && onTrainingSettings) onTrainingSettings();
+    };
+    window.addEventListener('el6-controller-secondary-menu', onControllerSecondaryMenu);
     window.addEventListener('keydown', kd);
     window.addEventListener('keyup', ku);
     // Keep the match running when focus leaves the window — do NOT auto-pause on blur.
@@ -1074,8 +1077,6 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const _gpEnabled = settings?.controllerEnabled !== false;
       const gp1 = _gpEnabled ? readGamepadInput(0) : null;
       const gp2 = _gpEnabled ? readGamepadInput(1) : null;
-      // Controller cannot pause — use mouse/trackpad or keyboard Esc/P to pause.
-      prevGpStart = !!gp1?.start;
       const mergeGp = (kb, gp) => gp ? {
         left: kb.left || gp.left, right: kb.right || gp.right,
         jump: kb.jump || gp.jump, up: kb.up || gp.up, down: kb.down || gp.down,
@@ -1958,6 +1959,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
 
     return () => {
       if (gameRef.current) gameRef.current.running = false;
+      window.removeEventListener('el6-controller-secondary-menu', onControllerSecondaryMenu);
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
       document.removeEventListener('visibilitychange', onWakeVis);
@@ -1997,7 +1999,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         )}
         <button
           onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }}
-          className="px-3 py-1 bg-secondary/90 text-secondary-foreground rounded font-body text-xs hover:opacity-90"
+          className="el6-controller-pause-trigger px-3 py-1 bg-secondary/90 text-secondary-foreground rounded font-body text-xs hover:opacity-90"
         >
           PAUSE (ESC)
         </button>

@@ -301,8 +301,8 @@ input.el6-controller-focus { filter: brightness(1.12); }
   top: 50% !important;
   right: auto !important;
   bottom: auto !important;
-  inset: auto auto auto 50% !important;
-  transform: translate(-50%, -50%) !important;
+  inset: 50% auto auto 50% !important;
+  transform: translate3d(-50%, -50%, 0) !important;
   width: min(100vw, calc(100dvh * 16 / 9)) !important;
   height: min(100dvh, calc(100vw * 9 / 16)) !important;
   margin: 0 !important;

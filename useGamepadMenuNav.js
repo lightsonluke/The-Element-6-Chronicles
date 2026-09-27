@@ -125,23 +125,86 @@ export function useGamepadMenuNav(enabled = true) {
   const lastDir = useRef({ up: false, down: false, left: false, right: false });
   const lastConfirm = useRef(false);
   const lastBack = useRef(false);
+  const lastStart = useRef(false);
+  const lastRightY = useRef(0);
 
   useEffect(() => {
     if (!enabled) return;
     let raf;
     let repeatTimer = 0;
 
-    const tick = () => {
-      if (window.__el6ControllerCapture || window.__el6GameplayActive) {
-        raf = requestAnimationFrame(tick);
-        return;
+    // Keep ordinary keyboard scrolling available on every menu/screen.
+    // Do not intercept gameplay controls or form fields.
+    const onKeyDown = (e) => {
+      if (window.__el6GameplayActive || window.__el6ControllerCapture) return;
+      const target = e.target;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) return;
+
+      const amount = Math.max(60, Math.round(window.innerHeight * 0.12));
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        window.scrollBy({ top: amount, behavior: 'smooth' });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        window.scrollBy({ top: -amount, behavior: 'smooth' });
+      } else if (e.key === 'PageDown') {
+        e.preventDefault();
+        window.scrollBy({ top: Math.round(window.innerHeight * 0.82), behavior: 'smooth' });
+      } else if (e.key === 'PageUp') {
+        e.preventDefault();
+        window.scrollBy({ top: -Math.round(window.innerHeight * 0.82), behavior: 'smooth' });
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
       }
+    };
+    window.addEventListener('keydown', onKeyDown, { passive: false });
+
+    const tick = () => {
       const gp = readGamepadInput(0);
       if (gp) {
+        const gameplay = !!window.__el6GameplayActive || !!document.querySelector('.el6-controller-pause-trigger');
+        const overlayOpen = !!document.querySelector('.el6-pause-overlay-layer, .el6-global-pause-layer');
+
+        // During active gameplay, Start/Plus opens the existing pause overlay
+        // and Back/Minus is reserved for a secondary overlay. Once an overlay
+        // is open, normal controller menu navigation becomes active again.
+        if (gameplay && !overlayOpen) {
+          const start = !!gp.start;
+          const back = !!gp.back;
+          if (start && !lastStart.current) {
+            const pauseButton = document.querySelector('.el6-controller-pause-trigger');
+            if (pauseButton) pauseButton.click();
+            else window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+          }
+          if (back && !lastBack.current) {
+            window.dispatchEvent(new CustomEvent('el6-controller-secondary-menu', { bubbles: true }));
+          }
+          lastStart.current = start;
+          lastBack.current = back;
+          lastConfirm.current = !!(gp.confirm ?? gp.jump);
+          lastDir.current = { up: gp.up, down: gp.down, left: gp.left, right: gp.right };
+          lastRightY.current = gp.rightY || 0;
+          raf = requestAnimationFrame(tick);
+          return;
+        }
+
         const dir = { up: gp.up, down: gp.down, left: gp.left, right: gp.right };
         const confirm = !!(gp.confirm ?? gp.jump);
         const back = !!(gp.back ?? gp.power);
         const start = !!gp.start;
+
+        // Right stick scrolls the document naturally instead of moving focus.
+        const ry = Number(gp.rightY || 0);
+        if (Math.abs(ry) > 0.18) {
+          const delta = ry * Math.max(8, window.innerHeight * 0.055);
+          window.scrollBy(0, delta);
+        }
+        lastRightY.current = ry;
 
         repeatTimer++;
         for (const d of ['up', 'down', 'left', 'right']) {
@@ -166,10 +229,18 @@ export function useGamepadMenuNav(enabled = true) {
           window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
         }
         lastBack.current = back;
+        lastStart.current = start;
+      } else {
+        lastStart.current = false;
+        lastBack.current = false;
+        lastConfirm.current = false;
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      cancelAnimationFrame(raf);
+    };
   }, [enabled]);
 }

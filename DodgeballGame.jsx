@@ -592,7 +592,7 @@ export default function DodgeballGame({
           </span>
         </div>
         <div className="el6-dodgeball-match-controls flex gap-2">
-          <button onClick={() => setPaused(p => !p)} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs">{paused ? '▶ RESUME' : '⏸ PAUSE'}</button>
+          <button onClick={() => setPaused(p => !p)} className="el6-controller-pause-trigger px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs">{paused ? '▶ RESUME' : '⏸ PAUSE'}</button>
           <button onClick={onQuit} className="px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs">QUIT</button>
         </div>
       </div>
