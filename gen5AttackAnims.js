@@ -46,13 +46,82 @@ function G(id,m,t){
   if(m==='sp'){C(0,-48,27+34*e);for(let i=0;i<8;i++){const a=i/8*TAU+t*2;C(Math.cos(a)*(38+62*e),-48+Math.sin(a)*(24+48*e),10+5*e)}}
   break;
  case'purple':
-  if(m==='us'){const x=-52+104*q,y=-42-62*e;K(x,y,x+30,-8,10);C(x,y,14)}
-  if(m==='ds'){const x=-22+55*e;K(-8,-22,x,-5,11);C(x,-5,15);K(x,-5,x+30,10,7)}
-  if(m==='ss'){const x=34+118*e;K(8,-48,x,-30,8);C(x,-30,13);}
-  if(m==='uh'){const x=58-112*q,y=-55-72*e;K(x,y,x-30,-5,9);C(x,y,14)}
-  if(m==='dh'){const y=-92+94*e;K(-8,y,20,y+45,11);C(20,y+45,15);K(-20,y+18,5,y+50,8)}
-  if(m==='sh'){for(let i=0;i<3;i++){const s=clamp((t-i*.13)/.68);const x=28+118*ease(s),y=-62+Math.sin(s*Math.PI)*48;K(4,-46,x,y,7);C(x,y,11)}}
-  if(m==='sp'){C(0,-50,25+28*e);for(let i=0;i<6;i++){const a=i/6*TAU+t*3;C(Math.cos(a)*55,-50+Math.sin(a)*38,12)}if(t>.55)K(-10,-50,112*ease((t-.55)/.45),-50,18)}
+  // Purple is a katana specialist: every move is built around a physical blade path.
+  // The hitboxes deliberately follow the blade/hand motion rather than becoming generic
+  // effect circles. Each move has a different sword technique and body motion.
+  if(m==='us'){
+    // Shadow Flip — a rising backflip with a tight diagonal draw-cut.
+    const r=ease(t);
+    const ang=-2.35 + r*1.9;
+    const bx=-30+48*r, by=-30-58*r;
+    K(bx,by,bx+Math.cos(ang)*58,by+Math.sin(ang)*58,7);
+    K(bx+4,by+2,bx+Math.cos(ang)*42,by+Math.sin(ang)*42,5);
+    C(bx+Math.cos(ang)*58,by+Math.sin(ang)*58,8);
+  }
+  if(m==='ds'){
+    // Vanish Sweep — low crouch, smoke feint, then a long ground-level iaido sweep.
+    const s=clamp((t-.16)/.68);
+    const x=-42+128*ease(s);
+    K(-20,-38,x,-52,7);
+    K(x,-52,x+62,-35,7);
+    C(x+62,-35,8);
+  }
+  if(m==='ss'){
+    // Ninja Dash — sheath-like launch followed by one committed horizontal draw slash.
+    const d=ease(t);
+    const x=30+132*d;
+    K(12,-45,x,-45,7);
+    K(x-46,-69,x+18,-25,6);
+    C(x+18,-25,8);
+  }
+  if(m==='uh'){
+    // Sky Assassin — rising reverse-grip cut that changes angle at the apex.
+    const d=ease(t);
+    const x=34-72*d, y=-42-92*d;
+    const ang=-2.05 + d*.95;
+    K(x,y,x+Math.cos(ang)*62,y+Math.sin(ang)*62,7);
+    C(x+Math.cos(ang)*62,y+Math.sin(ang)*62,8);
+    K(x-4,y+6,x+Math.cos(ang+.35)*42,y+Math.sin(ang+.35)*42,5);
+  }
+  if(m==='dh'){
+    // Smoke Drop — sheathing silhouette above, then a straight downward stab through the smoke.
+    const d=ease(t);
+    const y=-112+112*d;
+    K(8,y-58,8,y+28,7);
+    C(8,y+30,9);
+    if(t>.38) K(-24,-56,8,y-20,6);
+  }
+  if(m==='sh'){
+    // Crescent Rush — three distinct chained katana cuts, each with a different angle.
+    const phases=[
+      {st:0,ang:-.78,len:82,ox:0,oy:-2},
+      {st:.22,ang:.28,len:96,ox:34,oy:-18},
+      {st:.46,ang:-.58,len:112,ox:62,oy:-34}
+    ];
+    for(const z of phases){
+      const s=clamp((t-z.st)/.36);
+      if(s>0){
+        const k=ease(Math.min(1,s));
+        const x=z.ox+58*k, y=z.oy-18*Math.sin(k*Math.PI);
+        K(x,y,x+Math.cos(z.ang)*z.len*k,y+Math.sin(z.ang)*z.len*k,7);
+        if(k>.35) C(x+Math.cos(z.ang)*z.len*k,y+Math.sin(z.ang)*z.len*k,7);
+      }
+    }
+  }
+  if(m==='sp'){
+    // Phantom Strike — vanish, cross behind the opponent, then finish with a long sheathed cut.
+    const d=clamp((t-.12)/.78);
+    if(t<.28){
+      C(0,-48,22+10*e);
+    }else{
+      const k=ease(d);
+      const x=-30+170*k;
+      K(x-32,-76+48*k,x+22,-24+48*k,8);
+      K(x-26,-35,x+74,-35,8);
+      C(x+74,-35,11);
+    }
+    if(t>.72) K(20,-78,136,-28,9);
+  }
   break;
  case'orange':
   if(m==='us'){const cy=-78*e-28;C(0,cy,27);K(0,-12,0,cy,12)}
@@ -189,13 +258,124 @@ function art(ctx,id,m,t,c,c2){const e=out(t),q=inout(t),a=.95;
   if(m==='sp'){ring(ctx,0,-48,27+34*e,c,9,.8);for(let i=0;i<8;i++){const aa=i/8*TAU+t*2;stroke(ctx,[[Math.cos(aa)*38,-48+Math.sin(aa)*24],[Math.cos(aa)*(70+55*e),-48+Math.sin(aa)*(45+30*e)]],c2,4,.65)}}
  }
  if(id==='purple'){
-  if(m==='us'){const x=-52+104*q,y=-42-62*e;stroke(ctx,[[x,y],[x+30,-8]],c,10,a);slash(ctx,x,y,35,-.8,c2,4,a);dot(ctx,x,y,14,c2)}
-  if(m==='ds'){const x=-22+55*e;stroke(ctx,[[-8,-22],[x,-5],[x+30,10]],c,10,a);for(let i=0;i<5;i++)slash(ctx,x+10,0+i*2,28,-.8+i*.35,c2,2,.5)}
-  if(m==='ss'){const x=34+118*e;stroke(ctx,[[8,-48],[x,-30]],c,9,a);slash(ctx,x,-30,30,-.45,c2,4,a);dot(ctx,x,-30,13,c2)}
-  if(m==='uh'){const x=58-112*q,y=-55-72*e;stroke(ctx,[[x,y],[x-30,-5]],c,10,a);slash(ctx,x,y,44,-1.1,c2,5,a);spark(ctx,x,y,22,c2,a)}
-  if(m==='dh'){const y=-92+94*e;stroke(ctx,[[-8,y],[20,y+45]],c,11,a);slash(ctx,20,y+45,30,.8,c2,4,a);}
-  if(m==='sh'){for(let i=0;i<3;i++){const s=clamp((t-i*.13)/.68),x=28+118*ease(s),y=-62+Math.sin(s*Math.PI)*48;stroke(ctx,[[4,-46],[x,y]],c,8,a*(1-i*.15));slash(ctx,x,y,28,-.6,c2,3,a)}}
-  if(m==='sp'){ring(ctx,0,-50,25+28*e,c,6,.8);for(let i=0;i<6;i++){const aa=i/6*TAU+t*3;slash(ctx,Math.cos(aa)*55,-50+Math.sin(aa)*38,30,aa,c2,4,.8)}}
+  // Purple — detailed katana animation set. The bright secondary line is the blade edge;
+  // the darker body-colored line is the arm/sword motion. Smoke and afterimages are visual only.
+  if(m==='us'){
+    // Shadow Flip: compact startup -> backward flip -> rising diagonal draw cut.
+    const r=ease(t), ang=-2.35+r*1.9;
+    const x=-30+48*r, y=-30-58*r;
+    const tx=x+Math.cos(ang)*58, ty=y+Math.sin(ang)*58;
+    stroke(ctx,[[x,y],[tx,ty]],c,9,a);
+    stroke(ctx,[[x+4,y+2],[tx,ty]],'#F6D8FF',4.5,a);
+    const arc=clamp((t-.18)/.62);
+    if(arc>0) {
+      ctx.save();ctx.globalAlpha=.7*(1-arc);ctx.strokeStyle=c2;ctx.lineWidth=3;ctx.shadowColor=c2;ctx.shadowBlur=12;
+      ctx.beginPath();ctx.arc(x,y,45,-2.5,-2.5+arc*1.5);ctx.stroke();ctx.restore();
+    }
+    dot(ctx,x,y,5,c2,.9);
+    for(let i=0;i<4;i++) dot(ctx,x-10+i*5,y+8+i*2,2,c2,.35*(1-r));
+  }
+  if(m==='ds'){
+    // Vanish Sweep: smoke hides the crouch, then the blade skims horizontally and hooks upward.
+    const s=clamp((t-.16)/.68), k=ease(s);
+    const x=-42+128*k;
+    for(let i=0;i<5;i++){
+      const sx=-26+i*12, sy=-25+Math.sin(t*8+i)*5;
+      ring(ctx,sx,sy,8+i*2,c2,2,.18*(1-k));
+    }
+    stroke(ctx,[[-20,-38],[x,-52]],c,9,a);
+    stroke(ctx,[[x,-52],[x+62,-35]],c2,5,a);
+    if(s>.08){
+      const ang=-.27;
+      const ex=x+62, ey=-35;
+      stroke(ctx,[[ex-Math.cos(ang)*44,ey-Math.sin(ang)*44],[ex+Math.cos(ang)*44,ey+Math.sin(ang)*44]],'#FFF2FF',3.5,a);
+      ctx.save();ctx.globalAlpha=.8*(1-s);ctx.strokeStyle=c2;ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,-35,48,2.5,4.5);ctx.stroke();ctx.restore();
+    }
+  }
+  if(m==='ss'){
+    // Ninja Dash: low launch, body blur, then a single fast draw slash.
+    const d=ease(t), x=30+132*d;
+    stroke(ctx,[[12,-45],[x,-45]],c,8,a);
+    for(let i=1;i<4;i++) stroke(ctx,[[12-i*10,-45+i*3],[x-i*28,-45+i*2]],c2,2.2,.28*(1-d));
+    const ang=-.60;
+    const bx=x-46, by=-69, ex=x+18, ey=-25;
+    stroke(ctx,[[bx,by],[ex,ey]],c,8,a);
+    stroke(ctx,[[bx+4,by+3],[ex,ey]],'#F7E6FF',3.5,a);
+    ctx.save();ctx.globalAlpha=.85;ctx.strokeStyle=c2;ctx.lineWidth=3;ctx.shadowColor=c2;ctx.shadowBlur=14;ctx.beginPath();ctx.arc(x-5,-47,48,ang-.65,ang+.55);ctx.stroke();ctx.restore();
+    dot(ctx,ex,ey,6,c2,a);
+  }
+  if(m==='uh'){
+    // Sky Assassin: rising slash starts tight, then opens into a long upward crescent.
+    const d=ease(t), x=34-72*d, y=-42-92*d;
+    const ang=-2.05+d*.95, ex=x+Math.cos(ang)*62, ey=y+Math.sin(ang)*62;
+    stroke(ctx,[[x,y],[ex,ey]],c,9,a);
+    stroke(ctx,[[x-4,y+6],[ex,ey]],'#F7E6FF',4,a);
+    ctx.save();ctx.globalAlpha=.85;ctx.strokeStyle=c2;ctx.lineWidth=4;ctx.shadowColor=c2;ctx.shadowBlur=14;
+    ctx.beginPath();ctx.arc(x+18,y+15,58,-2.25,-.55);ctx.stroke();ctx.restore();
+    if(t>.55){
+      const q2=clamp((t-.55)/.45);
+      stroke(ctx,[[x-18,y+20],[x-18-18*q2,y+42*q2]],c2,2,.7*(1-q2));
+    }
+    dot(ctx,ex,ey,7,c2,a);
+  }
+  if(m==='dh'){
+    // Smoke Drop: silhouette disappears, katana points straight down, then snaps into the ground.
+    const d=ease(t), y=-112+112*d;
+    for(let i=0;i<6;i++){
+      const rr=18+i*7;
+      ring(ctx,8,-50,rr,c2,2,.18*(1-d));
+    }
+    stroke(ctx,[[8,y-58],[8,y+28]],c,9,a);
+    stroke(ctx,[[8,y-52],[8,y+28]],'#FFF5FF',3.5,a);
+    dot(ctx,8,y+30,9,c2,a);
+    if(t>.72){
+      const q2=clamp((t-.72)/.28);
+      for(let i=-3;i<=3;i++) stroke(ctx,[[8,30],[i*25*q2,30+18*q2]],c2,2.5,.8*(1-q2));
+    }
+  }
+  if(m==='sh'){
+    // Crescent Rush: three separate techniques — rising crescent, falling cut, finishing cross-cut.
+    const phases=[
+      {st:0,ang:-.78,len:82,ox:0,oy:-2},
+      {st:.22,ang:.28,len:96,ox:34,oy:-18},
+      {st:.46,ang:-.58,len:112,ox:62,oy:-34}
+    ];
+    phases.forEach((z,i)=>{
+      const s=clamp((t-z.st)/.36); if(s<=0)return;
+      const k=ease(Math.min(1,s));
+      const x=z.ox+58*k, y=z.oy-18*Math.sin(k*Math.PI);
+      const ex=x+Math.cos(z.ang)*z.len*k, ey=y+Math.sin(z.ang)*z.len*k;
+      stroke(ctx,[[x,y],[ex,ey]],c,7-i,a*(.65+.35*k));
+      stroke(ctx,[[x+3,y+2],[ex,ey]],'#F7E6FF',3,a*(.7+.3*k));
+      ctx.save();ctx.globalAlpha=.65*(1-k);ctx.strokeStyle=c2;ctx.lineWidth=3;ctx.shadowColor=c2;ctx.shadowBlur=10;ctx.beginPath();ctx.arc(ex,ey,30+i*8,z.ang-1.0,z.ang+.9);ctx.stroke();ctx.restore();
+    });
+  }
+  if(m==='sp'){
+    // Phantom Strike: brief disappearance, a behind-the-target cross cut, then a long final slash.
+    if(t<.28){
+      const q2=ease(t/.28);
+      for(let i=0;i<7;i++){
+        const rr=12+i*7;
+        ring(ctx,0,-48,rr,c2,2,.5*(1-q2));
+      }
+      dot(ctx,0,-48,22*(1-q2),c,.7);
+    }else{
+      const d=clamp((t-.12)/.78), k=ease(d), x=-30+170*k;
+      // First diagonal phantom cut.
+      stroke(ctx,[[x-32,-76+48*k],[x+22,-24+48*k]],c,9,a);
+      stroke(ctx,[[x-27,-72+48*k],[x+22,-24+48*k]],'#FFF3FF',3.5,a);
+      // Horizontal follow-through.
+      stroke(ctx,[[x-26,-35],[x+74,-35]],c2,7,a*.9);
+      ctx.save();ctx.globalAlpha=.65;ctx.strokeStyle=c2;ctx.lineWidth=3;ctx.beginPath();ctx.arc(x+12,-40,62,-1.9,.25);ctx.stroke();ctx.restore();
+      dot(ctx,x+74,-35,8,c2,a);
+    }
+    if(t>.72){
+      const q2=clamp((t-.72)/.28);
+      stroke(ctx,[[20,-78],[136,-28]],'#FFFFFF',3.5,q2);
+      stroke(ctx,[[20,-78],[136,-28]],c,9,q2);
+      for(let i=0;i<5;i++) slash(ctx,136-i*8,-28+i*3,22,-.42,c2,2,.55*q2);
+    }
+  }
  }
  if(id==='orange'){
   if(m==='us'){const cy=-78*e-28;portal(ctx,0,cy,28,c,.9);stroke(ctx,[[0,-12],[0,cy]],c2,10,a)}
