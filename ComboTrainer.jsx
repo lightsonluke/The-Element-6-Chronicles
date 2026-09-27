@@ -191,7 +191,7 @@ export default function ComboTrainer({ onBack, customCharsData = {}, equippedSki
   return (
     <div className="relative w-full flex flex-col items-center gap-2">
       {/* Top bar with reset and back */}
-      <div className="flex justify-between w-full max-w-[1280px]">
+      <div className="el6-combo-topbar flex justify-between w-full max-w-[1280px]">
         <button onClick={() => { setPhase('select'); }}
           className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Character Select</button>
         <button onClick={handleReset}
@@ -224,7 +224,7 @@ export default function ComboTrainer({ onBack, customCharsData = {}, equippedSki
 
         {/* Combo tracker overlay — top right corner */}
         {currentCombo && !completed && (
-          <div className="absolute top-3 right-3 z-30 bg-card/95 border-2 border-accent rounded-lg p-3 shadow-2xl" style={{ width: 200 }}>
+          <div className="el6-combo-steps absolute top-3 left-1/2 z-30 bg-card/95 border-2 border-accent rounded-lg p-3 shadow-2xl" style={{ width: 200 }}>
             <div className="flex justify-between items-center mb-2">
               <span className="font-heading text-[10px] text-accent">COMBO {comboIndex + 1}/{COMBOS.length}</span>
               <span className="text-[8px] font-heading text-muted-foreground">{currentCombo.difficulty.toUpperCase()}</span>

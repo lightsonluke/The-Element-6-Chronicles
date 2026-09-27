@@ -1195,8 +1195,8 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
       </MatchPauseButtonPortal>
       {paused && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></MatchPausePortal>}
-      <GameCanvasPortal gameMode="volleyball">
-        <canvas data-e6-game-canvas="true" ref={canvasRef} width={CANVAS_W} height={CANVAS_H} className="el6-match-canvas el6-sport-canvas" onPointerDown={(e) => { e.preventDefault(); window.focus(); }} />
+      <GameCanvasPortal>
+        <canvas data-e6-game-canvas="true" ref={canvasRef} width={CANVAS_W} height={CANVAS_H} className="el6-match-canvas el6-sport-canvas el6-volleyball-canvas" onPointerDown={(e) => { e.preventDefault(); window.focus(); }} />
       </GameCanvasPortal>
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">
