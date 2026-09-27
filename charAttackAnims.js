@@ -34,14 +34,12 @@ function getAttackKey(attack, attackKey) {
 
 // ── Main entry: draw sig/heavy attack with per-character config ──
 export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power) {
-  const key = getAttackKey(attack, attackKey);
   if (String(charId || '').startsWith('g1_')) {
-    drawGen1Attack(ctx, x, y, color, p, facing, charId, key === 'uh' ? 'upHeavy' : key);
-    ctx.shadowBlur = 0;
+    drawGen1Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
     return;
   }
   if (String(charId || '').startsWith('g2_')) {
-    drawGen2Attack(ctx, x, y, color, p, facing, charId, key);
+    drawGen2Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
     return;
   }
   if (String(charId || '').startsWith('g3_')) {
@@ -52,6 +50,7 @@ export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, atta
   const config = getConfig(charId, power, color);
   if (!config) return;
 
+  const key = getAttackKey(attack, attackKey);
   const cfg = config[key];
   if (!cfg) return;
 
@@ -93,7 +92,6 @@ export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, atta
 export function drawCharSuper(ctx, x, y, color, p, charId, facing = 1) {
   if (String(charId || '').startsWith('g1_')) {
     drawGen1Super(ctx, x, y, p, facing, charId);
-    ctx.shadowBlur = 0;
     return;
   }
   if (String(charId || '').startsWith('g2_')) {
