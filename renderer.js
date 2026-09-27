@@ -959,9 +959,10 @@ export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isN
 
   const isGen1 = String(charId || '').startsWith('g1_');
   const isGen2 = String(charId || '').startsWith('g2_');
+  const isGen3 = String(charId || '').startsWith('g3_');
   // Generic glow is intentionally disabled for Gen I: every visible attack
   // shape is authored directly, so there is no misleading extra hitbox-looking ring.
-  if (!isGen1 && !isGen2) {
+  if (!isGen1 && !isGen2 && !isGen3) {
     if (attack.isHeavy) {
       ctx.globalAlpha = (1 - progress) * 0.3;
       drawSigGlowRing(ctx, x, y - 15, color, 35 + progress * 10);
@@ -980,7 +981,7 @@ export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isN
   // Generation I hitboxes are authored directly against the final animation.
   // Do not apply the old generic 1.3x visual-only scale or the collision would drift.
   try {
-    if (isGen1 || isGen2) {
+    if (isGen1 || isGen2 || isGen3) {
       drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power);
     } else {
       const isUpOrDownSig = (attack.sigType === 'up' || attack.sigType === 'aerial' ||
@@ -1144,6 +1145,7 @@ export function drawSuperEffect(ctx, x, y, color, progress, charName = '', charI
   ctx.save();
   const isG1 = String(charId || '').startsWith('g1_');
   const isG2 = String(charId || '').startsWith('g2_');
+  const isG3 = String(charId || '').startsWith('g3_');
   try {
     // Small local activation flash only. There is deliberately NO universal
     // circular hitbox visual: the hitbox is defined by the actual super shape.
@@ -1153,7 +1155,7 @@ export function drawSuperEffect(ctx, x, y, color, progress, charName = '', charI
       ctx.beginPath(); ctx.arc(x, y - 18, 70, 0, Math.PI * 2); ctx.fill();
     }
 
-    if (isG1 || isG2) {
+    if (isG1 || isG2 || isG3) {
       // Gen I supers are authored at their final world scale so the visual and
       // exact collision geometry occupy the same pixels.
       drawCharSuper(ctx, x, y, color, progress, charId, facing || 1);
