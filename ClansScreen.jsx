@@ -683,10 +683,10 @@ export default function ClansScreen({
               </div>}
               <div className="mt-3 rounded-xl bg-secondary/40 p-3 text-sm">
                 <b>CLAN MILESTONE REWARDS</b>
-                <p className="mt-1 text-xs text-muted-foreground">Every member who was in the clan when a milestone was reached receives the milestone reward on their next clan sync.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Every reward is contribution-scaled: your token amount is based on your share of the clan XP earned during that tier, including the 50% and tier-completion milestones.</p>
                 <div className="mt-2 grid gap-1 text-xs">
-                  <span>50% milestone: large token reward + exclusive cosmetic/Shikigami</span>
-                  <span>Tier completion: even larger token reward + another exclusive cosmetic/Shikigami</span>
+                  <span>50% milestone: token reward × your XP contribution % for that tier + exclusive cosmetic/Shikigami</span>
+                  <span>Tier completion: token reward × your XP contribution % for that tier + another exclusive cosmetic/Shikigami</span>
                 </div>
               </div>
             </div>

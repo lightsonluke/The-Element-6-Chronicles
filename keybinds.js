@@ -118,17 +118,22 @@ export function getControlOptions(settings) {
   return opts;
 }
 
+function keyIsDown(keys, key) {
+  if (!key) return false;
+  return !!keys[key] || !!keys[String(key).toLowerCase()];
+}
+
 export function readPlayerInput(keys, binds) {
   return {
-    left: !!keys[binds.left],
-    right: !!keys[binds.right],
-    jump: !!keys[binds.jump],
-    up: !!keys[binds.jump],
-    down: !!keys[binds.down],
-    sig: !!keys[binds.sig],
-    power: !!keys[binds.power],
-    superMove: !!keys[binds.superMove],
-    heavy: !!keys[binds.heavy],
+    left: keyIsDown(keys, binds.left),
+    right: keyIsDown(keys, binds.right),
+    jump: keyIsDown(keys, binds.jump),
+    up: keyIsDown(keys, binds.jump),
+    down: keyIsDown(keys, binds.down),
+    sig: keyIsDown(keys, binds.sig),
+    power: keyIsDown(keys, binds.power),
+    superMove: keyIsDown(keys, binds.superMove),
+    heavy: keyIsDown(keys, binds.heavy),
   };
 }
 

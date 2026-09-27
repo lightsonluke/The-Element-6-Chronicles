@@ -61,6 +61,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   const [selectedEntities, setSelectedEntities] = useState([]);
   const [selectionDrag, setSelectionDrag] = useState(null);
   const [clipboardEntities, setClipboardEntities] = useState([]);
+  const [pasteArmed, setPasteArmed] = useState(false);
   const [material, setMaterial] = useState('normal');
   const [freehandDiameter, setFreehandDiameter] = useState(36);
   const [freehandStrokes, setFreehandStrokes] = useState([]);
@@ -435,19 +436,52 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     if (!selectedEntities.length) return;
     const payload = selectedEntities.map(sel => ({ kind:sel.kind, data: JSON.parse(JSON.stringify(sel.kind==='platform'?platforms[sel.index]:sel.kind==='hazard'?hazards[sel.index]:sel.kind==='object'?objects[sel.index]:freehandStrokes[sel.index])) }));
     setClipboardEntities(payload);
+    setPasteArmed(true);
     try { await navigator.clipboard?.writeText(JSON.stringify(payload)); } catch {}
   };
-  const pasteSelection = () => {
+  const pasteSelectionAt = (targetX = null, targetY = null) => {
     if (!clipboardEntities.length) return;
-    const off=40; const newSel=[]; const nextP=[...platforms], nextH=[...hazards], nextO=[...objects];
+    const first = clipboardEntities[0]?.data || {};
+    const anchor = first?.x != null && first?.y != null
+      ? { x: Number(first.x), y: Number(first.y) }
+      : first?.points?.length
+        ? { x: Number(first.points[0].x), y: Number(first.points[0].y) }
+        : { x: 0, y: 0 };
+    const dx = targetX == null ? 40 : Number(targetX) - anchor.x;
+    const dy = targetY == null ? 40 : Number(targetY) - anchor.y;
+    const newSel=[]; const nextP=[...platforms], nextH=[...hazards], nextO=[...objects], nextF=[...freehandStrokes];
     clipboardEntities.forEach(item=>{
-      const d={...item.data};
-      if(item.kind==='platform'){d.x+=off;d.y+=off;nextSel.push({kind:'platform',index:nextP.length});nextP.push(d);}
-      else if(item.kind==='hazard'){d.x+=off;d.y+=off;if(d.move){d.move={...d.move,startX:(d.move.startX??item.data.x)+off,startY:(d.move.startY??item.data.y)+off};}nextSel.push({kind:'hazard',index:nextH.length});nextH.push(d);}
-      else {d.x+=off;d.y+=off;d._originX=d.x;d._originY=d.y;nextSel.push({kind:'object',index:nextO.length});nextO.push(d);}
+      const d=JSON.parse(JSON.stringify(item.data || {}));
+      if(item.kind==='platform'){
+        d.x+=dx; d.y+=dy; newSel.push({kind:'platform',index:nextP.length}); nextP.push(d);
+      } else if(item.kind==='hazard'){
+        d.x+=dx; d.y+=dy;
+        if(d.move){ d.move={...d.move,startX:(d.move.startX??item.data.x)+dx,startY:(d.move.startY??item.data.y)+dy}; }
+        newSel.push({kind:'hazard',index:nextH.length}); nextH.push(d);
+      } else if(item.kind==='object'){
+        d.x+=dx; d.y+=dy; d._originX=d.x; d._originY=d.y; newSel.push({kind:'object',index:nextO.length}); nextO.push(d);
+      } else if(item.kind==='freehand'){
+        d.points=(d.points||[]).map(pt=>({x:Number(pt.x)+dx,y:Number(pt.y)+dy}));
+        if(d.move){ d.move={...d.move,startX:(d.move.startX??anchor.x)+dx,startY:(d.move.startY??anchor.y)+dy}; }
+        newSel.push({kind:'freehand',index:nextF.length}); nextF.push(d);
+      }
     });
-    setPlatforms(nextP);setHazards(nextH);setObjects(nextO);setSelectedEntities(newSel);
+    setPlatforms(nextP); setHazards(nextH); setObjects(nextO); setFreehandStrokes(nextF); setSelectedEntities(newSel); setPasteArmed(false);
   };
+  const pasteSelection = () => pasteSelectionAt(null, null);
+
+  const flipSelectionHorizontally = () => {
+    if (!selectedEntities.length) return;
+    const boxes = selectedEntities.map(sel => entityBox(sel.kind, sel.index)).filter(Boolean);
+    if (!boxes.length) return;
+    const left=Math.min(...boxes.map(b=>b.x)), right=Math.max(...boxes.map(b=>b.x+b.w)), center=(left+right)/2;
+    const flipX = x => center - (x - center);
+    setPlatforms(prev=>prev.map((p,i)=>selectedEntities.some(s=>s.kind==='platform'&&s.index===i) ? {...p,x:flipX(p.x+p.w)-p.w} : p));
+    setHazards(prev=>prev.map((h,i)=>selectedEntities.some(s=>s.kind==='hazard'&&s.index===i) ? {...h,x:flipX(h.x+h.w)-h.w} : h));
+    setObjects(prev=>prev.map((o,i)=>selectedEntities.some(s=>s.kind==='object'&&s.index===i) ? {...o,x:flipX(o.x)} : o));
+    setFreehandStrokes(prev=>prev.map((st,i)=>selectedEntities.some(s=>s.kind==='freehand'&&s.index===i) ? {...st,points:(st.points||[]).map(pt=>({x:flipX(pt.x),y:pt.y}))} : st));
+  };
+
 
   const onDown = (e) => {
     const { x, y } = pos(e);
@@ -456,6 +490,10 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
       const defW = 160, defH = 20;
       const snap = (v) => gridLock ? Math.round(v / 40) * 40 : Math.round(v);
       setPlatforms([...platforms, { x: snap(x - defW / 2), y: snap(y - defH / 2), w: defW, h: defH, material, ...(material === 'conveyor' ? { conveyorDir } : {}) }]);
+      return;
+    }
+    if (mode === 'select' && pasteArmed && clipboardEntities.length) {
+      pasteSelectionAt(x, y);
       return;
     }
     if (mode === 'freehand') {
@@ -733,7 +771,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
 
   // Load a saved stage into the editor for editing (tracks which slot is being edited)
   const loadStage = (stage, idx) => {
-    setSelectedEntities([]); setSelectionDrag(null); setClipboardEntities([]);
+    setSelectedEntities([]); setSelectionDrag(null); setClipboardEntities([]); setPasteArmed(false);
     const rawPlatforms = stage.platforms || stage;
     const storedFreehand = (Array.isArray(stage.freehandStrokes) ? stage.freehandStrokes : []).map(st => sanitizeFreehandStroke(st)).filter(Boolean);
     setFreehandStrokes(storedFreehand);
@@ -931,7 +969,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           <button onClick={() => setMode('add')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'add' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>ADD (drag)</button>
           <button onClick={() => setMode('freehand')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'freehand' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>FREEHAND</button>
           <button onClick={() => setMode('select')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'select' ? 'bg-cyan-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>SELECT</button>
-          {mode === 'select' && <><button onClick={copySelection} disabled={!selectedEntities.length} className="px-3 py-1 rounded font-heading text-xs bg-secondary text-secondary-foreground disabled:opacity-40">COPY</button><button onClick={pasteSelection} disabled={!clipboardEntities.length} className="px-3 py-1 rounded font-heading text-xs bg-secondary text-secondary-foreground disabled:opacity-40">PASTE</button><span className="text-[9px] text-muted-foreground">{selectedEntities.length} selected · Shift+drag adds</span></>}
+          {mode === 'select' && <><button onClick={copySelection} disabled={!selectedEntities.length} className="px-3 py-1 rounded font-heading text-xs bg-secondary text-secondary-foreground disabled:opacity-40">COPY</button><button onClick={pasteSelection} disabled={!clipboardEntities.length} className="px-3 py-1 rounded font-heading text-xs bg-secondary text-secondary-foreground disabled:opacity-40">PASTE</button><button onClick={flipSelectionHorizontally} disabled={!selectedEntities.length} className="px-3 py-1 rounded font-heading text-xs bg-secondary text-secondary-foreground disabled:opacity-40">ROTATE ↔</button><span className="text-[9px] text-muted-foreground">{pasteArmed ? 'CLICK A LOCATION TO PASTE' : `${selectedEntities.length} selected · Shift+drag adds`}</span></>}
           <button onClick={() => setMode('cursor')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'cursor' ? 'bg-cyan-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>CURSOR</button>
           <button onClick={() => setMode('remove')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'remove' ? 'bg-destructive text-destructive-foreground' : 'bg-secondary text-secondary-foreground'}`}>REMOVE</button>
           <button onClick={() => setMode('spawn')} className={`px-3 py-1 rounded font-heading text-xs ${mode === 'spawn' ? 'bg-green-600 text-white' : 'bg-secondary text-secondary-foreground'}`}>SPAWN</button>

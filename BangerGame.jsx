@@ -194,10 +194,10 @@ export default function BangerGame({
           const s = stRef.current;
           if (msg.down && remoteSide != null && s.phase === 'aim' && s.aimSide === remoteSide && s[`active${remoteSide}`] === remoteTeamSlot) {
             // The remote device may only fire for its own queued slot.
-            if ([kb.p1.sig, kb.p2.sig, 'z', 'x', 'j', 'k'].map(String).map(v => v.toLowerCase()).includes(k)) strike(remoteSide);
+            if ([kb.p1.sig, kb.p2.sig].map(String).map(v => v.toLowerCase()).includes(k)) strike(remoteSide);
           }
           if (msg.down && remoteSide != null && s.ball.bangerWindow > 0 && s.ball.bangerTarget?.side === remoteSide && s.ball.bangerTarget?.slot === remoteTeamSlot) {
-            if ([kb.p1.power, kb.p2.power, 'z', 'x', 'j', 'k'].map(String).map(v => v.toLowerCase()).includes(k)) callBanger();
+            if ([kb.p1.power, kb.p2.power].map(String).map(v => v.toLowerCase()).includes(k)) callBanger();
           }
           setTimeout(() => { remoteKeysProc.current = false; }, 0);
         }
@@ -206,7 +206,7 @@ export default function BangerGame({
     window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
     return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); };
     // eslint-disable-next-line
-  }, [p1IsCPU, p2IsCPU, lanConnection, lanRole, localScheme]);
+  }, [p1IsCPU, p2IsCPU, lanConnection, lanRole, localScheme, settings]);
 
   useEffect(() => {
     if (!started) return;

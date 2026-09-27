@@ -1196,7 +1196,7 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
       </MatchPauseButtonPortal>
       {paused && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></MatchPausePortal>}
       <GameCanvasPortal>
-        <canvas data-e6-game-canvas="true" ref={canvasRef} width={CANVAS_W} height={CANVAS_H} className="el6-match-canvas el6-sport-canvas" onPointerDown={(e) => { e.preventDefault(); window.focus(); }} />
+        <canvas data-e6-game-canvas="true" ref={canvasRef} width={CANVAS_W} height={CANVAS_H} className="el6-match-canvas el6-sport-canvas el6-volleyball-canvas" onPointerDown={(e) => { e.preventDefault(); window.focus(); }} />
       </GameCanvasPortal>
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">

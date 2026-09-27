@@ -208,9 +208,20 @@ function flushCloudSave() {
 
 const ALL = [...ALL_CHARS];
 
-const TOUCH_SCREENS = ['fighting', 'soccer', 'sports', 'training', 'tutorial', 'lan', 'team', 'customrooms', 'experimental', 'sportslobby'];
+const TOUCH_SCREENS = ['fighting', 'soccer', 'sports', 'training', 'tutorial', 'lan', 'team', 'customrooms', 'experimental', 'sportslobby', 'onlinesportsmatch'];
+
+function detectMobileOrTablet() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = String(navigator.userAgent || '').toLowerCase();
+  const iPadOS = navigator.platform === 'MacIntel' && Number(navigator.maxTouchPoints || 0) > 1;
+  const uaMobile = /android|iphone|ipod|ipad|windows phone|iemobile|mobile|tablet/.test(ua);
+  const uaDataMobile = navigator.userAgentData?.mobile === true;
+  return iPadOS || uaMobile || uaDataMobile;
+}
 
 export default function Game() {
+  const [autoMobileDevice, setAutoMobileDevice] = useState(false);
+  useEffect(() => { setAutoMobileDevice(detectMobileOrTablet()); }, []);
   const SCREEN_PATHS = {
     menu: '/home', shop: '/shop', modeSelect: '/fights', onlinelobby: '/online', onlinesports: '/onlinesports',
     sports: '/sports', elo: '/elo', hubserverselect: '/community', leaderboard: '/leaderboards', settings: '/settings',
@@ -587,10 +598,13 @@ export default function Game() {
       const rewards = Array.isArray(data) ? data : [];
       const granted = [];
       for (const reward of rewards) {
-        const ok = await grantClanReward(reward);
-        if (!ok) continue;
+        // Claim first: the server computes the member's tier-specific XP share
+        // and returns the scaled token amount. This prevents a base reward from
+        // being granted before the contribution check is applied.
         const { data: claimed, error: claimError } = await supabase.rpc('element6_claim_clan_milestone', { p_milestone_key: reward.milestone_key });
-        if (!claimError) granted.push(claimed || reward);
+        if (claimError || !claimed) continue;
+        const ok = await grantClanReward(claimed);
+        if (ok) granted.push(claimed);
       }
       return granted;
     } catch {
@@ -1458,16 +1472,18 @@ export default function Game() {
       // stage to its platform array here: materials, platform motion,
       // destroyable flags, hazards, items, spawns, backdrop, camera settings,
       // and KO-perimeter settings all belong to the stage definition.
+      const finite = (v, fallback = 0) => Number.isFinite(Number(v)) ? Number(v) : fallback;
+      const safeMotion = (m) => m && typeof m === 'object' ? { ...m, distance: finite(m.distance, 0), speed: finite(m.speed, 0), chain: Array.isArray(m.chain) ? m.chain.slice(0,10).map(step => ({ ...step, distance: finite(step?.distance, 0), speed: finite(step?.speed, 0) })) : m.chain } : null;
       customPlatforms = Array.isArray(stage?.platforms)
         ? stage.platforms.map(p => ({
             ...p,
-            move: p?.move ? { ...p.move, chain: Array.isArray(p.move.chain) ? p.move.chain.map(step => ({ ...step })) : p.move.chain } : p?.move,
-            motion: p?.motion ? { ...p.motion, chain: Array.isArray(p.motion.chain) ? p.motion.chain.map(step => ({ ...step })) : p.motion.chain } : p?.motion,
-          }))
+            x: finite(p?.x), y: finite(p?.y), w: Math.max(1, finite(p?.w, 40)), h: Math.max(1, finite(p?.h, 18)),
+            move: safeMotion(p?.move), motion: safeMotion(p?.motion),
+          })).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y) && p.w > 0 && p.h > 0)
         : (Array.isArray(progress.customStage) ? progress.customStage.map(p => ({ ...p })) : null);
-      customSpawnPoints = Array.isArray(stage?.spawnPoints) ? stage.spawnPoints.map(sp => ({ ...sp })) : null;
-      customHazards = Array.isArray(stage?.hazards) ? stage.hazards.map(h => ({ ...h, move: h?.move ? { ...h.move } : h?.move })) : null;
-      customObjects = Array.isArray(stage?.objects) ? stage.objects.map(o => ({ ...o })) : null;
+      customSpawnPoints = Array.isArray(stage?.spawnPoints) ? stage.spawnPoints.slice(0,4).map(sp => ({ ...sp, x: finite(sp?.x), y: finite(sp?.y) })) : null;
+      customHazards = Array.isArray(stage?.hazards) ? stage.hazards.map(h => ({ ...h, x: finite(h?.x), y: finite(h?.y), w: Math.max(1, finite(h?.w, 40)), h: Math.max(1, finite(h?.h, 40)), move: safeMotion(h?.move), motion: safeMotion(h?.motion) })).filter(h => h.type) : null;
+      customObjects = Array.isArray(stage?.objects) ? stage.objects.map(o => ({ ...o, x: finite(o?.x), y: finite(o?.y), w: Math.max(1, finite(o?.w, 24)), h: Math.max(1, finite(o?.h, 24)) })).filter(o => o.type) : null;
       customStageConfig = stage || null;
       resolvedMap = 'custom';
     }
@@ -2641,7 +2657,7 @@ export default function Game() {
         )}
       </div>
 
-      {progress?.settings?.mobileMode === true && TOUCH_SCREENS.includes(screen) && (
+      {(progress?.settings?.mobileMode === true || autoMobileDevice) && TOUCH_SCREENS.includes(screen) && (
         <TouchControls keybinds={getKeybinds(progress.settings).p1} settings={progress.settings || {}} />
       )}
       <GlobalClipRecorder />

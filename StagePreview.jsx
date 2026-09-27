@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MATERIALS, drawMaterialOverlay, drawMaterialStroke } from './materials.js';
-import { HAZARD_TYPES, OBJECT_TYPES } from './stageHazards.js';
+import { drawMaterialStroke } from './materials.js';
+import { drawPlatforms } from './renderer.js';
+import { buildHazardsFromStage, buildObjectsFromStage, drawHazards, drawObjects } from './stageHazards.js';
 import { drawStageBackground } from './stageBackgrounds.js';
-import { directionVector, normalizeMotion, sampleMotion } from './StageMotionRuntime.js';
+import { normalizeMotion, sampleMotion } from './StageMotionRuntime.js';
 
 const W = 1280, H = 720;
 const FREEHAND_PREVIEW_MAX_POINTS = 640;
@@ -48,15 +49,14 @@ function drawScene(ctx, stage, now, playing) {
     return { x: baseX + sampled.x, y: baseY + sampled.y };
   };
 
-  (data.platforms || []).forEach(p => {
-    if (p?._freehandSegment) return;
+  // Use the same platform renderer as the actual fighter match instead of a
+  // simplified editor-only rectangle renderer. This keeps materials, rounded
+  // geometry, animated platform accents, and stage visuals consistent.
+  const movingPlatforms = (data.platforms || []).filter(p => !p?._freehandSegment).map(p => {
     const pos = drawMove(p, p.x, p.y);
-    const mat = MATERIALS.find(m => m.id === (p.material || 'normal')) || MATERIALS[0];
-    ctx.fillStyle = mat.color || '#777';
-    ctx.fillRect(pos.x, pos.y, p.w, p.h);
-    try { drawMaterialOverlay(ctx, { ...p, x: pos.x, y: pos.y }, 0); } catch {}
-    if (p.destroyable) { ctx.strokeStyle = '#ff8844'; ctx.strokeRect(pos.x, pos.y, p.w, p.h); }
+    return { ...p, x: pos.x, y: pos.y };
   });
+  drawPlatforms(ctx, movingPlatforms, Math.floor(now / 16), 'splitcity');
   (data.freehandStrokes || []).forEach((stroke, idx) => {
     try {
       let rendered = stroke;
@@ -69,17 +69,19 @@ function drawScene(ctx, stage, now, playing) {
       drawMaterialStroke(ctx, rendered, Math.floor(now / 16));
     } catch {}
   });
-  (data.hazards || []).forEach(h => {
-    const pos = drawMove(h, h.x, h.y);
-    const def = HAZARD_TYPES.find(t => t.id === h.type) || HAZARD_TYPES[0];
-    ctx.globalAlpha = .65; ctx.fillStyle = def.color || '#f44'; ctx.fillRect(pos.x, pos.y, h.w || 50, h.h || 40); ctx.globalAlpha = 1;
-  });
-  (data.objects || []).forEach((o, idx) => {
-    const def = OBJECT_TYPES.find(t => t.id === o.type) || OBJECT_TYPES[0];
-    const pos = drawMove(o, o.x, o.y);
-    ctx.fillStyle = def.color || '#fff'; ctx.beginPath(); ctx.arc(pos.x, pos.y, (def.size || 24) / 2, 0, Math.PI * 2); ctx.fill();
-    ctx.save(); ctx.translate(pos.x, pos.y); ctx.rotate((o._previewRot || 0)); ctx.strokeStyle = '#ffffff88'; ctx.strokeRect(-(def.size||24)/2, -(def.size||24)/2, def.size||24, def.size||24); ctx.restore();
-  });
+  try {
+    const safeHazards = buildHazardsFromStage((data.hazards || []).map(h => {
+      const pos = drawMove(h, Number(h.x) || 0, Number(h.y) || 0);
+      return { ...h, x: pos.x, y: pos.y };
+    }));
+    const safeObjects = buildObjectsFromStage((data.objects || []).map(o => {
+      const pos = drawMove(o, Number(o.x) || 0, Number(o.y) || 0);
+      return { ...o, x: pos.x, y: pos.y };
+    }));
+    if (safeHazards) drawHazards(ctx, safeHazards, Math.floor(now / 16));
+    if (safeObjects) drawObjects(ctx, safeObjects, Math.floor(now / 16));
+  } catch {}
+
 
   const kp = data.killPerimeter;
   if (kp?.enabled !== false) {

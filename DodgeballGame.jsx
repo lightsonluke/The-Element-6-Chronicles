@@ -152,7 +152,7 @@ export default function DodgeballGame({
     window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
     return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); };
     // eslint-disable-next-line
-  }, [lanConnection, lanRole, localScheme]);
+  }, [lanConnection, lanRole, localScheme, settings]);
 
   // ── read human input for a side ──
   const readHuman = (side) => {
