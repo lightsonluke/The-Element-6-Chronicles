@@ -339,11 +339,11 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
       if (remoteStateRef.current) {
         st.current = remoteStateRef.current;
         if (ctx) draw(ctx, st.current, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories);
-        raf = requestAnimationFrame(loop);
+        raf = requestAnimationFrame(safeLoop);
         return;
       }
       const s = st.current;
-      if (pausedRef.current && !remoteStateRef.current && !lanConnection) { if (ctx) draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories); raf = requestAnimationFrame(loop); return; }
+      if (pausedRef.current && !remoteStateRef.current && !lanConnection) { if (ctx) draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories); raf = requestAnimationFrame(safeLoop); return; }
       s.frame++;
 
       if (s.phase === 'countdown') {
@@ -526,9 +526,19 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
 
       if (onStateExportRef.current) onStateExportRef.current(s);
       if (ctx) draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories);
-      raf = requestAnimationFrame(loop);
+      raf = requestAnimationFrame(safeLoop);
     };
-    raf = requestAnimationFrame(loop);
+    // A single exception in audio/export/render code must never kill the match loop.
+    // The old loop could silently stop here, leaving volleyball visibly frozen.
+    const safeLoop = (now) => {
+      try {
+        loop(now);
+      } catch (err) {
+        console.error('[Volleyball] recovered from frame error:', err);
+        raf = requestAnimationFrame(safeLoop);
+      }
+    };
+    raf = requestAnimationFrame(safeLoop);
     return () => cancelAnimationFrame(raf);
   }, [started, p1Chars, p2Chars, p2IsCPU, difficulty, p1Jersey, p2Jersey, onResult, is1v1, equippedSkins, equippedAccessories]);
 

@@ -28,85 +28,128 @@ function guard(ctx,x,y,flip=1,col='#7E8791'){fill(ctx,col);ctx.fillRect(x-9,y-26
 function cane(ctx,x,y,col){line(ctx,x,y-4,x+42,y-46,col,7);ctx.beginPath();ctx.arc(x+42,y-48,9,Math.PI*.15,Math.PI*1.35);ctx.stroke();}
 function cable(ctx,x1,y1,x2,y2,col='#6CB9FF'){stroke(ctx,col,2);ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo((x1+x2)/2,y1+18,x2,y2);ctx.stroke();}
 
-function drawTakeshi(ctx,p,m){const c=C.g3_takeshi; if(m==='ss'){line(ctx,15,-45,48+65*p,-48-Math.sin(p*Math.PI)*22,c,8);for(let i=0;i<5;i++)sand(ctx,42+i*13*p,-49+Math.sin(i+p*3)*5,5,c?1:1);}
-else if(m==='us'){const h=110*p;for(let i=0;i<7;i++)sand(ctx,(i-3)*5,-8-h*(i/7),7);poly(ctx,[[-18,-10],[18,-10],[9,-105],[-9,-105]],c,true,.7);poly(ctx,[[-9,-105],[9,-105],[0,-132]],'#E8D09A',true,.95);}
-else if(m==='ds'){for(let i=0;i<9;i++){const a=i/9*TAU,r=18+12*p;sand(ctx,Math.cos(a)*r,-8+Math.sin(a)*r*.45,7);}ring(ctx,0,-8,30,c,.7,4);}
-else if(m==='uh'){poly(ctx,[[-25,-5],[25,-5],[18,-145],[-18,-145]],c,true,.85);for(let i=0;i<5;i++)poly(ctx,[[0,-125],[35+8*i,-155+i*7],[52+8*i,-135+i*5],[15,-115]],'#E5C78B',true,.85);}
-else if(m==='dh'){for(let i=0;i<11;i++){const a=i/10*TAU;const r=35+18*p;sand(ctx,Math.cos(a)*r,-15+Math.sin(a)*r*.5,10);}ring(ctx,0,-12,52,c,.45,5);}
-else if(m==='sh'){poly(ctx,[[18,-78],[130,-60],[130,-15],[18,-30]],c,true,.95);for(let i=0;i<9;i++)sand(ctx,45+i*9,-42+(i%3)*8,5);poly(ctx,[[130,-60],[145,-38],[130,-15]],'#E5C78B',true,.9);}
-else {for(let i=0;i<20;i++){const a=i/20*TAU;const r=18+p*82;sand(ctx,Math.cos(a)*r,-42+Math.sin(a)*r*.65,5);}ring(ctx,0,-42,20+82*p,c,.7,4);sparks(ctx,0,-42,'#E8D09A',10,p);}}
-function drawAiko(ctx,p,m){const c=C.g3_aiko;if(m==='ss'){bone(ctx,15,-45,62+28*p,-44,16,c);poly(ctx,[[62+28*p,-44],[78+28*p,-51],[72+28*p,-36]],c,true);}
-else if(m==='us'){bone(ctx,14,-42,18,-120-30*p,17,c);bone(ctx,18,-120-30*p,18,-148-25*p,12,'#FFF6EA');}
-else if(m==='ds'){bone(ctx,-24,-10,-38,-42,15,c);bone(ctx,24,-10,38,-42,15,c);poly(ctx,[[-44,-44],[0,-58],[44,-44],[38,-30],[-38,-30]],c,true,.9);}
-else if(m==='uh'){for(let i=0;i<5;i++)bone(ctx,0,-45-i*14,(-10+i*5),-95-i*13,10,c);bone(ctx,0,-92,0,-160,12,c);}
-else if(m==='dh'){for(let i=0;i<5;i++){const x=-58+i*29;ctx.beginPath();ctx.arc(x,-5,25,Math.PI,TAU);ctx.strokeStyle=c;ctx.lineWidth=9;ctx.stroke();}for(let i=0;i<4;i++)line(ctx,-42+i*28,-6,-32+i*28,-52,c,7);}
-else if(m==='sh'){const pts=[];for(let i=0;i<=14;i++){const a=-1.1+i/14*2.2;pts.push([20+Math.cos(a)*105,-48+Math.sin(a)*105]);}poly(ctx,pts,c,true,.85);poly(ctx,[[20,-48],[126,-75],[135,-48],[126,-21]],'#FFF7ED',true,.65);}
-else {poly(ctx,[[15,-100],[55,-82],[70,-20],[15,0],[-15,-5],[-42,-65]],c,true,.85);bone(ctx,35,-55,145,-35,30,c);poly(ctx,[[145,-35],[172,-55],[165,-18]],c,true);for(let i=0;i<8;i++)sparks(ctx,70,-45,'#FFF7ED',2,p);}}
-function drawHaru(ctx,p,m){const c=C.g3_haru;if(m==='ss'){glass(ctx,[[15,-62],[105,-62],[105,-55],[15,-55]],c,.8,3);line(ctx,18,-58,100,-58,'#FFFFFF',1,.9);}
-else if(m==='us'){for(let i=0;i<5;i++){glass(ctx,[[-18+i*9,-8],[18+i*9,-8],[10+i*9,-125],[-10+i*9,-125]],c,.7,2);}poly(ctx,[[0,-130],[7,-150],[14,-130],[-14,-130]],'#FFFFFF',true,.8);}
-else if(m==='ds'){poly(ctx,[[-72,-4],[72,-4],[55,-28],[-55,-28]],c,false,.7,3);for(let i=0;i<8;i++){const a=i/8*TAU;line(ctx,0,-16,Math.cos(a)*70,-16+Math.sin(a)*18,c,2,.8);}}
-else if(m==='uh'){for(let i=0;i<6;i++){const a=i/6*TAU+p*1.4;const x=Math.cos(a)*30;glass(ctx,[[x-8,-10],[x+8,-10],[x+12,-140],[x-12,-140]],c,.7,2);}sparks(ctx,0,-120,'#FFFFFF',8,p);}
-else if(m==='dh'){poly(ctx,[[-90,-8],[90,-8],[80,-35],[-80,-35]],c,false,.75,4);for(let i=0;i<10;i++){const x=-80+i*18;line(ctx,x,-25,x+(i%2?12:-12),-70,c,2,.8);}}
-else if(m==='sh'){poly(ctx,[[25,-105],[135,-105],[135,-5],[25,-5]],c,true,.32);line(ctx,25,-105,25,-5,'#FFFFFF',3,.9);line(ctx,135,-105,135,-5,'#FFFFFF',5,.9);}
-else {for(let i=0;i<16;i++){const a=i/16*TAU;const r=18+70*p;const x=Math.cos(a)*r,y=-48+Math.sin(a)*r*.7;glass(ctx,[[x,y-18],[x+8,y],[x,y+18],[x-8,y]],c,.8,2);}circ(ctx,0,-48,8,'#FFFFFF',.9);}}
-function drawChiyo(ctx,p,m){const c=C.g3_chiyo;if(m==='ss'){venom(ctx,28+62*p,-50-Math.sin(p*Math.PI)*20,8,c);if(p>.65){for(let i=0;i<6;i++)venom(ctx,90+(i-3)*6,-50+(i%2)*9,4,c);}}
-else if(m==='us'){venom(ctx,0,-20-105*p,9,c);if(p>.65)for(let i=0;i<7;i++)venom(ctx,(i-3)*6,-125,5,c);}
-else if(m==='ds'){for(let i=0;i<8;i++)venom(ctx,(i-3.5)*14,-5,9,c,.7);for(let i=0;i<5;i++)venom(ctx,(i-2)*24,-20-(p*35),5,c);}
-else if(m==='uh'){for(let i=0;i<12;i++){const a=i/12*TAU+p*2;venom(ctx,Math.cos(a)*32,-55+Math.sin(a)*75,7,c,.8);}}
-else if(m==='dh'){for(let i=0;i<11;i++)venom(ctx,(i-5)*14,-5,10,c,.7);for(let i=0;i<7;i++){const x=-70+i*23;poly(ctx,[[x,-5],[x+7,-50-p*30],[x+14,-5]],c,true,.85);}}
-else if(m==='sh'){for(const s of [-1,1]){venom(ctx,18+s*18,-50,16,c);line(ctx,18+s*18,-50,85+s*42,-35,c,13,.9);poly(ctx,[[85+s*42,-35],[115+s*42,-43],[105+s*42,-20]],c,true,.95);}}
-else {circ(ctx,55,-50,28,c,.85);for(let i=0;i<10;i++){const a=i/10*TAU;line(ctx,55+Math.cos(a)*20,-50+Math.sin(a)*15,55+Math.cos(a)*95,-50+Math.sin(a)*55,c,9,.85);}}
+function body(ctx, lean=0, lift=0, col='#EAEAEA', a=1){
+  stroke(ctx,'#20252B',5,a); line(ctx,lean-7,-62-lift,lean+7,-20-lift,col,12,a);
+  circ(ctx,lean,-78-lift,11,col,a);
+  line(ctx,lean,-42-lift,lean-18,-8-lift,col,6,a); line(ctx,lean,-42-lift,lean+18,-8-lift,col,6,a);
 }
-function drawEmi(ctx,p,m){const c=C.g3_emi;if(m==='ss'){ring(ctx,42+55*p,-48,13,c,.7,3);line(ctx,24,-48,88+55*p,-48,c,3,.6);circ(ctx,88+55*p,-48,7,'#FFFFFF',.9);}
-else if(m==='us'){for(let i=0;i<4;i++)ring(ctx,0,-35-30*p-i*5,10+i*3,c,.6,2);poly(ctx,[[-13,-40],[13,-40],[8,-120],[-8,-120]],c,true,.3);}
-else if(m==='ds'){ring(ctx,0,-7,20+45*p,c,.55,3);for(let i=0;i<6;i++){const a=i/6*TAU;line(ctx,Math.cos(a)*20,-7+Math.sin(a)*8,Math.cos(a)*(30+35*p),-7+Math.sin(a)*(12+25*p),c,2,.7);}}
-else if(m==='uh'){circ(ctx,0,-55,18,c,.35);for(let i=0;i<5;i++){const a=-Math.PI/2+i*.4;line(ctx,0,-55,Math.cos(a)*30,-100-Math.sin(i)*25,c,3,.8);}}
-else if(m==='dh'){circ(ctx,0,-5,16,c,.25);ring(ctx,0,-5,42+25*p,c,.7,4);sparks(ctx,0,-5,c,8,p);}
-else if(m==='sh'){line(ctx,15,-48,78+35*p,-48,c,8,.9);circ(ctx,78+35*p,-48,12,'#FFFFFF',.8);ring(ctx,78+35*p,-48,18,c,.7,2);}
-else {ring(ctx,0,-52,35+65*p,c,.7,3);for(let i=0;i<12;i++){const a=i/12*TAU+p*2;line(ctx,Math.cos(a)*30,-52+Math.sin(a)*20,Math.cos(a)*(55+65*p),-52+Math.sin(a)*(35+65*p),c,2,.7);}circ(ctx,55+65*p*.4,-52,20,c,.8);}}
-function drawNozomi(ctx,p,m){const c=C.g3_nozomi;if(m==='ss'){vine(ctx,[[10,-50],[45,-60],[80+55*p,-42-Math.sin(p*Math.PI)*25]],c,7,.95);}
-else if(m==='us'){vine(ctx,[[0,-5],[0,-55],[12,-110],[0,-145]],c,12,.95);for(let i=0;i<5;i++)poly(ctx,[[0,-125-i*4],[10,-140-i*4],[16,-128-i*4]],c,true,.9);}
-else if(m==='ds'){vine(ctx,[[-15,-5],[-42,-20],[-62,-6]],c,6);vine(ctx,[[15,-5],[42,-20],[62,-6]],c,6);for(let i=0;i<8;i++)poly(ctx,[[-45+i*13,-8],[-39+i*13,-25],[-33+i*13,-8]],c,true,.8);}
-else if(m==='uh'){for(let i=0;i<5;i++){const a=-1.3+i*.65;vine(ctx,[[0,-8],[Math.cos(a)*35,-65],[Math.cos(a)*45,-145]],c,10,.9);}}
-else if(m==='dh'){for(let i=0;i<8;i++){const a=i/8*TAU;vine(ctx,[[Math.cos(a)*20,-5],[Math.cos(a)*55,-45],[Math.cos(a)*75,-10]],c,8,.9);}}
-else if(m==='sh'){vine(ctx,[[18,-52],[55,-70],[100,-45],[145,-35]],c,16,.95);for(let i=0;i<8;i++)poly(ctx,[[45+i*12,-60-i%2*8],[54+i*12,-78-i%2*8],[60+i*12,-58-i%2*8]],c,true,.9);}
-else {for(let i=0;i<12;i++){const a=i/12*TAU;vine(ctx,[[0,-45],[Math.cos(a)*55,-45+Math.sin(a)*25],[Math.cos(a)*110,-45+Math.sin(a)*70]],c,9,.9);}}
+function slashTrail(ctx,x1,y1,x2,y2,col,p,w=5){
+  for(let i=5;i>=1;i--) { const t=i/6; line(ctx,x1+(x2-x1)*t*.35,y1+(y2-y1)*t*.35,x2-(x2-x1)*t*.15,y2-(y2-y1)*t*.15,col,w*t,.12*t); }
+  line(ctx,x1,y1,x2,y2,col,w,.95);
+  sparks(ctx,x2,y2,col,5,p);
 }
-function drawMasaru(ctx,p,m){const c=C.g3_masaru;if(m==='ss'){for(let i=0;i<10;i++)ash(ctx,25+i*7*p,-48+Math.sin(i+p*4)*10,7,.7);}
-else if(m==='us'){for(let i=0;i<16;i++)ash(ctx,(Math.sin(i)*20),-10-i*8*p,8,.55);poly(ctx,[[-35,-5],[35,-5],[22,-125],[-22,-125]],c,true,.15);}
-else if(m==='ds'){for(let i=0;i<14;i++)ash(ctx,(i-7)*9,-8+Math.sin(i)*5,10,.55);ring(ctx,0,-8,40+25*p,c,.35,4);}
-else if(m==='uh'){for(let i=0;i<22;i++){const a=i/22*TAU+p*2;ash(ctx,Math.cos(a)*42,-65+Math.sin(a)*70,7,.55);}}
-else if(m==='dh'){for(let i=0;i<18;i++)ash(ctx,(i-9)*9,-5+Math.sin(i)*7,9,.6);for(let i=0;i<9;i++)line(ctx,(i-4)*18,-5,(i-4)*22,-45,c,4,.35);}
-else if(m==='sh'){for(let i=0;i<18;i++)ash(ctx,30+i*6*p,-48+Math.sin(i)*8,11,.7);poly(ctx,[[25,-70],[140,-55],[140,-20],[25,-32]],c,true,.7);}
-else {circ(ctx,0,-45,35,c,.45);for(let i=0;i<24;i++){const a=i/24*TAU;const r=25+70*p;ash(ctx,Math.cos(a)*r,-45+Math.sin(a)*r*.7,7,.7);}if(p>.55)for(let i=0;i<14;i++)ash(ctx,Math.cos(i)*85,-45+Math.sin(i)*55,6,.6);}}
-function drawRyo(ctx,p,m){const c=C.g3_ryo;if(m==='ss'){mist(ctx,25+60*p,-48,24,12,.45);line(ctx,25,-48,85+60*p,-48,'#FFFFFF',4,.4);}
-else if(m==='us'){mist(ctx,0,-35-80*p,35,28,.45);mist(ctx,0,-105,25,18,.65);ring(ctx,0,-120,30,c,.45,3);}
-else if(m==='ds'){mist(ctx,0,-5,55+20*p,18,.45);mist(ctx,0,-35,35,30,.6);}
-else if(m==='uh'){mist(ctx,0,-75,42,80,.35);for(let i=0;i<9;i++){const a=i/9*TAU;mist(ctx,Math.cos(a)*55,-75+Math.sin(a)*65,15,10,.35);}}
-else if(m==='dh'){mist(ctx,0,-5,70,25,.55);for(let i=0;i<8;i++){const a=i/8*TAU;line(ctx,Math.cos(a)*55,-5,Math.cos(a)*25,-35,c,4,.55);}}
-else if(m==='sh'){mist(ctx,65,-48,55,18,.55);poly(ctx,[[18,-75],[135,-48],[18,-20]],'#EAFBFF',true,.35);line(ctx,18,-48,135,-48,c,10,.7);}
-else {circ(ctx,0,-50,38,c,.18);for(let i=0;i<18;i++){const a=i/18*TAU;mist(ctx,Math.cos(a)*(25+60*p),-50+Math.sin(a)*(20+45*p),10,7,.4);}ring(ctx,0,-50,30+65*p,c,.55,3);}}
-function drawSouta(ctx,p,m){const c=C.g3_souta;if(m==='ss'){vine(ctx,[[12,-48],[45,-65],[85+45*p,-35]],c,5,.6,false);for(let i=0;i<8;i++)ash(ctx,40+i*7*p,-50+i%2*5,5,.5);}
-else if(m==='us'){for(let i=0;i<9;i++)ash(ctx,(i-4)*7,-8-i*13*p,6,.55);circ(ctx,0,-115,15,c,.45);}
-else if(m==='ds'){ash(ctx,0,-8,28,.7);if(p>.55){for(let i=0;i<7;i++)ash(ctx,(i-3)*12,-20-(p-.55)*40,6,.75);}}
-else if(m==='uh'){for(let i=0;i<18;i++){const a=i/18*TAU+p*3;ash(ctx,Math.cos(a)*(20+35*p),-50-Math.sin(a)*65*p,6,.6);}}
-else if(m==='dh'){for(let i=0;i<16;i++)ash(ctx,(i-8)*10,-8,7,.65);poly(ctx,[[-80,-10],[0,-35],[80,-10],[80,4],[-80,4]],c,true,.25);}
-else if(m==='sh'){poly(ctx,[[20,-62],[125,-52],[125,-35],[20,-40]],c,true,.55);for(let i=0;i<7;i++)ash(ctx,35+i*12*p,-48,6,.6);poly(ctx,[[125,-52],[150,-43],[125,-35]],'#D7C7B9',true,.7);}
-else {const shapes=[[[0,-50],32],[[0,-50],52],[[0,-50],72],[[65,-48],18]];for(let i=0;i<shapes.length;i++){const [[x,y],r]=shapes[i];if(i<3)ring(ctx,x,y,r*(.4+.6*p),c,.45,3);else poly(ctx,[[x-20,-y*.0-65],[x+20,-65],[x+45,-35],[x,-20],[x-35,-35]],c,true,.65);}for(let i=0;i<10;i++)ash(ctx,40+i*6,-45+(i%3)*7,5,.6);}}
-function drawOgata(ctx,p,m){const c=C.g3_ogata;if(m==='ss'){tech(ctx,30,-55,1,c);cable(ctx,42,-55,105+40*p,-45,c);poly(ctx,[[95+40*p,-55],[110+40*p,-45],[95+40*p,-35]],c,true,.8);}
-else if(m==='us'){tech(ctx,0,-18,1.2,c);line(ctx,0,-35,0,-135,c,12,.55);for(let i=0;i<6;i++)line(ctx,-10+i*4,-40,-10+i*5,-130,c,2,.7);}
-else if(m==='ds'){for(let i=0;i<4;i++){tech(ctx,(-45+i*30),-15,.7,c);cable(ctx,(-45+i*30),-15,0,-5,c);}ring(ctx,0,-5,48,c,.45,4);}
-else if(m==='uh'){tech(ctx,0,-25,1.4,c);line(ctx,0,-40,0,-155,c,18,.45);circ(ctx,0,-155,18,'#E8F7FF',.8);sparks(ctx,0,-120,c,10,p);}
-else if(m==='dh'){for(let i=0;i<4;i++){tech(ctx,-55+i*37,-15,.65,c);cable(ctx,-55+i*37,-15,0,-20,c);}circ(ctx,0,-10,55,c,.15);ring(ctx,0,-10,55,c,.7,5);}
-else if(m==='sh'){tech(ctx,20,-50,1.1,c);line(ctx,38,-50,130+55*p,-50,c,12,.6);circ(ctx,130+55*p,-50,20,c,.55);for(let i=0;i<7;i++)sparks(ctx,130+55*p,-50,c,2,p);}
-else {tech(ctx,0,-50,1.5,c);for(let i=0;i<8;i++){const a=i/8*TAU;line(ctx,0,-50,Math.cos(a)*(35+75*p),-50+Math.sin(a)*(35+55*p),c,7,.65);}circ(ctx,0,-50,30+40*p,c,.25);}}
-function drawKanenobu(ctx,p,m){const c=C.g3_kanenobu;if(m==='ss'){cane(ctx,10,-48,c);line(ctx,35,-70,82+40*p,-48,c,5);}
-else if(m==='us'){guard(ctx,25,-8);guard(ctx,-15,-18);for(let i=0;i<3;i++)line(ctx,20+i*6,-50,20+i*6,-125,c,7,.75);}
-else if(m==='ds'){guard(ctx,-32,-10);guard(ctx,32,-10);line(ctx,-45,-25,0,-65,c,9,.75);line(ctx,45,-25,0,-65,c,9,.75);ring(ctx,0,-15,50,c,.45,4);}
-else if(m==='uh'){for(let i=0;i<4;i++){guard(ctx,-28+i*18,-10-i*15);line(ctx,-28+i*18,-45-i*15,-28+i*18,-100-i*8,c,8,.75);}}
-else if(m==='dh'){tech(ctx,28,-12,1,c);for(let i=0;i<7;i++)line(ctx,28,-12,80+i*8,-12,c,4,.35);ring(ctx,28,-12,48,c,.65,4);}
-else if(m==='sh'){guard(ctx,58,-15);fill(ctx,'#AAB4BC');ctx.fillRect(25,-78,42,65);stroke(ctx,'#F0D66B',4);ctx.strokeRect(25,-78,42,65);line(ctx,68,-45,145,-45,c,4);}
-else {guard(ctx,-30,-5);guard(ctx,30,-5);tech(ctx,0,-45,1.1,c);for(let i=0;i<8;i++){const a=i/8*TAU;line(ctx,0,-45,Math.cos(a)*(45+55*p),-45+Math.sin(a)*(35+45*p),c,6,.7);}cane(ctx,5,-50,c);}}
+function sandArc(ctx,cx,cy,r,a0,a1,col,p){
+  stroke(ctx,col,7,.9); ctx.beginPath(); ctx.arc(cx,cy,r,a0,a1); ctx.stroke();
+  for(let i=0;i<8;i++){const a=a0+(a1-a0)*i/7;sand(ctx,cx+Math.cos(a)*r,cy+Math.sin(a)*r,4,.75);}
+}
+function shardBurst(ctx,cx,cy,count,r,col,p){for(let i=0;i<count;i++){const a=i/count*TAU+p*2;const rr=r*(.35+.65*p);poly(ctx,[[cx+Math.cos(a)*rr,cy+Math.sin(a)*rr],[cx+Math.cos(a+.09)*(rr+18),cy+Math.sin(a+.09)*(rr+18)],[cx+Math.cos(a-.07)*(rr+6),cy+Math.sin(a-.07)*(rr+6)]],col,true,.8);}}
+function venomTrail(ctx,x1,y1,x2,y2,col,p){line(ctx,x1,y1,x2,y2,col,11,.65);for(let i=0;i<9;i++){const t=i/8;venom(ctx,x1+(x2-x1)*t,y1+(y2-y1)*t,4+3*Math.sin(t*Math.PI),col,.8);}}
+function ashCloud(ctx,cx,cy,rx,ry,p,alpha=.6){for(let i=0;i<18;i++){const a=i/18*TAU+p*2;const rr=.3+.7*((i*7)%10)/10;ash(ctx,cx+Math.cos(a)*rx*rr,cy+Math.sin(a)*ry*rr,5+7*rr,alpha);}}
+function mistRibbon(ctx,cx,cy,r,p,col){for(let i=0;i<12;i++){const a=i/11*TAU+p*1.8;mist(ctx,cx+Math.cos(a)*r,cy+Math.sin(a)*r*.55,12,6,.38);}}
+function techBeam(ctx,x1,y1,x2,y2,col,p){line(ctx,x1,y1,x2,y2,col,16,.2);line(ctx,x1,y1,x2,y2,'#E8F7FF',5,.8);for(let i=0;i<5;i++){const t=(i/5+p)%1;circ(ctx,x1+(x2-x1)*t,y1+(y2-y1)*t,4,col,.8);}}
+function formation(ctx,side,p){for(let i=0;i<3;i++){const x=side*(34+i*24), y=-20-i*8;guard(ctx,x,y);line(ctx,x,y-42,x+side*12,y-72,c3(),4,.55);} }
+function c3(){return C.g3_kanenobu;}
+
+function drawTakeshi(ctx,p,m){const c=C.g3_takeshi; const q=clamp(p),s=Math.sin(q*Math.PI),snap=Math.sin(q*Math.PI*2);
+ body(ctx,-5*q,8*s,c);
+ if(m==='ss'){const ex=18+105*q, yy=-48-28*s; line(ctx,12,-48,ex,yy,c,5,.35); sandArc(ctx,ex-20,yy+8,34,-.45,.45,c,q); for(let i=0;i<10;i++)sand(ctx,ex-25+i*6,yy+Math.sin(i)*5,3,.7);}
+ else if(m==='us'){const h=35+105*q; for(let i=0;i<10;i++)sand(ctx,(i-5)*3,-5-h*(i/10),5,.8); poly(ctx,[[-16,-10],[16,-10],[10,-h],[-10,-h]],c,true,.85); poly(ctx,[[-10,-h],[10,-h],[0,-h-30]],'#F2D99B',true,.95); sparks(ctx,0,-h-28,c,8,q);}
+ else if(m==='ds'){const r=18+45*s; for(let i=0;i<12;i++)sand(ctx,Math.cos(i/12*TAU)*r,-7+Math.sin(i/12*TAU)*r*.45,6,.85); ring(ctx,0,-7,r,c,.8,4); if(q>.5){for(let i=0;i<9;i++)sand(ctx,Math.cos(i/9*TAU)*(r+22*s),-7+Math.sin(i/9*TAU)*(r+22*s)*.45,5,.75);}}
+ else if(m==='uh'){const h=35+120*q; poly(ctx,[[-24,-5],[24,-5],[18,-h],[-18,-h]],c,true,.8); for(let i=0;i<7;i++){const a=-1.3+i*.43;poly(ctx,[[0,-h],[Math.cos(a)*(45+15*s),-h-18],[Math.cos(a)*30,-h+12]],'#E9CD91',true,.85);} }
+ else if(m==='dh'){for(let i=0;i<13;i++){const a=-Math.PI+(i/12)*TAU;const r=25+38*s;sand(ctx,Math.cos(a)*r,-20+Math.sin(a)*r*.5,8,.85);} ring(ctx,0,-15,58*s,c,.65,5); if(q>.55) sparks(ctx,0,-20,'#EED7A5',12,q);}
+ else if(m==='sh'){const w=45+90*q; poly(ctx,[[18,-78],[18+w,-64],[18+w+10,-28],[18,-18]],c,true,.92); for(let i=0;i<12;i++)sand(ctx,45+i*7*q,-45+Math.sin(i+q*8)*7,4,.8); line(ctx,18+w,-64,18+w+15,-30,'#F3DCA8',5,.8);}
+ else {const r=20+90*q; circ(ctx,45,-48,20+12*(1-q),c,.45); for(let i=0;i<30;i++){const a=i/30*TAU+q*5;const rr=r*(.55+.45*((i*3)%10)/10);sand(ctx,Math.cos(a)*rr, -48+Math.sin(a)*rr*.62,4,.8);} ring(ctx,0,-48,r,c,.65,6); if(q>.7) shardBurst(ctx,0,-48,16,r,c,q);}
+}
+function drawAiko(ctx,p,m){const c=C.g3_aiko,q=clamp(p),s=Math.sin(q*Math.PI); body(ctx,-6*s,10*s,c); const boneHi='#FFF9F0';
+ if(m==='ss'){const len=42+72*q; bone(ctx,12,-48,12+len,-48,15,c); bone(ctx,12+len,-48,12+len+16,-58,11,c); slashTrail(ctx,20,-52,12+len,-48,boneHi,q,3);}
+ else if(m==='us'){const len=75+75*q; bone(ctx,10,-45,15,-45-len,18,c); for(let i=0;i<5;i++)bone(ctx,15,-65-i*len/5,17,-72-i*len/5,10,boneHi); poly(ctx,[[8,-45-len],[22,-45-len],[15,-45-len-26]],c,true,.95);}
+ else if(m==='ds'){for(let side of [-1,1]){bone(ctx,side*12,-45,side*30,-10,17,c);bone(ctx,side*30,-10,side*45,-8,12,c);} poly(ctx,[[-50,-8],[0,-27],[50,-8],[42,3],[-42,3]],c,true,.9); sparks(ctx,0,-6,boneHi,8,q);}
+ else if(m==='uh'){for(let i=0;i<7;i++){const yy=-50-i*15; bone(ctx,0,yy,Math.sin(i*.8)*10,yy-18,9,c);} bone(ctx,0,-145,0,-185,12,boneHi); for(let i=0;i<6;i++)circ(ctx,Math.sin(i)*8,-65-i*20,4,boneHi,.8);}
+ else if(m==='dh'){for(let i=0;i<6;i++){const x=-72+i*29;ctx.beginPath();ctx.arc(x,-5,27,Math.PI,TAU);ctx.strokeStyle=c;ctx.lineWidth=10;ctx.stroke();line(ctx,x,-5,x+Math.sin(i)*9,-42,c,5);} for(let i=0;i<7;i++)sparks(ctx,-55+i*18,-12,c,2,q);}
+ else if(m==='sh'){const ang=-1.2+2.4*q; const pts=[];for(let i=0;i<=18;i++){const a=ang+i/18*1.45;pts.push([20+Math.cos(a)*112,-48+Math.sin(a)*112]);}poly(ctx,pts,c,true,.82); poly(ctx,[[20,-48],[128,-72],[140,-48],[128,-24]],boneHi,true,.62); slashTrail(ctx,22,-48,130,-52,boneHi,q,2);}
+ else {for(let i=0;i<9;i++)bone(ctx,20+i*3,-105+i*4,48+i*9,-80+i*4,12,c,.75); bone(ctx,40,-62,155,-38,32,c); poly(ctx,[[150,-38],[178,-58],[175,-18]],c,true,.95); for(let i=0;i<14;i++)sparks(ctx,75,-48,boneHi,2,q); ring(ctx,75,-48,68,boneHi,.2,3);}
+}
+function drawHaru(ctx,p,m){const c=C.g3_haru,q=clamp(p),s=Math.sin(q*Math.PI); body(ctx,3*s,6*s,c); const hi='#FFFFFF';
+ if(m==='ss'){const x=25+100*q; glass(ctx,[[12,-67],[x,-67],[x+8,-58],[12,-58]],c,.75,3); line(ctx,12,-62,x,-62,hi,2,.9); slashTrail(ctx,18,-62,x,-62,hi,q,2);}
+ else if(m==='us'){const len=55+95*q; poly(ctx,[[-5,-45],[5,-45],[5,-45-len],[-5,-45-len]],c,true,.45); line(ctx,0,-45,0,-45-len,hi,3,.95); for(let i=0;i<5;i++)line(ctx,-8,-65-i*20,8,-65-i*20,c,2,.6); poly(ctx,[[-7,-45-len],[7,-45-len],[0,-45-len-22]],hi,true,.9);}
+ else if(m==='ds'){for(let i=0;i<9;i++){const x=-65+i*16;const y=-7+Math.sin(i)*5;poly(ctx,[[x,y],[x+8,y-25-(i%3)*7],[x+14,y+2]],c,true,.7);line(ctx,x,y,x+8,y-25,hi,1,.7);}}
+ else if(m==='uh'){const h=80+70*q;for(let i=0;i<6;i++){const x=-32+i*13;glass(ctx,[[x,-12],[x+12,-12],[x+18,-h],[x-8,-h]],c,.42,3);line(ctx,x+5,-h,x+10,-12,hi,1,.7);} shardBurst(ctx,0,-h,10,45,c,q);}
+ else if(m==='dh'){poly(ctx,[[-95,-10],[95,-10],[80,-35],[-80,-35]],c,false,.7,4); for(let i=0;i<14;i++){const a=i/13*TAU;line(ctx,Math.cos(a)*70,-20,Math.cos(a)*110,-65-Math.sin(a)*12,c,2,.7);} if(q>.55)shardBurst(ctx,0,-15,12,75,c,q);}
+ else if(m==='sh'){const x=20+105*q; poly(ctx,[[20,-112],[x,-112],[x,-2],[20,-2]],c,true,.22); line(ctx,x,-112,x,-2,hi,7,.9); for(let i=0;i<8;i++)line(ctx,x,-100+i*13,x-20,-92+i*14,hi,1,.8);}
+ else {const r=15+95*q; circ(ctx,0,-50,8,hi,.9); for(let i=0;i<28;i++){const a=i/28*TAU+q*3;const rr=r*(.5+.5*((i*11)%10)/10);const x=Math.cos(a)*rr,y=-50+Math.sin(a)*rr*.7;poly(ctx,[[x,y-12],[x+8,y],[x,y+12],[x-8,y]],c,true,.65);line(ctx,x-7,y,x+7,y,hi,1,.6);} ring(ctx,0,-50,r,hi,.55,3);}
+}
+function drawChiyo(ctx,p,m){const c=C.g3_chiyo,q=clamp(p),s=Math.sin(q*Math.PI); body(ctx,-4*s,7*s,c);
+ if(m==='ss'){const x=30+75*q;venomTrail(ctx,18,-50,x,-50-18*s,c,q); if(q>.7){for(let i=0;i<7;i++)venom(ctx,x+Math.sin(i)*10,-50+(i-3)*7,5,c,.8);}}
+ else if(m==='us'){const y=-38-92*q;venom(ctx,8,y,8,c);line(ctx,8,-42,8,y,c,8,.55);if(q>.62){for(let i=0;i<8;i++)venom(ctx,8+(i-4)*5,y,4,c,.8);}}
+ else if(m==='ds'){for(let i=0;i<8;i++)venom(ctx,(i-3.5)*15,-4,11,c,.55);for(let i=0;i<7;i++){const x=-45+i*15;venom(ctx,x,-12-30*q,5,c,.8);}}
+ else if(m==='uh'){for(let i=0;i<14;i++){const a=-Math.PI/2+i/13*Math.PI*1.6;const r=28+18*q;venom(ctx,Math.cos(a)*r,-58+Math.sin(a)*(80+35*q),7,c,.7);} line(ctx,0,-35,0,-145,c,15,.35);}
+ else if(m==='dh'){for(let i=0;i<12;i++)venom(ctx,(i-5.5)*14,-8,11,c,.5);for(let i=0;i<9;i++){const x=-62+i*15;poly(ctx,[[x,-5],[x+6,-45-28*s],[x+13,-5]],c,true,.9);venom(ctx,x+7,-48-28*s,5,c,.8);}}
+ else if(m==='sh'){for(let side of [-1,1]){const ex=20+side*55;venom(ctx,side*15,-48,17,c,.75);venomTrail(ctx,side*25,-48,side*(55+55*q),-42-10*s,c,q);poly(ctx,[[side*(55+55*q),-42-10*s],[side*(90+55*q),-52],[side*(78+55*q),-22]],c,true,.95);}}
+ else {circ(ctx,45,-50,26,c,.8);for(let i=0;i<12;i++){const a=i/12*TAU;const rr=25+70*q;venomTrail(ctx,45+Math.cos(a)*20,-50+Math.sin(a)*15,45+Math.cos(a)*rr,-50+Math.sin(a)*rr*.7,c,q);}circ(ctx,45,-50,9,'#CFFF8A',.9);}
+}
+function drawEmi(ctx,p,m){const c=C.g3_emi,q=clamp(p),s=Math.sin(q*Math.PI); body(ctx,7*s,5*s,c); const pulse='#FFDCE1';
+ if(m==='ss'){const dx=28+80*q; ring(ctx,dx,-50,10+9*s,c,.75,3);line(ctx,15,-50,dx,-50,pulse,2,.65);for(let i=0;i<5;i++)circ(ctx,dx-20+i*8,-50+Math.sin(i)*5,3,pulse,.8);}
+ else if(m==='us'){for(let i=0;i<5;i++)ring(ctx,0,-45-i*18-35*q,8+i*3,c,.65,2);line(ctx,0,-42,0,-130-30*q,pulse,3,.8);sparks(ctx,0,-135,c,8,q);}
+ else if(m==='ds'){ring(ctx,0,-8,20+48*s,c,.8,4);for(let i=0;i<12;i++){const a=i/12*TAU;line(ctx,Math.cos(a)*20,-8+Math.sin(a)*6,Math.cos(a)*(45+25*s),-8+Math.sin(a)*(15+12*s),c,2,.75);}}
+ else if(m==='uh'){circ(ctx,0,-55,18,c,.35);for(let i=0;i<7;i++){const a=-Math.PI/2+i*.35;line(ctx,0,-55,Math.cos(a)*(30+18*s),-105-Math.sin(i)*30,c,3,.8);}ring(ctx,0,-85,26,pulse,.55,2);}
+ else if(m==='dh'){circ(ctx,0,-8,12,c,.25);ring(ctx,0,-8,42+28*s,c,.8,5);for(let i=0;i<10;i++)sparks(ctx,0,-8,c,2,q);}
+ else if(m==='sh'){const dx=35+70*q;line(ctx,14,-50,dx,-50,c,10,.8);circ(ctx,dx,-50,12,pulse,.85);for(let i=0;i<4;i++)ring(ctx,dx,-50,16+i*6,c,.3,2);}
+ else {ring(ctx,0,-52,30+72*q,c,.85,4);for(let i=0;i<14;i++){const a=i/14*TAU+q*4;line(ctx,0,-52,Math.cos(a)*(45+75*q),-52+Math.sin(a)*(30+55*q),pulse,2,.8);}const tx=55+45*s;line(ctx,14,-50,tx,-50,c,14,.9);circ(ctx,tx,-50,14,'#FFF',.9);sparks(ctx,tx,-50,c,12,q);}
+}
+function drawNozomi(ctx,p,m){const c=C.g3_nozomi,q=clamp(p),s=Math.sin(q*Math.PI);body(ctx,-4*s,6*s,c);
+ if(m==='ss'){const pts=[[10,-50],[42,-62],[72+60*q,-42-28*s]];vine(ctx,pts,c,7,.95);for(let i=0;i<5;i++)poly(ctx,[[45+i*16,-54-i*4],[51+i*16,-67-i*4],[57+i*16,-55-i*4]],c,true,.9);}
+ else if(m==='us'){vine(ctx,[[0,-5],[0,-55],[12,-105],[0,-145-20*q]],c,12,.95);for(let i=0;i<7;i++)poly(ctx,[[0,-110-i*6],[11,-127-i*6],[17,-112-i*6]],c,true,.9);}
+ else if(m==='ds'){vine(ctx,[[-10,-5],[-40,-22],[-68,-5]],c,7);vine(ctx,[[10,-5],[40,-22],[68,-5]],c,7);for(let i=0;i<10;i++){const x=-55+i*12;poly(ctx,[[x,-8],[x+6,-27],[x+12,-8]],c,true,.8);}}
+ else if(m==='uh'){for(let i=0;i<6;i++){const a=-1.45+i*.58;vine(ctx,[[0,-8],[Math.cos(a)*38,-62],[Math.cos(a)*50,-145-15*s]],c,10,.9);}}
+ else if(m==='dh'){for(let i=0;i<10;i++){const a=i/10*TAU;const x=Math.cos(a)*(45+15*s),y=-45+Math.sin(a)*32;vine(ctx,[[0,-45],[x,y],[x*1.25,y-10]],c,9,.8);}}
+ else if(m==='sh'){const len=70+70*q;for(let i=0;i<4;i++)vine(ctx,[[15,-48],[45+i*10,-55+i*6],[15+len,-48+i*3]],c,10,.9);for(let i=0;i<8;i++)poly(ctx,[[55+i*10,-50],[62+i*10,-66],[69+i*10,-50]],c,true,.9);}
+ else {for(let i=0;i<20;i++){const a=i/20*TAU;const rr=25+75*q;vine(ctx,[[0,-48],[Math.cos(a)*45,-48+Math.sin(a)*24],[Math.cos(a)*rr,-48+Math.sin(a)*(40+35*q)]],c,9,.8); } ring(ctx,0,-48,105*q+25,c,.3,4);}
+}
+function drawMasaru(ctx,p,m){const c=C.g3_masaru,q=clamp(p),s=Math.sin(q*Math.PI);body(ctx,-5*s,7*s,c);
+ if(m==='ss'){const x=25+115*q;ashCloud(ctx,x,-50-18*s,28,18,q,.65);line(ctx,14,-50,x,-50,c,9,.4);for(let i=0;i<10;i++)ash(ctx,x-20+i*5,-50+Math.sin(i)*6,4,.8);}
+ else if(m==='us'){ashCloud(ctx,0,-55-75*q,30,70,q,.7);circ(ctx,0,-125-15*q,9,'#D9D0C8',.7);sparks(ctx,0,-130,c,7,q);}
+ else if(m==='ds'){ashCloud(ctx,0,-12,35+35*s,12,q,.7);ring(ctx,0,-12,35+35*s,c,.4,4);for(let i=0;i<12;i++)ash(ctx,Math.cos(i/12*TAU)*(35+40*s),-12+Math.sin(i/12*TAU)*10,5,.7);}
+ else if(m==='uh'){ashCloud(ctx,0,-75,38,75,q,.7);for(let i=0;i<10;i++){const a=i/10*TAU;ash(ctx,Math.cos(a)*40,-75+Math.sin(a)*75,6,.7);}line(ctx,0,-30,0,-145,c,4,.25);}
+ else if(m==='dh'){ashCloud(ctx,0,-25,80*s+25,22,q,.8);for(let i=0;i<16;i++){const a=i/16*TAU;ash(ctx,Math.cos(a)*(25+55*s),-25+Math.sin(a)*20,6,.8);}ring(ctx,0,-25,65*s+20,c,.35,4);}
+ else if(m==='sh'){const x=30+115*q;ashCloud(ctx,x,-48,38,22,q,.75);poly(ctx,[[18,-78],[x,-72],[x+12,-30],[18,-25]],c,true,.7);for(let i=0;i<9;i++)ash(ctx,x-20+i*6,-50+Math.sin(i)*9,5,.8);}
+ else {ashCloud(ctx,0,-48,75+35*q,55+25*q,q,.85);circ(ctx,0,-48,18+28*q,c,.25);if(q>.35){for(let i=0;i<22;i++){const a=i/22*TAU;ash(ctx,Math.cos(a)*(30+100*q),-48+Math.sin(a)*(20+75*q),7,.75);}}ring(ctx,0,-48,35+95*q,c,.45,5);}
+}
+function drawRyo(ctx,p,m){const c=C.g3_ryo,q=clamp(p),s=Math.sin(q*Math.PI);body(ctx,8*s,6*s,c);
+ if(m==='ss'){mistRibbon(ctx,50+70*q,-48,25+20*s,q,c);line(ctx,14,-48,90+70*q,-48,c,6,.3);}
+ else if(m==='us'){for(let i=0;i<15;i++)mist(ctx,Math.cos(i)*15,-45-75*q+i*3,16,8,.45);mist(ctx,0,-140-15*q,22,12,.8);ring(ctx,0,-40,28,c,.35,3);}
+ else if(m==='ds'){mistRibbon(ctx,0,-8,35+25*s,q,c);for(let i=0;i<8;i++)mist(ctx,(i-3.5)*14,-5,18,8,.45);for(let i=0;i<7;i++)mist(ctx,0,-12-i*12,14,7,.5);}
+ else if(m==='uh'){for(let i=0;i<18;i++){const a=i/18*TAU+p*2;mist(ctx,Math.cos(a)*38,-70+Math.sin(a)*70,13,8,.45);}ring(ctx,0,-140,45,c,.55,4);}
+ else if(m==='dh'){mistRibbon(ctx,0,-20,55+30*s,q,c);for(let i=0;i<12;i++)mist(ctx,Math.cos(i/12*TAU)*(40+35*s),-20+Math.sin(i/12*TAU)*18,15,8,.5);ring(ctx,0,-20,70*s+25,c,.45,4);}
+ else if(m==='sh'){const x=35+100*q;mist(ctx,x,-50,60,16,.7);line(ctx,18,-50,x,-50,'#FFFFFF',8,.5);slashTrail(ctx,25,-48,x,-50,c,q,5);}
+ else {const r=25+80*q;for(let i=0;i<26;i++){const a=i/26*TAU+p*3;mist(ctx,Math.cos(a)*r,-50+Math.sin(a)*r*.7,15,8,.5);}circ(ctx,0,-50,40+30*q,c,.18);ring(ctx,0,-50,r,c,.65,5);if(q>.7)sparks(ctx,0,-50,'#F4FBFF',16,q);}
+}
+function drawSouta(ctx,p,m){const c=C.g3_souta,q=clamp(p),s=Math.sin(q*Math.PI);body(ctx,3*s,5*s,c);
+ if(m==='ss'){for(let i=0;i<10;i++){const t=i/9;ash(ctx,18+85*q*t,-48+Math.sin(t*TAU+q*4)*18,4,.75);}line(ctx,16,-48,105*q+18,-48,c,4,.35);}
+ else if(m==='us'){for(let i=0;i<9;i++){const a=-Math.PI/2+(i-4)*.16;ash(ctx,Math.cos(a)*(15+50*q),-45-Math.abs(Math.sin(a))*75*q,5,.75);}circ(ctx,0,-125*q-45,10,c,.45);}
+ else if(m==='ds'){circ(ctx,0,-5,24,c,.35);for(let i=0;i<8;i++)ash(ctx,-35+i*10,-6,5,.75);if(q>.45){for(let i=0;i<10;i++)ash(ctx,-50+i*11,-45*s,4,.85);}}
+ else if(m==='uh'){for(let i=0;i<18;i++){const a=i/18*TAU+q*2.5;ash(ctx,Math.cos(a)*(25+25*s),-60+Math.sin(a)*(65+35*q),5,.7);}ring(ctx,0,-75,40+35*q,c,.45,4);}
+ else if(m==='dh'){poly(ctx,[[-15,-35],[90,-30],[90,-10],[-15,-5]],c,true,.5);ashCloud(ctx,45,-22,90,18,q,.7);for(let i=0;i<10;i++)ash(ctx,45+i*8,-25-Math.sin(i)*15,5,.75);}
+ else if(m==='sh'){const len=55+100*q;poly(ctx,[[18,-58],[18+len,-58],[18+len,-36],[18,-38]],c,true,.65);for(let i=0;i<9;i++)ash(ctx,40+i*9*q,-48+Math.sin(i)*5,4,.85);}
+ else {const forms=[q<.25?'sphere':q<.5?'blade':q<.75?'spike':'fist'];const r=20+65*q;ashCloud(ctx,45*q,-48,r*.7,r*.5,q,.75);if(q>.25){poly(ctx,[[30,-75],[90*q+45,-62],[90*q+45,-32],[30,-20]],c,true,.7);}if(q>.5){poly(ctx,[[50,-78],[140*q,-55],[140*q,-25],[50,-18]],c,true,.8);}if(q>.72){circ(ctx,125*q,-45,28,c,.8);for(let i=0;i<12;i++)ash(ctx,100*q+i*3,-45+Math.sin(i)*10,5,.8);}}
+}
+function drawOgata(ctx,p,m){const c=C.g3_ogata,q=clamp(p),s=Math.sin(q*Math.PI);body(ctx,-3*s,5*s,c);const hot='#D8F4FF';
+ if(m==='ss'){tech(ctx,20,-50,1,c);const x=45+85*q;techBeam(ctx,35,-50,x,-50,c,q);circ(ctx,x,-50,12,hot,.8);}
+ else if(m==='us'){tech(ctx,0,-50,1.1,c);techBeam(ctx,0,-65,0,-155-20*q,c,q);for(let i=0;i<6;i++)circ(ctx,Math.sin(i)*9,-90-i*12,4,hot,.7);}
+ else if(m==='ds'){for(let i=0;i<4;i++){const x=-50+i*34;tech(ctx,x,-12,.65,c);cable(ctx,x,-12,0,-20,c);}ring(ctx,0,-12,55*s+25,c,.8,5);for(let i=0;i<8;i++)sparks(ctx,0,-12,c,2,q);}
+ else if(m==='uh'){tech(ctx,0,-25,1.4,c);techBeam(ctx,0,-45,0,-165,c,q);for(let i=0;i<8;i++)tech(ctx,Math.cos(i/8*TAU)*22,-100+Math.sin(i)*12,.35,c);circ(ctx,0,-165,22,hot,.8);}
+ else if(m==='dh'){for(let i=0;i<5;i++){const x=-58+i*29;tech(ctx,x,-18,.6,c);cable(ctx,x,-18,0,-25,c);}circ(ctx,0,-20,22,c,.3);ring(ctx,0,-20,60,c,.8,5);if(q>.55)techBeam(ctx,-45,-20,45,-20,c,q);}
+ else if(m==='sh'){tech(ctx,20,-50,1.2,c);const x=45+110*q;techBeam(ctx,38,-50,x,-50,c,q);for(let i=0;i<8;i++)sparks(ctx,x,-50,c,2,q);if(q>.72)circ(ctx,x,-50,25,c,.3);}
+ else {for(let i=0;i<7;i++){const a=i/7*TAU;tech(ctx,Math.cos(a)*55,-50+Math.sin(a)*30,.75,c);cable(ctx,Math.cos(a)*55,-50+Math.sin(a)*30,0,-50,c);}circ(ctx,0,-50,25+38*q,c,.3);techBeam(ctx,-80,-50,80,-50,c,q);for(let i=0;i<12;i++)sparks(ctx,0,-50,hot,2,q);}
+}
+function drawKanenobu(ctx,p,m){const c=C.g3_kanenobu,q=clamp(p),s=Math.sin(q*Math.PI);body(ctx,4*s,4*s,c);
+ if(m==='ss'){cane(ctx,12,-50,c);line(ctx,35,-70,75+65*q,-50,c,7,.9);sparks(ctx,75+65*q,-50,c,5,q);}
+ else if(m==='us'){guard(ctx,18,-8);guard(ctx,-18,-18);for(let i=0;i<3;i++){line(ctx,18,-48,18,-85-i*18,c,7,.7);sparks(ctx,18,-105-i*10,c,2,q);}}
+ else if(m==='ds'){guard(ctx,-35,-8);guard(ctx,35,-8);line(ctx,-45,-25,0,-58,c,10,.8);line(ctx,45,-25,0,-58,c,10,.8);ring(ctx,0,-15,50*s+25,c,.45,4);}
+ else if(m==='uh'){for(let i=0;i<5;i++){const x=-36+i*18;guard(ctx,x,-10-i*12);line(ctx,x,-48-i*12,x,-100-i*15,c,7,.75);}}
+ else if(m==='dh'){tech(ctx,28,-15,1,c);for(let i=0;i<8;i++)line(ctx,28,-15,65+i*9,-15,c,4,.35);ring(ctx,28,-15,48*s+25,c,.7,4);}
+ else if(m==='sh'){guard(ctx,62,-15);fill(ctx,'#B9C2C8');ctx.fillRect(20,-78,50,66);stroke(ctx,'#F3D66A',4);ctx.strokeRect(20,-78,50,66);line(ctx,70,-45,145+20*q,-45,c,5,.85);for(let i=0;i<6;i++)sparks(ctx,145+20*q,-45,c,2,q);}
+ else {guard(ctx,-40,-5);guard(ctx,0,-20);guard(ctx,40,-5);tech(ctx,0,-48,1.1,c);for(let i=0;i<10;i++){const a=i/10*TAU;line(ctx,0,-48,Math.cos(a)*(45+70*q),-48+Math.sin(a)*(35+48*q),c,6,.7);}cane(ctx,5,-50,c);ring(ctx,0,-48,40+55*q,c,.35,4);}
+}
 
 const DRAW={g3_takeshi:drawTakeshi,g3_aiko:drawAiko,g3_haru:drawHaru,g3_chiyo:drawChiyo,g3_emi:drawEmi,g3_nozomi:drawNozomi,g3_masaru:drawMasaru,g3_ryo:drawRyo,g3_souta:drawSouta,g3_ogata:drawOgata,g3_kanenobu:drawKanenobu};
 export const GEN3_ATTACK_NAMES={
