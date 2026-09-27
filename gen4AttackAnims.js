@@ -205,7 +205,7 @@ function boxesFor(charId,m,t){
  return b;
 }
 
-function mirrorBoxes(bs,f){return bs.map(h=>h.shape==='circle'||h.shape==='box'?{...h,x:h.x*f}:h.shape==='capsule'?{...h,x1:h.x1*f,x2:h.x2*f}:h);}
+function mirrorBoxes(bs,f){return bs.map(h=>h.shape==='circle'||h.shape==='box'?{...h,x:h.x*f}:h.shape==='capsule'?{...h,x1:h.x1*f,x2:h.x2*f}:h.shape==='polygon'?{...h,points:h.points.map(([x,y])=>[x*f,y])}:h);}
 export function getGen4Hitboxes(charId,move,t,facing=1){
  if(move==='sp'){
    const e=out(t), b=[]; const Cc=(x,y,r)=>b.push({shape:'circle',x,y,r}); const B=(x,y,w,h)=>b.push({shape:'box',x,y,w,h});

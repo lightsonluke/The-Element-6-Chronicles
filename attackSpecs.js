@@ -9,6 +9,7 @@ import { DOWN_HEAVIES } from './downHeavies.js';
 import { getGen2Hitboxes } from './gen2AttackAnims.js';
 import { getGen3Hitboxes } from './gen3AttackAnims.js';
 import { getGen4Hitboxes } from './gen4AttackAnims.js';
+import { getGen5Hitboxes } from './gen5AttackAnims.js';
 
 const TAU = Math.PI * 2;
 
@@ -165,6 +166,26 @@ export function getActiveSpecHitboxes(attacker) {
     else if (mk === 'down' || mk === 'downSignature') mk = 'ds';
     else mk = 'ss';
     const localBoxes = getGen4Hitboxes(attacker.char.id, mk, t, attacker.facing || 1);
+    const ox = Number(attacker.x) || 0, oy = Number(attacker.y) || 0;
+    return localBoxes.map(h => {
+      if (h.shape === 'circle' || h.shape === 'box') return { ...h, x: ox + h.x, y: oy + h.y };
+      if (h.shape === 'capsule') return { ...h, x1: ox + h.x1, y1: oy + h.y1, x2: ox + h.x2, y2: oy + h.y2 };
+      if (h.shape === 'polygon') return { ...h, points: h.points.map(([px, py]) => [ox + px, oy + py]) };
+      return h;
+    });
+  }
+
+  if (['yellow','blue','purple','orange','green','pink','grey','turquoise','olive','copper','emerald','pearl','red','lavender','amber'].includes(attacker?.char?.id) || String(attacker?.char?.id || '').startsWith('g5_')) {
+    let mk = data.sigType || data.moveKey || '';
+    if (data.isSuper) mk = 'sp';
+    else if (data.isHeavy) {
+      if (mk === 'downHeavy' || mk === 'down' || data.isGroundPound) mk = 'dh';
+      else if (mk === 'upHeavy' || mk === 'upheavy' || mk === 'aerialHeavy' || mk === 'aerial' || data.isAerialHeavy) mk = 'uh';
+      else mk = 'sh';
+    } else if (mk === 'up' || mk === 'upSignature') mk = 'us';
+    else if (mk === 'down' || mk === 'downSignature') mk = 'ds';
+    else mk = 'ss';
+    const localBoxes = getGen5Hitboxes(attacker.char.id, mk, t, attacker.facing || 1);
     const ox = Number(attacker.x) || 0, oy = Number(attacker.y) || 0;
     return localBoxes.map(h => {
       if (h.shape === 'circle' || h.shape === 'box') return { ...h, x: ox + h.x, y: oy + h.y };

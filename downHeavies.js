@@ -81,3 +81,22 @@ Object.assign(DOWN_HEAVIES, {
   g1_grass: { name:'Vine Collapse', type:'gen1DownHeavy', range:120, damage:21, color:'#44AA44', duration:26 },
   g1_ice: { name:'Sliding Ice Block', type:'gen1DownHeavy', range:128, damage:22, color:'#AAEEFF', duration:24 },
 });
+
+// Generation V — authored Down Heavy metadata. Geometry is supplied by gen5AttackAnims.js.
+Object.assign(DOWN_HEAVIES, {
+  yellow:{name:'Ground Breaker',type:'gen5DownHeavy',range:125,damage:25,color:'#FFD700',duration:26},
+  blue:{name:'Tidal Crush',type:'gen5DownHeavy',range:150,damage:24,color:'#4488FF',duration:27},
+  purple:{name:'Smoke Drop',type:'gen5DownHeavy',range:135,damage:26,color:'#9944CC',duration:24},
+  orange:{name:'Portal Trap',type:'gen5DownHeavy',range:155,damage:24,color:'#FF8800',duration:27},
+  green:{name:'Fault Line',type:'gen5DownHeavy',range:160,damage:26,color:'#44AA44',duration:28},
+  pink:{name:'Slam',type:'gen5DownHeavy',range:140,damage:24,color:'#FF66AA',duration:27},
+  grey:{name:'Wall Cage',type:'gen5DownHeavy',range:150,damage:25,color:'#888888',duration:27},
+  turquoise:{name:'Hammer Form',type:'gen5DownHeavy',range:145,damage:26,color:'#44CCAA',duration:26},
+  olive:{name:'Growing Hammer',type:'gen5DownHeavy',range:155,damage:27,color:'#808000',duration:28},
+  copper:{name:'Time Anchor',type:'gen5DownHeavy',range:145,damage:25,color:'#CC7744',duration:27},
+  emerald:{name:'Solid Point',type:'gen5DownHeavy',range:140,damage:24,color:'#33CC66',duration:26},
+  pearl:{name:'Resonant Ground',type:'gen5DownHeavy',range:150,damage:24,color:'#EEEEDD',duration:27},
+  red:{name:'Flame Burst',type:'gen5DownHeavy',range:145,damage:26,color:'#FF3333',duration:27},
+  lavender:{name:'Air Cage',type:'gen5DownHeavy',range:150,damage:24,color:'#BB88DD',duration:27},
+  amber:{name:'Clone Collapse',type:'gen5DownHeavy',range:150,damage:25,color:'#FFBB33',duration:27},
+});

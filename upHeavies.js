@@ -40,3 +40,22 @@ Object.assign(UP_HEAVIES, {
   g4_daichi: { name:'Resonance Lift', type:'gen4UpHeavy', range:160, damage:23, color:'#FFB02E', duration:27 },
   g4_renko: { name:'Refinement Tower', type:'gen4UpHeavy', range:170, damage:25, color:'#A90024', duration:27 },
 });
+
+// Generation V — authored Up Heavy metadata. Geometry is supplied by gen5AttackAnims.js.
+Object.assign(UP_HEAVIES, {
+  yellow:{name:'Maximum Jump',type:'gen5UpHeavy',range:150,damage:25,color:'#FFD700',duration:26},
+  blue:{name:'Water Spiral',type:'gen5UpHeavy',range:160,damage:24,color:'#4488FF',duration:27},
+  purple:{name:'Sky Assassin',type:'gen5UpHeavy',range:165,damage:26,color:'#9944CC',duration:25},
+  orange:{name:'Portal Loop',type:'gen5UpHeavy',range:165,damage:24,color:'#FF8800',duration:28},
+  green:{name:'Earth Column',type:'gen5UpHeavy',range:170,damage:26,color:'#44AA44',duration:28},
+  pink:{name:'Orbit',type:'gen5UpHeavy',range:150,damage:24,color:'#FF66AA',duration:27},
+  grey:{name:'Tower Wall',type:'gen5UpHeavy',range:165,damage:25,color:'#888888',duration:27},
+  turquoise:{name:'Serpent Rise',type:'gen5UpHeavy',range:170,damage:25,color:'#44CCAA',duration:27},
+  olive:{name:'Giant Step',type:'gen5UpHeavy',range:170,damage:27,color:'#808000',duration:28},
+  copper:{name:'Stolen Second',type:'gen5UpHeavy',range:155,damage:25,color:'#CC7744',duration:27},
+  emerald:{name:'Phase Dive',type:'gen5UpHeavy',range:165,damage:25,color:'#33CC66',duration:26},
+  pearl:{name:'Echo Column',type:'gen5UpHeavy',range:160,damage:24,color:'#EEEEDD',duration:27},
+  red:{name:'Inferno Wheel',type:'gen5UpHeavy',range:165,damage:26,color:'#FF3333',duration:27},
+  lavender:{name:'Sky Platform',type:'gen5UpHeavy',range:170,damage:24,color:'#BB88DD',duration:27},
+  amber:{name:'Clone Ladder',type:'gen5UpHeavy',range:165,damage:25,color:'#FFBB33',duration:28},
+});

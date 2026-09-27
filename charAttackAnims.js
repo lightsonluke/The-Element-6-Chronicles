@@ -11,6 +11,7 @@ import { drawGen1Attack, drawGen1Super } from './gen1AttackAnims.js';
 import { drawGen2Attack, drawGen2Super } from './gen2AttackAnims.js';
 import { drawGen3Attack, drawGen3Super } from './gen3AttackAnims.js';
 import { drawGen4Attack, drawGen4Super } from './gen4AttackAnims.js';
+import { drawGen5Attack, drawGen5Super } from './gen5AttackAnims.js';
 
 const SUPER_W = 1200, SUPER_H = 700;
 
@@ -49,6 +50,10 @@ export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, atta
   }
   if (String(charId || '').startsWith('g4_')) {
     drawGen4Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
+    return;
+  }
+  if (['yellow','blue','purple','orange','green','pink','grey','turquoise','olive','copper','emerald','pearl','red','lavender','amber'].includes(charId) || String(charId || '').startsWith('g5_')) {
+    drawGen5Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
     return;
   }
 
@@ -109,6 +114,10 @@ export function drawCharSuper(ctx, x, y, color, p, charId, facing = 1) {
   }
   if (String(charId || '').startsWith('g4_')) {
     drawGen4Super(ctx, x, y, color, p, charId, facing);
+    return;
+  }
+  if (['yellow','blue','purple','orange','green','pink','grey','turquoise','olive','copper','emerald','pearl','red','lavender','amber'].includes(charId) || String(charId || '').startsWith('g5_')) {
+    drawGen5Super(ctx, x, y, p, facing, charId);
     return;
   }
   const config = getConfig(charId, '', color);
