@@ -314,13 +314,12 @@ function CampaignPlayer({ cur, setCur, progress, customCharsData, customStages, 
 
   if (phase === 'fight') {
     return (
-      <div className="fixed inset-0 z-50 bg-black">
+      <div className="fixed inset-0 z-[4] bg-black">
         <PlatformFighter key={fightKey}
           p1Char={p1Char} p2Char={(b.cpuChars || ['red'])[0]} p2IsCPU
           selectedMap={stage.map} customPlatforms={stage.customPlatforms} customSpawnPoints={stage.customSpawnPoints}
           cpuDifficulty={(b.mods || {}).cpuDifficulty || 'regular'}
           gameMode={(b.winCondition === 'no_stock_lost' ? 'sudden' : 'regular')}
-          canvasHostMode="campaign"
           infiniteSuper={!!((b.mods || {}).infiniteSuper)}
           matchTime={(b.mods || {}).timeLimit || 240}
           mods={b.mods || {}}

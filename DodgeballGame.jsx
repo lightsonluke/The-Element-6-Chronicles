@@ -141,6 +141,10 @@ export default function DodgeballGame({
     };
     if (lanConnection) {
       lanConnection.onMessage((msg) => {
+        if (msg?.type === 'state' && msg.state && lanRole !== 'host') {
+          remoteStateRef.current = msg.state;
+          return;
+        }
         if (msg?.type === 'key') {
           remoteKeysProc.current = true;
           const k = msg.key.length === 1 ? msg.key.toLowerCase() : msg.key;
@@ -239,7 +243,6 @@ export default function DodgeballGame({
     let raf;
     const loop = () => {
       raf = requestAnimationFrame(loop);
-      if (lanConnection?.stalledRef?.current) { draw(); return; }
       if (remoteStateRef.current) {
         stRef.current = remoteStateRef.current;
         draw();
@@ -251,6 +254,9 @@ export default function DodgeballGame({
       const in2 = withEdges(p2IsCPU ? cpuInput(s.p2, s.p1, s, 2) : readHuman(2), 2);
       step(s, in1, in2);
       if (onStateExportRef.current) onStateExportRef.current(s);
+      if (lanConnection && lanRole === 'host' && s.frame % 4 === 0) {
+        try { lanConnection.sendMessage({ type: 'state', state: JSON.parse(JSON.stringify(s)) }); } catch (_) {}
+      }
       if (s.over && !paidRef.current) {
         paidRef.current = true;
         const agg = {
@@ -592,7 +598,7 @@ export default function DodgeballGame({
           </span>
         </div>
         <div className="el6-dodgeball-match-controls flex gap-2">
-          <button onClick={() => setPaused(p => !p)} className="el6-controller-pause-trigger px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs">{paused ? '▶ RESUME' : '⏸ PAUSE'}</button>
+          <button onClick={() => setPaused(p => !p)} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs">{paused ? '▶ RESUME' : '⏸ PAUSE'}</button>
           <button onClick={onQuit} className="px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs">QUIT</button>
         </div>
       </div>

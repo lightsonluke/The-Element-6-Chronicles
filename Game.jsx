@@ -103,6 +103,7 @@ import GameIcon from "./GameIcon.jsx";
 import ClipsScreen from './ClipsScreen.jsx';
 import ClansScreen from './ClansScreen.jsx';
 import GlobalClipRecorder from './GlobalClipRecorder.jsx';
+import GlobalNotifications from './GlobalNotifications.jsx';
 import { sanitizeFreehandStroke } from './freehandSafe.js';
 import { recordClanMatchActivity } from './clanActivity.js';
 
@@ -1290,6 +1291,59 @@ export default function Game() {
     if (convId) chatSeenRef.current[convId] = lastAt || new Date().toISOString();
   };
 
+  const acceptCommunityClanInvite = async (sessionId) => {
+    if (!sessionId) return;
+    if ((progressRef.current?.coins || 0) < 5000) { setChatToast({ name: 'Element 6', text: 'You need 5,000 tokens to accept this clan founding request.' }); setTimeout(() => setChatToast(null), 4500); return; }
+    const spent = await spendClanTokens(5000);
+    if (!spent) return;
+    try {
+      const { data, error } = await supabase.rpc('element6_pay_community_founding', { p_session_id: sessionId });
+      if (error) throw error;
+      setChatToast({ name: 'Element 6', text: data?.complete ? 'All three founders paid. The clan has been created!' : `Founding payment accepted (${data?.paid || 2}/3).` });
+      sfx.notification();
+      if (data?.complete) setTimeout(() => setScreen('clans'), 900);
+    } catch (e) {
+      addCoins(5000);
+      setChatToast({ name: 'Element 6', text: e?.message || 'Could not accept the founding request.' });
+      setTimeout(() => setChatToast(null), 5000);
+    }
+  };
+
+  const handleReceivedChatGift = async (give, fromName) => {
+    setProgress(prev => {
+      const next = { ...prev };
+      if (give.tokens > 0) next.coins = (next.coins || 0) + give.tokens;
+      if (give.skins?.length) next.ownedSkins = [...new Set([...(next.ownedSkins || []), ...give.skins])];
+      if (give.accessories?.length) next.ownedAccessories = [...new Set([...(next.ownedAccessories || []), ...give.accessories])];
+      if (give.killFX?.length) next.ownedKillFX = [...new Set([...(next.ownedKillFX || []), ...give.killFX])];
+      if (give.chars?.length) next.unlockedIds = [...new Set([...(next.unlockedIds || []), ...give.chars])];
+      saveProgress(next); return next;
+    });
+    setTradeGiftToast({ type: 'gift', name: fromName || 'Someone', text: 'sent you a gift!' });
+    sfx.notification(); setTimeout(() => setTradeGiftToast(null), 5000);
+  };
+
+  const handleChatTransfer = async (info) => {
+    if (!info?.to) return;
+    const give = info.give || {};
+    try {
+      if (info.kind === 'gift') {
+        const { error } = await supabase.rpc('element6_send_gift', { p_to_user: info.to, p_to_username: info.peerName || 'Player', p_from_username: userProfile.username || 'Player', p_give: give });
+        if (error) throw error;
+      }
+      setProgress(prev => {
+        const next = { ...prev };
+        if (give.tokens > 0) next.coins = Math.max(0, (next.coins || 0) - give.tokens);
+        if (give.skins?.length) next.ownedSkins = (next.ownedSkins || []).filter(s => !give.skins.includes(s));
+        if (give.accessories?.length) next.ownedAccessories = (next.ownedAccessories || []).filter(a => !give.accessories.includes(a));
+        if (give.killFX?.length) next.ownedKillFX = (next.ownedKillFX || []).filter(f => !give.killFX.includes(f));
+        if (give.chars?.length) next.unlockedIds = (next.unlockedIds || []).filter(c => !give.chars.includes(c));
+        saveProgress(next); return next;
+      });
+      sfx.purchaseSuccess();
+    } catch { sfx.warning(); }
+  };
+
   const handleUsernameChange = ({ oldName, newName }) => {
     setUserProfile(prev => ({ ...prev, username: newName }));
     setUsernameToast({ oldName, newName });
@@ -1868,6 +1922,7 @@ export default function Game() {
             </div>
           </div>
         )}
+        <GlobalNotifications settings={progress.settings || {}} />
         {chatToast && (
           <div className="fixed top-16 right-4 z-50 bg-card border-2 border-accent rounded-lg px-4 py-3 shadow-2xl max-w-xs animate-pulse">
             <p className="text-[10px] font-heading text-accent"><GameIcon emoji="💬" size={14} /> NEW MESSAGE — {chatToast.name}</p>
@@ -2430,7 +2485,7 @@ export default function Game() {
         )}
 
         {screen === 'chat' && (
-          <ChatPanel onBack={() => { setPendingDM(null); goBack(); }} initialDM={pendingDM} onMarkSeen={markChatSeen} />
+          <ChatPanel onBack={() => { setPendingDM(null); goBack(); }} initialDM={pendingDM} onMarkSeen={markChatSeen} progress={progress} onTransfer={handleChatTransfer} onAcceptClanInvite={acceptCommunityClanInvite} onReceiveGift={handleReceivedChatGift} />
         )}
 
         {screen === 'customrooms' && (

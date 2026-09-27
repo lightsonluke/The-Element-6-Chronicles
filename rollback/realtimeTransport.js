@@ -33,6 +33,10 @@ export class SupabaseRollbackTransport {
 
   async connect({ timeoutMs = 10000 } = {}) {
     if (this.connected) return;
+    if (this.channel) {
+      try { await this.client.removeChannel(this.channel); } catch {}
+      this.channel = null;
+    }
     this.channel = this.client.channel(`rollback:${this.matchId}`, {
       config: { broadcast: { self: false, ack: true } },
     });
@@ -87,6 +91,16 @@ export class SupabaseRollbackTransport {
     if (!this.connected || !this.channel) throw new Error('Rollback transport is not connected.');
     const response = await this.channel.send({ type: 'broadcast', event, payload });
     if (response !== 'ok') throw new Error(`Realtime broadcast failed: ${response}`);
+  }
+
+  // Rejoin the Realtime topic without sending a disconnect result to the peer.
+  // This is used after a transient browser/network interruption so the match can
+  // recover instead of becoming permanently stuck in RESYNCING.
+  async reconnect(options = {}) {
+    this.connected = false;
+    clearInterval(this.heartbeatTimer);
+    this.heartbeatTimer = null;
+    try { await this.connect(options); return true; } catch (_) { return false; }
   }
 
   sendInput(packet) {

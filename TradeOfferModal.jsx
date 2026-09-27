@@ -1,4 +1,4 @@
-import db from './localBackend';
+import { supabase } from './supabaseClient.js';
 
 import React, { useState, useEffect } from 'react';
 
@@ -31,10 +31,8 @@ export default function TradeOfferModal({ mode = 'trade', peer, progress, userId
     if (!peer?.id) return;
     (async () => {
       try {
-        const recs = await db.entities.UserProgress.filter({ user_id: peer.id });
-        if (recs[0]?.progress_json) {
-          setPeerProgress(JSON.parse(recs[0].progress_json));
-        }
+        const { data: rec } = await supabase.from('user_progress').select('progress_json').eq('user_id', peer.id).maybeSingle();
+        if (rec?.progress_json) setPeerProgress(rec.progress_json);
       } catch {}
       setLoading(false);
     })();
@@ -68,17 +66,14 @@ export default function TradeOfferModal({ mode = 'trade', peer, progress, userId
     setBusy(true);
     try {
       // Create a TradeGift record (pending — peer must accept)
-      await db.entities.TradeGift.create({
-        type: 'trade_request',
-        from_user_id: userId,
-        to_user_id: peer.id,
-        from_username: username,
-        to_username: peer.username || peer.name || 'Player',
-        status: 'pending',
+      const { data: trade, error: tradeError } = await supabase.from('element6_trade_gifts').insert({
+        type: 'trade_request', from_user_id: userId, to_user_id: peer.id,
+        from_username: username, to_username: peer.username || peer.name || 'Player', status: 'pending',
         give: { tokens: offer.tokens || 0, skins: offer.skins, accessories: offer.accessories, killFX: offer.killFX, chars: offer.chars },
         request: { tokens: request.tokens || 0, skins: request.skins, accessories: request.accessories, killFX: request.killFX, chars: request.chars },
-        room_code: peer.room || '',
-      });
+      }).select('id').single();
+      if (tradeError) throw tradeError;
+      await supabase.from('player_direct_messages').insert({ sender_id: userId, recipient_id: peer.id, sender_username: username || 'Player', body: `🔄 Sent you a trade offer. [E6TRADE:${trade?.id || ''}]` });
       sfx.purchaseSuccess();
       onConfirm?.({ give: offer, request });
     } catch (e) { sfx.warning(); }

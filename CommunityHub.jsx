@@ -1,4 +1,5 @@
 import db from './localBackend';
+import { supabase } from './supabaseClient.js';
 
 import React, { useState, useEffect, useRef } from 'react';
 
@@ -131,10 +132,13 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
   // Load user + account stats for HUD
   const [stats, setStats] = useState({ xp: 0, wins: 0, kos: 0, rank: '—' });
   useEffect(() => {
-    db.auth.me().then(async (u) => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      const u = data?.user;
+      if (!u) return;
+      const cloudName = u.user_metadata?.username || u.user_metadata?.full_name || (u.email || 'Player').split('@')[0];
       setUserId(u.id);
-      setUsername(u.username || (u.full_name || (u.email || 'Player')).split('@')[0]);
-      setTitle(u.profile_title || '');
+      setUsername(cloudName);
+      setTitle(u.user_metadata?.profile_title || '');
       try {
         const entries = await db.entities.LeaderboardEntry.filter({ user_id: u.id });
         if (entries[0]) {
@@ -172,156 +176,80 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
   const equippedSkin = progress?.equippedSkins?.[favId];
   const equippedAcc = progress?.equippedAccessories?.[favId];
 
-  // Hub multiplayer via Presence — creates/updates own record, subscribes to others
+  // Hub multiplayer is backed by the real Supabase presence table. This makes a
+  // public/random hub server visible to every player in the same broad region,
+  // not just another tab on the same browser.
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
-    let unsub = null;
+    let channel = null;
     let tickTimer = null;
-
-    (async () => {
+    const writePresence = async (patch = {}) => {
+      if (cancelled) return;
       try {
-        // Create or update our Presence record with hub data
-        const existing = await db.entities.Presence.filter({ user_id: userId });
-        const now = new Date().toISOString();
-        const hubData = {
-          last_active: now,
+        await supabase.from('online_hub_presence').upsert({
+          user_id: userId,
           username,
           hub_server: serverCode,
-          hub_region: hubRegion,
-          hub_x: HUB_WIDTH / 2,
-          hub_y: HUB_GROUND_Y,
-          hub_facing: 1,
-          hub_frame: 0,
-          hub_char_id: favId,
-          hub_color: charColor,
-          hub_title: title,
-          hub_skin: equippedSkin || null,
-          hub_acc: equippedAcc || null,
-          hub_killfx: progress?.equippedKillFX || 'none',
-          hub_emote: null,
-          hub_emote_t: 0,
-          hub_level: getCharLevelData(progress, favId)?.level || 1,
-        };
-        if (existing[0]) {
-          presenceId.current = existing[0].id;
-          await db.entities.Presence.update(existing[0].id, hubData);
-        } else {
-          const rec = await db.entities.Presence.create({ user_id: userId, ...hubData });
-          presenceId.current = rec.id;
-        }
-        if (cancelled) return;
-
-        // Initial load of other players in this server
-        const loadPlayers = async () => {
-          try {
-            const all = await db.entities.Presence.filter({ hub_server: serverCode }, '-last_active', 50);
-            const cutoff = Date.now() - 120000; // 2 min stale cutoff
-            const others = (all || []).filter(p => p.user_id !== userId && p.last_active && new Date(p.last_active).getTime() > cutoff);
-            setPlayers(others.map(p => ({
-              id: p.user_id,
-              name: p.username || 'Player',
-              color: p.hub_color || '#88ff88',
-              charId: p.hub_char_id || 'yellow',
-              title: p.hub_title || '',
-              x: p.hub_x || 200,
-              skin: p.hub_skin || null,
-              acc: p.hub_acc || null,
-              killfx: p.hub_killfx || 'none',
-              emote: p.hub_emote || null,
-              emoteT: p.hub_emote_t || 0,
-              level: p.hub_level || 1,
-            })));
-            // Build a pseudo room for TradesGiftsPanel
-            setRoom({ id: serverCode, players: others.map(p => ({ id: p.user_id, name: p.username, color: p.hub_color, charId: p.hub_char_id })) });
-          } catch {}
-        };
-        await loadPlayers();
-
-        // Detect new joiners
-        const initialIds = new Set(playersRef.current.map(p => p.id));
-        prevPlayerIds.current = initialIds;
-
-        // Subscribe to Presence changes
-        unsub = db.entities.Presence.subscribe((ev) => {
-          loadPlayers();
-          // Check for new joiners
-          const currentIds = new Set(playersRef.current.map(p => p.id));
-          const newJoiners = playersRef.current.filter(p => !prevPlayerIds.current.has(p.id));
-          if (newJoiners.length > 0) {
-            newJoiners.forEach(p => {
-              setJoinToast({ name: p.name || 'A player', text: 'joined the Hub' });
-              sfx.notification();
-              setTimeout(() => setJoinToast(null), 3500);
-              if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                try { new Notification('Element 6 Hub', { body: `${p.name || 'A player'} joined the Community Hub` }); } catch {}
-              }
-            });
-          }
-          prevPlayerIds.current = currentIds;
-        });
-
-        // Tick: update our position/emote/equips every 250ms (NO race condition — only our record)
-        tickTimer = setInterval(async () => {
-          const st = stateRef.current;
-          try {
-            if (presenceId.current) {
-              await db.entities.Presence.update(presenceId.current, {
-                hub_x: st.px,
-                hub_y: st.py,
-                hub_facing: st.facing,
-                hub_frame: st.frame,
-                hub_emote: st.emote || null,
-                hub_emote_t: st.emoteT || 0,
-                last_active: new Date().toISOString(),
-                hub_char_id: favId,
-                hub_color: charColor,
-                hub_title: title,
-                hub_skin: equippedSkin || null,
-                hub_acc: equippedAcc || null,
-                hub_killfx: progress?.equippedKillFX || 'none',
-                hub_level: getCharLevelData(progress, favId)?.level || 1,
-                });
-            }
-          } catch {}
-        }, 250);
-
-        // Cleanup on leave — clear hub fields so we disappear from the hub
-        const clearHub = async () => {
-          try {
-            if (presenceId.current) {
-              await db.entities.Presence.update(presenceId.current, {
-                hub_server: null,
-                hub_emote: null,
-                hub_emote_t: 0,
-                last_active: new Date().toISOString(),
-              });
-            }
-          } catch {}
-        };
-        roomRef.current = { id: serverCode, removeSelf: clearHub };
-        const onLeave = () => clearHub();
-        const onVis = () => { if (document.visibilityState === 'hidden') clearHub(); };
-        document.addEventListener('visibilitychange', onVis);
-        window.addEventListener('pagehide', onLeave);
-        window.addEventListener('beforeunload', onLeave);
-
-        return () => {
-          unsub?.(); clearInterval(tickTimer);
-          document.removeEventListener('visibilitychange', onVis);
-          window.removeEventListener('pagehide', onLeave);
-          window.removeEventListener('beforeunload', onLeave);
-          clearHub();
-        };
-      } catch (e) {}
-    })();
-
-    return () => {
-      cancelled = true;
-      unsub?.();
-      if (tickTimer) clearInterval(tickTimer);
+          region: hubRegion,
+          character_id: favId,
+          color: charColor,
+          title,
+          x: stateRef.current.px,
+          y: stateRef.current.py,
+          facing: stateRef.current.facing,
+          frame: stateRef.current.frame,
+          emote: stateRef.current.emote || null,
+          skin: equippedSkin || null,
+          accessory: equippedAcc || null,
+          killfx: progress?.equippedKillFX || 'none',
+          level: getCharLevelData(progress, favId)?.level || 1,
+          updated_at: new Date().toISOString(),
+          ...patch,
+        }, { onConflict: 'user_id' });
+      } catch {}
     };
-  }, [userId, serverCode]);
+    const loadPlayers = async () => {
+      try {
+        const cutoff = new Date(Date.now() - 120000).toISOString();
+        const { data: all } = await supabase.from('online_hub_presence').select('*').eq('hub_server', serverCode).eq('region', hubRegion).gte('updated_at', cutoff).limit(50);
+        if (cancelled) return;
+        const others = (all || []).filter(p => p.user_id !== userId);
+        setPlayers(others.map(p => ({
+          id: p.user_id, name: p.username || 'Player', color: p.color || '#88ff88', charId: p.character_id || 'yellow',
+          title: p.title || '', x: Number(p.x || 200), y: Number(p.y || HUB_GROUND_Y), skin: p.skin || null,
+          acc: p.accessory || null, killfx: p.killfx || 'none', emote: p.emote || null, emoteT: p.emote_t || 0,
+          level: Number(p.level || 1),
+        })));
+        setRoom({ id: serverCode, players: others.map(p => ({ id: p.user_id, name: p.username, username: p.username, color: p.color, charId: p.character_id })) });
+      } catch {}
+    };
+    const initialIds = new Set(playersRef.current.map(p => p.id));
+    prevPlayerIds.current = initialIds;
+    const refresh = async () => {
+      await writePresence();
+      const before = new Set(playersRef.current.map(p => p.id));
+      await loadPlayers();
+      const newcomers = playersRef.current.filter(p => !before.has(p.id));
+      if (newcomers.length) {
+        newcomers.forEach(p => { setJoinToast({ name: p.name || 'A player', text: 'joined the Hub' }); sfx.notification(); setTimeout(() => setJoinToast(null), 3500); });
+      }
+      prevPlayerIds.current = new Set(playersRef.current.map(p => p.id));
+    };
+    writePresence(); loadPlayers();
+    channel = supabase.channel(`hub-presence:${serverCode}:${hubRegion}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'online_hub_presence', filter: `hub_server=eq.${serverCode}` }, () => loadPlayers())
+      .subscribe();
+    tickTimer = setInterval(refresh, 500);
+    const clearHub = async () => { try { await supabase.from('online_hub_presence').delete().eq('user_id', userId); } catch {} };
+    const onVis = () => { if (document.visibilityState === 'hidden') clearHub(); else writePresence(); };
+    window.addEventListener('pagehide', clearHub); window.addEventListener('beforeunload', clearHub); document.addEventListener('visibilitychange', onVis);
+    return () => {
+      cancelled = true; clearInterval(tickTimer); if (channel) supabase.removeChannel(channel);
+      window.removeEventListener('pagehide', clearHub); window.removeEventListener('beforeunload', clearHub); document.removeEventListener('visibilitychange', onVis);
+      clearHub();
+    };
+  }, [userId, serverCode, hubRegion, username, favId, charColor, title, equippedSkin, equippedAcc]);
 
   // Poll for party invites
   useEffect(() => {
@@ -809,11 +737,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
     // Re-fetch flyers immediately
     try { const list = await db.entities.Flyer.filter({ hidden: false }, '-created_date', 120); setFlyers(list || []); } catch {}
     // Update our presence to stay active
-    try {
-      if (presenceId.current) {
-        await db.entities.Presence.update(presenceId.current, { last_active: new Date().toISOString(), hub_server: serverCode });
-      }
-    } catch {}
+    try { await supabase.from('online_hub_presence').upsert({ user_id: userId, username, hub_server: serverCode, region: hubRegion, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }); } catch {}
   };
 
   const handleClick = (e) => {

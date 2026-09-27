@@ -193,8 +193,10 @@ export default function ActualSportsOnlineMatch({
     if (!isHost || !channel.current || performance.now() - lastStateSent.current < 33) return;
     lastStateSent.current = performance.now();
     lastHostStateRef.current = state;
-    if (stalledRef.current) return;
-    channel.current.send({ type: 'broadcast', event: 'state', payload: { state } });
+    // Keep authoritative checkpoints flowing even while the guest is stalled.
+    // Stopping snapshots during a stall made recovery impossible because the
+    // very player that needed the state could never receive a fresh one.
+    channel.current.send({ type: 'broadcast', event: 'state', payload: { state, resync: stalledRef.current } });
   };
 
   const finish = winnerTeam => {
@@ -253,7 +255,7 @@ export default function ActualSportsOnlineMatch({
       p1Chars={p1Team.map(player => player.character_id)} p2Chars={p2Team.map(player => player.character_id)}
       p1IsCPU={false} p2IsCPU={false} difficulty="regular"
       p1Elements={p1Team.map(elementFor)} p2Elements={p2Team.map(elementFor)}
-      onResult={matchResult => { if (isHost) finish(matchResult?.won ? 1 : 2); }}
+      onResult={matchResult => { if (isHost) finish(matchResult?.p1Won === true ? 1 : 2); }}
       onQuit={onEnd}
       onStateExport={isHost ? onStateExport : undefined}
       remoteState={isHost ? null : remoteState}
@@ -266,7 +268,7 @@ export default function ActualSportsOnlineMatch({
       p1Chars={[p1.character_id]} p2Chars={[p2.character_id]}
       p1IsCPU={false} p2IsCPU={false} difficulty="regular"
       p1Elements={[elementFor(p1)]} p2Elements={[elementFor(p2)]}
-      onResult={matchResult => { if (isHost) finish(matchResult?.won ? 1 : 2); }}
+      onResult={matchResult => { if (isHost) finish(matchResult?.p1Won === true ? 1 : 2); }}
       onQuit={onEnd}
       onStateExport={isHost ? onStateExport : undefined}
       remoteState={isHost ? null : remoteState}

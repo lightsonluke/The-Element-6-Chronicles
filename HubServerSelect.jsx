@@ -1,4 +1,4 @@
-import db from './localBackend';
+import { supabase } from './supabaseClient.js';
 
 import React, { useState, useEffect } from 'react';
 
@@ -22,19 +22,17 @@ export default function HubServerSelect({ onBack, onJoin }) {
 
   useEffect(() => {
     music.play('menu');
-    db.auth.me().then(u => setMe(u)).catch(() => {});
+    supabase.auth.getUser().then(({ data }) => setMe(data?.user || null)).catch(() => {});
     setRegion(getClientRegion());
     const load = async () => {
       try {
-        const all = await db.entities.Presence.filter({}, '-last_active', 200);
-        const cutoff = Date.now() - STALE_MS;
-        const active = (all || []).filter(p => p.hub_server && p.last_active && new Date(p.last_active).getTime() > cutoff);
-        // Community Hub server discovery is global: any active player makes their
-        // server visible regardless of the viewer's region.
+        const cutoff = new Date(Date.now() - STALE_MS).toISOString();
+        const { data: all } = await supabase.from('online_hub_presence').select('*').gte('updated_at', cutoff).limit(500);
+        // Public/random servers are visible to players in the same broad region.
         const map = {};
-        active.forEach(p => {
-          if (!map[p.hub_server]) map[p.hub_server] = { code: p.hub_server, region: p.hub_region || 'global', players: [], count: 0 };
-          map[p.hub_server].players.push({ id: p.user_id, name: p.username, color: p.hub_color, charId: p.hub_char_id });
+        (all || []).filter(p => p.hub_server && (p.region || 'NA-EAST') === region).forEach(p => {
+          if (!map[p.hub_server]) map[p.hub_server] = { code: p.hub_server, region: p.region || region, players: [], count: 0 };
+          map[p.hub_server].players.push({ id: p.user_id, name: p.username, color: p.color, charId: p.character_id });
           map[p.hub_server].count++;
         });
         const list = Object.values(map).filter(s => s.count >= 1).sort((a, b) => b.count - a.count || a.code.localeCompare(b.code));

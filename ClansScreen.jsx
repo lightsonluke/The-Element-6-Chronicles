@@ -83,6 +83,7 @@ export default function ClansScreen({
   const [founderMethod, setFounderMethod] = useState('wealthy');
   const [communitySession, setCommunitySession] = useState(null);
   const [communityCodeInput, setCommunityCodeInput] = useState('');
+  const [communityInvitees, setCommunityInvitees] = useState({ one: '', two: '' });
   const [applyText, setApplyText] = useState('');
   const [chatText, setChatText] = useState('');
   const [meetingForm, setMeetingForm] = useState({ clanId: '', title: '', notes: '', scheduledAt: '' });
@@ -234,42 +235,67 @@ export default function ClansScreen({
   }, [clans, search]);
 
   async function startCommunityFounding() {
+    if (!communityInvitees.one.trim() || !communityInvitees.two.trim()) { setNotice('Enter the usernames of two other players first.'); return; }
+    if (communityInvitees.one.trim().toLowerCase() === communityInvitees.two.trim().toLowerCase()) { setNotice('The two invited usernames must be different.'); return; }
+    if (tokenBalance < COMMUNITY_CREATE_COST) { setNotice(`You need ${COMMUNITY_CREATE_COST.toLocaleString()} tokens to found a clan.`); return; }
     setBusy(true);
     try {
-      const { data, error } = await supabase.rpc('element6_start_clan_founder_session');
-      if (error) throw error;
-      setCommunitySession(data);
-      setNotice(`Community founding code: ${data.code}. Get ${COMMUNITY_FOUNDERS_REQUIRED} other players to confirm it.`);
-    } catch (e) {
-      setNotice(safeError(e));
-    } finally {
-      setBusy(false);
-    }
+      // The founder pays their 5,000-token share immediately. The two invited
+      // founders pay only when they accept their Element 6 chat invitation.
+      const spent = await onSpendTokens?.(COMMUNITY_CREATE_COST);
+      if (!spent) throw new Error('You do not have enough tokens.');
+      const { data, error } = await supabase.rpc('element6_start_community_founding', {
+        p_invitee_one_username: communityInvitees.one.trim(),
+        p_invitee_two_username: communityInvitees.two.trim(),
+        p_name: createForm.name,
+        p_tag: createForm.tag,
+        p_bio: createForm.bio,
+        p_icon_url: createForm.icon || null,
+      });
+      if (error) {
+        try { await onGrantTokens?.(COMMUNITY_CREATE_COST); } catch {}
+        throw error;
+      }
+      const { data: paid, error: payError } = await supabase.rpc('element6_pay_community_founding', { p_session_id: data.session_id });
+      if (payError) {
+        try { await onGrantTokens?.(COMMUNITY_CREATE_COST); } catch {}
+        throw payError;
+      }
+      setCommunitySession({ ...data, paid: paid?.paid || 1 });
+      setNotice('Founding requests sent. The two players must accept and pay 5,000 tokens each within 24 hours.');
+    } catch (e) { setNotice(safeError(e)); }
+    finally { setBusy(false); }
   }
 
   async function refreshCommunityFounding() {
     if (!communitySession?.session_id) return;
     try {
-      const { data, error } = await supabase.rpc('element6_get_clan_founder_session', { p_session_id: communitySession.session_id });
+      const { data, error } = await supabase.from('element6_community_foundings').select('*').eq('id', communitySession.session_id).maybeSingle();
       if (error) throw error;
-      setCommunitySession(data);
+      const { data: payments } = await supabase.from('element6_community_founding_payments').select('user_id,paid_at').eq('session_id', communitySession.session_id);
+      setCommunitySession({ ...communitySession, ...(data || {}), paid: (payments || []).length, payments: payments || [] });
+      if (data?.status === 'completed') { setNotice('All three founders paid. The clan has been created.'); await refresh(); setView('mine'); }
     } catch (e) { setNotice(safeError(e)); }
   }
 
   async function confirmCommunityFounding() {
-    const code = communityCodeInput.trim().toUpperCase();
-    if (!code) return;
+    const sessionId = communityCodeInput.trim();
+    if (!sessionId) return;
     setBusy(true);
     try {
-      const { data, error } = await supabase.rpc('element6_confirm_clan_founder', { p_code: code });
-      if (error) throw error;
+      if (tokenBalance < COMMUNITY_CREATE_COST) throw new Error('You need 5,000 tokens to accept this founding request.');
+      const spent = await onSpendTokens?.(COMMUNITY_CREATE_COST);
+      if (!spent) throw new Error('You do not have enough tokens.');
+      const { data, error } = await supabase.rpc('element6_pay_community_founding', { p_session_id: sessionId });
+      if (error) {
+        try { await onGrantTokens?.(COMMUNITY_CREATE_COST); } catch {}
+        throw error;
+      }
       setCommunityCodeInput('');
-      setNotice(data.message || 'Community founding confirmed.');
-    } catch (e) {
-      setNotice(safeError(e));
-    } finally {
-      setBusy(false);
-    }
+      setNotice(data?.complete ? 'All three founders have paid. The clan is now created and all three are leaders.' : `Payment accepted. ${data?.paid || 1}/3 founders have paid.`);
+      if (data?.complete) { await refresh(); setView('mine'); }
+    } catch (e) { setNotice(safeError(e)); }
+    finally { setBusy(false); }
   }
 
   async function createClan() {
@@ -277,14 +303,14 @@ export default function ClansScreen({
     const playtimeSeconds = Number(founderProgress?.playtimeSeconds || 0);
     const isProven = wins >= PROVEN_WINS_REQUIRED && playtimeSeconds >= PROVEN_PLAYTIME_REQUIRED;
     const isCommunity = founderMethod === 'community';
-    const requiredTokens = founderMethod === 'wealthy' ? CREATE_COST : (isCommunity ? COMMUNITY_CREATE_COST : 0);
+    const requiredTokens = founderMethod === 'wealthy' ? CREATE_COST : 0;
 
     if (founderMethod === 'proven' && !isProven) {
       setNotice(`Proven Founder requires ${PROVEN_WINS_REQUIRED} total wins and ${PROVEN_PLAYTIME_REQUIRED / 3600} hours of playtime.`);
       return;
     }
-    if (isCommunity && (!communitySession?.confirmed || Number(communitySession.confirmations || 0) < COMMUNITY_FOUNDERS_REQUIRED)) {
-      setNotice(`Community Founder needs ${COMMUNITY_FOUNDERS_REQUIRED} other players to confirm the founding.`);
+    if (isCommunity) {
+      setNotice('Community Founding is now completed automatically after all three founders accept and pay 5,000 tokens.');
       return;
     }
     if (requiredTokens > 0 && tokenBalance < requiredTokens) {
@@ -605,22 +631,18 @@ export default function ClansScreen({
 
             {founderMethod === 'community' && (
               <div className="space-y-3 rounded-xl bg-secondary/50 p-4">
-                <div className="text-sm font-semibold">Community Founding</div>
-                <div className="text-xs text-muted-foreground">The founder starts a 24-hour founding session. Three other players enter the code and confirm. Then the founder pays {COMMUNITY_CREATE_COST.toLocaleString()} tokens to create the clan.</div>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={startCommunityFounding} disabled={busy} className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">Start Founding Session</button>
-                  {communitySession && <button type="button" onClick={refreshCommunityFounding} disabled={busy} className="rounded-lg bg-secondary px-3 py-2 text-sm">Refresh</button>}
+                <div className="text-sm font-semibold">Community Founding · 3 Shared Leaders</div>
+                <div className="text-xs text-muted-foreground">Enter two usernames of players who are not currently in a clan. You pay 5,000 tokens when you send the request. Each invited player gets an Element 6 chat invitation and pays 5,000 tokens when they click ACCEPT. All three payments must happen within 24 hours; then the clan is created automatically and all three players are permanent shared leaders.</div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <input value={communityInvitees.one} onChange={e=>setCommunityInvitees(v=>({...v,one:e.target.value}))} placeholder="First founder username" className="rounded-lg border bg-background px-3 py-2 text-sm" />
+                  <input value={communityInvitees.two} onChange={e=>setCommunityInvitees(v=>({...v,two:e.target.value}))} placeholder="Second founder username" className="rounded-lg border bg-background px-3 py-2 text-sm" />
                 </div>
-                {communitySession && (
-                  <div className="rounded-lg border p-3 text-sm">
-                    <div>Code: <b className="tracking-widest">{communitySession.code}</b></div>
-                    <div className="text-xs text-muted-foreground">Confirmations: {communitySession.confirmations || 0}/{COMMUNITY_FOUNDERS_REQUIRED}</div>
-                    <div className="text-xs text-muted-foreground">{communitySession.confirmed ? 'Ready to create.' : 'Waiting for confirmations.'}</div>
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <input value={communityCodeInput} onChange={e=>setCommunityCodeInput(e.target.value.toUpperCase())} placeholder="Enter someone else's founding code" className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm" maxLength={12} />
-                  <button type="button" onClick={confirmCommunityFounding} disabled={busy || !communityCodeInput.trim()} className="rounded-lg bg-secondary px-3 py-2 text-sm disabled:opacity-50">Confirm</button>
+                <button type="button" onClick={startCommunityFounding} disabled={busy || !communityInvitees.one.trim() || !communityInvitees.two.trim() || tokenBalance < COMMUNITY_CREATE_COST || !createForm.name.trim() || !createForm.tag.trim()} className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50">SEND FOUNDING REQUESTS · 5,000 TOKENS</button>
+                {communitySession && <div className="rounded-lg border p-3 text-sm"><div className="font-heading text-accent">FOUNDING REQUEST ACTIVE</div><div className="text-xs text-muted-foreground mt-1">Paid: {communitySession.paid || 1}/3 · expires in 24 hours</div><button type="button" onClick={refreshCommunityFounding} className="mt-2 rounded bg-secondary px-3 py-1.5 text-xs">REFRESH</button></div>}
+                <div className="border-t border-border pt-3">
+                  <p className="text-xs font-semibold">Accept someone else's invitation</p>
+                  <p className="text-[10px] text-muted-foreground mb-2">Paste the founding request ID from the Element 6 chat invitation.</p>
+                  <div className="flex gap-2"><input value={communityCodeInput} onChange={e=>setCommunityCodeInput(e.target.value)} placeholder="Founding request ID" className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm" /><button type="button" onClick={confirmCommunityFounding} disabled={busy || !communityCodeInput.trim() || tokenBalance < COMMUNITY_CREATE_COST} className="rounded-lg bg-secondary px-3 py-2 text-sm disabled:opacity-50">ACCEPT · 5,000</button></div>
                 </div>
               </div>
             )}
@@ -646,7 +668,7 @@ export default function ClansScreen({
                 img.src=objectUrl;
               }} />
             </div>
-            <button disabled={busy || (founderMethod === 'wealthy' && tokenBalance < CREATE_COST) || (founderMethod === 'community' && (tokenBalance < COMMUNITY_CREATE_COST || !communitySession?.confirmed)) || (founderMethod === 'proven' && (Number(founderProgress?.wins || 0) < PROVEN_WINS_REQUIRED || Number(founderProgress?.playtimeSeconds || 0) < PROVEN_PLAYTIME_REQUIRED))} onClick={createClan} className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground disabled:opacity-50">
+            <button disabled={busy || founderMethod === 'community' || (founderMethod === 'wealthy' && tokenBalance < CREATE_COST) || (founderMethod === 'proven' && (Number(founderProgress?.wins || 0) < PROVEN_WINS_REQUIRED || Number(founderProgress?.playtimeSeconds || 0) < PROVEN_PLAYTIME_REQUIRED))} onClick={createClan} className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground disabled:opacity-50">
               {founderMethod === 'wealthy' ? `Create for ${CREATE_COST.toLocaleString()} Tokens` : founderMethod === 'community' ? `Create for ${COMMUNITY_CREATE_COST.toLocaleString()} Tokens` : 'Create with Founder Trial'}
             </button>
           </section>

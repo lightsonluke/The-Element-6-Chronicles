@@ -32,6 +32,9 @@ export function useLANConnection() {
   const streamRef = useRef(null);
   const tickRef = useRef(0);
   const lastMsgTickRef = useRef(-1);
+  const isHostRef = useRef(false);
+  const lastStateMessageRef = useRef(null);
+  const lastResyncRequestRef = useRef(0);
 
   // netCore-backed connection state — 10s timeout, 15s reconnection window
   const connRef = useRef(new ConnectionState({
@@ -60,6 +63,9 @@ export function useLANConnection() {
   }, []);
 
   const sendMessage = useCallback((msg) => {
+    if (msg?.type === 'state' && isHostRef.current) {
+      lastStateMessageRef.current = { ...msg };
+    }
     const dc = dcRef.current;
     // Stamp every message with a monotonically increasing tick so the
     // receiver can reject stale/out-of-order packets via SeqNum.
@@ -104,6 +110,16 @@ export function useLANConnection() {
       if (msg && msg.type === '__ping') { sendRaw({ type: '__pong' }); return; }
       if (msg && msg.type === '__pong') return;
       if (msg && msg.type === '__frame') { setFrameUrl(msg.d); return; }
+      // LAN recovery: the guest can request the most recent authoritative state
+      // without restarting the room. The host resends its cached state with a
+      // fresh transport tick so the receiver cannot reject it as stale.
+      if (msg && msg.type === '__resync_request') {
+        if (isHostRef.current && lastStateMessageRef.current) {
+          const recovery = { ...lastStateMessageRef.current, _resync: true, _tick: ++tickRef.current };
+          try { dc.send(JSON.stringify(recovery)); } catch (_) {}
+        }
+        return;
+      }
       // Reject stale/out-of-order messages via SeqNum tick comparison
       if (msg && msg._tick !== undefined) {
         if (!SeqNum.is_newer(msg._tick, lastMsgTickRef.current)) return;
@@ -141,6 +157,7 @@ export function useLANConnection() {
 
   const createRoom = useCallback(async (hostUserId, hostName, gameMode, hostChar, hostElement, customCode) => {
     setIsHost(true);
+    isHostRef.current = true;
     setStatus('hosting');
     setError(null);
 
@@ -196,6 +213,7 @@ export function useLANConnection() {
 
   const joinRoom = useCallback(async (code, guestUserId, guestName, guestChar, guestElement) => {
     setIsHost(false);
+    isHostRef.current = false;
     setStatus('joining');
     setError(null);
 
@@ -291,6 +309,12 @@ export function useLANConnection() {
         // Fast stall detection for LAN (1.2s) — tighter than ConnectionState's 10s
         const fastStall = Date.now() - lastRecvRef.current > 1200;
         if (fastStall !== stalledRef.current) { stalledRef.current = fastStall; setStalled(fastStall); }
+        // A stalled guest does not wait forever for a lucky packet. Ask the
+        // host for a fresh authoritative snapshot at most twice per second.
+        if (!isHostRef.current && fastStall && Date.now() - lastResyncRequestRef.current > 500) {
+          lastResyncRequestRef.current = Date.now();
+          try { dc.send(JSON.stringify({ type: '__resync_request', _tick: ++tickRef.current })); } catch (_) {}
+        }
         // Also check ConnectionState for the longer reconnection window
         connRef.current.isAlive();
       }

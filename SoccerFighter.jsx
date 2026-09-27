@@ -166,7 +166,10 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
     const ctx = canvas.getContext('2d');
 
     if (lanConnection) {
-      lanConnection.onMessage((msg) => { if (msg && msg.type === 'input') remoteInputRef.current = msg.input; });
+      lanConnection.onMessage((msg) => {
+        if (msg && msg.type === 'input') remoteInputRef.current = msg.input;
+        if (msg && msg.type === 'state' && msg.state && lanRole !== 'host') remoteStateRef.current = msg.state;
+      });
     }
 
     const char1 = getCharData(p1Char);
@@ -450,7 +453,6 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
       // Online/LAN pauses are local input menus only; the shared simulation
       // continues so the opponent never freezes with us.
       if (pausedRef.current && !lanConnection) { requestAnimationFrame(loop); return; }
-      if (lanConnection && lanConnection.stalledRef && lanConnection.stalledRef.current) { lastTime = now; requestAnimationFrame(loop); return; }
 
       const rawDt = Math.min((now - lastTime) / 1000, 0.05);
       const inSlowMo = slowMoRef.current > 0;
@@ -956,9 +958,13 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         }
       }
 
-      if (isOnlineHost && onStateExportRef.current && now - lastSnapshotAtRef.current >= 50) {
+      if ((isOnlineHost || (lanConnection && lanRole === 'host')) && now - lastSnapshotAtRef.current >= 50) {
         lastSnapshotAtRef.current = now;
-        onStateExportRef.current(snapshot());
+        const snap = snapshot();
+        if (isOnlineHost && onStateExportRef.current) onStateExportRef.current(snap);
+        if (lanConnection && lanRole === 'host') {
+          try { lanConnection.sendMessage({ type: 'state', state: snap }); } catch (_) {}
+        }
       }
 
       // Camera shake
@@ -1359,7 +1365,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
     <div className="el6-match-viewport">
       <div className="fixed top-4 left-4 z-[100] flex items-center gap-2">
         {!tournamentMode && <button onClick={finishQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Menu</button>}
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className={`el6-controller-pause-trigger px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80 ${tournamentMode ? 'ml-auto' : ''}`}>Pause (ESC)</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className={`px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80 ${tournamentMode ? 'ml-auto' : ''}`}>Pause (ESC)</button>
       </div>
       <GameCanvasPortal>
         <canvas ref={canvasRef} width={W} height={H}

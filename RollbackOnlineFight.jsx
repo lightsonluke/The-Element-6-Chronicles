@@ -124,6 +124,8 @@ export default function RollbackOnlineFight({
     let pingTimer = null;
     let snapshotTimer = null;
     let readyTimer = null;
+    let reconnectTimer = null;
+    let lastReconnectAt = 0;
     let stopped = false;
     let finished = false;
     let resyncing = false;
@@ -377,7 +379,7 @@ export default function RollbackOnlineFight({
         try { db.entities.OnlineMatch.update(matchId, { status: 'active' }).catch(() => {}); } catch {}
         pingTimer = setInterval(() => transport.ping().catch(() => {}), 1000);
         snapshotTimer = setInterval(() => {
-          if (isHost && !finished && !resyncing) {
+          if (isHost && !finished) {
             const snapshotState = session.getRenderableState();
             transport.sendControl('state-snapshot', {
               frame: session.getStats().currentFrame,
@@ -407,9 +409,27 @@ export default function RollbackOnlineFight({
             accumulator -= FRAME_MS;
             steps += 1;
           }
-          if (Date.now() - lastPeerMessageAt > 10000) setConnectionText('RECONNECTING…');
-          else setConnectionText('CONNECTED');
-          if (Date.now() - lastPeerMessageAt > 25000) { finishMatch(role); return; }
+          const peerSilence = Date.now() - lastPeerMessageAt;
+          if (peerSilence > 1800 && !resyncing) {
+            setConnectionText('RESYNCING…');
+            if (Date.now() - lastResyncAt > 1800) {
+              lastResyncAt = Date.now();
+              resyncToken = Date.now();
+              transport.sendControl('resync-request', { token: resyncToken }).catch(() => {});
+            }
+          } else {
+            setConnectionText('CONNECTED');
+          }
+          // Rejoin the Realtime topic after a prolonged silent period. This is
+          // intentionally independent of match completion so a transient tab
+          // or network interruption cannot permanently freeze one player.
+          if (peerSilence > 4500 && Date.now() - lastReconnectAt > 5000) {
+            lastReconnectAt = Date.now();
+            reconnectTimer = transport.reconnect().then(ok => {
+              if (ok) { lastPeerMessageAt = Date.now(); setConnectionText('RECONNECTING…'); }
+            }).catch(() => {});
+          }
+          if (peerSilence > 30000) { finishMatch(role); return; }
           render(session.getRenderableState());
           animationFrame = requestAnimationFrame(loop);
         };
@@ -429,6 +449,7 @@ export default function RollbackOnlineFight({
       clearInterval(pingTimer);
       clearInterval(snapshotTimer);
       clearInterval(readyTimer);
+      if (reconnectTimer && typeof reconnectTimer.cancel === 'function') reconnectTimer.cancel?.();
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       transport?.close('screen-left').catch(() => {});
@@ -464,7 +485,7 @@ export default function RollbackOnlineFight({
       <div className="flex justify-between items-center w-full px-1 max-w-[1280px]">
         <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Forfeit</button>
         <span className="text-[10px] font-heading text-accent">{connectionText}</span>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-controller-pause-trigger px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
       </div>
       {networkError && <p className="text-xs text-destructive font-body">{networkError}</p>}
       {resyncing && <div className="absolute inset-0 z-20 grid place-items-center bg-black/70 font-heading text-accent text-2xl">RESYNCING MATCH…</div>}

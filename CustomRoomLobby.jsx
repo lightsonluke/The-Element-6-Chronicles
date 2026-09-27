@@ -1,5 +1,6 @@
 import db from './localBackend';
 import { supabase } from './supabaseClient.js';
+import { getClientRegion } from './hubRegion.js';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
@@ -104,52 +105,112 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
     };
   }, [musicVolume, sfxVolume]);
 
-  const refreshBrowse = async () => {
-    try {
-      const rooms = await db.entities.CustomRoom.filter({ status: 'open' });
-      const mc = MODE_CONFIG[mode] || MODE_CONFIG.fight;
-      setBrowseRooms((rooms || []).filter(r => (r.settings?.mode || 'fight') === mode && (r.max_players || 8) > (r.players?.length || 0)));
-    } catch {}
-  };
+  const toRoom = useCallback((raw, playerRows = [], profileRows = []) => {
+    if (!raw) return null;
+    const settingsRaw = raw.settings || {};
+    const profileMap = Object.fromEntries((profileRows || []).map(p => [p.user_id, p.username]));
+    const humans = (playerRows || []).map(p => ({
+      slot: Number(p.player_slot || 1) - 1,
+      char: p.loadout?.character_id || 'yellow',
+      is_bot: false,
+      user_id: p.user_id,
+      name: profileMap[p.user_id] || 'Player',
+      loadout: p.loadout || {},
+    }));
+    const bots = Array.isArray(settingsRaw.bots) ? settingsRaw.bots : [];
+    const players = [...humans, ...bots].sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
+    return {
+      id: raw.id,
+      room_code: raw.room_code,
+      status: raw.status === 'waiting' ? 'open' : raw.status,
+      host_user_id: raw.host_id,
+      max_players: Number(settingsRaw.maxPlayers || 2),
+      players,
+      stage_name: settingsRaw.stageName || 'Split City',
+      stage_platforms: settingsRaw.stagePlatforms || [],
+      stage_spawn_points: settingsRaw.stageSpawnPoints || [],
+      settings: settingsRaw,
+      winner: raw.authoritative_state?.winner || 'none',
+      region: raw.region || settingsRaw.region || getClientRegion(),
+    };
+  }, []);
 
-  // Subscribe to room when we have one (not during game — game component handles its own sync)
+  const fetchRoom = useCallback(async roomId => {
+    const { data: raw, error } = await supabase.from('online_custom_rooms').select('*').eq('id', roomId).maybeSingle();
+    if (error || !raw) return null;
+    const { data: playerRows } = await supabase.from('online_custom_room_players').select('room_id,user_id,player_slot,loadout').eq('room_id', roomId);
+    const ids = (playerRows || []).map(p => p.user_id).filter(Boolean);
+    const { data: profiles } = ids.length ? await supabase.from('player_profiles').select('user_id,username').in('user_id', ids) : { data: [] };
+    return toRoom(raw, playerRows || [], profiles || []);
+  }, [toRoom]);
+
+  const refreshBrowse = useCallback(async () => {
+    try {
+      const { data: rawRooms, error } = await supabase.from('online_custom_rooms').select('*').eq('status', 'waiting').order('created_at', { ascending: false }).limit(100);
+      if (error) throw error;
+      const mc = MODE_CONFIG[mode] || MODE_CONFIG.fight;
+      const region = getClientRegion();
+      const rooms = (rawRooms || []).filter(r => (r.settings?.mode || 'fight') === mode && (r.region || r.settings?.region || region) === region);
+      const ids = rooms.map(r => r.id);
+      if (!ids.length) { setBrowseRooms([]); return; }
+      const { data: prs } = await supabase.from('online_custom_room_players').select('room_id,user_id,player_slot,loadout').in('room_id', ids);
+      const profileIds = [...new Set((prs || []).map(p => p.user_id))];
+      const { data: profiles } = profileIds.length ? await supabase.from('player_profiles').select('user_id,username').in('user_id', profileIds) : { data: [] };
+      const byRoom = {};
+      (prs || []).forEach(p => { (byRoom[p.room_id] ||= []).push(p); });
+      const next = rooms.map(r => toRoom(r, byRoom[r.id] || [], profiles || [])).filter(r => (r.players?.length || 0) < r.max_players);
+      setBrowseRooms(next);
+    } catch (e) { setError(e?.message || 'Could not load rooms.'); }
+  }, [mode, toRoom]);
+
+  useEffect(() => { if (me?.id) refreshBrowse(); }, [me?.id, refreshBrowse]);
+
+  // Live lobby polling is intentionally backed by Supabase, not localStorage, so
+  // a room made by a friend on another device is visible immediately.
   useEffect(() => {
     if (!room?.id || phase === 'game') return;
+    let alive = true;
     const refresh = async () => {
       try {
-        const r = await db.entities.CustomRoom.get(room.id);
-        if (r) { setRoom(r); if (r.status === 'playing' && phase !== 'game' && phase !== 'connecting') { if (!lan.isHost) lan.joinRoom(r.room_code, me?.id, me?.full_name || 'Guest', myChar, myElement); setPhase('connecting'); } if (r.status === 'closed') { setError('Room closed.'); setPhase('browse'); } }
+        const r = await fetchRoom(room.id);
+        if (!alive || !r) return;
+        setRoom(r);
+        if (r.status === 'playing' && phase !== 'game' && phase !== 'connecting') {
+          if (!lan.isHost && mode === 'fight') await lan.joinRoom(r.room_code, me?.id, me?.full_name || 'Guest', myChar, myElement);
+          setPhase(mode === 'fight' ? 'connecting' : 'game');
+        }
+        if (r.status === 'cancelled' || r.status === 'finished') { setError('Room closed.'); setPhase('browse'); refreshBrowse(); }
       } catch {}
     };
     refresh();
-    try {
-      unsubRef.current = db.entities.CustomRoom.subscribe((ev) => {
-        if (!ev?.data || ev.data.id !== room.id) return;
-        const r = ev.data;
-        setRoom(r);
-        if (r.status === 'playing' && phase !== 'game' && phase !== 'connecting') { if (!lan.isHost) lan.joinRoom(r.room_code, me?.id, me?.full_name || 'Guest', myChar, myElement); setPhase('connecting'); }
-        if (r.status === 'closed') { setError('Room closed.'); setPhase('browse'); }
-      });
-    } catch {}
-    pollRef.current = setInterval(refresh, 3000);
-    return () => { if (unsubRef.current) unsubRef.current(); clearInterval(pollRef.current); };
-    // eslint-disable-next-line
-  }, [room?.id, phase]);
+    const t = setInterval(refresh, 1200);
+    return () => { alive = false; clearInterval(t); };
+  }, [room?.id, phase, fetchRoom, lan.isHost, mode, me?.id, myChar, myElement, refreshBrowse]);
 
   const createRoom = async () => {
     if (!me) { setError('Not signed in.'); return; }
     setError(null);
     try {
-      const code = genCode();
-      const players = [{ slot: 0, char: myChar, is_bot: false, user_id: me.id, name: 'You', loadout }];
-      const created = await db.entities.CustomRoom.create({
-        room_code: code, status: 'open', host_user_id: me.id, host_char: myChar,
-        players, max_players: (MODE_CONFIG[mode] || MODE_CONFIG.fight).maxPlayers,
-        stage_name: STAGE_OPTIONS[0].name, stage_platforms: [], stage_spawn_points: [],
-        guest_inputs: {}, game_state: {}, settings: { mode }, winner: 'none',
+      const mc = MODE_CONFIG[mode] || MODE_CONFIG.fight;
+      const { data, error } = await supabase.rpc('create_element6_custom_room', {
+        p_settings: {
+          mode,
+          maxPlayers: mc.maxPlayers,
+          region: getClientRegion(),
+          characterId: myChar,
+          stageName: STAGE_OPTIONS[0].name,
+          stagePlatforms: STAGE_OPTIONS[0].platforms,
+          stageSpawnPoints: [],
+          bots: [],
+          equippedSkins,
+          equippedAccessories,
+          element: myElement,
+        }
       });
+      if (error) throw error;
+      const created = await fetchRoom(data.room_id);
       setRoom(created); setPhase('lobby');
-    } catch (e) { setError('Could not create room.'); }
+    } catch (e) { setError(e?.message || 'Could not create room.'); }
   };
 
   const joinByCode = async () => {
@@ -158,108 +219,97 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
     const code = joinCode.trim().toUpperCase();
     if (!code) return;
     try {
-      const candidates = await db.entities.CustomRoom.filter({ room_code: code, status: 'open' });
-      const r = (candidates || [])[0];
-      if (!r) { setError('No open room with that code.'); return; }
-      const players = Array.isArray(r.players) ? [...r.players] : [];
-      if (players.length >= (r.max_players || 8)) { setError('Room is full.'); return; }
-      const existing = players.findIndex(p => p.user_id === me.id);
-      if (existing >= 0) {
-        players[existing] = { ...players[existing], char: myChar, loadout };
-      } else {
-        players.push({ slot: players.length, char: myChar, is_bot: false, user_id: me.id, name: 'Guest', loadout });
-      }
-      await db.entities.CustomRoom.update(r.id, { players });
-      const updated = await db.entities.CustomRoom.get(r.id);
-      setRoom(updated); setPhase('lobby');
-    } catch (e) { setError('Could not join room.'); }
+      const { data, error } = await supabase.rpc('join_element6_custom_room', {
+        p_room_code: code,
+        p_loadout: { character_id: myChar, equippedSkins, equippedAccessories, element: myElement },
+      });
+      if (error) throw error;
+      const joined = await fetchRoom(data.room_id);
+      if (!joined) throw new Error('Room is no longer available.');
+      setRoom(joined); setPhase('lobby');
+    } catch (e) { setError(e?.message || 'No open room with that code.'); }
   };
 
   const joinFromBrowse = async (r) => {
     if (!me) { setError('Not signed in.'); return; }
-    const players = Array.isArray(r.players) ? [...r.players] : [];
-    if (players.length >= (r.max_players || 8)) { setError('Room is full.'); return; }
-    const existing = players.findIndex(p => p.user_id === me.id);
-    if (existing >= 0) {
-      players[existing] = { ...players[existing], char: myChar, loadout };
-    } else {
-      players.push({ slot: players.length, char: myChar, is_bot: false, user_id: me.id, name: 'Guest', loadout });
-    }
     try {
-      await db.entities.CustomRoom.update(r.id, { players });
-      const updated = await db.entities.CustomRoom.get(r.id);
-      setRoom(updated); setPhase('lobby');
-    } catch { setError('Could not join room.'); }
+      const { data, error } = await supabase.rpc('join_element6_custom_room', {
+        p_room_code: r.room_code,
+        p_loadout: { character_id: myChar, equippedSkins, equippedAccessories, element: myElement },
+      });
+      if (error) throw error;
+      const joined = await fetchRoom(data.room_id);
+      setRoom(joined); setPhase('lobby');
+    } catch (e) { setError(e?.message || 'Could not join room.'); }
+  };
+
+  const updateRoomSettings = async patch => {
+    const r = roomRef.current;
+    if (!r || r.host_user_id !== me?.id) return;
+    const next = { ...(r.settings || {}), ...patch };
+    try {
+      const { error } = await supabase.from('online_custom_rooms').update({ settings: next, region: next.region || r.region, updated_at: new Date().toISOString() }).eq('id', r.id).eq('host_id', me.id);
+      if (error) throw error;
+      setRoom(prev => prev ? { ...prev, settings: next, ...('stageName' in patch ? { stage_name: next.stageName } : {}), ...('stagePlatforms' in patch ? { stage_platforms: next.stagePlatforms } : {}), ...('stageSpawnPoints' in patch ? { stage_spawn_points: next.stageSpawnPoints } : {}), ...('bots' in patch ? { players: [...(prev.players || []).filter(p => !p.is_bot), ...(next.bots || [])] } : {}) } : prev);
+    } catch (e) { setError(e?.message || 'Could not update room.'); }
   };
 
   const leaveRoom = async () => {
-    if (roomRef.current) {
-      const r = roomRef.current;
-      const isHost = r.host_user_id === me?.id;
-      if (isHost) {
-        try { await db.entities.CustomRoom.update(r.id, { status: 'closed' }); } catch {}
-      } else {
-        const players = (Array.isArray(r.players) ? r.players : []).filter(p => p.user_id !== me?.id);
-        try { await db.entities.CustomRoom.update(r.id, { players }); } catch {}
-      }
-    }
+    if (roomRef.current?.id) { try { await supabase.rpc('leave_element6_custom_room', { p_room_id: roomRef.current.id }); } catch {} }
+    try { lan.closeConnection(); } catch {}
     setRoom(null); setPhase('browse'); refreshBrowse();
   };
 
-  // ── Host lobby controls ──
   const addBot = async () => {
     const r = roomRef.current; if (!r || r.host_user_id !== me?.id) return;
-    const players = Array.isArray(r.players) ? [...r.players] : [];
-    if (players.length >= (r.max_players || 8)) return;
-    const pool = ALL;
-    const botChar = pool[Math.floor(Math.random() * pool.length)].id;
-    players.push({ slot: players.length, char: botChar, is_bot: true, difficulty: settings?.defaultCPUDifficulty || 'regular', user_id: null, name: `Bot ${players.length}`, loadout: {} });
-    try { await db.entities.CustomRoom.update(r.id, { players }); } catch {}
+    const bots = Array.isArray(r.settings?.bots) ? [...r.settings.bots] : [];
+    if ((r.players?.length || 0) >= (r.max_players || 8)) return;
+    const pool = ALL; const botChar = pool[Math.floor(Math.random() * pool.length)].id;
+    bots.push({ slot: (r.players || []).length, char: botChar, is_bot: true, difficulty: settings?.defaultCPUDifficulty || 'regular', user_id: null, name: `Bot ${bots.length + 1}`, loadout: {} });
+    await updateRoomSettings({ bots });
   };
 
-  const removePlayer = async (idx) => {
+  const botIndexForPlayer = idx => {
+    const r = roomRef.current; const target = r?.players?.[idx];
+    if (!target?.is_bot) return -1;
+    return (r.settings?.bots || []).findIndex(b => Number(b.slot) === Number(target.slot));
+  };
+
+  const removePlayer = async idx => {
     const r = roomRef.current; if (!r || r.host_user_id !== me?.id) return;
-    const players = (Array.isArray(r.players) ? r.players : []).filter((_, i) => i !== idx);
-    players.forEach((p, i) => { p.slot = i; });
-    try { await db.entities.CustomRoom.update(r.id, { players }); } catch {}
+    const bi = botIndexForPlayer(idx); if (bi < 0) return;
+    const bots = [...(r.settings?.bots || [])]; bots.splice(bi, 1);
+    bots.forEach((b, i) => { b.slot = (r.players || []).filter(p => !p.is_bot).length + i; });
+    await updateRoomSettings({ bots });
   };
 
   const setBotDifficulty = async (idx, diff) => {
-    const r = roomRef.current; if (!r) return;
-    const players = Array.isArray(r.players) ? [...r.players] : [];
-    if (players[idx]) { players[idx] = { ...players[idx], difficulty: diff }; }
-    try { await db.entities.CustomRoom.update(r.id, { players }); } catch {}
+    const bi = botIndexForPlayer(idx); const bots = [...(roomRef.current?.settings?.bots || [])]; if (bi < 0 || !bots[bi]) return;
+    bots[bi] = { ...bots[bi], difficulty: diff }; await updateRoomSettings({ bots });
   };
 
   const setBotChar = async (idx, charId) => {
-    const r = roomRef.current; if (!r) return;
-    const players = Array.isArray(r.players) ? [...r.players] : [];
-    if (players[idx]) { players[idx] = { ...players[idx], char: charId }; }
-    try { await db.entities.CustomRoom.update(r.id, { players }); } catch {}
+    const bi = botIndexForPlayer(idx); const bots = [...(roomRef.current?.settings?.bots || [])]; if (bi < 0 || !bots[bi]) return;
+    bots[bi] = { ...bots[bi], char: charId }; await updateRoomSettings({ bots });
   };
 
-  const setStage = async (idx) => {
+  const setStage = async idx => {
     const r = roomRef.current; if (!r || r.host_user_id !== me?.id) return;
     setSelectedStageIdx(idx);
     const stage = STAGE_OPTIONS[idx];
-    try { await db.entities.CustomRoom.update(r.id, { stage_name: stage.name, stage_platforms: stage.platforms, stage_spawn_points: [] }); } catch {}
+    await updateRoomSettings({ stageName: stage.name, stagePlatforms: stage.platforms, stageSpawnPoints: [] });
   };
 
-  const setCustomStage = async (stageIdx) => {
+  const setCustomStage = async stageIdx => {
     const r = roomRef.current; if (!r || r.host_user_id !== me?.id) return;
-    const stage = customStages[stageIdx];
-    if (!stage) return;
-    const platforms = stage.platforms || stage;
-    const spawnPoints = stage.spawnPoints || [];
-    try { await db.entities.CustomRoom.update(r.id, { stage_name: stage.name || 'Custom', stage_platforms: platforms, stage_spawn_points: spawnPoints }); } catch {}
+    const stage = customStages[stageIdx]; if (!stage) return;
+    await updateRoomSettings({ stageName: stage.name || 'Custom', stagePlatforms: stage.platforms || stage, stageSpawnPoints: stage.spawnPoints || [] });
   };
 
-  const updateMyChar = async (charId) => {
-    setMyChar(charId);
+  const updateMyChar = async charId => {
+    setMyChar(charId); setMyElement(equippedElements?.[charId] || 'basic');
     const r = roomRef.current; if (!r || !me) return;
-    const players = Array.isArray(r.players) ? [...r.players] : [];
-    const idx = players.findIndex(p => p.user_id === me.id);
-    if (idx >= 0) { players[idx] = { ...players[idx], char: charId, loadout }; try { await db.entities.CustomRoom.update(r.id, { players }); } catch {} }
+    try { await supabase.rpc('update_element6_custom_room_player', { p_room_id: r.id, p_character_id: charId, p_loadout: { character_id: charId, equippedSkins, equippedAccessories, element: equippedElements?.[charId] || 'basic' } }); } catch (e) { setError(e?.message || 'Could not update fighter.'); }
   };
 
   const startGame = async () => {
@@ -267,17 +317,12 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
     const players = Array.isArray(r.players) ? r.players : [];
     if (players.length < 2) { setError('Need at least 2 players/bots.'); return; }
     try {
-      // Sport modes run locally (their engines don't support the CustomRoom sync layer)
-      if (mode !== 'fight') {
-        await db.entities.CustomRoom.update(r.id, { status: 'playing' });
-        setPhase('game');
-        return;
-      }
-      // Create WebRTC room first (for real-time game sync)
+      const started = await supabase.rpc('start_element6_custom_room', { p_room_id: r.id, p_settings: r.settings || {} });
+      if (started.error) throw started.error;
+      if (mode !== 'fight') { setPhase('game'); return; }
       await lan.createRoom(me.id, me.full_name || 'Host', 'custom', myChar, myElement, r.room_code);
-      await db.entities.CustomRoom.update(r.id, { status: 'playing', guest_inputs: {}, game_state: {} });
       setPhase('connecting');
-    } catch { setError('Could not start game.'); }
+    } catch (e) { setError(e?.message || 'Could not start game.'); }
   };
 
   // ── Connecting phase ──
@@ -306,7 +351,7 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
           sfxVolume={sfxVolume} musicVolume={musicVolume}
           customCharsData={customCharsData} customNumberMap={customNumberMap}
           equippedEmotes={equippedEmotes}
-          onEnd={() => { if (isHost) { try { db.entities.CustomRoom.update(room.id, { status: 'closed' }); } catch {} } onEnd?.(); setRoom(null); setPhase('browse'); refreshBrowse(); }}
+          onEnd={async () => { if (isHost) { try { await supabase.rpc('finish_element6_custom_room', { p_room_id: room.id, p_winner: 'draw' }); } catch {} } onEnd?.(); setRoom(null); setPhase('browse'); refreshBrowse(); }}
         />
       );
     }
@@ -316,8 +361,8 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
         sfxVolume={sfxVolume} musicVolume={musicVolume} settings={settings} myElement={myElement}
         lanConnection={lan} lanRole={lan.isHost ? 'host' : 'guest'} localScheme={localScheme}
         equippedEmotes={equippedEmotes}
-        onEnd={(res) => {
-          if (isHost) { try { db.entities.CustomRoom.update(room.id, { status: 'closed' }); } catch {} }
+        onEnd={async (res) => {
+          if (isHost) { try { await supabase.rpc('finish_element6_custom_room', { p_room_id: room.id, p_winner: res?.winner || 'draw' }); } catch {} }
           lan.closeConnection();
           onEnd?.(res); setRoom(null); setPhase('browse'); refreshBrowse();
         }}
@@ -463,7 +508,7 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
       <div className="flex gap-3 w-full max-w-md">
         <button onClick={createRoom} className="flex-1 px-4 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90 shadow-lg">CREATE ROOM</button>
         <div className="flex-1 flex gap-1">
-          <input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase().slice(0, 4))} placeholder="CODE"
+          <input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase().slice(0, 6))} placeholder="CODE"
             className="flex-1 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm border border-border text-center uppercase tracking-widest" />
           <button onClick={joinByCode} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-80">JOIN</button>
         </div>

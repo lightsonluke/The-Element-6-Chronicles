@@ -741,7 +741,6 @@ export default function PlatformFighter({
   stageCamera = null,
   killPerimeter = null,
   trainingMode = false,
-  canvasHostMode = null,
   trainingController = null,
   onTrainingSettings = null,
   trainingSettingsOverlay = null,
@@ -750,6 +749,7 @@ export default function PlatformFighter({
   const gameRef = useRef(null);
   const keysRef = useRef({});
   const remoteInputRef = useRef(null);
+  const lanRemoteStateRef = useRef(null);
   const [winner, setWinner] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [countdown, setCountdown] = useState(3);
@@ -840,7 +840,9 @@ export default function PlatformFighter({
   useEffect(() => {
     if (!lanConnection) return;
     lanConnection.onMessage((msg) => {
-      if (msg && msg.type === 'input' && msg.input) remoteInputRef.current = msg.input;
+      if (!msg) return;
+      if (msg.type === 'input' && msg.input) remoteInputRef.current = msg.input;
+      if (msg.type === 'state' && msg.state) lanRemoteStateRef.current = msg.state;
     });
   }, [lanConnection]);
 
@@ -942,6 +944,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
     let hitstop = 0, superImpactFlash = 0;
     let prevF1Grounded = true, prevF2Grounded = true, prevF2Power = 0;
     let prevStocks1 = f1.stocks, prevStocks2 = f2.stocks;
+    let prevGpStart = false;
   let killFeed = [];
     let killFxEffects = []; // { x, y, color, progress, fxId }
     // Emote state is stored on each fighter: f.emote = { id, timer, maxTimer, progress }
@@ -991,10 +994,6 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       if (!['F5', 'F12'].includes(e.key)) e.preventDefault();
     };
     const ku = e => { keysRef.current[e.key] = false; keysRef.current[e.key.toLowerCase()] = false; };
-    const onControllerSecondaryMenu = () => {
-      if (trainingMode && onTrainingSettings) onTrainingSettings();
-    };
-    window.addEventListener('el6-controller-secondary-menu', onControllerSecondaryMenu);
     window.addEventListener('keydown', kd);
     window.addEventListener('keyup', ku);
     // Keep the match running when focus leaves the window — do NOT auto-pause on blur.
@@ -1026,6 +1025,28 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const dt = Math.min((now - lastTime) / 1000, 0.05) * (M?.slowMotion || 1);
       lastTime = now;
       const { f1, f2 } = gameRef.current;
+      // LAN guests use the host's periodic checkpoint as an automatic recovery
+      // point. Prediction continues between checkpoints, so a brief packet stall
+      // no longer permanently desynchronizes the two fighters.
+      if (lanConnection && lanRole !== 'host' && lanRemoteStateRef.current) {
+        const snap = lanRemoteStateRef.current;
+        if (snap.f1 && snap.f2) {
+          const restore = (target, source) => {
+            Object.keys(source).forEach(k => {
+              if (k === 'char' || k === 'loadout') return;
+              try { target[k] = source[k]; } catch (_) {}
+            });
+          };
+          restore(f1, snap.f1); restore(f2, snap.f2);
+          if (Number.isFinite(snap.timer)) gameRef.current.timer = snap.timer;
+          if (Number.isFinite(snap.coins1)) coinsCollected1 = snap.coins1;
+          if (Number.isFinite(snap.coins2)) coinsCollected2 = snap.coins2;
+          if (Array.isArray(snap.platforms)) {
+            platforms.splice(0, platforms.length, ...snap.platforms.map(pl => ({ ...pl })));
+          }
+          lanRemoteStateRef.current = null;
+        }
+      }
       gameRef.current.timer -= dt;
 
       if (gameRef.current.timer <= 0 || f1.stocks <= 0 || f2.stocks <= 0) {
@@ -1079,6 +1100,8 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const _gpEnabled = settings?.controllerEnabled !== false;
       const gp1 = _gpEnabled ? readGamepadInput(0) : null;
       const gp2 = _gpEnabled ? readGamepadInput(1) : null;
+      // Controller cannot pause — use mouse/trackpad or keyboard Esc/P to pause.
+      prevGpStart = !!gp1?.start;
       const mergeGp = (kb, gp) => gp ? {
         left: kb.left || gp.left, right: kb.right || gp.right,
         jump: kb.jump || gp.jump, up: kb.up || gp.up, down: kb.down || gp.down,
@@ -1100,6 +1123,24 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           p2In = localRaw;
         }
         lanConnection.sendMessage({ type: 'input', input: localRaw });
+        if (lanRole === 'host' && (f1.frame || 0) % 4 === 0) {
+          const cleanFighter = f => {
+            const out = {};
+            for (const [key, value] of Object.entries(f || {})) {
+              if (key === 'char' || key === 'loadout') continue;
+              try { JSON.stringify(value); out[key] = value; } catch (_) {}
+            }
+            return out;
+          };
+          lanConnection.sendMessage({
+            type: 'state',
+            state: {
+              f1: cleanFighter(f1), f2: cleanFighter(f2),
+              timer: gameRef.current.timer, coins1: coinsCollected1, coins2: coinsCollected2,
+              platforms: platforms.map(pl => ({ ...pl })),
+            },
+          });
+        }
       } else {
         const soloPlay = p2IsCPU || dummy; // only one human player (P1)
         p1In = gameMode === 'botbattle'
@@ -1961,7 +2002,6 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
 
     return () => {
       if (gameRef.current) gameRef.current.running = false;
-      window.removeEventListener('el6-controller-secondary-menu', onControllerSecondaryMenu);
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
       document.removeEventListener('visibilitychange', onWakeVis);
@@ -1978,7 +2018,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
 
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
-      <GameCanvasPortal gameMode={canvasHostMode || gameMode}>
+      <GameCanvasPortal>
         <canvas
                 ref={canvasRef} width={W} height={H}
                 className="el6-match-canvas el6-fight-canvas"
@@ -1990,24 +2030,24 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      <div className="el6-match-control-layer absolute top-3 right-3 flex items-center gap-2">
-        {trainingMode && onTrainingSettings && (
-          <button
-            onClick={onTrainingSettings}
-            className="px-3 py-1 bg-secondary/90 text-secondary-foreground rounded font-body text-xs hover:opacity-90"
-          >
-            SETTINGS
-          </button>
-        )}
-        <MatchPauseButtonPortal>
+      <MatchPauseButtonPortal>
+        <div className="el6-match-control-layer fixed top-3 right-3 flex items-center gap-2 pointer-events-auto">
+          {trainingMode && onTrainingSettings && (
+            <button
+              onClick={onTrainingSettings}
+              className="px-3 py-1 bg-secondary/90 text-secondary-foreground rounded font-body text-xs hover:opacity-90"
+            >
+              SETTINGS
+            </button>
+          )}
           <button
             onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }}
-            className="el6-controller-pause-trigger px-3 py-1 bg-secondary/90 text-secondary-foreground rounded font-body text-xs hover:opacity-90"
+            className="px-3 py-1 bg-secondary/90 text-secondary-foreground rounded font-body text-xs hover:opacity-90"
           >
             PAUSE (ESC)
           </button>
-        </MatchPauseButtonPortal>
-      </div>
+        </div>
+      </MatchPauseButtonPortal>
       {paused && !winner && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={gameMode === 'challenge' ? () => { pausedRef.current = false; setPaused(false); } : finishQuit} /></MatchPausePortal>}
       {trainingMode && !winner && trainingSettingsOverlay}
       {winner && (

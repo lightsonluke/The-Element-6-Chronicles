@@ -73,7 +73,43 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
       : equippedAccessories;
   }
   const mergedAccessories = botAccsRef.current;
-  useEffect(() => { remoteStateRef.current = remoteState; }, [remoteState]);
+  // Volleyball is a full-viewport game. Lock the document and visual viewport
+  // while it is mounted so a parent page scroll/offset cannot pull the canvas
+  // down and to the right immediately after matchmaking.
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const previous = { htmlOverflow: html.style.overflow, bodyOverflow: body.style.overflow, scrollX: window.scrollX, scrollY: window.scrollY };
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    window.scrollTo(0, 0);
+    const lock = () => { if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0); };
+    window.addEventListener('scroll', lock, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', lock);
+      html.style.overflow = previous.htmlOverflow;
+      body.style.overflow = previous.bodyOverflow;
+      window.scrollTo(previous.scrollX, previous.scrollY);
+    };
+  }, []);
+  useEffect(() => {
+    remoteStateRef.current = remoteState;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const lockCanvas = () => {
+      canvas.style.position = 'fixed';
+      canvas.style.left = '50%'; canvas.style.top = '50%';
+      canvas.style.right = 'auto'; canvas.style.bottom = 'auto';
+      canvas.style.margin = '0'; canvas.style.transform = 'translate3d(-50%, -50%, 0)';
+      canvas.style.width = 'min(100vw, calc(100dvh * 16 / 9))';
+      canvas.style.height = 'min(100dvh, calc(100vw * 9 / 16))';
+    };
+    lockCanvas();
+    window.addEventListener('resize', lockCanvas);
+    window.visualViewport?.addEventListener('resize', lockCanvas);
+    window.visualViewport?.addEventListener('scroll', lockCanvas);
+    return () => { window.removeEventListener('resize', lockCanvas); window.visualViewport?.removeEventListener('resize', lockCanvas); window.visualViewport?.removeEventListener('scroll', lockCanvas); };
+  }, [remoteState]);
   useEffect(() => { onStateExportRef.current = onStateExport; }, [onStateExport]);
 
   // Initialize state once
@@ -281,7 +317,12 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
     const ku = e => { const rk = resolveKey(e.key); keysRef.current[rk.toLowerCase()] = false; if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: false }); };
     if (lanConnection) {
       lanConnection.onMessage((msg) => {
-        if (!msg || msg.type !== 'key') return;
+        if (!msg) return;
+        if (msg.type === 'state' && msg.state && lanRole !== 'host') {
+          remoteStateRef.current = msg.state;
+          return;
+        }
+        if (msg.type !== 'key') return;
         remoteKeysProc.current = true;
         if (msg.down) kd({ key: msg.key, preventDefault() {} }); else ku({ key: msg.key });
         remoteKeysProc.current = false;
@@ -525,6 +566,9 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
       if (s.shake > 0) s.shake *= 0.85;
 
       if (onStateExportRef.current) onStateExportRef.current(s);
+      if (lanConnection && lanRole === 'host' && s.frame % 4 === 0) {
+        try { lanConnection.sendMessage({ type: 'state', state: JSON.parse(JSON.stringify(s)) }); } catch (_) {}
+      }
       if (ctx) draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p2IsCPU, is1v1, equippedSkins, mergedAccessories);
       raf = requestAnimationFrame(safeLoop);
     };
@@ -1182,48 +1226,20 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
     s.phase = 'serve'; s.phaseTimer = 0;
   }
 
-  // Keep the volleyball match viewport locked to the actual browser viewport.
-  // This prevents a parent/page scroll or focus adjustment from making the
-  // entire court appear to jump down/right immediately after entering.
+  // Suppress controller menu-nav for the entire match so the controller can't
+  // pause or leave — only the mouse/trackpad (or keyboard Esc) can.
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    const previousOverflowX = document.body.style.overflowX;
-    const previousOverflowY = document.body.style.overflowY;
-    const previousScrollBehavior = document.documentElement.style.scrollBehavior;
-    document.body.style.overflow = 'hidden';
-    document.body.style.overflowX = 'hidden';
-    document.body.style.overflowY = 'hidden';
-    document.documentElement.style.scrollBehavior = 'auto';
-    window.scrollTo(0, 0);
-    const host = document.getElementById('el6-game-canvas-host');
-    if (host) {
-      host.style.position = 'fixed';
-      host.style.left = '0';
-      host.style.top = '0';
-      host.style.right = '0';
-      host.style.bottom = '0';
-      host.style.width = '100vw';
-      host.style.height = '100dvh';
-      host.style.margin = '0';
-      host.style.transform = 'none';
-    }
     window.__el6GameplayActive = true;
-    return () => {
-      window.__el6GameplayActive = false;
-      document.body.style.overflow = previousOverflow;
-      document.body.style.overflowX = previousOverflowX;
-      document.body.style.overflowY = previousOverflowY;
-      document.documentElement.style.scrollBehavior = previousScrollBehavior;
-    };
+    return () => { window.__el6GameplayActive = false; };
   }, []);
 
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
       <MatchPauseButtonPortal>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-controller-pause-trigger el6-match-pause-button px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
       </MatchPauseButtonPortal>
       {paused && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></MatchPausePortal>}
-      <GameCanvasPortal gameMode="volleyball">
+      <GameCanvasPortal>
         <canvas data-e6-game-canvas="true" ref={canvasRef} width={CANVAS_W} height={CANVAS_H} className="el6-match-canvas el6-sport-canvas el6-volleyball-canvas" onPointerDown={(e) => { e.preventDefault(); window.focus(); }} />
       </GameCanvasPortal>
       {countdown > 0 && (
