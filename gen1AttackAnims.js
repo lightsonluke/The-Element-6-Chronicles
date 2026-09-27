@@ -200,7 +200,7 @@ function fireAttack(ctx, x, y, p, move) {
     for (let i = 0; i < 4; i++) flame(ctx, x + (i - 1.5) * 13, y - 9 - Math.abs(i - 1.5) * 4, 12 + q * 5, c, a * .8);
   } else if (move === 'ss') {
     ctx.save(); ctx.translate(x + 20, y - 42); ctx.rotate(-.25 + q * .9); flame(ctx, 0, 0, 22, c, a); strokePath(ctx, [[0, 3], [26, 3]], c, 9, a * .7); ctx.restore();
-  } else if (move === 'upHeavy') {
+  } else if (move === 'upHeavy' || move === 'uh') {
     ctx.save(); ctx.translate(x, y - 92); ctx.rotate(q * TAU); ctx.strokeStyle = c; ctx.lineWidth = 15; glow(ctx, c, 24); ctx.beginPath(); ctx.arc(0, 0, 70, 0, TAU); ctx.stroke();
     for (let i = 0; i < 8; i++) flame(ctx, Math.cos(i / 8 * TAU) * 70, Math.sin(i / 8 * TAU) * 70, 12, c, a * .7, i / 8 * TAU); ctx.restore();
   } else if (move === 'dh') {
@@ -239,7 +239,7 @@ function waterAttack(ctx, x, y, p, move) {
   } else if (move === 'ss') {
     const pts = []; for (let i = 0; i <= 14; i++) { const t = i / 14; pts.push([x + 16 + 72 * q * t, y - 42 - Math.sin(t * Math.PI) * 26]); } waterStroke(ctx, pts, c, 9, a);
     dot(ctx, x + 16 + 72 * q, y - 42, 8, '#FFFFFF', a); dot(ctx, x + 16 + 72 * q, y - 42, 5, c, a);
-  } else if (move === 'upHeavy') {
+  } else if (move === 'upHeavy' || move === 'uh') {
     const pts = []; for (let i = 0; i < 28; i++) { const t = i / 27; const ang = t * TAU + q * 1.9; pts.push([x + Math.cos(ang) * 54, y - 64 + Math.sin(ang) * 92]); } waterStroke(ctx, pts, c, 13, a);
     for (let i = 0; i < 8; i++) dot(ctx, x + 54 * Math.cos(i / 8 * TAU), y - 64 + 92 * Math.sin(i / 8 * TAU), 3, '#FFFFFF', a * .5);
   } else if (move === 'dh') {
@@ -268,7 +268,7 @@ function grassAttack(ctx, x, y, p, move) {
     for (const sx of [-1, 1]) { const ex = x + sx * (38 - q * 24); strokePath(ctx, [[x + sx * 14, y - 2], [x + sx * 44, y - 24], [ex, y - 42]], c, 7, a); for (let i = 0; i < 3; i++) leaf(ctx, ex + sx * i * 7, y - 42 - i * 5, 5, 11, sx * .7, c, a * .8); }
   } else if (move === 'ss') {
     ctx.save(); ctx.translate(x + 12, y - 44); ctx.rotate(-.05); ctx.fillStyle = wood; ctx.globalAlpha = a; glow(ctx, wood, 8); ctx.fillRect(0, -6, 70 * q, 12); for (let i = 0; i < 4; i++) leaf(ctx, 18 + i * 15, -2, 4, 9, i * .5, c, a * .6); ctx.restore();
-  } else if (move === 'upHeavy') {
+  } else if (move === 'upHeavy' || move === 'uh') {
     const r = 76 * q; ctx.save(); ctx.translate(x, y - 16); ctx.strokeStyle = c; ctx.lineWidth = 9; glow(ctx, c, 18); ctx.beginPath(); ctx.ellipse(0, 0, r, r * .55, 0, Math.PI, TAU); ctx.stroke(); ctx.restore();
     for (let i = 0; i < 8; i++) { const ang = i / 8 * TAU; leaf(ctx, x + Math.cos(ang) * r, y - 48 + Math.sin(ang) * r * .55, 12, 28, ang, c, a); }
   } else if (move === 'dh') {
@@ -295,7 +295,7 @@ function iceAttack(ctx, x, y, p, move) {
     for (let i = 0; i < 7; i++) { const ang = Math.PI * 1.05 + i / 6 * Math.PI * .9; shard(ctx, x + Math.cos(ang) * 52 * q, y - 18 + Math.sin(ang) * 35 * q, 9, 22, ang, c, a); }
   } else if (move === 'ss') {
     ctx.save(); ctx.translate(x + 20, y - 45); ctx.rotate(q * TAU); ctx.strokeStyle = c; ctx.lineWidth = 15; glow(ctx, c, 18); ctx.beginPath(); ctx.arc(0, 0, 38, -1.15, 1.15); ctx.stroke(); ctx.restore();
-  } else if (move === 'upHeavy') {
+  } else if (move === 'upHeavy' || move === 'uh') {
     for (let i = 0; i < 3; i++) { const ang = -Math.PI / 2 + i * TAU / 3 + q * .7; const sx = x + Math.cos(ang) * 76 * q; const sy = y - 70 + Math.sin(ang) * 76 * q; shard(ctx, sx, sy, 16, 42, ang, c, a); }
   } else if (move === 'dh') {
     const bx = x + 28 + q * 104; ctx.save(); ctx.fillStyle = c; ctx.globalAlpha = a; glow(ctx, c, 16); ctx.fillRect(bx - 34, y - 18, 68, 34); ctx.restore(); if (p > .7) { shard(ctx, bx + 38, y - 30, 14, 28, -.6, c, a); shard(ctx, bx - 38, y - 6, 14, 28, .6, c, a); }
@@ -323,7 +323,7 @@ export function drawGen1Attack(ctx, x, y, color, p, facing, charId, move) {
     else if (move === 'ds') thunderDown(ctx, 0, localY, p);
     else if (move === 'ss') thunderSide(ctx, 0, localY, p, false);
     else if (move === 'sh') thunderSide(ctx, 0, localY, p, true);
-    else if (move === 'upHeavy') thunderUpHeavy(ctx, 0, localY, p);
+    else if (move === 'upHeavy' || move === 'uh') thunderUpHeavy(ctx, 0, localY, p);
     else if (move === 'dh') thunderDownHeavy(ctx, 0, localY, p);
   } else if (charId === 'g1_fire') fireAttack(ctx, 0, localY, p, move);
   else if (charId === 'g1_water') waterAttack(ctx, 0, localY, p, move);

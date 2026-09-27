@@ -1278,8 +1278,11 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     if (!inputs.jump) fighter.jumpHeld = false;
 
     // ── Heavy Attack ──
-    // Up + heavy = character-specific Generation I Up Heavy.
-    if (inputs.heavy && inputs.up && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && UP_HEAVIES[fighter.char.id]) {
+    // Up + heavy = character-specific Up Heavy. `up` is the same directional
+    // input as jump in the fight controls, so test both fields explicitly and
+    // consume the heavy before the jump logic can turn the input into a jump.
+    const wantsUpHeavy = !!inputs.heavy && (!!inputs.up || !!inputs.jump);
+    if (wantsUpHeavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && UP_HEAVIES[fighter.char.id]) {
       inputs._heavyConsumed = true;
       const upHeavy = UP_HEAVIES[fighter.char.id];
       fighter.state = 'attacking';

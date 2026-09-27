@@ -27,17 +27,16 @@ Object.assign(UP_HEAVIES, {
   g2_utsuro: { name:'Hollow Arm Rise', type:'gen2UpHeavy', range:170, damage:25, color:'#7D4AA5', duration:27 },
 });
 
-// Generation III — authored Up Heavy metadata; exact collision is supplied by gen3AttackAnims.js.
+// Generation IV — authored Up Heavy metadata. Animation/hitbox geometry is
+// supplied by gen4AttackAnims.js.
 Object.assign(UP_HEAVIES, {
-  g3_takeshi:{name:'Sand Pillar',type:'gen3UpHeavy',range:175,damage:24,color:'#D8B27A',duration:28},
-  g3_aiko:{name:'Spine Lance',type:'gen3UpHeavy',range:180,damage:25,color:'#EDE2D2',duration:27},
-  g3_haru:{name:'Glass Cathedral',type:'gen3UpHeavy',range:170,damage:24,color:'#BDEBFF',duration:28},
-  g3_chiyo:{name:'Venom Column',type:'gen3UpHeavy',range:175,damage:24,color:'#76D63A',duration:27},
-  g3_emi:{name:'Vital Surge',type:'gen3UpHeavy',range:155,damage:23,color:'#D65A6A',duration:25},
-  g3_nozomi:{name:'Vine Tower',type:'gen3UpHeavy',range:175,damage:24,color:'#4FAE46',duration:28},
-  g3_masaru:{name:'Ash Column',type:'gen3UpHeavy',range:180,damage:24,color:'#9B9084',duration:28},
-  g3_ryo:{name:'Cloud Break',type:'gen3UpHeavy',range:170,damage:24,color:'#C9D9E1',duration:27},
-  g3_souta:{name:'Ash Spiral',type:'gen3UpHeavy',range:160,damage:22,color:'#B9A99B',duration:27},
-  g3_ogata:{name:'Extraction Column',type:'gen3UpHeavy',range:180,damage:25,color:'#6CB9FF',duration:28},
-  g3_kanenobu:{name:'Guard Formation',type:'gen3UpHeavy',range:175,damage:25,color:'#D8B33F',duration:29},
+  g4_cobalt: { name:'Fortress Lift', type:'gen4UpHeavy', range:170, damage:24, color:'#3366FF', duration:26 },
+  g4_cyan: { name:'Cyclone Rise', type:'gen4UpHeavy', range:160, damage:24, color:'#66DDFF', duration:26 },
+  g4_onyx: { name:'Shadow Tower', type:'gen4UpHeavy', range:160, damage:25, color:'#5C3C88', duration:25 },
+  g4_gold: { name:'Golden Rebuild', type:'gen4UpHeavy', range:165, damage:23, color:'#FFD83D', duration:27 },
+  g4_vermilion: { name:'Inferno Column', type:'gen4UpHeavy', range:155, damage:26, color:'#E34234', duration:25 },
+  g4_umber: { name:'Seismic Uppercut', type:'gen4UpHeavy', range:150, damage:25, color:'#9A5B32', duration:24 },
+  g4_graphite: { name:'Resonance Column', type:'gen4UpHeavy', range:165, damage:24, color:'#8899AA', duration:27 },
+  g4_daichi: { name:'Resonance Lift', type:'gen4UpHeavy', range:160, damage:23, color:'#FFB02E', duration:27 },
+  g4_renko: { name:'Refinement Tower', type:'gen4UpHeavy', range:170, damage:25, color:'#A90024', duration:27 },
 });

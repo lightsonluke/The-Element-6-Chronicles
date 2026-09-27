@@ -58,17 +58,26 @@ Object.assign(DOWN_HEAVIES, {
   g2_utsuro: { name:'Hollow Circle', type:'gen2DownHeavy', range:155, damage:25, color:'#7D4AA5', duration:27 },
 });
 
-// Generation III — authored Down Heavy metadata; exact collision is supplied by gen3AttackAnims.js.
+// Generation IV — authored Down Heavy metadata. Animation/hitbox geometry is
+// supplied by gen4AttackAnims.js.
 Object.assign(DOWN_HEAVIES, {
-  g3_takeshi:{name:'Sand Burial',type:'gen3DownHeavy',range:125,damage:25,color:'#D8B27A',duration:28},
-  g3_aiko:{name:'Rib Cage',type:'gen3DownHeavy',range:130,damage:25,color:'#EDE2D2',duration:28},
-  g3_haru:{name:'Glass Floor',type:'gen3DownHeavy',range:150,damage:24,color:'#BDEBFF',duration:27},
-  g3_chiyo:{name:'Toxic Pool',type:'gen3DownHeavy',range:145,damage:25,color:'#76D63A',duration:28},
-  g3_emi:{name:'Shock Response',type:'gen3DownHeavy',range:125,damage:23,color:'#D65A6A',duration:26},
-  g3_nozomi:{name:'Briar Cage',type:'gen3DownHeavy',range:155,damage:25,color:'#4FAE46',duration:28},
-  g3_masaru:{name:'Ash Collapse',type:'gen3DownHeavy',range:145,damage:25,color:'#9B9084',duration:28},
-  g3_ryo:{name:'Vanishing Ground',type:'gen3DownHeavy',range:150,damage:24,color:'#C9D9E1',duration:27},
-  g3_souta:{name:'Ash Wave',type:'gen3DownHeavy',range:150,damage:23,color:'#B9A99B',duration:27},
-  g3_ogata:{name:'Overload Field',type:'gen3DownHeavy',range:145,damage:25,color:'#6CB9FF',duration:28},
-  g3_kanenobu:{name:'Suppression Order',type:'gen3DownHeavy',range:145,damage:25,color:'#D8B33F',duration:28},
+  g4_cobalt: { name:'Falling Wall', type:'gen4DownHeavy', range:180, damage:25, color:'#3366FF', duration:26 },
+  g4_cyan: { name:'Air Hammer', type:'gen4DownHeavy', range:145, damage:24, color:'#66DDFF', duration:26 },
+  g4_onyx: { name:'Black Floor', type:'gen4DownHeavy', range:155, damage:25, color:'#5C3C88', duration:27 },
+  g4_gold: { name:'Restoration Ring', type:'gen4DownHeavy', range:150, damage:23, color:'#FFD83D', duration:27 },
+  g4_vermilion: { name:'Firefall', type:'gen4DownHeavy', range:150, damage:26, color:'#E34234', duration:26 },
+  g4_umber: { name:'Fault Strike', type:'gen4DownHeavy', range:155, damage:25, color:'#9A5B32', duration:25 },
+  g4_graphite: { name:'Structural Failure', type:'gen4DownHeavy', range:155, damage:24, color:'#8899AA', duration:27 },
+  g4_daichi: { name:'Disruption Array', type:'gen4DownHeavy', range:150, damage:24, color:'#FFB02E', duration:27 },
+  g4_renko: { name:'Extraction Well', type:'gen4DownHeavy', range:160, damage:26, color:'#A90024', duration:28 },
+});
+
+// Generation I authored Down Heavy metadata. These are separate from the
+// universal ground-pound so grounded Down + Heavy selects the character move.
+Object.assign(DOWN_HEAVIES, {
+  g1_thunder: { name:'Orbiting Lightning Ball', type:'gen1DownHeavy', range:100, damage:22, color:'#FFFF44', duration:24 },
+  g1_fire: { name:'Burning Cracks', type:'gen1DownHeavy', range:120, damage:21, color:'#FF6600', duration:26 },
+  g1_water: { name:'Bouncing Water Sphere', type:'gen1DownHeavy', range:96, damage:21, color:'#3399CC', duration:24 },
+  g1_grass: { name:'Vine Collapse', type:'gen1DownHeavy', range:120, damage:21, color:'#44AA44', duration:26 },
+  g1_ice: { name:'Sliding Ice Block', type:'gen1DownHeavy', range:128, damage:22, color:'#AAEEFF', duration:24 },
 });
