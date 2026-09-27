@@ -740,6 +740,7 @@ export default function PlatformFighter({
   stageCamera = null,
   killPerimeter = null,
   trainingMode = false,
+  canvasHostMode = null,
   trainingController = null,
   onTrainingSettings = null,
   trainingSettingsOverlay = null,
@@ -1976,7 +1977,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
 
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
-      <GameCanvasPortal>
+      <GameCanvasPortal gameMode={canvasHostMode || gameMode}>
         <canvas
                 ref={canvasRef} width={W} height={H}
                 className="el6-match-canvas el6-fight-canvas"
