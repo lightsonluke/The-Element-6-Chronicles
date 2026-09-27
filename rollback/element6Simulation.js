@@ -119,7 +119,7 @@ function prepareCharacter(character, elementId, shikigamiId) {
   return prepared;
 }
 
-export function createElement6OnlineState({ matchId, mode, stageId = 'splitcity', host, guest }) {
+export function createElement6OnlineState({ matchId, mode, stageId = '__random__', host, guest }) {
   if (mode !== 'ranked' && mode !== 'unranked') throw new Error('Element 6 rollback currently supports ranked and unranked only.');
   if (!host?.character || !guest?.character) throw new Error('Both online players require character data.');
 

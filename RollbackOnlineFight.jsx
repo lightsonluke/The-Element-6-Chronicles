@@ -85,6 +85,7 @@ export default function RollbackOnlineFight({
   const pausedRef = useRef(false);
   const showDiagnosticsRef = useRef(false);
   const resultProofRef = useRef(null);
+  const cameraRef = useRef({ camX: 0, camY: 0, camZoom: 0.85 });
   const [paused, setPaused] = useState(false);
   const [winner, setWinner] = useState(null);
   const [countdown, setCountdown] = useState(3);
@@ -139,7 +140,7 @@ export default function RollbackOnlineFight({
     const initialState = createElement6OnlineState({
       matchId,
       mode,
-      stageId,
+      stageId: '__random__',
       host: {
         character: hostCharacter,
         elementId: hostLoadout.element || 'basic',
@@ -199,22 +200,30 @@ export default function RollbackOnlineFight({
       // browsers receive the same saved ID, never a player-made/custom stage.
       const sharedStage = state.stageId || stageId || 'splitcity';
       drawBackground(ctx, ONLINE_STAGE_WIDTH, ONLINE_STAGE_HEIGHT, state.frame, sharedStage);
-      const minX = Math.min(hostFighter.x, guestFighter.x);
-      const maxX = Math.max(hostFighter.x, guestFighter.x);
-      const minY = Math.min(hostFighter.y, guestFighter.y);
-      const maxY = Math.max(hostFighter.y, guestFighter.y);
-      const spreadX = (maxX - minX) + 280;
-      const spreadY = (maxY - minY) + 280;
-      const fitZoom = Math.min(ONLINE_STAGE_WIDTH / Math.max(spreadX, 300), ONLINE_STAGE_HEIGHT / Math.max(spreadY, 250));
-      const camZoom = Math.max(0.50, Math.min(0.95, fitZoom));
-      const midX = (minX + maxX) / 2;
-      const midY = (minY + maxY) / 2 - 70;
-      const camX = (midX - ONLINE_STAGE_WIDTH / 2) * (1 - camZoom);
-      const camY = (midY - ONLINE_STAGE_HEIGHT / 2) * (1 - camZoom);
+      // Match the offline 1v1 camera: distance-based zoom plus smooth tracking.
+      // Camera state is render-only and therefore does not enter rollback.
+      const fdx = Math.abs(guestFighter.x - hostFighter.x);
+      const fdy = Math.abs(guestFighter.y - hostFighter.y);
+      const zoomMul = settings.cameraZoom === 'close' ? 1.15 : settings.cameraZoom === 'far' ? 0.85 : 1.0;
+      let targetZoom = Math.max(0.60, Math.min(0.95, 0.95 - fdx / 1200 - fdy / 1000));
+      const spreadX = fdx + 280;
+      const spreadY = fdy + 280;
+      const fitZoomX = ONLINE_STAGE_WIDTH / Math.max(spreadX, 200);
+      const fitZoomY = ONLINE_STAGE_HEIGHT / Math.max(spreadY, 200);
+      targetZoom = Math.min(targetZoom, Math.max(0.50, Math.min(fitZoomX, fitZoomY)));
+      targetZoom *= zoomMul;
+      const camera = cameraRef.current;
+      camera.camZoom += (targetZoom - camera.camZoom) * 0.05;
+      const midX = (hostFighter.x + guestFighter.x) / 2;
+      const midY = ((hostFighter.y + guestFighter.y) / 2) - 70;
+      const targetCamX = (midX - ONLINE_STAGE_WIDTH / 2) * (1 - camera.camZoom) * 0.35;
+      const targetCamY = (midY - ONLINE_STAGE_HEIGHT / 2) * (1 - camera.camZoom) * 0.35;
+      camera.camX += (targetCamX - camera.camX) * 0.07;
+      camera.camY += (targetCamY - camera.camY) * 0.07;
       ctx.save();
       ctx.translate(ONLINE_STAGE_WIDTH / 2, ONLINE_STAGE_HEIGHT / 2);
-      ctx.scale(camZoom, camZoom);
-      ctx.translate(-ONLINE_STAGE_WIDTH / 2 - camX, -ONLINE_STAGE_HEIGHT / 2 - camY);
+      ctx.scale(camera.camZoom, camera.camZoom);
+      ctx.translate(-ONLINE_STAGE_WIDTH / 2 - camera.camX, -ONLINE_STAGE_HEIGHT / 2 - camera.camY);
       drawPlatforms(ctx, getOnlineStagePlatforms(sharedStage) || ONLINE_PLATFORMS, state.frame, sharedStage);
       drawFighter(hostFighter, hostCharacter, hostLoadout, isHost ? myUsername : oppUsername);
       drawFighter(guestFighter, guestCharacter, guestLoadout, isHost ? oppUsername : myUsername);
@@ -334,8 +343,26 @@ export default function RollbackOnlineFight({
             setResyncing(false);
             setNetworkError(null);
             setConnectionText('CONNECTED · RESYNCED');
-          } else if (packet.kind === 'state-snapshot' && packet.state && !resyncing) {
-            // Normal snapshots are informational and never pause a healthy match.
+          } else if (packet.kind === 'state-snapshot' && packet.state) {
+            const hostFrame = Number(packet.frame ?? packet.state.frame ?? 0);
+            const localFrame = session?.getStats().currentFrame ?? 0;
+            const frameGap = hostFrame - localFrame;
+            // Host checkpoints are also an automatic recovery path. A healthy
+            // rollback session keeps running normally, but if the guest falls
+            // materially behind (or the checkpoint checksum disagrees), replace
+            // prediction history immediately instead of letting the mismatch grow.
+            if (!isHost && !resyncing && (frameGap > 8 || (packet.checksum && checksumState(packet.state) !== packet.checksum))) {
+              resyncing = true;
+              lastResyncAt = Date.now();
+              resyncToken = Number(packet.token) || Date.now();
+              setResyncing(true);
+              setConnectionText('RESYNCING…');
+              session.replaceState(packet.state, hostFrame);
+              transport.sendControl('resync-ack', { token: resyncToken, frame: hostFrame }).catch(() => {});
+              setTimeout(() => {
+                if (!stopped) { resyncing = false; setResyncing(false); setConnectionText('CONNECTED · RESYNCED'); }
+              }, 120);
+            }
           } else if (packet.kind === 'disconnect') finishMatch(role);
         });
 
@@ -350,11 +377,16 @@ export default function RollbackOnlineFight({
         try { db.entities.OnlineMatch.update(matchId, { status: 'active' }).catch(() => {}); } catch {}
         pingTimer = setInterval(() => transport.ping().catch(() => {}), 1000);
         snapshotTimer = setInterval(() => {
-          if (isHost && !finished && !resyncing) transport.sendControl('state-snapshot', {
-            frame: session.getStats().currentFrame,
-            state: session.getRenderableState(),
-          }).catch(() => {});
-        }, 250);
+          if (isHost && !finished && !resyncing) {
+            const snapshotState = session.getRenderableState();
+            transport.sendControl('state-snapshot', {
+              frame: session.getStats().currentFrame,
+              state: snapshotState,
+              checksum: checksumState(snapshotState),
+              token: Date.now(),
+            }).catch(() => {});
+          }
+        }, 100);
 
         const keybinds = getKeybinds(settings);
         let lastTime = performance.now();
