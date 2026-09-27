@@ -176,7 +176,7 @@ export function getActiveSpecHitboxes(attacker) {
     });
   }
 
-  if (['black,magenta,indigo,maroon,crimson,scarlet,white,silver,corpent,magneto,willow,cable,snodvor,kirsten,volt,temple,nightmare,hazel,whami,controller,evil,life,death,mercy'].includes(attacker?.char?.id)) {
+  if (['black','magenta','indigo','maroon','crimson','scarlet','white','silver','corpent','magneto','willow','cable','snodvor','kirsten','volt','temple','nightmare','hazel','whami','controller','evil','life','death','mercy'].includes(attacker?.char?.id)) {
     let mk = data.sigType || data.moveKey || '';
     if (data.isSuper) mk = 'sp';
     else if (data.isHeavy) {

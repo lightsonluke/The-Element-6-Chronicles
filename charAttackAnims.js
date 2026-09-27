@@ -53,15 +53,11 @@ export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, atta
     drawGen4Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
     return;
   }
-  if (['black,magenta,indigo,maroon,crimson,scarlet,white,silver,corpent,magneto,willow,cable,snodvor,kirsten,volt,temple,nightmare,hazel,whami,controller,evil,life,death,mercy'].includes(charId)) {
+  if (['black','magenta','indigo','maroon','crimson','scarlet','white','silver','corpent','magneto','willow','cable','snodvor','kirsten','volt','temple','nightmare','hazel','whami','controller','evil','life','death','mercy'].includes(charId)) {
     drawGen5RestAttack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
     return;
   }
-  if (['black,magenta,indigo,maroon,crimson,scarlet,white,silver,corpent,magneto,willow,cable,snodvor,kirsten,volt,temple,nightmare,hazel,whami,controller,evil,life,death,mercy'].includes(charId)) {
-    drawGen5RestSuper(ctx, x, y, p, facing, charId);
-    return;
-  }
-
+  if (['yellow','blue','purple','orange','green','pink','grey','turquoise','olive','copper','emerald','pearl','red','lavender','amber'].includes(charId) || String(charId || '').startsWith('g5_')) {
     drawGen5Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
     return;
   }
@@ -123,6 +119,10 @@ export function drawCharSuper(ctx, x, y, color, p, charId, facing = 1) {
   }
   if (String(charId || '').startsWith('g4_')) {
     drawGen4Super(ctx, x, y, color, p, charId, facing);
+    return;
+  }
+  if (['black','magenta','indigo','maroon','crimson','scarlet','white','silver','corpent','magneto','willow','cable','snodvor','kirsten','volt','temple','nightmare','hazel','whami','controller','evil','life','death','mercy'].includes(charId)) {
+    drawGen5RestSuper(ctx, x, y, p, facing, charId);
     return;
   }
   if (['yellow','blue','purple','orange','green','pink','grey','turquoise','olive','copper','emerald','pearl','red','lavender','amber'].includes(charId) || String(charId || '').startsWith('g5_')) {
