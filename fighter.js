@@ -1595,8 +1595,22 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     }
     if (f.genProjectiles) {
       for (const wp of f.genProjectiles) {
-        if ((wp.type === 'gen_solid_barrier' || wp.type === 'gen_glass_wall' || wp.type === 'gen_protect_wall') && wp.life > 0) {
-          wallPlatforms.push({ x: wp.x, y: wp.y - wp.h, w: wp.w, h: wp.h, material: 'normal' });
+        // Every persistent wall/barrier power is a real shared solid platform.
+        // Read them from the owner AND every active opponent so a wall created
+        // by another fighter cannot be walked through or treated as local-only.
+        if ((
+          wp.type === 'gen_ice_wall' ||
+          wp.type === 'gen_glass_wall' ||
+          wp.type === 'gen_solid_barrier' ||
+          wp.type === 'gen_protect_wall'
+        ) && wp.life > 0) {
+          wallPlatforms.push({
+            x: wp.x,
+            y: wp.y - wp.h,
+            w: wp.w,
+            h: wp.h,
+            material: 'normal',
+          });
         }
       }
     }
