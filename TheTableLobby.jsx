@@ -13,6 +13,7 @@ export default function TheTableLobby({ onBack, unlockedIds=[], favoriteId='yell
   const [user,setUser]=useState(null),[tournament,setTournament]=useState(null),[players,setPlayers]=useState([]);
   const [phase,setPhase]=useState('pick'),[char,setChar]=useState(favoriteId||'yellow'),[error,setError]=useState('');
   const [watching,setWatching]=useState(false),[lastResult,setLastResult]=useState(null),[revealing,setRevealing]=useState(false);
+  const [tournamentId,setTournamentId]=useState(null);
 
   const refresh=async(id)=>{
     if(!id)return;
@@ -63,7 +64,6 @@ export default function TheTableLobby({ onBack, unlockedIds=[], favoriteId='yell
     if(e){setError(e.message);return;}
     setError('');setTournamentId(data.tournament_id);sfx.matchFound();
   };
-  const [tournamentId,setTournamentId]=useState(null);
   const vote=async stage=>{
     if(!tournament?.id)return;
     const {error:e}=await supabase.rpc('element6_vote_the_table',{p_tournament_id:tournament.id,p_stage_id:stage});

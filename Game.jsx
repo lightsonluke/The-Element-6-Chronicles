@@ -1589,16 +1589,11 @@ export default function Game() {
     const isPvP = !fighters.isCPU;
     const activeEvent = getActiveEvent();
     const won = m.p1Won === true;
-    let reward = usedEvil ? 0 : (won ? 10 : 3);
-    if (fighters.gameMode === 'botbattle') reward = 0;
-    if (won && fighters.gameMode === 'ranked' && !usedEvil) reward += 25;
-    if (won && fighters.gameMode === 'sudden' && !usedEvil) reward += 15;
-    if (won && fighters.gameMode === 'superonly' && !usedEvil) reward += 15;
-    if (won && fighters.gameMode === 'hp' && !usedEvil) reward += 10;
-    if (fighters.gameMode === 'coin' && !usedEvil) reward += (m.stats?.coins || 0);
-    if (won && fighters.gameMode === 'challenge' && !usedEvil) reward += 40;
-    if (won && fighters.gameMode === 'brawl' && !usedEvil) reward += 15;
-    // Match tokens are intentionally disabled. Rewards come only from Daily Rewards and Clan rewards.
+    // Per-match tokens and character XP are disabled. The only token rewards
+    // are the explicitly supported Daily Rewards and Clan reward systems.
+    // Keep the result object at zero so no downstream screen can accidentally
+    // display or persist a match reward.
+    const reward = 0;
     recordFightResult(fighters.p1, m.stats || {}, won, m.moveStats);
     const clanMode = fighters.gameMode === 'regular' ? 'offline_regularbattle' : fighters.gameMode === 'ranked' ? 'bot_ranked' : fighters.gameMode === 'time' ? 'time_battle' : null;
     if (clanMode) {
