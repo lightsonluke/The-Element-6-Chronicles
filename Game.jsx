@@ -1589,11 +1589,16 @@ export default function Game() {
     const isPvP = !fighters.isCPU;
     const activeEvent = getActiveEvent();
     const won = m.p1Won === true;
-    // Per-match tokens and character XP are disabled. The only token rewards
-    // are the explicitly supported Daily Rewards and Clan reward systems.
-    // Keep the result object at zero so no downstream screen can accidentally
-    // display or persist a match reward.
-    const reward = 0;
+    let reward = usedEvil ? 0 : (won ? 10 : 3);
+    if (fighters.gameMode === 'botbattle') reward = 0;
+    if (won && fighters.gameMode === 'ranked' && !usedEvil) reward += 25;
+    if (won && fighters.gameMode === 'sudden' && !usedEvil) reward += 15;
+    if (won && fighters.gameMode === 'superonly' && !usedEvil) reward += 15;
+    if (won && fighters.gameMode === 'hp' && !usedEvil) reward += 10;
+    if (fighters.gameMode === 'coin' && !usedEvil) reward += (m.stats?.coins || 0);
+    if (won && fighters.gameMode === 'challenge' && !usedEvil) reward += 40;
+    if (won && fighters.gameMode === 'brawl' && !usedEvil) reward += 15;
+    if (reward > 0) addCoins(reward);
     recordFightResult(fighters.p1, m.stats || {}, won, m.moveStats);
     const clanMode = fighters.gameMode === 'regular' ? 'offline_regularbattle' : fighters.gameMode === 'ranked' ? 'bot_ranked' : fighters.gameMode === 'time' ? 'time_battle' : null;
     if (clanMode) {
@@ -1603,7 +1608,35 @@ export default function Game() {
         recordClanMatchActivity({ supabase, userId: data.user.id, mode: clanMode, matchId, result: won ? 'win' : 'loss' }).catch(() => {});
       }).catch(() => {});
     }
-    const xpGained = 0;
+    const xpGained = usedEvil ? 0 : calculateBattleXP(fighters.difficulty, won, isPvP);
+    if (xpGained > 0) {
+      setProgress(prev => {
+        const levels = { ...(prev.charLevels || {}) };
+        const cd = levels[fighters.p1] || { level: 1, xp: 0 };
+        let nl = cd.level; let nxp = (cd.xp || 0) + xpGained;
+        while (nl < MAX_LEVEL && nxp >= xpForLevel(nl)) { nxp -= xpForLevel(nl); nl++; }
+        levels[fighters.p1] = { ...cd, level: nl, xp: nxp };
+        const next = { ...prev, charLevels: levels };
+        saveProgress(next);
+        return next;
+      });
+    }
+    // P2 XP — in PvP, both characters get XP based on their performance
+    if (isPvP && !usedEvil && xpGained > 0) {
+      const p2Won = !won;
+      const p2XP = Math.floor(calculateBattleXP(fighters.difficulty, p2Won, true) * 0.8);
+      if (p2XP > 0) {
+        setProgress(prev => {
+          const levels = { ...(prev.charLevels || {}) };
+          const cd = levels[fighters.p2] || { level: 1, xp: 0 };
+          let nl = cd.level; let nxp = (cd.xp || 0) + p2XP;
+          while (nl < MAX_LEVEL && nxp >= xpForLevel(nl)) { nxp -= xpForLevel(nl); nl++; }
+          levels[fighters.p2] = { ...cd, level: nl, xp: nxp };
+          const next = { ...prev, charLevels: levels };
+          saveProgress(next); return next;
+        });
+      }
+    }
     // Track daily quest stats
     const stats = m.stats || {};
     setProgress(prev => {
@@ -1681,8 +1714,10 @@ export default function Game() {
   const awardSportMatch = (sport, result) => {
     if (!result || result.p1Won === null || result.p1Won === undefined) return;
     const won = result.p1Won === true;
-    const xp = 0;
-    // Match tokens/XP are intentionally disabled. Keep leaderboard/stat tracking below.
+    const xp = calculateSportXP(sport, result.stats, won);
+    const coins = result.tournamentWon ? (result.reward || 50) : (won ? 15 : 5);
+    if (coins > 0) addCoins(coins);
+    addXP(result.p1CharId || progress.favoriteId || 'yellow', xp);
     const clanSportMode = ({
       soccer: result.online ? 'soccer_online' : 'soccer_offline',
       volleyball: result.online ? 'volleyball_online' : 'volleyball_offline',
@@ -1696,7 +1731,7 @@ export default function Game() {
         recordClanMatchActivity({ supabase, userId: data.user.id, mode: clanSportMode, matchId, result: won ? 'win' : 'loss' }).catch(() => {});
       }).catch(() => {});
     }
-    // No per-match reward for the second player either.
+    if (result.p2IsHuman && result.p2CharId) addXP(result.p2CharId, calculateSportXP(sport, result.stats, !won));
     // Mastery: award wins for any game mode
     if (won) {
       setProgress(prev => {

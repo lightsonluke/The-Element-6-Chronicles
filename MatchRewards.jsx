@@ -14,10 +14,11 @@ export const DIFFICULTY_XP = {
   pro: 50, hard: 70, insane: 90, honored: 120,
 };
 
-export function calculateBattleXP() {
-  // Match XP is intentionally disabled. XP comes only from the explicitly
-  // supported reward systems outside normal match completion.
-  return 0;
+export function calculateBattleXP(difficulty, won, isPlayerVsPlayer) {
+  let baseXP = DIFFICULTY_XP[difficulty] || 35;
+  if (isPlayerVsPlayer) baseXP = 80; // player vs player gives most XP
+  if (!won) baseXP = Math.floor(baseXP * 0.3); // loss gives 30%
+  return baseXP;
 }
 
 export default function MatchRewards({
@@ -31,9 +32,9 @@ export default function MatchRewards({
   const char = ALL.find(c => c.id === charId);
   const won = result?.p1Won === true;
   const isDraw = result?.p1Won === null;
-  const singleXP = 0;
+  const singleXP = calculateBattleXP(difficulty, won || isDraw, isPlayerVsPlayer);
   const isAccumulated = matchCount && matchCount > 1;
-  const xpGained = 0;
+  const xpGained = isAccumulated ? (totalXP || 0) : singleXP;
 
   const oldLevel = currentLevelData?.level || 1;
   const oldXP = currentLevelData?.xp || 0;
