@@ -1,26 +1,13 @@
-Element 6 — Generation V Detailed Attack Overhaul
+# Element 6 — Gen 4 Hitbox + Knockback Alignment Package
 
-This package replaces Generation V attack presentation and combat geometry without changing other generations.
+This package is a replacement for the Gen 4 combat files from the detailed Gen 4 animation package.
 
-Scope
-- 38 Generation V characters: 22 heroes, 13 villains, 3 guardians.
-- 6 combat slots per character: Side Signature, Up Signature, Down Signature, Side Heavy, Down Heavy, Super.
-- 224 Gen V move variants are overridden by the new renderer/spec layer.
-- Purple is intentionally protected: only Purple Side Signature and Purple Down Signature are overridden. Purple Up Signature, Side Heavy, Down Heavy, and Super are left on the existing implementation.
+## Files
+- `gen4AttackAnims.js` — keeps the detailed Gen 4 animations and replaces the Gen 4 collision geometry with authored, shape-specific hitboxes. The hitboxes follow the visible barrier, blade, wind ribbon, shadow shape, ring, pillar, projectile, machine, and resonance geometry instead of using one large generic rectangle.
+- `attackSpecs.js` — adds per-move Gen 4 knockback direction and a modest per-move strength multiplier. Up attacks launch upward, forward attacks launch in the attack direction, radial attacks push away from the impact center, and the heavier/super attacks are tuned separately.
+- `fighter.js` — applies the per-move Gen 4 knockback multiplier while preserving the game's existing global knockback scaling and defender modifiers. It also contains the shared solid-wall/barrier collision fix from the previous package.
 
-What changed
-- Detailed, character-specific attack animation language for every affected Gen V move.
-- Hitboxes are generated from the same geometric primitives used to draw the attack, so they track the visible weapon/effect instead of using a generic large rectangle.
-- Arc attacks use multiple narrow circles/capsules along the actual arc.
-- Beams, blades, barriers, portals, vines, lightning, sound rings, gravity fields, etc. use different collision geometry.
-- Per-move knockback direction is calculated from the documented attack type and the actual defender contact direction.
-- Directional attacks capture 8-way input (left/right/up/down + diagonals) at attack startup. The animation, hitbox geometry, and knockback all use the same aim vector.
-- Side signatures still use the game's existing side/up/down selection rules; holding left/right plus up/down produces diagonal aiming for affected directional side moves.
-- Down Heavy is included through its existing DOWN_HEAVIES data path; no separate down-heavy data file is required.
+## Important
+Replace the corresponding files in the project. Do not rename the files.
 
-Files
-- gen5AttackOverhaul.js — new Gen V animation/hitbox/knockback/directional-control layer.
-- fighter.js — connects Gen V specs, hitboxes, knockback and 8-way aim into combat.
-- charAttackAnims.js — routes affected Gen V moves to the detailed renderer.
-
-No character roster data was rewritten. No Gen I–IV attacks are changed by this package.
+This package does not change damage values or non-Gen-4 attack geometry.

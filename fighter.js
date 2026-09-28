@@ -4,11 +4,11 @@
 import { getPowerEffect, SINGLE_RANDOM_POWER_CHARS } from './powerEffects.js';
 import { applyShikigamiStat } from './shikigami.js';
 import { DOWN_HEAVIES } from './downHeavies.js';
+import { UP_HEAVIES } from './upHeavies.js';
 import { drawWhip } from './whipRenderer.js';
 import { activateGenPower, updateGenProjectiles, onGenPowerExpire } from './genPowers.js';
 import { updateMovementAbilities, onMovementAbilityLanded, resetMovementAbilityState } from './movementAbilities.js';
-import { getAttackSpecForData as getBaseAttackSpecForData, getActiveSpecHitboxes as getBaseActiveSpecHitboxes, specKnockbackVector as getBaseSpecKnockbackVector } from './attackSpecs.js';
-import { getGen5AttackSpec, getGen5Hitboxes, getGen5KnockbackVector, applyGen5Aim } from './gen5AttackOverhaul.js';
+import { getAttackSpecForData, getActiveSpecHitboxes, hitboxIntersectsBody, specKnockbackVector } from './attackSpecs.js';
 
 export const GRAVITY = 0.42;
 export const JUMP_FORCE = -14.5;
@@ -26,18 +26,6 @@ const SIG_COOLDOWN = 45;    // 0.75 seconds at 60fps
 const NORMAL_COOLDOWN = 8;
 const HEAVY_COOLDOWN = 42;  // 0.70 seconds at 60fps
 const KNOCKBACK_SCALE = 0.40; // global 60% knockback reduction for all attacks
-
-// Gen V attack-spec overlay. Purple is overridden only for Side/Down Signature.
-function getAttackSpecForData(charId, data) {
-  return getGen5AttackSpec(charId, data) || getBaseAttackSpecForData(charId, data);
-}
-function getActiveSpecHitboxes(attacker) {
-  const g5 = getGen5AttackSpec(attacker?.char?.id, attacker?.attackData);
-  return g5 ? getGen5Hitboxes(attacker) : getBaseActiveSpecHitboxes(attacker);
-}
-function specKnockbackVector(attacker, defender) {
-  return getGen5KnockbackVector(attacker, defender) || getBaseSpecKnockbackVector(attacker, defender);
-}
 
 // CPU difficulty configs
 // (CPU_DIFFICULTY moved to botAI.js)
@@ -1020,7 +1008,6 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     const tmp = inputs.left; inputs.left = inputs.right; inputs.right = tmp;
     const tmp2 = inputs.up; inputs.up = inputs.down; inputs.down = tmp2;
   }
-  fighter._attackInput = inputs;
 
   if (fighter.invincible > 0) fighter.invincible--;
   if (fighter.landingLag > 0) fighter.landingLag--;
@@ -1226,7 +1213,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
     // Flying (White)
     if (fighter.canFly) {
-      if (inputs.jump && !fighter.jumpHeld) {
+      if (inputs.jump && !fighter.jumpHeld && !(inputs.heavy && UP_HEAVIES[fighter.char.id])) {
         fighter.vy = JUMP_FORCE * 0.7;
         fighter.jumpHeld = true;
         fighter.isFlying = true;
@@ -1234,7 +1221,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     }
 
     // ── Jump with variable height (Brawlhalla-style) — edge-detected via fighter.jumpHeld ──
-    if (inputs.jump && !fighter.jumpHeld) {
+    if (inputs.jump && !fighter.jumpHeld && !(inputs.heavy && UP_HEAVIES[fighter.char.id])) {
       fighter.jumpHeld = true;
       fighter.jumpCutApplied = false;
       const useGroundJump = fighter.coyoteTime > 0 && fighter.jumps >= fighter.maxJumps;
@@ -1291,6 +1278,22 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     if (!inputs.jump) fighter.jumpHeld = false;
 
     // ── Heavy Attack ──
+    // Up + heavy = character-specific Up Heavy. `up` is the same directional
+    // input as jump in the fight controls, so test both fields explicitly and
+    // consume the heavy before the jump logic can turn the input into a jump.
+    const wantsUpHeavy = !!inputs.heavy && (!!inputs.up || !!inputs.jump);
+    if (wantsUpHeavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && UP_HEAVIES[fighter.char.id]) {
+      inputs._heavyConsumed = true;
+      const upHeavy = UP_HEAVIES[fighter.char.id];
+      fighter.state = 'attacking';
+      const dur = Math.min(upHeavy.duration || 24, 30);
+      fighter.attackTimer = dur;
+      fighter.attackData = { ...upHeavy, duration: dur, sigType: 'upHeavy', hitApplied: false, progress: 0, isHeavy: true };
+      fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
+      fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
+      fighter.vy = 0;
+      fighter.moveStats.heavy++;
+    }
     // Air + down + heavy = Ground Pound (slam down with AoE)
     if (inputs.heavy && inputs.down && !fighter.grounded && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && fighter.groundPoundCooldown <= 0) {
       inputs._heavyConsumed = true;
@@ -1310,10 +1313,8 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         fighter.state = 'attacking';
         const dur = Math.min(downHeavy.duration, 28);
         fighter.attackTimer = dur;
-        fighter.attackData = prepareSpecAttack(fighter,
-          { ...downHeavy, duration: dur, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true },
-          'Down Heavy', 'heavy');
-        fighter.attackTimer = fighter.attackData.duration;
+        fighter.attackData = { ...downHeavy, duration: dur, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true };
+        fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
         fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
         fighter.vy = 0;
         fighter.moveStats.downHeavy++;
@@ -1327,10 +1328,8 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         fighter.state = 'attacking';
         const dur = Math.min(heavy.duration, 30);
         fighter.attackTimer = dur;
-        fighter.attackData = prepareSpecAttack(fighter,
-          { ...heavy, duration: dur, sigType: 'heavy', hitApplied: false, progress: 0, isHeavy: true },
-          'Side Heavy', 'heavy');
-        fighter.attackTimer = fighter.attackData.duration;
+        fighter.attackData = { ...heavy, duration: dur, sigType: 'heavy', hitApplied: false, progress: 0, isHeavy: true };
+        fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
         fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
         if (fighter.grounded) fighter.vy = 0;
         if (heavy.hasArmor) fighter.invincible = Math.max(fighter.invincible, 8);
@@ -1346,8 +1345,27 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       // Recovery attack: sig + up in air = launch up with damage + knockback (air-only, cooldown-gated AND limited to once per airtime so it can't be spammed to fly infinitely)
       if (!fighter.grounded && inputs.up && fighter.recoveryCooldown <= 0 && fighter.recoveryAirUses < 1) {
         fighter.state = 'attacking';
-        fighter.attackTimer = 16;
-        fighter.attackData = { name: 'Recovery', type: 'recovery', duration: 16, damage: 12, range: 110, color: fighter.char.color, sigType: 'up', hitApplied: false, progress: 0, isRecovery: true };
+
+        // Recovery intentionally uses the character's exact Up Signature move data.
+        // This keeps the recovery animation, timing, hitbox profile, damage/range
+        // metadata, and per-character Gen 1 animation identical to Up Signature.
+        // The only recovery-specific behavior is the upward launch/cooldown.
+        const upSig = fighter.char.signatures?.up;
+        const recoveryDuration = Math.min(upSig?.duration || 16, 28);
+        fighter.attackTimer = recoveryDuration;
+        fighter.attackData = {
+          ...(upSig || {}),
+          name: upSig?.name || 'Recovery',
+          type: 'recovery',
+          duration: recoveryDuration,
+          color: upSig?.color || fighter.char.color,
+          sigType: 'up',
+          hitApplied: false,
+          progress: 0,
+          isRecovery: true,
+          recoveryAnimationKey: 'us',
+        };
+        fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
         fighter.vy = -14;
         fighter.hitstun = 0;
         fighter.recoveryCooldown = 40 * (fighter.statControlRecoveryMul || 1);
@@ -1378,11 +1396,8 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
           fighter.state = 'attacking';
           const dur = Math.min(sig.duration, 28);
           fighter.attackTimer = dur;
-          fighter.attackData = prepareSpecAttack(fighter,
-            { ...sig, duration: dur, sigType, hitApplied: false, progress: 0 },
-            sigType === 'up' ? 'Up Signature' : sigType === 'down' ? 'Down Signature' : 'Side Signature',
-            'signature');
-          fighter.attackTimer = fighter.attackData.duration;
+          fighter.attackData = { ...sig, duration: dur, sigType, hitApplied: false, progress: 0 };
+          fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
           fighter.sigCooldown = SIG_COOLDOWN * (fighter.statControlRecoveryMul || 1);
           fighter.vy = 0;
           if (sigType === 'side') fighter.moveStats.sigSide++;
@@ -1405,14 +1420,12 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     if (inputs.superMove && !inputs._superConsumed && fighter.superMeter >= fighter.maxSuper) {
       inputs._superConsumed = true;
       fighter.superMeter = 0;
-      const sm = fighter.char.superMove;
+      const sm = fighter.char?.superMove || { name: 'Super', duration: 42, damage: 30, color: fighter.char?.color || '#FFFFFF' };
       fighter.state = 'superAttack';
       const dur = Math.min(sm?.duration || 50, 55);
       fighter.attackTimer = dur;
-      fighter.attackData = prepareSpecAttack(fighter,
-        { ...(sm || {}), duration: dur, sigType: 'super', hitApplied: false, progress: 0, isSuper: true },
-        'Super', 'super');
-      fighter.attackTimer = fighter.attackData.duration;
+      fighter.attackData = { ...(sm || {}), duration: dur, sigType: 'super', hitApplied: false, progress: 0, isSuper: true };
+      fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
       fighter.moveStats.super++;
     }
     if (!inputs.superMove) inputs._superConsumed = false;
@@ -1582,8 +1595,22 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     }
     if (f.genProjectiles) {
       for (const wp of f.genProjectiles) {
-        if ((wp.type === 'gen_solid_barrier' || wp.type === 'gen_glass_wall' || wp.type === 'gen_protect_wall') && wp.life > 0) {
-          wallPlatforms.push({ x: wp.x, y: wp.y - wp.h, w: wp.w, h: wp.h, material: 'normal' });
+        // Every persistent wall/barrier power is a real shared solid platform.
+        // Read them from the owner AND every active opponent so a wall created
+        // by another fighter cannot be walked through or treated as local-only.
+        if ((
+          wp.type === 'gen_ice_wall' ||
+          wp.type === 'gen_glass_wall' ||
+          wp.type === 'gen_solid_barrier' ||
+          wp.type === 'gen_protect_wall'
+        ) && wp.life > 0) {
+          wallPlatforms.push({
+            x: wp.x,
+            y: wp.y - wp.h,
+            w: wp.w,
+            h: wp.h,
+            material: 'normal',
+          });
         }
       }
     }
@@ -1809,123 +1836,67 @@ function updateAttackProgress(fighter) {
   fighter.attackData.progress = Math.min(elapsed / fighter.attackData.duration, 1);
 }
 
-
-function prepareSpecAttack(fighter, data, moveName, kind) {
-  let prepared = {
-    ...data,
-    isSuper: kind === 'super',
-    isHeavy: kind === 'heavy',
-    sigType: kind === 'heavy' ? (moveName === 'Down Heavy' ? 'downHeavy' : 'heavy') : data.sigType,
-  };
-  if (fighter?.char?.id) {
-    const g5 = getGen5AttackSpec(fighter.char.id, prepared);
-    if (g5) prepared = applyGen5Aim(prepared, fighter._attackInput, fighter.facing);
-  }
-  const spec = fighter?.char?.id ? getAttackSpecForData(fighter.char.id, prepared) : null;
-  if (!spec) return prepared;
-
-  const power = Math.max(1, Number(fighter.char?.stats?.power ?? 5));
-  const heavyDamage = 12 + power * 2;
-  const damage = kind === 'super'
-    ? heavyDamage * 1.6
-    : kind === 'heavy'
-      ? heavyDamage
-      : heavyDamage * 0.55;
-
-  const shapeRange = {
-    moving: 88, point: 92, radial: 118, vertical: 150, ground: 126,
-    bottom: 112, line: 155, multi: 150, forward: 138,
-  };
-  const baseRange = shapeRange[spec.shape] || 120;
-  const range = kind === 'super' ? baseRange * 1.05 : baseRange;
-
-  const duration = kind === 'super' ? 26 : kind === 'heavy' ? 13 : 10;
-  const knockback = kind === 'super' ? 1.35 : kind === 'heavy' ? 1.12 : 0.82;
-
-  return {
-    ...prepared,
-    name: prepared.name || moveName,
-    desc: spec.description,
-    duration,
-    damage,
-    range,
-    knockback,
-    spec,
-    attackProfile: spec.shape,
-    specKnockback: spec.knockback,
-  };
-}
-
-function circleRectOverlap(cx, cy, r, rx, ry, rw, rh) {
-  const nx = Math.max(rx - rw / 2, Math.min(cx, rx + rw / 2));
-  const ny = Math.max(ry - rh / 2, Math.min(cy, ry + rh / 2));
-  const dx = cx - nx, dy = cy - ny;
-  return dx * dx + dy * dy <= r * r;
-}
-
-function boxBoxOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
-  return Math.abs(ax - bx) * 2 < aw + bw && Math.abs(ay - by) * 2 < ah + bh;
-}
-
-function pointSegmentDistanceSq(px, py, x1, y1, x2, y2) {
-  const vx = x2 - x1, vy = y2 - y1;
-  const wx = px - x1, wy = py - y1;
-  const vv = vx * vx + vy * vy;
-  const t = vv > 0 ? Math.max(0, Math.min(1, (wx * vx + wy * vy) / vv)) : 0;
-  const dx = px - (x1 + t * vx), dy = py - (y1 + t * vy);
-  return dx * dx + dy * dy;
-}
-
-function capsuleRectOverlap(h, rx, ry, rw, rh) {
-  // Test the defender center and its four corners against the active segment.
-  const points = [
-    [rx, ry],
-    [rx - rw / 2, ry - rh / 2], [rx + rw / 2, ry - rh / 2],
-    [rx - rw / 2, ry + rh / 2], [rx + rw / 2, ry + rh / 2],
-  ];
-  const rr = h.r * h.r;
-  return points.some(([px, py]) => pointSegmentDistanceSq(px, py, h.x1, h.y1, h.x2, h.y2) <= rr);
-}
-
 export function checkHit(attacker, defender) {
   if (!attacker.attackData || attacker.attackData.hitApplied) return false;
   if (defender.invincible > 0) return false;
-
-  if (defender.dodgeChance && Math.random() < defender.dodgeChance) return false;
-
-  const p = attacker.attackData.progress;
-  if (p < 0.04 || p > 0.94) return false;
-
-  const spec = attacker.attackData.spec || getAttackSpecForData(attacker.char?.id, attacker.attackData);
-  if (!spec) {
-    // Compatibility fallback for non-document/custom/crossover attacks.
-    if (attacker.attackData.isSuper) {
-      const dx = defender.x - attacker.x, dy = defender.y - attacker.y;
-      return Math.hypot(dx, dy) < 240;
-    }
-    const baseRange = (attacker.attackData.range || 80) * (attacker.rangeBoost || 1);
-    const facing = attacker.facing;
-    const st = attacker.attackData.sigType;
-    let hbW, hbH, hbCX, hbCY;
-    if (st === 'up' || st === 'aerial') {
-      hbW = 70; hbH = baseRange; hbCX = attacker.x; hbCY = attacker.y - baseRange / 2 - 10;
-    } else if (st === 'down' || st === 'downNormal') {
-      hbW = 70; hbH = baseRange; hbCX = attacker.x; hbCY = attacker.y + baseRange / 2 - 20;
-    } else {
-      hbW = baseRange; hbH = 60; hbCX = attacker.x + facing * (hbW / 2 - 10); hbCY = attacker.y - 30;
-    }
-    const dBW = 32, dBH = 72, dBX = defender.x, dBY = defender.y - 36;
-    return boxBoxOverlap(hbCX, hbCY, hbW, hbH, dBX, dBY, dBW, dBH);
+  // Pearl's Sixth Sense — 50% chance to auto-dodge any incoming attack
+  if (defender.dodgeChance && Math.random() < defender.dodgeChance) {
+    return false;
   }
 
-  const hitboxes = getActiveSpecHitboxes(attacker);
-  const dBW = 32, dBH = 72, dBX = defender.x, dBY = defender.y - 36;
+  const p = attacker.attackData.progress;
+  if (p < 0.08 || p > 0.85) return false;
 
-  return hitboxes.some(h => {
-    if (h.shape === 'circle') return circleRectOverlap(h.x, h.y, h.r, dBX, dBY, dBW, dBH);
-    if (h.shape === 'capsule') return capsuleRectOverlap(h, dBX, dBY, dBW, dBH);
-    return boxBoxOverlap(h.x, h.y, h.w, h.h, dBX, dBY, dBW, dBH);
-  });
+  // Legacy supers use a generous distance check. Hand-authored supers below
+  // use their exact active geometry instead. Geometry generation is isolated so
+  // one malformed optional attack can never take down the whole match.
+  let activeSpecHitboxes = [];
+  try { activeSpecHitboxes = getActiveSpecHitboxes(attacker) || []; } catch (err) { activeSpecHitboxes = []; }
+  const hasExactSuper = attacker.attackData.isSuper && activeSpecHitboxes.length > 0;
+  if (attacker.attackData.isSuper && attacker.char?.id?.startsWith('g1_') && !hasExactSuper) return false;
+  if (attacker.attackData.isSuper && !hasExactSuper) {
+    const sdx = defender.x - attacker.x;
+    const sdy = defender.y - attacker.y;
+    return Math.sqrt(sdx * sdx + sdy * sdy) < 240;
+  }
+
+  // Hand-authored spec hitboxes take precedence for Generation I and any future
+  // move that supplies a spec. This keeps collision locked to the actual visual.
+  const specHitboxes = activeSpecHitboxes;
+  if (specHitboxes.length) {
+    try { return specHitboxes.some(hb => hitboxIntersectsBody(hb, defender)); } catch (err) { return false; }
+  }
+
+  // ── Fallback AABB hitbox collision ──
+  const baseRange = (attacker.attackData.range || 80) * (attacker.rangeBoost || 1);
+  const facing = attacker.facing;
+  const st = attacker.attackData.sigType;
+
+  // Build attack hitbox rectangle based on attack type
+  let hbW, hbH, hbCX, hbCY;
+  if (st === 'up' || st === 'aerial') {
+    hbW = 70; hbH = baseRange;
+    hbCX = attacker.x; hbCY = attacker.y - baseRange / 2 - 10;
+  } else if (st === 'down' || st === 'downNormal') {
+    hbW = 70; hbH = baseRange;
+    hbCX = attacker.x; hbCY = attacker.y + baseRange / 2 - 20;
+  } else if (st === 'heavy') {
+    hbW = baseRange * 1.1; hbH = 80;
+    hbCX = attacker.x + facing * (hbW / 2 - 10); hbCY = attacker.y - 30;
+  } else {
+    hbW = baseRange; hbH = 60;
+    hbCX = attacker.x + facing * (hbW / 2 - 10); hbCY = attacker.y - 30;
+  }
+
+  // Defender body box — rectangle centered on body
+  const dBW = 32, dBH = 72;
+  const dBX = defender.x, dBY = defender.y - 36;
+
+  // AABB overlap test
+  return (hbCX - hbW / 2) < (dBX + dBW / 2) &&
+         (hbCX + hbW / 2) > (dBX - dBW / 2) &&
+         (hbCY - hbH / 2) < (dBY + dBH / 2) &&
+         (hbCY + hbH / 2) > (dBY - dBH / 2);
 }
 
 export function applyHit(attacker, defender) {
@@ -1959,43 +1930,50 @@ export function applyHit(attacker, defender) {
   attacker.superMeter = Math.min(attacker.maxSuper, attacker.superMeter + dmg * 0.7);
   defender.superMeter = Math.min(defender.maxSuper, defender.superMeter + dmg * 0.25);
 
-  // Knockback is tied to the move's documented direction/contact model.
-  // Heavy > Signature, while Supers get the strongest launch.
+  // Knockback scales smoothly with damage (Brawlhalla-style curve)
   const isLight = attacker.attackData.isNormal;
   const kbMul = 1 + defender.damage * 0.025;
-  const spec = attacker.attackData.spec || getAttackSpecForData(attacker.char?.id, attacker.attackData);
-  const profile = spec?.knockback || 'forward';
   const kbBase = attacker.attackData.knockback || 1.0;
-  const kbFactor = attacker.attackData.isSuper
-    ? 0.46
-    : attacker.attackData.isHeavy
-      ? 0.34
-      : isLight
-        ? 0.10
-        : 0.14;
-  const kb = dmg * kbFactor * kbMul * kbBase * (attacker.knockbackMul || 1) * KNOCKBACK_SCALE * (1 - (defender.knockbackReduction || 0));
+  const kbFactor = isLight ? 0.16 : attacker.attackData.isHeavy ? 0.32 : 0.24;
+  const specKbScale = Number(attacker.attackData.spec?.knockbackScale) || 1;
+  const kb = dmg * kbFactor * kbMul * kbBase * specKbScale * (attacker.knockbackMul || 1) * KNOCKBACK_SCALE * (1 - (defender.knockbackReduction || 0));
+  const st = attacker.attackData.sigType;
 
-  if (attacker.attackData.isGroundPound) {
+  const spec = attacker.attackData.spec || getAttackSpecForData(attacker.char?.id, attacker.attackData);
+  if (spec?.knockback) {
+    const dir = specKnockbackVector(attacker, defender, spec.knockback);
+    const mag = kb * (spec.kind === 'super' ? 1.15 : 1);
+    defender.vx = dir.x * mag;
+    defender.vy = dir.y * mag;
+  } else if (attacker.attackData.isGroundPound) {
     defender.vy = -kb * 0.5;
     defender.vx = (defender.x > attacker.x ? 1 : -1) * kb * 1.5;
   } else if (attacker.attackData.isRecovery) {
     defender.vy = -kb * 2.0;
     defender.vx = attacker.facing * kb * 0.3;
-  } else if (spec) {
-    const dir = specKnockbackVector(attacker, defender, profile);
-    const verticalBias = profile === 'up' ? 1.35 : profile === 'down' ? 0.75 : profile === 'radial' ? 1.0 : 0.72;
-    const horizontalBias = profile === 'up' ? 0.38 : profile === 'down' ? 0.85 : 1.0;
-    defender.vx = dir.x * kb * horizontalBias;
-    defender.vy = dir.y * kb * verticalBias;
-  } else if (attacker.attackData.isSuper) {
-    defender.vy = -kb * 1.4;
-    defender.vx = attacker.facing * kb * 1.2;
-  } else if (attacker.attackData.sigType === 'up' || attacker.attackData.sigType === 'aerial') {
+  } else if (st === 'up' || st === 'aerial') {
     defender.vy = -kb * 1.8;
     defender.vx = attacker.facing * kb * 0.3;
-  } else if (attacker.attackData.sigType === 'down' || attacker.attackData.sigType === 'downNormal') {
+  } else if (st === 'down' || st === 'downNormal') {
     defender.vy = kb * 0.6;
     defender.vx = attacker.facing * kb * 0.5;
+  } else if (st === 'super') {
+    defender.vy = -kb * 1.4;
+    defender.vx = attacker.facing * kb * 1.2;
+  } else if (st === 'heavy') {
+    // Heavy attacks: strong, directional knockback based on attack type
+    const heavyType = attacker.attackData.type;
+    if (heavyType === 'groundSlam' || heavyType === 'freeze') {
+      defender.vy = -kb * 1.5;
+      defender.vx = attacker.facing * kb * 0.6;
+    } else if (heavyType === 'launch') {
+      defender.vy = -kb * 2.0;
+      defender.vx = attacker.facing * kb * 0.3;
+    } else {
+      // Forward-launching heavy
+      defender.vx = attacker.facing * kb * 1.4;
+      defender.vy = -kb * 0.6;
+    }
   } else {
     defender.vx = attacker.facing * kb * 1.2;
     defender.vy = -kb * 0.55;
