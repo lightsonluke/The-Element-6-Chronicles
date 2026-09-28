@@ -106,7 +106,6 @@ import GlobalClipRecorder from './GlobalClipRecorder.jsx';
 import GlobalNotifications from './GlobalNotifications.jsx';
 import OnlineHubScreen from './OnlineHubScreen.jsx';
 import TheTableLobby from './TheTableLobby.jsx';
-import RaceLobby from './RaceLobby.jsx';
 import PartyScreen from './PartyScreen.jsx';
 import { sanitizeFreehandStroke } from './freehandSafe.js';
 import { recordClanMatchActivity } from './clanActivity.js';
@@ -228,7 +227,7 @@ export default function Game() {
   const [autoMobileDevice, setAutoMobileDevice] = useState(false);
   useEffect(() => { setAutoMobileDevice(detectMobileOrTablet()); }, []);
   const SCREEN_PATHS = {
-    menu: '/home', shop: '/shop', modeSelect: '/fights', onlinelobby: '/online', onlinesports: '/onlinesports', onlinehub: '/online', thetable: '/online/the-table', race: '/online/race',
+    menu: '/home', shop: '/shop', modeSelect: '/fights', onlinelobby: '/online', onlinesports: '/onlinesports', onlinehub: '/online', thetable: '/online/the-table',
     sports: '/sports', elo: '/elo', hubserverselect: '/community', leaderboard: '/leaderboards', settings: '/settings',
     hub: '/community-hub', sandbox: '/sandbox-mode', stageeditor: '/stage-editor', mobilecontrols: '/mobile-controls', training: '/training', combos: '/combo-trainer',
     tutorial: '/tutorial', storySaves: '/story-mode', soccer: '/soccer', friends: '/friends', chat: '/chat',
@@ -245,7 +244,7 @@ export default function Game() {
     '/bot-battle': 'botbattle', '/low-gravity': 'lowgravity', '/2v2-teams': 'team', '/tournament-character-select': 'tournament',
   };
   const PATH_ALIASES = {
-    '/home': 'menu', '/fights': 'modeSelect', '/online': 'onlinehub', '/online/the-table': 'thetable', '/online/race': 'race', '/ranked': 'onlinelobby', '/unranked': 'onlinelobby',
+    '/home': 'menu', '/fights': 'modeSelect', '/online': 'onlinehub', '/online/the-table': 'thetable', '/ranked': 'onlinelobby', '/unranked': 'onlinelobby',
     '/online-fights': 'onlinelobby', '/sports': 'sports', '/online-sports': 'sportslobby', '/onlinesports': 'sportslobby',
     '/soccer': 'soccer', '/soccer-online': 'onlinesports', '/soccer-ranked': 'onlinesports', '/volleyball': 'sports',
     '/volleyball-online': 'onlinesports', '/volleyball-ranked-1v1': 'onlinesports', '/baseball': 'sports', '/parkour': 'sports',
@@ -1002,7 +1001,6 @@ export default function Game() {
     else if (dest === 'onlineunranked') { setOnlineMode('unranked'); setScreen('onlinelobby'); }
     else if (dest === 'online') { setScreen('onlinehub'); }
     else if (dest === 'thetable') { setScreen('thetable'); }
-    else if (dest === 'race') { setScreen('race'); }
     else if (dest === 'onlinesettings') setScreen('settings');
     else setScreen(dest);
   };
@@ -1257,14 +1255,21 @@ export default function Game() {
 
   // Match replay metadata is consumed by the automatic replay recorder.
   useEffect(() => {
-    const active = ['fighting','soccer','sports','training','team','sportslobby','onlinesportsmatch','battleroyale','onlinelobby','grandcircuit','thetable','race','customrooms','lan'].includes(screen);
+    const active = ['fighting','soccer','sports','training','team','sportslobby','onlinesportsmatch','battleroyale','onlinelobby','grandcircuit','thetable','customrooms','lan'].includes(screen);
+    const modeLabels = {
+      fighting: 'Regular Fight', soccer: 'Soccer', sports: 'Sports', training: 'Training', team: 'Team Battle',
+      sportslobby: 'Online Sports', onlinesportsmatch: 'Online Sports Match', battleroyale: 'Battle Royale',
+      onlinelobby: onlineMode === 'ranked' ? 'Ranked Fight' : 'Unranked Fight', grandcircuit: 'Grand Circuit',
+      thetable: 'The Table', customrooms: 'Custom Room', lan: 'LAN Play'
+    };
     window.__e6MatchReplayMeta = active ? {
       mode: screen,
-      online: ['onlinelobby','sportslobby','onlinesportsmatch','battleroyale','thetable','race'].includes(screen),
+      modeLabel: modeLabels[screen] || screen,
+      online: ['onlinelobby','sportslobby','onlinesportsmatch','battleroyale','thetable'].includes(screen),
       startedAt: Date.now(),
     } : null;
     return () => { if (window.__e6MatchReplayMeta?.mode === screen) window.__e6MatchReplayMeta = null; };
-  }, [screen]);
+  }, [screen, onlineMode]);
 
   // Track whether the chat screen is open (to suppress notifications while viewing)
   useEffect(() => { onChatScreenRef.current = screen === 'chat'; }, [screen]);
@@ -1598,7 +1603,7 @@ export default function Game() {
     if (fighters.gameMode === 'coin' && !usedEvil) reward += (m.stats?.coins || 0);
     if (won && fighters.gameMode === 'challenge' && !usedEvil) reward += 40;
     if (won && fighters.gameMode === 'brawl' && !usedEvil) reward += 15;
-    if (reward > 0) addCoins(reward);
+    // Match tokens are intentionally disabled. Rewards come only from Daily Rewards and Clan rewards.
     recordFightResult(fighters.p1, m.stats || {}, won, m.moveStats);
     const clanMode = fighters.gameMode === 'regular' ? 'offline_regularbattle' : fighters.gameMode === 'ranked' ? 'bot_ranked' : fighters.gameMode === 'time' ? 'time_battle' : null;
     if (clanMode) {
@@ -1608,35 +1613,7 @@ export default function Game() {
         recordClanMatchActivity({ supabase, userId: data.user.id, mode: clanMode, matchId, result: won ? 'win' : 'loss' }).catch(() => {});
       }).catch(() => {});
     }
-    const xpGained = usedEvil ? 0 : calculateBattleXP(fighters.difficulty, won, isPvP);
-    if (xpGained > 0) {
-      setProgress(prev => {
-        const levels = { ...(prev.charLevels || {}) };
-        const cd = levels[fighters.p1] || { level: 1, xp: 0 };
-        let nl = cd.level; let nxp = (cd.xp || 0) + xpGained;
-        while (nl < MAX_LEVEL && nxp >= xpForLevel(nl)) { nxp -= xpForLevel(nl); nl++; }
-        levels[fighters.p1] = { ...cd, level: nl, xp: nxp };
-        const next = { ...prev, charLevels: levels };
-        saveProgress(next);
-        return next;
-      });
-    }
-    // P2 XP — in PvP, both characters get XP based on their performance
-    if (isPvP && !usedEvil && xpGained > 0) {
-      const p2Won = !won;
-      const p2XP = Math.floor(calculateBattleXP(fighters.difficulty, p2Won, true) * 0.8);
-      if (p2XP > 0) {
-        setProgress(prev => {
-          const levels = { ...(prev.charLevels || {}) };
-          const cd = levels[fighters.p2] || { level: 1, xp: 0 };
-          let nl = cd.level; let nxp = (cd.xp || 0) + p2XP;
-          while (nl < MAX_LEVEL && nxp >= xpForLevel(nl)) { nxp -= xpForLevel(nl); nl++; }
-          levels[fighters.p2] = { ...cd, level: nl, xp: nxp };
-          const next = { ...prev, charLevels: levels };
-          saveProgress(next); return next;
-        });
-      }
-    }
+    const xpGained = 0;
     // Track daily quest stats
     const stats = m.stats || {};
     setProgress(prev => {
@@ -1714,10 +1691,8 @@ export default function Game() {
   const awardSportMatch = (sport, result) => {
     if (!result || result.p1Won === null || result.p1Won === undefined) return;
     const won = result.p1Won === true;
-    const xp = calculateSportXP(sport, result.stats, won);
-    const coins = result.tournamentWon ? (result.reward || 50) : (won ? 15 : 5);
-    if (coins > 0) addCoins(coins);
-    addXP(result.p1CharId || progress.favoriteId || 'yellow', xp);
+    const xp = 0;
+    // Match tokens/XP are intentionally disabled. Keep leaderboard/stat tracking below.
     const clanSportMode = ({
       soccer: result.online ? 'soccer_online' : 'soccer_offline',
       volleyball: result.online ? 'volleyball_online' : 'volleyball_offline',
@@ -1731,7 +1706,7 @@ export default function Game() {
         recordClanMatchActivity({ supabase, userId: data.user.id, mode: clanSportMode, matchId, result: won ? 'win' : 'loss' }).catch(() => {});
       }).catch(() => {});
     }
-    if (result.p2IsHuman && result.p2CharId) addXP(result.p2CharId, calculateSportXP(sport, result.stats, !won));
+    // No per-match reward for the second player either.
     // Mastery: award wins for any game mode
     if (won) {
       setProgress(prev => {
@@ -2411,7 +2386,6 @@ export default function Game() {
               else if (key === 'chat') { setScreen('chat'); }
               else if (key === 'elo') { setScreen('elo'); }
               else if (key === 'thetable') { setScreen('thetable'); }
-              else if (key === 'race') { setScreen('race'); }
               else if (key === 'party') { setScreen('party'); }
             }}
           />
@@ -2430,19 +2404,6 @@ export default function Game() {
             musicVolume={progress.settings?.musicVolume ?? 50}
           />
         )}
-        {screen === 'race' && (
-          <RaceLobby
-            onBack={goBack}
-            unlockedIds={progress.unlockedIds}
-            favoriteId={progress.favoriteId}
-            equippedElements={progress.equippedElements || {}}
-            equippedAccessories={progress.equippedAccessories || {}}
-            equippedSkins={progress.equippedSkins || {}}
-            settings={progress.settings || {}}
-            sfxVolume={progress.settings?.sfxVolume ?? 70}
-            musicVolume={progress.settings?.musicVolume ?? 50}
-          />
-        )}
         {screen === 'dailyreward' && (
           <DailyRewards
             coins={progress.coins || 0}
@@ -2453,7 +2414,6 @@ export default function Game() {
         {screen === 'party' && (
           <PartyScreen onBack={goBack} onQueueMode={(mode) => {
             if (mode === 'thetable') setScreen('thetable');
-            else if (mode === 'race') setScreen('race');
             else if (mode === 'battleroyale') setScreen('battleroyale');
             else if (mode === 'sports') setScreen('onlinesports');
             else if (mode === 'customrooms') { setCustomRoomMode('fight'); setScreen('customrooms'); }

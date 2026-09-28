@@ -1,11 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { getClipBlob, getClipPreviewBlob, deleteClipBlob, listClipMetadata } from './clipStorage.js';
+import { getClipBlob, getClipPreviewBlob, deleteClipBlob, deleteAllReplays, listClipMetadata } from './clipStorage.js';
 import GameIcon from './GameIcon.jsx';
 
 const DEFAULT_FPS = 60;
 
 function extensionForMime(mime) {
   return String(mime || '').toLowerCase().includes('mp4') ? 'mp4' : 'webm';
+}
+
+function replayModeLabel(clip) {
+  if (!clip?.replay) return '';
+  return clip.replayMeta?.modeLabel || clip.replayMeta?.mode || 'Match';
 }
 
 function makeVideoSource(video, blob) {
@@ -78,12 +83,11 @@ export default function ClipsScreen({
           // The saved clip is the canonical playback source. Older records may
           // contain a WebM preview alongside an MP4 main blob; never prefer that
           // stale preview because it can leave the player stuck on Loading.
-          const playbackBlob = blob;
           if (!blob || blob.size < 1000) continue;
 
           next[clip.id] = {
             blob,
-            previewBlob: playbackBlob,
+            previewBlob: previewBlob && previewBlob.size >= 1000 ? previewBlob : blob,
             mime: blob.type || clip.mime || 'video/mp4',
             extension: extensionForMime(blob.type || clip.mime),
           };
@@ -97,6 +101,19 @@ export default function ClipsScreen({
 
     return () => { cancelled = true; };
   }, [clips]);
+
+  useEffect(() => {
+    for (const clip of clips) {
+      const source = sources[clip.id];
+      const video = videoRefs.current[clip.id];
+      if (!source || !video) continue;
+      if (sourceRefs.current[clip.id]?.blob === source.blob && video.src) continue;
+      const old = sourceRefs.current[clip.id];
+      if (old?.url) { try { URL.revokeObjectURL(old.url); } catch {} }
+      const made = makeVideoSource(video, source.blob);
+      sourceRefs.current[clip.id] = { ...made, blob: source.blob, fallbackUsed: false };
+    }
+  }, [clips, sources]);
 
   useEffect(() => () => {
     Object.values(sourceRefs.current).forEach(source => {
@@ -199,6 +216,21 @@ export default function ClipsScreen({
     }
   };
 
+  const clearAllReplays = async () => {
+    if (section !== 'replays' || !visibleClips.length) return;
+    if (!window.confirm('Delete all saved match replays? This cannot be undone.')) return;
+    await deleteAllReplays().catch(() => {});
+    Object.keys(sourceRefs.current).forEach(id => {
+      const source = sourceRefs.current[id];
+      try { source?.video?.pause?.(); } catch {}
+      if (source?.url) { try { URL.revokeObjectURL(source.url); } catch {} }
+      delete sourceRefs.current[id];
+    });
+    setSources(prev => { const next = { ...prev }; visibleClips.forEach(c => delete next[c.id]); return next; });
+    setStoredClips(prev => prev.filter(c => !c.replay));
+    setActiveViewer(null);
+  };
+
   return (
     <div className="min-h-screen w-full overflow-y-auto p-6 bg-background">
       <div className="max-w-5xl mx-auto">
@@ -210,12 +242,17 @@ export default function ClipsScreen({
               <button onClick={() => setSection('replays')} className={`px-2 py-1 rounded text-[9px] font-heading ${section==='replays'?'bg-accent text-accent-foreground':'bg-secondary'}`}>MATCH REPLAYS</button>
             </div>
           </div>
-          <button
-            onClick={onBack}
-            className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80"
-          >
-            ← BACK
-          </button>
+          <div className="flex gap-2">
+            {section === 'replays' && visibleClips.length > 0 && (
+              <button onClick={clearAllReplays} className="px-4 py-2 bg-destructive/20 text-destructive rounded-lg font-heading text-xs hover:opacity-80">CLEAR ALL</button>
+            )}
+            <button
+              onClick={onBack}
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80"
+            >
+              ← BACK
+            </button>
+          </div>
         </div>
 
         <p className="text-xs text-muted-foreground font-body mb-5">
@@ -243,36 +280,24 @@ export default function ClipsScreen({
                       className="relative rounded-lg overflow-hidden bg-black"
                     >
                       <video
-                        ref={node => {
-                          videoRefs.current[clip.id] = node;
-
-                          if (
-                            node &&
-                            source &&
-                            sourceRefs.current[clip.id]?.blob !== source.blob
-                          ) {
-                            const old = sourceRefs.current[clip.id];
-                            if (old?.url) {
-                              try { URL.revokeObjectURL(old.url); } catch {}
-                            }
-
-                            const made = makeVideoSource(node, source.previewBlob || source.blob);
-                            sourceRefs.current[clip.id] = {
-                              ...made,
-                              blob: source.blob,
-                            };
-                          }
-                        }}
+                        key={`${clip.id}-${source.blob.size}-${source.mime}`}
+                        ref={node => { videoRefs.current[clip.id] = node; }}
                         controls
                         playsInline
                         preload="auto"
                         className="w-full rounded-lg bg-black block"
                         style={{ aspectRatio: '16 / 9', ...(clip.replay ? { transform: `scale(${zoom})`, transformOrigin: 'center center' } : {}) }}
                         onError={() => {
-                          setFailed(prev => ({
-                            ...prev,
-                            [clip.id]: true,
-                          }));
+                          const fallback = source.previewBlob;
+                          if (fallback && fallback !== source.blob && !sourceRefs.current[clip.id]?.fallbackUsed) {
+                            const old = sourceRefs.current[clip.id];
+                            if (old?.url) { try { URL.revokeObjectURL(old.url); } catch {} }
+                            const made = makeVideoSource(videoRefs.current[clip.id], fallback);
+                            sourceRefs.current[clip.id] = { ...made, blob: source.blob, fallbackUsed: true };
+                            setFailed(prev => { const next = { ...prev }; delete next[clip.id]; return next; });
+                            return;
+                          }
+                          setFailed(prev => ({ ...prev, [clip.id]: true }));
                         }}
                       />
 
@@ -321,8 +346,9 @@ export default function ClipsScreen({
 
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span className="text-[10px] text-muted-foreground font-body flex-1 min-w-[180px]">
+                      {clip.replay && <><span className="text-accent font-heading">{replayModeLabel(clip)}</span>{' · '}</>}
                       {new Date(clip.created || Date.now()).toLocaleString()}
-                      {` · ${clip.replay ? (clip.extension || 'WEBM').toUpperCase() : 'MP4'} · `}
+                      {` · ${clip.replay ? 'MP4' : (clip.extension || 'MP4').toUpperCase()} · `}
                       {Math.round(clip.duration || 30)}s
                     </span>
 
@@ -339,7 +365,7 @@ export default function ClipsScreen({
                       onClick={() => download(clip)}
                       className="px-2 py-1 bg-primary/30 text-primary rounded text-[10px] font-heading disabled:opacity-40"
                     >
-                      <GameIcon emoji="⬇" size={14} /> SAVE {clip.replay ? (clip.extension || 'WEBM').toUpperCase() : 'MP4'}
+                      <GameIcon emoji="⬇" size={14} /> SAVE {clip.replay ? 'MP4' : (clip.extension || 'MP4').toUpperCase()}
                     </button>
                     {clip.replay && <select value={speed} onChange={e => { const v=Number(e.target.value); setSpeed(v); const vdo=getVideo(clip.id); if(vdo)vdo.playbackRate=v; }} className="px-2 py-1 bg-secondary rounded text-[10px]">
                       <option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1">1×</option><option value="1.5">1.5×</option><option value="2">2×</option>

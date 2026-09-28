@@ -7,7 +7,6 @@ const ITEMS = [
   ['unranked','ONLINE UNRANKED','1v1 unranked fights'],
   ['sports','ONLINE SPORTS','Soccer, volleyball, dodgeball and Banger'],
   ['thetable','THE TABLE','8-player elimination fight tournament'],
-  ['race','RACE','30-player parkour survival race'],
   ['battleroyale','BATTLE ROYALE','Large online survival fight'],
   ['customrooms','CUSTOM ROOMS','Create or join custom rooms'],
   ['party','PARTY','Build an 8-player party and queue together'],

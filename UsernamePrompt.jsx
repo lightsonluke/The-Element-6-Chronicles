@@ -37,7 +37,7 @@ export default function UsernamePrompt({ onSet }) {
     setBusy(true);
     try {
       // Cloud is canonical. localBackend remains as a harmless offline fallback.
-      try { await syncCurrentUsername(trimmed); } catch (cloudError) { await db.auth.updateMe({ username: trimmed }); }
+      await syncCurrentUsername(trimmed);
       sfx.purchaseSuccess();
       onSet?.(trimmed);
       setShow(false);

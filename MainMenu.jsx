@@ -42,6 +42,10 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
       { label: 'Regular Battle', key: 'regularbattle' },
       { label: 'Stage Editor', key: 'stageeditor' },
     ]},
+    { type: 'tab', id: 'ranked', label: 'RANKED', items: [
+      { label: 'Ranked Fights', key: 'onlineranked' },
+      { label: 'Unranked Fights', key: 'onlineunranked' },
+    ]},
     { type: 'button', label: 'ONLINE', key: 'online' },
     { type: 'button', label: 'SPORTS', key: 'sports' },
     { type: 'button', label: 'SHOP', key: 'shop' },

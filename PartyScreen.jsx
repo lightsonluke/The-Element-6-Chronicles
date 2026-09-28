@@ -7,7 +7,7 @@ const MODES = [
   ['customrooms','Custom Rooms'],['banger-online','Banger Online 3v3'],['volleyball-online','Volleyball Online 2v2'],
   ['thetable','The Table'],['battleroyale','Battle Royale'],['grandcircuit-online','Grand Circuit'],
   ['lan','LAN Play'],['soccer-online','Soccer Online'],['dodgeball-online','Dodgeball Online'],
-  ['race','Race'],['ctf-online','Capture the Flag'],
+['ctf-online','Capture the Flag'],
 ];
 
 const nameOf = u => u?.user_metadata?.username || u?.user_metadata?.full_name || u?.email?.split('@')[0] || 'Player';

@@ -8,6 +8,18 @@ const VERSION = 1;
 const MAX_CLIPS = 30;
 const MAX_REPLAYS = 50;
 
+async function normalizeVideoBlob(blob) {
+  if (!blob) return null;
+  try {
+    const head = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
+    const isWebM = head[0] === 0x1a && head[1] === 0x45 && head[2] === 0xdf && head[3] === 0xa3;
+    const isMP4 = head[4] === 0x66 && head[5] === 0x74 && head[6] === 0x79 && head[7] === 0x70;
+    if (isWebM && !String(blob.type || '').includes('webm')) return new Blob([blob], { type: 'video/webm' });
+    if (isMP4 && !String(blob.type || '').includes('mp4')) return new Blob([blob], { type: 'video/mp4' });
+  } catch {}
+  return blob;
+}
+
 function openDB() {
   return new Promise((resolve, reject) => {
     if (!window.indexedDB) return reject(new Error('IndexedDB unavailable'));
@@ -116,7 +128,7 @@ export async function getClipBlob(id) {
     const request = tx.objectStore(STORE).get(id);
     request.onsuccess = () => {
       db.close();
-      resolve(request.result?.blob || null);
+      resolve(normalizeVideoBlob(request.result?.blob || null));
     };
     request.onerror = () => {
       db.close();
@@ -153,7 +165,7 @@ export async function getClipPreviewBlob(id) {
     const request = tx.objectStore(STORE).get(id);
     request.onsuccess = () => {
       db.close();
-      resolve(request.result?.previewBlob || request.result?.blob || null);
+      normalizeVideoBlob(request.result?.previewBlob || request.result?.blob || null).then(resolve).catch(() => resolve(request.result?.previewBlob || request.result?.blob || null));
     };
     request.onerror = () => {
       db.close();
@@ -168,8 +180,23 @@ export async function saveReplayBlob(id, blob, meta = {}) {
     ...meta,
     replay: true,
     replayMeta: meta.replayMeta || null,
-    mime: meta.mime || blob?.type || 'video/webm',
-    extension: meta.extension || 'webm',
+    mime: meta.mime || blob?.type || 'video/mp4',
+    extension: meta.extension || 'mp4',
+  });
+}
+
+export async function deleteAllReplays() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    const request = store.getAll();
+    request.onsuccess = () => {
+      for (const row of request.result || []) if (row?.replay) store.delete(row.id);
+    };
+    request.onerror = () => reject(request.error);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
   });
 }
 

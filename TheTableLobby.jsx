@@ -12,8 +12,8 @@ const stageLabel = id => String(id || '').replace(/[-_]/g,' ').replace(/\b\w/g,c
 export default function TheTableLobby({ onBack, unlockedIds=[], favoriteId='yellow', equippedElements={}, equippedSkins={}, equippedAccessories={}, equippedShikigami={}, settings={}, sfxVolume=70, musicVolume=50 }) {
   const [user,setUser]=useState(null),[tournament,setTournament]=useState(null),[players,setPlayers]=useState([]);
   const [phase,setPhase]=useState('pick'),[char,setChar]=useState(favoriteId||'yellow'),[error,setError]=useState('');
-  const [watching,setWatching]=useState(false),[lastResult,setLastResult]=useState(null),[revealing,setRevealing]=useState(false);
   const [tournamentId,setTournamentId]=useState(null);
+  const [watching,setWatching]=useState(false),[lastResult,setLastResult]=useState(null),[revealing,setRevealing]=useState(false);
 
   const refresh=async(id)=>{
     if(!id)return;
@@ -58,9 +58,9 @@ export default function TheTableLobby({ onBack, unlockedIds=[], favoriteId='yell
     }
   },[tournament?.status,tournament?.active_match_id,tournament?.id]);
 
-  const join=async()=>{
+  const join=async(selectedChar=char)=>{
     if(!user){setError('Sign in to enter The Table.');return;}
-    const {data,error:e}=await supabase.rpc('element6_join_the_table',{p_char_id:char,p_loadout:{element:equippedElements?.[char]||'basic',equippedSkins,equippedAccessories,equippedShikigami}});
+    const {data,error:e}=await supabase.rpc('element6_join_the_table',{p_char_id:selectedChar,p_loadout:{element:equippedElements?.[char]||'basic',equippedSkins,equippedAccessories,equippedShikigami}});
     if(e){setError(e.message);return;}
     setError('');setTournamentId(data.tournament_id);sfx.matchFound();
   };
