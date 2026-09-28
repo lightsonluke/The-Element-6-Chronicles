@@ -89,82 +89,12 @@ function buildSpec(charId, data, moveKey = '') {
   const kind = inferKind(data);
   return { charId, kind, moveKey, name:data.name || moveKey, description:String(data.desc || data.description || ''), color:data.color, shape:normalizeProfile(data.hitboxProfile || data.type, 'forward'), knockback:normalizeProfile(data.knockbackProfile || data.knockbackType, 'forward'), range:Number(data.range) || 100, duration:Number(data.duration) || (kind === 'super' ? 26 : kind === 'heavy' ? 13 : 10), damage:Number(data.damage) || 0 };
 }
-
-// Generation IV combat tuning: each move gets a direction and a modest strength
-// multiplier that matches the authored animation.  This does NOT use one generic
-// knockback direction for every Gen 4 attack.
-const GEN4_KNOCKBACK = {
-  g4_cobalt: {
-    us:{knockback:'upContact',knockbackScale:1.00}, ds:{knockback:'radialContact',knockbackScale:.92}, ss:{knockback:'forwardContact',knockbackScale:.94},
-    uh:{knockback:'upContact',knockbackScale:1.08}, dh:{knockback:'radialUp',knockbackScale:1.10}, sh:{knockback:'forwardContact',knockbackScale:1.08}, sp:{knockback:'radialContact',knockbackScale:1.15}
-  },
-  g4_cyan: {
-    us:{knockback:'upContact',knockbackScale:.96}, ds:{knockback:'radialContact',knockbackScale:.90}, ss:{knockback:'forwardContact',knockbackScale:.88},
-    uh:{knockback:'upContact',knockbackScale:1.02}, dh:{knockback:'radialUp',knockbackScale:1.06}, sh:{knockback:'forwardContact',knockbackScale:1.06}, sp:{knockback:'radialContact',knockbackScale:1.15}
-  },
-  g4_onyx: {
-    us:{knockback:'upContact',knockbackScale:1.00}, ds:{knockback:'upContact',knockbackScale:.92}, ss:{knockback:'forwardContact',knockbackScale:1.00},
-    uh:{knockback:'upContact',knockbackScale:1.08}, dh:{knockback:'radialUp',knockbackScale:1.06}, sh:{knockback:'forwardContact',knockbackScale:1.10}, sp:{knockback:'radialContact',knockbackScale:1.15}
-  },
-  g4_gold: {
-    us:{knockback:'upContact',knockbackScale:.90}, ds:{knockback:'radialContact',knockbackScale:.78}, ss:{knockback:'forwardContact',knockbackScale:.82},
-    uh:{knockback:'upContact',knockbackScale:1.00}, dh:{knockback:'radialContact',knockbackScale:.92}, sh:{knockback:'forwardContact',knockbackScale:1.00}, sp:{knockback:'radialContact',knockbackScale:1.08}
-  },
-  g4_vermilion: {
-    us:{knockback:'upContact',knockbackScale:1.00}, ds:{knockback:'radialUp',knockbackScale:.96}, ss:{knockback:'forwardContact',knockbackScale:1.05},
-    uh:{knockback:'upContact',knockbackScale:1.10}, dh:{knockback:'radialUp',knockbackScale:1.10}, sh:{knockback:'forwardContact',knockbackScale:1.12}, sp:{knockback:'forwardContact',knockbackScale:1.20}
-  },
-  g4_umber: {
-    us:{knockback:'upContact',knockbackScale:.96}, ds:{knockback:'radialContact',knockbackScale:.82}, ss:{knockback:'forwardContact',knockbackScale:.90},
-    uh:{knockback:'upContact',knockbackScale:1.08}, dh:{knockback:'forwardContact',knockbackScale:1.02}, sh:{knockback:'forwardContact',knockbackScale:1.06}, sp:{knockback:'forwardContact',knockbackScale:1.16}
-  },
-  g4_graphite: {
-    us:{knockback:'upContact',knockbackScale:.90}, ds:{knockback:'forwardContact',knockbackScale:.86}, ss:{knockback:'forwardContact',knockbackScale:.88},
-    uh:{knockback:'upContact',knockbackScale:1.00}, dh:{knockback:'radialUp',knockbackScale:1.00}, sh:{knockback:'forwardContact',knockbackScale:1.02}, sp:{knockback:'radialContact',knockbackScale:1.12}
-  },
-  g4_daichi: {
-    us:{knockback:'upContact',knockbackScale:.96}, ds:{knockback:'upContact',knockbackScale:.88}, ss:{knockback:'forwardContact',knockbackScale:.92},
-    uh:{knockback:'upContact',knockbackScale:1.02}, dh:{knockback:'radialContact',knockbackScale:1.00}, sh:{knockback:'forwardContact',knockbackScale:1.08}, sp:{knockback:'radialContact',knockbackScale:1.12}
-  },
-  g4_renko: {
-    us:{knockback:'upContact',knockbackScale:1.00}, ds:{knockback:'radialContact',knockbackScale:.90}, ss:{knockback:'forwardContact',knockbackScale:.96},
-    uh:{knockback:'upContact',knockbackScale:1.06}, dh:{knockback:'radialUp',knockbackScale:1.06}, sh:{knockback:'forwardContact',knockbackScale:1.10}, sp:{knockback:'radialContact',knockbackScale:1.18}
-  }
-};
-
-function normalizeGen4MoveKey(data) {
-  if (!data) return 'ss';
-  if (data.isSuper || data.sigType === 'super') return 'sp';
-  if (data.isHeavy) {
-    if (data.sigType === 'downHeavy' || data.sigType === 'down' || data.isGroundPound) return 'dh';
-    if (data.sigType === 'upHeavy' || data.sigType === 'upheavy' || data.sigType === 'aerialHeavy' || data.sigType === 'aerial' || data.isAerialHeavy) return 'uh';
-    return 'sh';
-  }
-  if (data.sigType === 'up' || data.sigType === 'upSignature') return 'us';
-  if (data.sigType === 'down' || data.sigType === 'downSignature') return 'ds';
-  return 'ss';
-}
-
-function getGen4CombatSpec(charId, attackData) {
-  const char = CHAR_MAP.get(charId);
-  if (!char || !String(charId).startsWith('g4_')) return null;
-  const key = normalizeGen4MoveKey(attackData);
-  const raw = key === 'sp' ? char.superMove : key === 'uh' ? char.upHeavy : key === 'dh' ? char.downHeavy : key === 'sh' ? char.heavyAttack : char.signatures?.[key === 'us' ? 'up' : key === 'ds' ? 'down' : 'side'];
-  const base = buildSpec(charId, raw || attackData, key);
-  const tuning = GEN4_KNOCKBACK[charId]?.[key] || {};
-  return {...base, moveKey:key, ...tuning};
-}
-
 export function getAttackSpec(charId, moveKey) {
   const char = CHAR_MAP.get(charId); if (!char) return null;
   return buildSpec(charId, moveFromKey(char, moveKey), moveKey);
 }
 export function getAttackSpecForData(charId, attackData) {
   if (!attackData) return null;
-  if (String(charId || '').startsWith('g4_')) {
-    const g4 = getGen4CombatSpec(charId, attackData);
-    if (g4) return g4;
-  }
   if (GEN1_MOVE_SPECS[charId]) {
     const raw = attackData.sigType;
     const key = attackData.isSuper ? 'super' : attackData.isHeavy ? (raw === 'downHeavy' ? 'dh' : raw === 'upHeavy' ? 'upHeavy' : 'sh') : raw === 'up' ? 'us' : raw === 'down' || raw === 'downNormal' ? 'ds' : 'ss';
@@ -371,7 +301,6 @@ export function specKnockbackVector(attacker, defender, profile){
   if(p==='inward'){const dx=attacker.x-defender.x,dy=attacker.y-defender.y,len=Math.hypot(dx,dy)||1;return{x:dx/len,y:dy/len};}
   if(p==='forwardcontact'){const dy=(defender.y-attacker.y)/90;return{x:f,y:Math.max(-.75,Math.min(.35,dy))};}
   if(p==='radialup'){const dx=defender.x-attacker.x;return{x:Math.max(-.8,Math.min(.8,dx/100)),y:-1};}
-  if(p==='down'){const dx=defender.x-attacker.x;return{x:Math.max(-.65,Math.min(.65,dx/100)),y:.85};}
   if(p==='velocity'){const vx=attacker.vx||f,vy=attacker.vy||0,len=Math.hypot(vx,vy)||1;return{x:vx/len,y:vy/len};}
   return {x:f,y:-.38};
 }
