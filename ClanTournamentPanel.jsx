@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
 
-export default function ClanTournamentPanel({ supabase, currentUserId, myClan, onGrantTokens }) {
+export default function ClanTournamentPanel({ supabase, myClan, onGrantTokens }) {
   const [reward, setReward] = useState(null); const [week, setWeek] = useState(null); const [monthly, setMonthly] = useState([]); const [notice, setNotice] = useState(''); const [loading, setLoading] = useState(true);
   const refresh = async () => { if (!supabase) return; setLoading(true); try {
-    await supabase.rpc('element6_ensure_clan_tournament_current_period');
+    const { error: ensureError } = await supabase.rpc('element6_ensure_clan_tournament_current_period');
+    if (ensureError) throw ensureError;
+    const weeklyQuery = supabase.from('element6_clan_tournament_weekly').select('*,clan_a:element6_clans!clan_a_id(id,name,tag,icon_url),clan_b:element6_clans!clan_b_id(id,name,tag,icon_url)').order('starts_at',{ascending:false}).limit(1);
+    if (myClan?.id) weeklyQuery.eq('user_clan_id', myClan.id);
     const [{data:w,error:we},{data:m,error:me}] = await Promise.all([
-      supabase.from('element6_clan_tournament_weekly').select('*,clan_a:element6_clans!clan_a_id(id,name,tag,icon_url),clan_b:element6_clans!clan_b_id(id,name,tag,icon_url)').eq('user_clan_id', currentUserId || '00000000-0000-0000-0000-000000000000').maybeSingle(),
-      supabase.from('element6_clan_tournament_monthly').select('rank,clan_id,clan_name,clan_tag,tournament_points,monthly_xp,qualified').order('rank',{ascending:true}).limit(100)
+      weeklyQuery.maybeSingle(),
+      supabase.from('element6_clan_tournament_monthly').select('rank,clan_id,clan_name,clan_tag,tournament_points,monthly_xp,monthly_wins,qualified,month_key').order('rank',{ascending:true}).limit(100)
     ]); if(we) throw we; if(me) throw me; setWeek(w||null); setMonthly(m||[]);
   } catch(e){ setNotice(e?.message||'Tournament data could not be loaded.'); } finally { setLoading(false); } };
   const claimReward = async () => { try { const {data,error}=await supabase.rpc('element6_claim_clan_tournament_reward'); if(error) throw error; if(data?.claimed){ await onGrantTokens?.(Number(data.tokens||0)); setReward(data); setNotice(`Monthly championship reward claimed (contribution-scaled): ${Number(data.tokens||0).toLocaleString()} tokens.`); } else if(data?.reason==='already_claimed') setNotice('This month’s championship reward was already claimed.'); } catch(e){ setNotice(e?.message||'Reward could not be claimed.'); } };
-  useEffect(()=>{ refresh(); const t=setInterval(refresh,30000); return()=>clearInterval(t); },[supabase,currentUserId]);
+  useEffect(()=>{ refresh(); const t=setInterval(refresh,30000); return()=>clearInterval(t); },[supabase,myClan?.id]);
   return <section className="space-y-4">
     <div className="rounded-2xl border bg-card p-5"><div className="flex justify-between items-start gap-3"><div><h2 className="font-heading text-xl">CLAN TOURNAMENTS</h2><p className="text-xs text-muted-foreground mt-1">Every week, clans are randomly paired. The clan that earns more XP during that week wins the matchup.</p></div><button onClick={refresh} className="rounded-lg bg-secondary px-3 py-2 text-xs">REFRESH</button></div>
       {loading ? <p className="mt-4 text-sm text-muted-foreground">Loading tournament…</p> : week ? <div className="mt-4 rounded-xl bg-secondary/50 p-4"><div className="text-xs text-muted-foreground">WEEK {week.week_key}</div><div className="mt-2 grid grid-cols-2 gap-3"><div className={`rounded-xl border p-3 ${week.winner_clan_id===week.clan_a_id?'border-accent':''}`}><b>{week.clan_a?.name||'Clan A'}</b><div className="text-xs">{Number(week.clan_a_xp||0).toLocaleString()} XP</div></div><div className={`rounded-xl border p-3 ${week.winner_clan_id===week.clan_b_id?'border-accent':''}`}><b>{week.clan_b?.name||'Clan B'}</b><div className="text-xs">{Number(week.clan_b_xp||0).toLocaleString()} XP</div></div></div><div className="mt-3 text-xs text-muted-foreground">{week.status==='complete' ? `Winner: ${week.winner_clan_id===week.clan_a_id?week.clan_a?.name:week.clan_b?.name}` : 'Matchup is active.'}</div></div> : <p className="mt-4 text-sm text-muted-foreground">Join a clan to participate.</p>}
