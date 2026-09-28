@@ -34,47 +34,48 @@ async function convertReplayToMP4(webmBlob) {
     target: new BufferTarget(),
   });
 
+  const videoTrack = await input.getPrimaryVideoTrack();
+  if (!videoTrack) throw new Error('Replay contains no video track.');
+  const width = await videoTrack.getDisplayWidth();
+  const height = await videoTrack.getDisplayHeight();
+  const fpsInfo = await videoTrack.computeFrameRateMetrics().catch(() => null);
+  const frameRate = Math.max(24, Math.min(60, fpsInfo?.bestGuessFrameRate || 60));
   const videoQuality = new Quality({ bitrate: 8000000 });
-  const videoOK = await canEncodeVideo('avc', {
-    width: 1280,
-    height: 720,
-    frameRate: 60,
-    quality: videoQuality,
-  });
-  if (!videoOK) throw new Error('H.264 video encoding is unavailable in this browser.');
 
-  let hasAudio = false;
-  try { hasAudio = Boolean(await input.getPrimaryAudioTrack()); } catch {}
+  if (!(await canEncodeVideo('avc', { width, height, frameRate, quality: videoQuality }))) {
+    throw new Error(`H.264 encoding is unavailable for ${width}x${height} video.`);
+  }
 
-  if (hasAudio) {
-    const audioOK = await canEncodeAudio('aac', {
-      numberOfChannels: 2,
-      sampleRate: 48000,
-      quality: new Quality({ bitrate: 192000 }),
-    });
-    if (!audioOK) throw new Error('AAC audio encoding is unavailable in this browser.');
+  const audioTrack = await input.getPrimaryAudioTrack().catch(() => null);
+  let audioOptions = null;
+  if (audioTrack) {
+    const channels = await audioTrack.getNumberOfChannels().catch(() => 2);
+    const sampleRate = await audioTrack.getSampleRate().catch(() => 48000);
+    if (await canEncodeAudio('aac', { numberOfChannels: channels, sampleRate, quality: new Quality({ bitrate: 192000 }) })) {
+      audioOptions = { codec: 'aac', quality: new Quality({ bitrate: 192000 }), forceTranscode: true };
+    }
   }
 
   const conversion = await Conversion.init({
     input,
     output,
-    video: {
+    tracks: 'primary',
+    video: async track => ({
       codec: 'avc',
+      width: await track.getDisplayWidth(),
+      height: await track.getDisplayHeight(),
       quality: videoQuality,
       forceTranscode: true,
-      frameRate: 60,
+      frameRate,
       hardwareAcceleration: 'prefer-hardware',
-    },
-    ...(hasAudio ? {
-      audio: {
-        codec: 'aac',
-        quality: new Quality({ bitrate: 192000 }),
-        forceTranscode: true,
-      },
-    } : {}),
+    }),
+    ...(audioOptions ? { audio: audioOptions } : { audio: { discard: true } }),
   });
 
-  if (!conversion.isValid) throw new Error('Replay MP4 conversion is invalid.');
+  if (!conversion.isValid) {
+    const reasons = (conversion.discardedTracks || []).map(x => x.reason).join(', ');
+    throw new Error(`Replay MP4 conversion is invalid${reasons ? ` (${reasons})` : ''}.`);
+  }
   await conversion.execute();
 
   const buffer = output.target.buffer;
@@ -118,6 +119,8 @@ export function startMatchReplay(canvasEl, meta = {}) {
 export async function stopMatchReplay() {
   if (timer) { clearTimeout(timer); timer = null; }
   const recorder = active;
+  const sessionStartedAt = startedAt;
+  const sessionMeta = { ...(window.__e6MatchReplayMeta || {}) };
   active = null;
   window.__e6MatchReplayRecording = false;
 
@@ -136,13 +139,15 @@ export async function stopMatchReplay() {
         // Never save a replay as WebM or fake an MP4 by renaming the file.
         // Replays are saved only after a real H.264/AAC MP4 conversion succeeds.
         const mp4 = await convertReplayToMP4(webm);
-        const meta = window.__e6MatchReplayMeta || {};
+        const meta = sessionMeta;
+        const endedAt = Date.now();
         const id = `replay_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         await saveReplayBlob(id, mp4, {
           mime: 'video/mp4',
           extension: 'mp4',
-          duration: (Date.now() - startedAt) / 1000,
-          replayMeta: { ...meta, createdAt: startedAt, endedAt: Date.now(), format: 'mp4' },
+          duration: (Date.now() - sessionStartedAt) / 1000,
+          replay: true,
+          replayMeta: { ...meta, createdAt: sessionStartedAt, endedAt, format: 'mp4' },
         });
         await trimClips(80).catch(() => {});
         window.dispatchEvent(new CustomEvent('replaySaved', { detail: { id, replay: true, extension: 'mp4', mime: 'video/mp4' } }));

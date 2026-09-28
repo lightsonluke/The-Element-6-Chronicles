@@ -1,4 +1,5 @@
 import db from './localBackend';
+import cloudCommunity from './cloudCommunity.js';
 
 import React, { useState, useEffect } from 'react';
 
@@ -85,11 +86,11 @@ export default function PlayerProfileModal({ player, me, onClose, onPlayCampaign
 
   const loadStages = async () => {
     setView('stages');
-    try { const list = await db.entities.UploadedStage.filter({ owner_user_id: player.id, is_private: false }, '-created_date', 50); setStages(list || []); } catch {}
+    try { const list = await cloudCommunity.entities.UploadedStage.filter({ owner_user_id: player.id, is_private: false, hidden: false }, '-created_date', 50); setStages(list || []); } catch {}
   };
   const loadCampaigns = async () => {
     setView('campaigns');
-    try { const list = await db.entities.Campaign.filter({ owner_user_id: player.id, is_public: true }, '-created_date', 50); setCampaigns(list || []); } catch {}
+    try { const list = await cloudCommunity.entities.Campaign.filter({ owner_user_id: player.id, is_public: true, hidden: false }, '-created_date', 50); setCampaigns(list || []); } catch {}
   };
   const loadFlyers = async () => {
     setView('flyers');

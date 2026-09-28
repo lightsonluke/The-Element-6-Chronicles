@@ -21,14 +21,36 @@ export default function TheTableLobby({ onBack, unlockedIds=[], favoriteId='yell
       supabase.from('element6_table_tournaments').select('*').eq('id',id).maybeSingle(),
       supabase.from('element6_table_players').select('*').eq('tournament_id',id).order('slot')
     ]);
-    if(!t)return;
+    if(!t){
+      setError('The Table tournament could not be loaded.');
+      return;
+    }
+    setError('');
     setTournament(t);setPlayers(p||[]);
     if(t.status==='voting')setPhase('voting');
     else if(t.status==='playing'){ if(phase==='voting' && !revealing){ setRevealing(true); setTimeout(()=>setRevealing(false),2200); } setPhase('playing'); }
     else if(t.status==='finished')setPhase('finished');
   };
 
-  useEffect(()=>{supabase.auth.getUser().then(({data})=>setUser(data.user||null)).catch(()=>{});},[]);
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{
+      const {data:{user:u}}=await supabase.auth.getUser();
+      if(cancelled)return;
+      setUser(u||null);
+      if(!u)return;
+      const {data,error}=await supabase.rpc('element6_get_my_table');
+      if(cancelled)return;
+      if(error){ setError(error.message); return; }
+      if(data?.tournament_id){
+        setTournamentId(data.tournament_id);
+        if(data.status==='voting')setPhase('voting');
+        else if(data.status==='playing')setPhase('playing');
+        else if(data.status==='finished')setPhase('finished');
+      }
+    })().catch(e=>{if(!cancelled)setError(e?.message||'Could not load The Table.');});
+    return()=>{cancelled=true;};
+  },[]);
   useEffect(()=>{
     if(!tournamentId)return;
     refresh(tournamentId);
@@ -60,8 +82,10 @@ export default function TheTableLobby({ onBack, unlockedIds=[], favoriteId='yell
 
   const join=async(selectedChar=char)=>{
     if(!user){setError('Sign in to enter The Table.');return;}
-    const {data,error:e}=await supabase.rpc('element6_join_the_table',{p_char_id:selectedChar,p_loadout:{element:equippedElements?.[char]||'basic',equippedSkins,equippedAccessories,equippedShikigami}});
+    setError('JOINING THE TABLE…');
+    const {data,error:e}=await supabase.rpc('element6_join_the_table',{p_char_id:selectedChar,p_loadout:{element:equippedElements?.[selectedChar]||'basic',equippedSkins,equippedAccessories,equippedShikigami}});
     if(e){setError(e.message);return;}
+    if(!data?.tournament_id){setError('The Table did not return a tournament.');return;}
     setError('');setTournamentId(data.tournament_id);sfx.matchFound();
   };
   const vote=async stage=>{
@@ -74,7 +98,13 @@ export default function TheTableLobby({ onBack, unlockedIds=[], favoriteId='yell
     await supabase.rpc('element6_table_report_result',{p_tournament_id:tournament.id,p_match_id:activeRound.matchId,p_winner:winner}).catch(e=>setError(e.message));
     setLastResult(winner);setWatching(false);
   };
-  const leave=async()=>{if(tournament?.id)await supabase.rpc('element6_leave_the_table',{p_tournament_id:tournament.id}).catch(()=>{});setTournament(null);setTournamentId(null);setPlayers([]);setPhase('pick');setLastResult(null)};
+  const leave=async()=>{
+    if(tournament?.id){
+      const {error:e}=await supabase.rpc('element6_leave_the_table',{p_tournament_id:tournament.id});
+      if(e){setError(e.message);return;}
+    }
+    setTournament(null);setTournamentId(null);setPlayers([]);setPhase('pick');setLastResult(null);setError('');
+  };
 
   if(phase==='pick')return <div className="w-full max-w-4xl"><div className="flex justify-between mb-4"><button onClick={onBack} className="px-4 py-2 bg-secondary rounded"><GameIcon emoji="←" size={14}/> BACK</button><h2 className="text-2xl font-heading text-accent">THE TABLE</h2><div/></div><p className="text-center text-xs text-muted-foreground mb-4">8 players · one stock · every round is one fight.</p><UniversalCharacterSelect title="THE TABLE · PICK YOUR FIGHTER" startLabel="JOIN THE TABLE" unlockedIds={unlockedIds} favoriteId={favoriteId} playerCount={1} equippedSkins={equippedSkins} equippedAccessories={equippedAccessories} equippedElements={equippedElements} onStart={c=>{setChar(c);join(c)}} onBack={onBack}/>{error&&<p className="text-center text-destructive text-xs">{error}</p>}</div>;
 

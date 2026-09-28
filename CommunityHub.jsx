@@ -280,19 +280,20 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
     return () => clearInterval(t);
   }, [userId]);
 
-  // Track party membership
+  // Track the real online party membership so Community Hub chat uses the same
+  // Supabase party as Online -> Party instead of browser-local Party records.
   useEffect(() => {
     if (!userId) return;
+    let cancelled = false;
     const load = async () => {
       try {
-        const list = await db.entities.Party.filter({});
-        const mine = (list || []).filter(p => (p.member_ids || []).includes(userId));
-        setParty(mine[0] || null);
+        const { data, error } = await supabase.rpc('element6_get_my_party');
+        if (!cancelled && !error) setParty(data || null);
       } catch {}
     };
     load();
-    const t = setInterval(load, 8000);
-    return () => clearInterval(t);
+    const t = setInterval(load, 4000);
+    return () => { cancelled = true; clearInterval(t); };
   }, [userId]);
 
   // Request notification permission once

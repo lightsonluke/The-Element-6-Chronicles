@@ -109,6 +109,7 @@ import TheTableLobby from './TheTableLobby.jsx';
 import PartyScreen from './PartyScreen.jsx';
 import { sanitizeFreehandStroke } from './freehandSafe.js';
 import { recordClanMatchActivity } from './clanActivity.js';
+import { startMatchReplay, stopMatchReplay } from './matchReplayRecorder.js';
 
 // Screens where a canvas game is actively running and the gamepad is used
 // for gameplay. Menu navigation is disabled ONLY on these screens so the
@@ -1270,6 +1271,59 @@ export default function Game() {
     } : null;
     return () => { if (window.__e6MatchReplayMeta?.mode === screen) window.__e6MatchReplayMeta = null; };
   }, [screen, onlineMode]);
+
+  // Match replay recorder: attach to the actual game canvas only while a
+  // match screen is active. This fixes replays not saving at all because the
+  // recorder previously existed as a utility but was never started by Game.
+  useEffect(() => {
+    const replayScreens = new Set([
+      'fighting','soccer','sports','training','team','sportslobby',
+      'onlinesportsmatch','battleroyale','onlinelobby','grandcircuit',
+      'customrooms','lan'
+    ]);
+    let cancelled = false;
+    let currentCanvas = null;
+    let scanTimer = null;
+
+    const findGameCanvas = () => {
+      const canvases = [...document.querySelectorAll('canvas')];
+      return canvases
+        .filter(c => c.isConnected && c.width >= 240 && c.height >= 160)
+        .sort((a,b) => (b.width*b.height) - (a.width*a.height))[0] || null;
+    };
+
+    const scan = async () => {
+      if (cancelled) return;
+      if (!replayScreens.has(screen)) {
+        if (currentCanvas) {
+          currentCanvas = null;
+          await stopMatchReplay().catch(() => {});
+        }
+        return;
+      }
+      const canvas = findGameCanvas();
+      if (!canvas) return;
+      if (canvas === currentCanvas) return;
+      if (currentCanvas) await stopMatchReplay().catch(() => {});
+      if (cancelled) return;
+      const meta = window.__e6MatchReplayMeta || { mode: screen, modeLabel: screen };
+      const started = startMatchReplay(canvas, meta);
+      if (started) currentCanvas = canvas;
+    };
+
+    scan();
+    scanTimer = setInterval(scan, 350);
+    const observer = new MutationObserver(() => { scan(); });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      cancelled = true;
+      if (scanTimer) clearInterval(scanTimer);
+      observer.disconnect();
+      currentCanvas = null;
+      stopMatchReplay().catch(() => {});
+    };
+  }, [screen]);
 
   // Track whether the chat screen is open (to suppress notifications while viewing)
   useEffect(() => { onChatScreenRef.current = screen === 'chat'; }, [screen]);
