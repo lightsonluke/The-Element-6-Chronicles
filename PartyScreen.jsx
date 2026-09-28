@@ -24,7 +24,7 @@ export default function PartyScreen({ onBack, onQueueMode }) {
     const [{data:mine},{data:pub},{data:reqs}] = await Promise.all([
       supabase.from('element6_parties').select('*').eq('host_user_id',u.id).maybeSingle(),
       supabase.from('element6_parties').select('*').eq('is_public',true).eq('status','open').order('created_at',{ascending:false}).limit(30),
-      supabase.from('player_friend_requests').select('*').or(`sender_id.eq.${u.id},recipient_id.eq.${u.id}`).eq('status','accepted')
+      supabase.from('player_friend_requests').select('*').or('sender_id.eq.' + u.id + ',recipient_id.eq.' + u.id).eq('status','accepted')
     ]);
     setParty(mine || null);
     const ids=[...new Set((reqs||[]).map(r=>r.sender_id===u.id?r.recipient_id:r.sender_id))];
@@ -34,7 +34,7 @@ export default function PartyScreen({ onBack, onQueueMode }) {
 
   useEffect(()=>{load(); const t=setInterval(load,2500); return()=>clearInterval(t)},[load]);
 
-  const create=async()=>{if(!user)return;setError('');const {data,error:e}=await supabase.rpc('element6_create_party',{p_public:isPublic,p_name:`${nameOf(user)}'s Party'});if(e){setError(e.message);return;}setParty(data);sfx.purchaseSuccess();
+  const create=async()=>{if(!user)return;setError('');const {data,error:e}=await supabase.rpc('element6_create_party',{p_public:isPublic,p_name:nameOf(user) + "'s Party"});if(e){setError(e.message);return;}setParty(data);sfx.purchaseSuccess();
     if(autoInvite && friends.length) await Promise.all(friends.map(f=>supabase.rpc('element6_send_party_invite',{p_party_id:data.id,p_to_user:f.user_id}).catch(()=>null)));
   };
   const join=async id=>{const args=id?{p_party_id:id}:{p_party_code:joinCode.trim()};const {data,error:e}=await supabase.rpc('element6_join_party',args);if(e){setError(e.message);return;}setParty(data);sfx.click()};
@@ -60,8 +60,18 @@ export default function PartyScreen({ onBack, onQueueMode }) {
         <div className="mt-4"><h4 className="text-xs font-heading text-primary">FRIENDS</h4>{friends.filter(f=>!(party.members||[]).some(m=>m.user_id===f.user_id)).map(f=><button key={f.user_id} onClick={()=>invite(f.user_id)} className="w-full mt-1 p-2 text-left rounded bg-secondary/30 text-xs">+ INVITE {f.username}</button>)}</div>
       </div>
       <div className="bg-card border rounded-xl p-5"><h3 className="font-heading text-primary">QUEUE AS A PARTY</h3><p className="text-xs text-muted-foreground">All party members are kept together. If a mode has fewer slots, extra party members are placed in spectator status.</p>
-        <div className="grid grid-cols-2 gap-2 mt-4">{MODES.map(([id,label])=><button key={id} onClick={()=>setMode(id)} className={`p-2 rounded border text-xs ${mode===id?'border-accent bg-accent/10':'border-border bg-secondary/30'}`}>{label}</button>)}</div>
-        <button onClick={queue} disabled={!mode} className="mt-4 w-full py-3 rounded bg-primary text-primary-foreground font-heading disabled:opacity-40">QUEUE PARTY{mode?` · ${mode.toUpperCase()}`:''}</button>
+        <div className="grid grid-cols-2 gap-2 mt-4">
+          {MODES.map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setMode(id)}
+              className={'p-2 rounded border text-xs ' + (mode === id ? 'border-accent bg-accent/10' : 'border-border bg-secondary/30')}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <button onClick={queue} disabled={!mode} className="mt-4 w-full py-3 rounded bg-primary text-primary-foreground font-heading disabled:opacity-40">QUEUE PARTY{mode ? ' · ' + mode.toUpperCase() : ''}</button>
       </div>
     </div>}
   </div>
