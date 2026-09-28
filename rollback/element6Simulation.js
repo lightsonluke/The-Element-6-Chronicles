@@ -119,7 +119,7 @@ function prepareCharacter(character, elementId, shikigamiId) {
   return prepared;
 }
 
-export function createElement6OnlineState({ matchId, mode, stageId = '__random__', host, guest }) {
+export function createElement6OnlineState({ matchId, mode, stageId = '__random__', host, guest, stocks = 3 }) {
   if (mode !== 'ranked' && mode !== 'unranked') throw new Error('Element 6 rollback currently supports ranked and unranked only.');
   if (!host?.character || !guest?.character) throw new Error('Both online players require character data.');
 
@@ -133,6 +133,8 @@ export function createElement6OnlineState({ matchId, mode, stageId = '__random__
   guestFighter.gameMode = mode;
   hostFighter.playerIndex = 1;
   guestFighter.playerIndex = 2;
+  hostFighter.stocks = Math.max(1, Number(stocks) || 3);
+  guestFighter.stocks = Math.max(1, Number(stocks) || 3);
 
   return {
     version: 1,
@@ -140,7 +142,7 @@ export function createElement6OnlineState({ matchId, mode, stageId = '__random__
     mode,
     // Included in rollback snapshots/checksums so both clients must agree on
     // the server-selected normal stage before the match advances.
-    stageId: resolveOnlineStageId('__random__', matchId),
+    stageId: resolveOnlineStageId(stageId, matchId),
     seed: hashSeed(String(matchId)),
     timerFrames: 4 * 60 * 60,
     winner: null,

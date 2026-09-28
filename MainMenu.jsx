@@ -42,18 +42,7 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
       { label: 'Regular Battle', key: 'regularbattle' },
       { label: 'Stage Editor', key: 'stageeditor' },
     ]},
-    { type: 'tab', id: 'ranked', label: 'RANKED', items: [
-      { label: 'Online Ranked', key: 'onlineranked' },
-      { label: 'Online Unranked', key: 'onlineunranked' },
-    ]},
-    { type: 'tab', id: 'online', label: 'ONLINE', items: [
-      { label: 'Battle Royale', key: 'battleroyale' },
-      { label: 'Custom Rooms', key: 'customrooms' },
-      { label: 'LAN Play', key: 'lan' },
-      { label: 'Friends', key: 'friends' },
-      { label: 'Chat', key: 'chat' },
-      { label: 'ELO', key: 'elo' },
-    ]},
+    { type: 'button', label: 'ONLINE', key: 'online' },
     { type: 'button', label: 'SPORTS', key: 'sports' },
     { type: 'button', label: 'SHOP', key: 'shop' },
     { type: 'tab', id: 'sandbox', label: 'SANDBOX', items: [
@@ -77,6 +66,7 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
       { label: 'Hero Codex', key: 'codex' },
     ]},
     { type: 'tab', id: 'quests', label: 'QUESTS', items: [
+      { label: 'Daily Reward', key: 'dailyreward' },
       { label: 'Daily Quests', key: 'daily' },
       { label: 'Fight Quests', key: 'fightquests' },
       { label: 'Leaderboard', key: 'leaderboard' },

@@ -303,7 +303,7 @@ input.el6-controller-focus { filter: brightness(1.12); }
 
 /* Volleyball must remain locked to the viewport center even while the document scroll position changes. */
 .el6-game-canvas-host > canvas.el6-volleyball-canvas {
-  position: fixed !important;
+  position: absolute !important;
   left: 50% !important;
   top: 50% !important;
   right: auto !important;

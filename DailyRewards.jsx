@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 
 import GameIcon from "./GameIcon.jsx";
 import { sfx } from './sfx.js';
+import { supabase } from './supabaseClient.js';
 
 function getTodayStr() {
   const d = new Date();
@@ -24,7 +25,8 @@ export default function DailyRewards({ onClaim, onClose, coins }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const user = await db.auth.me().catch(() => null);
+        const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+        const user = authData?.user || await db.auth.me().catch(() => null);
         if (!user) { setLoading(false); return; }
         const existing = await db.entities.DailyReward.filter({ user_id: user.id });
         const today = getTodayStr();
@@ -48,7 +50,8 @@ export default function DailyRewards({ onClaim, onClose, coins }) {
     if (claiming || claimed) return;
     setClaiming(true);
     try {
-      const user = await db.auth.me().catch(() => null);
+      const { data: authData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+      const user = authData?.user || await db.auth.me().catch(() => null);
       if (!user) return;
       const today = getTodayStr();
 

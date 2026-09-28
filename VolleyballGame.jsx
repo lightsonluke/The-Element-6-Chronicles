@@ -73,24 +73,33 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
       : equippedAccessories;
   }
   const mergedAccessories = botAccsRef.current;
-  // Volleyball is a full-viewport game. Lock the document and visual viewport
-  // while it is mounted so a parent page scroll/offset cannot pull the canvas
-  // down and to the right immediately after matchmaking.
+  // The canvas portal owns the viewport. Do not manipulate document scroll position;
+  // the old body/visualViewport lock caused the canvas to drift on browsers that
+  // restore scroll offsets during matchmaking.
   useEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const previous = { htmlOverflow: html.style.overflow, bodyOverflow: body.style.overflow, scrollX: window.scrollX, scrollY: window.scrollY };
-    html.style.overflow = 'hidden';
-    body.style.overflow = 'hidden';
-    window.scrollTo(0, 0);
-    const lock = () => { if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0); };
-    window.addEventListener('scroll', lock, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', lock);
-      html.style.overflow = previous.htmlOverflow;
-      body.style.overflow = previous.bodyOverflow;
-      window.scrollTo(previous.scrollX, previous.scrollY);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const host = canvas.parentElement;
+    const fit = () => {
+      if (!host) return;
+      host.style.position = 'fixed';
+      host.style.inset = '0';
+      host.style.width = '100vw';
+      host.style.height = '100dvh';
+      host.style.overflow = 'hidden';
+      canvas.style.position = 'absolute';
+      canvas.style.left = '50%';
+      canvas.style.top = '50%';
+      canvas.style.right = 'auto';
+      canvas.style.bottom = 'auto';
+      canvas.style.margin = '0';
+      canvas.style.transform = 'translate(-50%, -50%)';
+      canvas.style.width = 'min(100vw, calc(100dvh * 16 / 9))';
+      canvas.style.height = 'min(100dvh, calc(100vw * 9 / 16))';
     };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
   }, []);
   useEffect(() => {
     remoteStateRef.current = remoteState;

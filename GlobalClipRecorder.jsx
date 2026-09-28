@@ -6,6 +6,7 @@ import {
   isClipRecorderActive
 } from './clipRecorder.js';
 import { saveClipBlob, trimClips } from './clipStorage.js';
+import { startMatchReplay, stopMatchReplay } from './matchReplayRecorder.js';
 
 function showToast(message) {
   const old = document.getElementById('clip-toast');
@@ -80,6 +81,7 @@ export default function GlobalClipRecorder() {
   const canvasRef = useRef(null);
   const scanTimerRef = useRef(null);
   const savingRef = useRef(false);
+  const replayCanvasRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,13 +89,20 @@ export default function GlobalClipRecorder() {
     const start = () => {
       if (cancelled) return;
       const canvas = findGameCanvas();
-      if (!canvas) return;
+      if (!canvas) {
+        if (replayCanvasRef.current) { stopMatchReplay().catch(() => {}); replayCanvasRef.current = null; }
+        return;
+      }
       // Prematch animation canvases are deliberately not marked as match canvases.
       // Once the real sport/BR canvas mounts, switch the recorder to it automatically.
       if (canvasRef.current === canvas && isClipRecorderActive()) return;
       if (initClipRecorder(canvas)) {
         canvasRef.current = canvas;
         window.__e6ClipRecorderActive = true;
+        if (replayCanvasRef.current !== canvas) {
+          replayCanvasRef.current = canvas;
+          startMatchReplay(canvas, window.__e6MatchReplayMeta || {});
+        }
       }
     };
 
@@ -142,7 +151,9 @@ export default function GlobalClipRecorder() {
 
       scanTimerRef.current = null;
       stopClipRecorder();
+      stopMatchReplay().catch(() => {});
       canvasRef.current = null;
+      replayCanvasRef.current = null;
       savingRef.current = false;
     };
   }, []);

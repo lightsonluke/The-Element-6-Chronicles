@@ -6,6 +6,7 @@ const DB_NAME = 'element6_clips_native_v4';
 const STORE = 'clips';
 const VERSION = 1;
 const MAX_CLIPS = 30;
+const MAX_REPLAYS = 50;
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -44,6 +45,8 @@ export async function saveClipBlob(id, blob, meta = {}) {
       size: blob.size,
       duration: Number(meta.duration) || 30,
       previewBlob: meta.previewBlob || blob,
+      replay: Boolean(meta.replay),
+      replayMeta: meta.replayMeta || null,
     });
     tx.oncomplete = () => {
       db.close();
@@ -72,6 +75,8 @@ export async function listClipMetadata() {
           extension: row.extension || (String(row.mime || row.blob?.type).includes('mp4') ? 'mp4' : 'webm'),
           size: row.size || row.blob?.size || 0,
           duration: row.duration || 30,
+          replay: Boolean(row.replay),
+          replayMeta: row.replayMeta || null,
         }))
         .sort((a, b) => (b.created || 0) - (a.created || 0)));
     };
@@ -155,4 +160,20 @@ export async function getClipPreviewBlob(id) {
       reject(request.error);
     };
   });
+}
+
+
+export async function saveReplayBlob(id, blob, meta = {}) {
+  return saveClipBlob(id, blob, {
+    ...meta,
+    replay: true,
+    replayMeta: meta.replayMeta || null,
+    mime: meta.mime || blob?.type || 'video/webm',
+    extension: meta.extension || 'webm',
+  });
+}
+
+export async function listReplayMetadata() {
+  const rows = await listClipMetadata();
+  return rows.filter(row => row.replay).slice(0, MAX_REPLAYS);
 }

@@ -28,6 +28,9 @@ export default function ClipsScreen({
   const [sources, setSources] = useState({});
   const [failed, setFailed] = useState({});
   const [activeViewer, setActiveViewer] = useState(null);
+  const [section, setSection] = useState('clips');
+  const [speed, setSpeed] = useState(1);
+  const [zoom, setZoom] = useState(1);
   const videoRefs = useRef({});
   const sourceRefs = useRef({});
 
@@ -106,6 +109,7 @@ export default function ClipsScreen({
   }, []);
 
   const getVideo = id => videoRefs.current[id];
+  const visibleClips = clips.filter(c => section === 'replays' ? c.replay : !c.replay);
 
   const stepFrame = (id, direction) => {
     const video = getVideo(id);
@@ -144,6 +148,7 @@ export default function ClipsScreen({
     setActiveViewer(id);
     try {
       video.currentTime = 0;
+      video.playbackRate = speed;
       await video.play();
     } catch {}
   };
@@ -156,7 +161,7 @@ export default function ClipsScreen({
     const a = document.createElement('a');
     a.href = url;
     a.download =
-      `Element6_Clip_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.${source.extension || extensionForMime(source.mime)}`;
+      `Element6_${clip.replay ? 'MatchReplay' : 'Clip'}_${new Date(clip.created || Date.now()).toISOString().replace(/[:.]/g, '-')}.${source.extension || extensionForMime(source.mime)}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -198,9 +203,13 @@ export default function ClipsScreen({
     <div className="min-h-screen w-full overflow-y-auto p-6 bg-background">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-2xl font-heading text-accent tracking-wider">
-            <GameIcon emoji="🎬" size={14} /> CLIPS
-          </h2>
+          <div>
+            <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="🎬" size={14} /> CLIPS</h2>
+            <div className="flex gap-1 mt-2">
+              <button onClick={() => setSection('clips')} className={`px-2 py-1 rounded text-[9px] font-heading ${section==='clips'?'bg-accent text-accent-foreground':'bg-secondary'}`}>CLIPS</button>
+              <button onClick={() => setSection('replays')} className={`px-2 py-1 rounded text-[9px] font-heading ${section==='replays'?'bg-accent text-accent-foreground':'bg-secondary'}`}>MATCH REPLAYS</button>
+            </div>
+          </div>
           <button
             onClick={onBack}
             className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80"
@@ -210,16 +219,16 @@ export default function ClipsScreen({
         </div>
 
         <p className="text-xs text-muted-foreground font-body mb-5">
-          MP4 · 60 FPS · saved locally in your browser.
+          Clips and automatic Match Replays are saved locally in your browser.
         </p>
 
-        {clips.length === 0 ? (
+        {visibleClips.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground font-body">
             No clips yet.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {clips.slice(0, 30).map(clip => {
+            {visibleClips.slice(0, section === 'replays' ? 50 : 30).map(clip => {
               const source = sources[clip.id];
               const videoReady = !!source?.blob;
 
@@ -258,7 +267,7 @@ export default function ClipsScreen({
                         playsInline
                         preload="auto"
                         className="w-full rounded-lg bg-black block"
-                        style={{ aspectRatio: '16 / 9' }}
+                        style={{ aspectRatio: '16 / 9', ...(clip.replay ? { transform: `scale(${zoom})`, transformOrigin: 'center center' } : {}) }}
                         onError={() => {
                           setFailed(prev => ({
                             ...prev,
@@ -306,14 +315,14 @@ export default function ClipsScreen({
 
                   {failed[clip.id] && (
                     <div className="mt-2 p-2 rounded bg-destructive/10 text-destructive text-[10px]">
-                      This MP4 could not be decoded by the browser.
+                      This saved recording could not be decoded by the browser.
                     </div>
                   )}
 
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span className="text-[10px] text-muted-foreground font-body flex-1 min-w-[180px]">
                       {new Date(clip.created || Date.now()).toLocaleString()}
-                      {' · MP4 · '}
+                      {` · ${clip.replay ? (clip.extension || 'WEBM').toUpperCase() : 'MP4'} · `}
                       {Math.round(clip.duration || 30)}s
                     </span>
 
@@ -330,8 +339,13 @@ export default function ClipsScreen({
                       onClick={() => download(clip)}
                       className="px-2 py-1 bg-primary/30 text-primary rounded text-[10px] font-heading disabled:opacity-40"
                     >
-                      <GameIcon emoji="⬇" size={14} /> SAVE MP4
+                      <GameIcon emoji="⬇" size={14} /> SAVE {clip.replay ? (clip.extension || 'WEBM').toUpperCase() : 'MP4'}
                     </button>
+                    {clip.replay && <select value={speed} onChange={e => { const v=Number(e.target.value); setSpeed(v); const vdo=getVideo(clip.id); if(vdo)vdo.playbackRate=v; }} className="px-2 py-1 bg-secondary rounded text-[10px]">
+                      <option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1">1×</option><option value="1.5">1.5×</option><option value="2">2×</option>
+                    </select>}
+                    {clip.replay && <button onClick={()=>setZoom(z=>Math.min(2.5,Number((z+0.25).toFixed(2))))} className="px-2 py-1 bg-secondary rounded text-[10px]">ZOOM +</button>}
+                    {clip.replay && <button onClick={()=>setZoom(z=>Math.max(1,Number((z-0.25).toFixed(2))))} className="px-2 py-1 bg-secondary rounded text-[10px]">ZOOM −</button>}
 
                     <button
                       onClick={() => remove(clip.id)}

@@ -74,6 +74,8 @@ export default function RollbackOnlineFight({
   myElo,
   oppElo,
   stageId = 'splitcity',
+  stocks = 3,
+  onRoundFinished,
   myUsername = 'YOU',
   oppUsername = 'OPPONENT',
   sfxVolume = 70,
@@ -143,12 +145,13 @@ export default function RollbackOnlineFight({
     const initialState = createElement6OnlineState({
       matchId,
       mode,
-      stageId: '__random__',
+      stageId,
       host: {
         character: hostCharacter,
         elementId: hostLoadout.element || 'basic',
         shikigamiId: hostLoadout.equippedShikigami?.[hostCharacter.id],
       },
+      stocks,
       guest: {
         character: guestCharacter,
         elementId: guestLoadout.element || 'basic',
@@ -271,6 +274,7 @@ export default function RollbackOnlineFight({
       } : { winnerRole: winningRole, opponentDisconnected: true };
       const result = winningRole === role ? 'me' : winningRole === 'draw' ? 'draw' : 'opp';
       setWinner(result);
+      onRoundFinished?.({ winnerRole: winningRole, winnerUserId: winningRole === 'host' ? (isHost ? playerId : opponentPlayerId) : (isHost ? opponentPlayerId : playerId), proof: resultProofRef.current });
       try { db.entities.OnlineMatch.update(matchId, { status: 'finished', winner: winningRole }).catch(() => {}); } catch {}
     };
 
