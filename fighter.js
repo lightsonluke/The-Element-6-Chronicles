@@ -1935,8 +1935,7 @@ export function applyHit(attacker, defender) {
   const kbMul = 1 + defender.damage * 0.025;
   const kbBase = attacker.attackData.knockback || 1.0;
   const kbFactor = isLight ? 0.16 : attacker.attackData.isHeavy ? 0.32 : 0.24;
-  const specKbScale = Number(attacker.attackData.spec?.knockbackScale) || 1;
-  const kb = dmg * kbFactor * kbMul * kbBase * specKbScale * (attacker.knockbackMul || 1) * KNOCKBACK_SCALE * (1 - (defender.knockbackReduction || 0));
+  const kb = dmg * kbFactor * kbMul * kbBase * (attacker.knockbackMul || 1) * KNOCKBACK_SCALE * (1 - (defender.knockbackReduction || 0));
   const st = attacker.attackData.sigType;
 
   const spec = attacker.attackData.spec || getAttackSpecForData(attacker.char?.id, attacker.attackData);

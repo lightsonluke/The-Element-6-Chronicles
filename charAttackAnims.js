@@ -7,9 +7,12 @@ import { drawJab, drawSlash, drawWhip, drawLaunch, drawGround, drawSlam, drawCha
 import { drawSuper } from './attackSupers.js';
 import { drawUniqueSuper } from './uniqueSupers.js';
 import { PARTICLES } from './charAttackParticles.js';
-import { getAttackSpec, getAttackSpecForData } from './attackSpecs.js';
-import { drawSpecAttack, drawSpecSuper } from './attackSpecRenderer.js';
-import { drawGen5Attack, drawGen5Super } from './gen5AttackOverhaul.js';
+import { drawGen1Attack, drawGen1Super } from './gen1AttackAnims.js';
+import { drawGen2Attack, drawGen2Super } from './gen2AttackAnims.js';
+import { drawGen3Attack, drawGen3Super } from './gen3AttackAnims.js';
+import { drawGen4Attack, drawGen4Super } from './gen4AttackAnims.js';
+import { drawGen5Attack, drawGen5Super } from './gen5AttackAnims.js';
+import { drawGen5RestAttack, drawGen5RestSuper } from './gen5RestAttackAnims.js';
 
 const SUPER_W = 1200, SUPER_H = 700;
 
@@ -24,6 +27,7 @@ function getAttackKey(attack, attackKey) {
   const st = attack.sigType || attackKey || 'side';
   if (attack.isHeavy) {
     if (st === 'downHeavy' || st === 'down' || attack.isGroundPound) return 'dh';
+    if (st === 'upHeavy' || st === 'upheavy' || st === 'aerialHeavy' || st === 'aerial' || attack.isAerialHeavy) return 'uh';
     return 'sh';
   }
   if (st === 'up' || st === 'aerial' || attack.isRecovery) return 'us';
@@ -33,17 +37,28 @@ function getAttackKey(attack, attackKey) {
 
 // ── Main entry: draw sig/heavy attack with per-character config ──
 export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power) {
-  if (drawGen5Attack(ctx, x, y, color, p, facing, attack, charId)) {
-    ctx.shadowBlur = 0;
+  if (String(charId || '').startsWith('g1_')) {
+    drawGen1Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
     return;
   }
-  // The attached attack specification is authoritative for Gen I-V fighting moves.
-  // This path intentionally bypasses the older generic shape table so the animation
-  // stays attached to the same attack object that supplies the hitbox.
-  const spec = getAttackSpecForData(charId, attack);
-  if (spec) {
-    drawSpecAttack(ctx, x, y, color, p, facing, spec);
-    ctx.shadowBlur = 0;
+  if (String(charId || '').startsWith('g2_')) {
+    drawGen2Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
+    return;
+  }
+  if (String(charId || '').startsWith('g3_')) {
+    drawGen3Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
+    return;
+  }
+  if (String(charId || '').startsWith('g4_')) {
+    drawGen4Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
+    return;
+  }
+  if (['black','magenta','indigo','maroon','crimson','scarlet','white','silver','corpent','magneto','willow','cable','snodvor','kirsten','volt','temple','nightmare','hazel','whami','controller','evil','life','death','mercy'].includes(charId)) {
+    drawGen5RestAttack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
+    return;
+  }
+  if (['yellow','blue','purple','orange','green','pink','grey','turquoise','olive','copper','emerald','pearl','red','lavender','amber'].includes(charId) || String(charId || '').startsWith('g5_')) {
+    drawGen5Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
     return;
   }
 
@@ -89,18 +104,31 @@ export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, atta
 }
 
 // ── Main entry: draw super with per-character config ──
-export function drawCharSuper(ctx, x, y, color, p, charId) {
-  if (drawGen5Super(ctx, x, y, color, p, 1, charId, { isSuper: true, sigType: 'super' })) {
-    ctx.shadowBlur = 0;
+export function drawCharSuper(ctx, x, y, color, p, charId, facing = 1) {
+  if (String(charId || '').startsWith('g1_')) {
+    drawGen1Super(ctx, x, y, p, facing, charId);
     return;
   }
-  const spec = getAttackSpec(charId, 'Super');
-  if (spec) {
-    drawSpecSuper(ctx, x, y, color, p, spec, 1);
-    ctx.shadowBlur = 0;
+  if (String(charId || '').startsWith('g2_')) {
+    drawGen2Super(ctx, x, y, color, p, charId, facing);
     return;
   }
-
+  if (String(charId || '').startsWith('g3_')) {
+    drawGen3Super(ctx, x, y, color, p, charId, facing);
+    return;
+  }
+  if (String(charId || '').startsWith('g4_')) {
+    drawGen4Super(ctx, x, y, color, p, charId, facing);
+    return;
+  }
+  if (['black','magenta','indigo','maroon','crimson','scarlet','white','silver','corpent','magneto','willow','cable','snodvor','kirsten','volt','temple','nightmare','hazel','whami','controller','evil','life','death','mercy'].includes(charId)) {
+    drawGen5RestSuper(ctx, x, y, p, facing, charId);
+    return;
+  }
+  if (['yellow','blue','purple','orange','green','pink','grey','turquoise','olive','copper','emerald','pearl','red','lavender','amber'].includes(charId) || String(charId || '').startsWith('g5_')) {
+    drawGen5Super(ctx, x, y, p, facing, charId);
+    return;
+  }
   const config = getConfig(charId, '', color);
   if (!config || !config.sp) {
     // Fallback: generic burst

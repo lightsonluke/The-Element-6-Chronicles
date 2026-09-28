@@ -206,234 +206,103 @@ export function drawGen4Attack(ctx,x,y,color,p,facing,charId,move){facingWrap(ct
 export function drawGen4Super(ctx,x,y,color,p,charId,facing=1){facingWrap(ctx,x,y,facing,local=>{switch(charId){case'g4_cobalt':cobaltSuper(local,p);break;case'g4_cyan':cyanSuper(local,p);break;case'g4_onyx':onyxSuper(local,p);break;case'g4_gold':goldSuper(local,p);break;case'g4_vermilion':fireSuper(local,p);break;case'g4_umber':umberSuper(local,p);break;case'g4_graphite':graphiteSuper(local,p);break;case'g4_daichi':daichiSuper(local,p);break;case'g4_renko':renkoSuper(local,p);break;}});}
 
 function boxesFor(charId,m,t){
-  const e=out(t), b=[];
-  const Cc=(x,y,r)=>b.push({shape:'circle',x,y,r});
-  const B=(x,y,w,h)=>b.push({shape:'box',x,y,w,h});
-  const K=(x1,y1,x2,y2,r)=>b.push({shape:'capsule',x1,y1,x2,y2,r});
-  const P=points=>b.push({shape:'polygon',points});
-  const arcCaps=(cx,cy,r,a0,a1,count=7,rad=9)=>{
-    for(let i=0;i<count;i++){
-      const u=count===1?0:i/(count-1), a=a0+(a1-a0)*u;
-      Cc(cx+Math.cos(a)*r,cy+Math.sin(a)*r,rad);
-    }
-  };
-  const burst=(cx,cy,r,count=8,rad=9)=>{
-    for(let i=0;i<count;i++){
-      const a=i/count*Math.PI*2;
-      Cc(cx+Math.cos(a)*r,cy+Math.sin(a)*r*.62,rad);
-    }
-  };
-  switch(charId){
-    case'g4_cobalt':
-      if(m==='us'){
-        const y=-92*e; B(-17,y-56,34,112);
-        if(t>.34){const q=out((t-.34)/.66);P([[17,y-56],[17+72*q,y-82*q],[17+84*q,y-66*q],[17+38*q,y+2*q],[17,y+56]]);}
-      } else if(m==='ds'){
-        const q=out(Math.min(1,t/.68)), gap=72-48*q;
-        P([[-gap-22,-74],[-gap+22,-66],[-gap+18,-4],[-gap-26,-12]]);
-        P([[gap+22,-74],[gap-22,-66],[gap-18,-4],[gap+26,-12]]);
-        if(t>.55){const z=out((t-.55)/.45);burst(0,-30,30+28*z,8,8);}
-      } else if(m==='ss'){
-        const len=22+108*e; B(22+len/2,-50,len,28);
-        P([[22+len,-64],[22+len+18,-50],[22+len,-36]]);
-      } else if(m==='uh'){
-        const y=-92*e; B(-44,y,88,24);
-        if(t>.42){const q=out((t-.42)/.58);P([[0,y-10],[-72*q,y-66*q],[-54*q,y-82*q],[0,y-22]]);P([[0,y-10],[72*q,y-66*q],[54*q,y-82*q],[0,y-22]]);}
-      } else if(m==='dh'){
-        const y=-122+104*e; B(-89,y,178,24);
-        if(t>.58){const q=out((t-.58)/.42);for(let i=0;i<5;i++){const x=-64+i*32;P([[x,y+12],[x+10,y+12+28*q],[x+4,y+12+40*q],[x-8,y+12+24*q]]);}}
-      } else if(m==='sh'){
-        const q=inout(t),a=-1.05+2.1*q,r=88,cx=10,cy=-52;
-        arcCaps(cx,cy,r,-1.05,a,8,12);
-        if(t>.48){const tip=out((t-.48)/.52);Cc(cx+Math.cos(a)*r,cy+Math.sin(a)*r,16+8*tip);}
-      }
-      break;
-    case'g4_cyan':
-      if(m==='us'){
-        const h=112*e; for(let i=-2;i<=2;i++) K(i*8,0,i*5,-h,5.5);
-      } else if(m==='ds'){
-        const q=out(t), y=-8+34*q; Cc(0,y,14);
-        if(t>.42){const z=out((t-.42)/.58); for(let i=0;i<10;i++){const a=i/10*Math.PI*2; K(Math.cos(a)*16,-8+Math.sin(a)*7,Math.cos(a)*(38+52*z),-8+Math.sin(a)*(14+25*z),5);}}
-      } else if(m==='ss'){
-        const q=out(t), tip=18+98*q; K(20,-48,tip,-48,7); K(tip,-48,tip+12,-50,5);
-      } else if(m==='uh'){
-        const q=out(t); arcCaps(0,-66,44+30*q,-Math.PI/2,Math.PI*1.5,12,8);
-        K(-38,-20,-48,-98*q,7); K(38,-20,48,-98*q,7);
-      } else if(m==='dh'){
-        const y=-116+74*e; Cc(0,y,20);
-        if(t>.48){const z=out((t-.48)/.52); for(let i=0;i<10;i++){const a=i/10*Math.PI*2; K(Math.cos(a)*12,y+12,Math.cos(a)*(34+54*z),y+12+Math.sin(a)*18,5);}}
-      } else if(m==='sh'){
-        const q=out(t),len=132*q;
-        for(let i=0;i<5;i++){
-          const y=-76+i*14;
-          K(18,y,18+len,y+Math.sin(i*.8+t*5)*7,7);
-        }
-        if(t>.58) K(18+len,-48,18+len+22,-48,8);
-      }
-      break;
-    case'g4_onyx':
-      if(m==='us'){
-        const h=112*e; P([[-18,0],[0,-h],[18,0],[8,-h-24],[0,-h-34],[-8,-h-24]]);
-      } else if(m==='ds'){
-        const q=out(t); Cc(0,-5,18+26*q);
-        if(t>.42){const z=out((t-.42)/.58); P([[-34*z,-4],[0,-78*z],[34*z,-4],[18*z,-18*z],[-18*z,-18*z]]);}
-      } else if(m==='ss'){
-        const q=out(t),x=24+82*q;
-        for(let i=-1;i<=1;i++) K(22,-54+i*7,x,-54+i*10,8);
-      } else if(m==='uh'){
-        const h=104*e; B(-20,-h-24,40,104);
-        P([[-24,-h+14],[0,-h-38],[24,-h+14],[16,-h+2],[-16,-h+2]]);
-        if(t>.55){const q=out((t-.55)/.45);K(0,-h+8,50*q,-h-38*q,12);}
-      } else if(m==='dh'){
-        const r=26+48*e; Cc(0,0,r*.55); for(let i=0;i<7;i++){const a=i/6*Math.PI;const x=Math.cos(a)*r,y=-4-Math.sin(a)*r*.5;P([[x-7,y],[x,y-24*e],[x+7,y]]);}
-      } else if(m==='sh'){
-        const len=116*e; P([[18,-74],[18+len,-52],[18+len+20,-42],[18+len,-28],[18,-20]]); K(22,-48,18+len,-42,12);
-      }
-      break;
-    case'g4_gold':
-      if(m==='us'){
-        const h=108*e; for(let i=0;i<6;i++) P([[-28+i*4,-4-i*16],[0,-22-i*16-h*.55],[28-i*4,-4-i*16],[18-i*3,5-i*16],[-18+i*3,5-i*16]]); Cc(0,-h,16);
-      } else if(m==='ds'){
-        const r=20+52*e; arcCaps(0,-8,r,0,Math.PI*2,12,7); if(t>.5)burst(0,-8,20+34*out((t-.5)/.5),10,7);
-      } else if(m==='ss'){
-        const len=70*e; K(18,-45,28+len,-45,11); Cc(28+len,-45,16);
-      } else if(m==='uh'){
-        const h=116*e; for(let i=0;i<6;i++) P([[-28,-6-i*18*e],[0,-24-i*18*e],[28,-6-i*18*e],[18,2-i*18*e],[-18,2-i*18*e]]); Cc(0,-h,18);
-      } else if(m==='dh'){
-        const r=78*e; arcCaps(0,-5,r,0,Math.PI*2,14,7); if(t>.55)burst(0,-5,r*(1-.28*out((t-.55)/.45)),12,8);
-      } else if(m==='sh'){
-        const r=18+34*e; Cc(22,-48,r); if(t>.42){const q=out((t-.42)/.58); arcCaps(22,-48,22+48*q,-Math.PI*.85,Math.PI*.85,9,8);}
-      }
-      break;
-    case'g4_vermilion':
-      if(m==='us'){
-        const h=106*e; P([[0,-26-h],[22,-58-h],[8,-92-h],[-12,-70-h],[-24,-40-h]]); K(0,-26,0,-h,6);
-      } else if(m==='ds'){
-        const r=24+34*e; arcCaps(0,-7,r,Math.PI,Math.PI*2,8,6); K(-r,-8,0,-42*e,7); K(r,-8,0,-42*e,7);
-      } else if(m==='ss'){
-        const q=inout(t),a=-1.15+2.15*q; const ex=18+Math.cos(a)*68,ey=-48+Math.sin(a)*68; K(18,-48,ex,ey,10); Cc(ex,ey,16);
-      } else if(m==='uh'){
-        const h=106*e; for(let i=0;i<6;i++){const a=i/6*Math.PI*2+t*2; K(Math.cos(a)*22,-5,Math.cos(a)*48,-h+Math.sin(a)*48,6);} Cc(0,-h,25);
-      } else if(m==='dh'){
-        const by=-122+96*e; Cc(0,by,22); if(t>.52)K(-12,by+18,12,by+18+60*out((t-.52)/.48),8);
-      } else if(m==='sh'){
-        const len=118*e; P([[18,-72],[18+len,-50],[18+len+18,-36],[18+len,-20],[18,-34]]); K(24,-48,18+len,-40,11);
-      }
-      break;
-    case'g4_umber':
-      if(m==='us'){
-        K(-16,-4,0,-52-76*e,8); K(0,-52-76*e,16,-4,8); Cc(0,-86*e,15);
-      } else if(m==='ds'){
-        Cc(0,-4,18+34*e); for(let i=0;i<8;i++){const a=i/8*Math.PI*2;K(Math.cos(a)*18,-4,Math.cos(a)*(34+42*e),-4+Math.sin(a)*(10+16*e),5);}
-      } else if(m==='ss'){
-        const q=inout(t),ang=-.25+q*.9,ex=30+Math.cos(ang)*50,ey=-48+Math.sin(ang)*35; K(12,-48,ex,ey,11); Cc(ex,ey,13);
-      } else if(m==='uh'){
-        K(15,-45,32,-88-72*e,13); for(let i=0;i<5;i++)K((i-2)*13,0,(i-2)*13,-72*e,4);
-      } else if(m==='dh'){
-        K(0,-42,0,-5,11); for(let i=0;i<6;i++)K(0,0,18+i*18*e,-5+(i%2)*8,6); 
-      } else if(m==='sh'){
-        const end=92*e; K(16,-52,16+end,-52,13); if(t>.5){K(16+end,-52,16+end+34,-39,7);Cc(16+end+34,-39,12);} 
-      }
-      break;
-    case'g4_graphite':
-      if(m==='us'){
-        for(let i=0;i<5;i++){const y=-20-i*19*e;Cc(0,y,10+i*3);} Cc(0,-108*e,18);
-      } else if(m==='ds'){
-        Cc(0,-5,16+28*e); const x=58*e; Cc(x,-20,13); K(0,-5,x,-20,4); if(t>.52)Cc(x,-20,13+32*out((t-.52)/.48));
-      } else if(m==='ss'){
-        const x=20+90*e; K(20,-50,x,-50,7); Cc(x,-50,18);
-      } else if(m==='uh'){
-        for(let i=0;i<7;i++){const y=-18-i*17*e;Cc(0,y,10+i*2);} Cc(0,-110*e,22);
-      } else if(m==='dh'){
-        Cc(0,-4,22+40*e); for(let i=0;i<5;i++){const x=-20+i*10;K(x,0,x+(i%2?-38:38)*e,4,4);}
-      } else if(m==='sh'){
-        const x=42+82*e; K(18,-48,x,-48,7); for(let i=0;i<5;i++)Cc(x,-48,7+i*2); Cc(x,-48,20);
-      }
-      break;
-    case'g4_daichi':
-      if(m==='us'){
-        B(-13,-96*e,26,20); for(let i=-1;i<=1;i++)K(i*12,-42*e,i*12,-122*e,4); Cc(0,-68*e,11);
-      } else if(m==='ds'){
-        B(-14,-12,28,14); for(let i=-1;i<=1;i++)K(-32+i*32,-4,0,-4,3); Cc(0,-4,15+42*e);
-      } else if(m==='ss'){
-        const len=112*e; K(18,-50,18+len,-50,8); B(18+len-10,-58,20,16);
-      } else if(m==='uh'){
-        for(let i=0;i<4;i++){B(-46+i*24,-8-e*78,20,14);K(-36+i*24,-8,-36+i*24,-78*e,3);} Cc(0,-84*e,22);
-      } else if(m==='dh'){
-        for(let i=0;i<6;i++){const a=i/6*Math.PI*2+t*1.7,x=Math.cos(a)*54,y=-30+Math.sin(a)*34;Cc(x,y,7);K(x,y,0,0,3);} if(t>.55)Cc(0,0,30+18*out((t-.55)/.45));
-      } else if(m==='sh'){
-        const len=145*e; B(20,-67,38,38); K(38,-48,38+len,-48,8); for(let i=0;i<4;i++)Cc(50+i*27*e,-48,7+i*2); Cc(38+len,-48,16);
-      }
-      break;
-    case'g4_renko':
-      if(m==='us'){
-        Cc(0,-25-e*85,22); Cc(0,-48-e*55,15); K(0,0,0,-120*e,5);
-      } else if(m==='ds'){
-        const r=24+28*e; arcCaps(0,-8,r,0,Math.PI*2,10,6); if(t>.5)burst(0,-8,30+32*out((t-.5)/.5),10,7);
-      } else if(m==='ss'){
-        const len=118*e; B(18,-60,28,24); K(30,-48,30+len,-48,9); Cc(30+len,-48,11);
-      } else if(m==='uh'){
-        for(let i=0;i<5;i++)Cc(0,-15-i*20*e,15+i*2); K(-38,0,38,0,4);
-      } else if(m==='dh'){
-        const r=70*e; arcCaps(0,-8,r,0,Math.PI*2,14,7); if(t>.55)Cc(0,0,24+48*out((t-.55)/.45));
-      } else if(m==='sh'){
-        const len=155*e; B(18,-72,44,48); for(let i=0;i<4;i++)Cc(38,-64+i*10,9+i*2); K(42,-48,42+len,-48,10); Cc(42+len,-48,22);
-      }
-      break;
-  }
-  return b;
+ const e=out(t), b=[];
+ const Cc=(x,y,r)=>b.push({shape:'circle',x,y,r});
+ const B=(x,y,w,h)=>b.push({shape:'box',x,y,w,h});
+ const K=(x1,y1,x2,y2,r)=>b.push({shape:'capsule',x1,y1,x2,y2,r});
+ const P=pts=>b.push({shape:'polygon',points:pts});
+ const A=(cx,cy,rx,ry,n=12)=>{for(let i=0;i<n;i++){const a=i/ n*Math.PI*2; Cc(cx+Math.cos(a)*rx,cy+Math.sin(a)*ry,9);}};
+ switch(charId){
+ case'g4_cobalt':
+   if(m==='us'){const y=-110*e;B(-34,y,68,24);if(t>.28)K(28,y,Math.min(88,28+60*out((t-.28)/.72)),y-18,10);}
+   else if(m==='ds'){const c=38*e;B(-82+c,-52,48,64);B(34-c,-52,48,64);if(t>.62)A(0,-20,45,28,10);}
+   else if(m==='ss')B(20,-58,100*e,30);
+   else if(m==='uh'){const y=-100*e;B(-44,y,88,24);if(t>.48){const k=out((t-.48)/.52);P([[0,y],[ -72*k,y-60*k],[-56*k,y-76*k],[0,y-18*k]]);P([[0,y],[72*k,y-60*k],[56*k,y-76*k],[0,y-18*k]]);}}
+   else if(m==='dh')B(-86,-118+98*e,172,24);
+   else if(m==='sh'){const q=inout(t),ang=-1.05+2.1*q,r=94,cx=8,cy=-52;Cc(cx+Math.cos(ang)*r,cy+Math.sin(ang)*r,18);K(cx+Math.cos(-1.05)*r,cy+Math.sin(-1.05)*r,cx+Math.cos(ang)*r,cy+Math.sin(ang)*r,13);}
+   break;
+ case'g4_cyan':
+   if(m==='us'){const h=120*e;for(let i=0;i<5;i++)K(-20+i*10,0,-10+i*5,-h,7);}
+   else if(m==='ds'){const y=-12+42*e;Cc(0,y,18+22*e);if(t>.45)A(0,y,18+68*out((t-.45)/.55),8+35*out((t-.45)/.55),12);}
+   else if(m==='ss'){const q=inout(t);const ang=-Math.PI*.22+q*Math.PI*.44;const ex=20+Math.cos(ang)*85,ey=-48+Math.sin(ang)*22;K(20,-48,ex,ey,8);}
+   else if(m==='uh'){const rx=38+e*18,ry=58+e*45;A(0,-70,rx,ry,18);}
+   else if(m==='dh'){const y=-118+78*e;Cc(0,y,25);if(t>.52)Cc(0,0,18+62*out((t-.52)/.48));}
+   else if(m==='sh')B(20,-78,135*e,55);
+   break;
+ case'g4_onyx':
+   if(m==='us'){const h=110*e;P([[-18,0],[0,-h],[18,0]]);P([[-9,-h+22],[0,-h-22],[9,-h+22]]);}
+   else if(m==='ds'){Cc(0,-5,48*e+15);if(t>.48)P([[-30*out((t-.48)/.52),-8],[0,-82*out((t-.48)/.52)],[30*out((t-.48)/.52),-8]]);}
+   else if(m==='ss'){const x=22+72*e;for(let i=0;i<3;i++)K(20,-54+(i-1)*4,x,-54+(i-1)*13,9);}
+   else if(m==='uh'){const h=105*e;B(-22,-h-20,44,100);P([[-26,-h+10],[0,-h-32],[26,-h+10],[18,-h+2],[-18,-h+2]]);if(t>.55){const q=out((t-.55)/.45);K(0,-h+15,45*q*Math.cos(-1.1),-h+15+45*q*Math.sin(-1.1),12);}}
+   else if(m==='dh'){const r=30+e*62;A(0,0,r,r*.35,12);}
+   else if(m==='sh'){const len=120*e;P([[18,-75],[18+len,-52],[18+len,-35],[18,-20],[18+len+28,-44],[18+len,-35]]);K(20,-48,18+len,-44,16);}
+   break;
+ case'g4_gold':
+   if(m==='us'){const h=105*e;for(let i=0;i<5;i++)B(-26-i*2,-h+i*18,52+i*4,14);Cc(0,-h,24);}
+   else if(m==='ds'){const r=18+e*52;Cc(0,-8,r);if(t>.5)Cc(0,-8,70-52*out((t-.5)/.5));}
+   else if(m==='ss'){const len=75*e;K(15,-45,25+len,-45,14);Cc(25+len,-45,18);}
+   else if(m==='uh'){const h=120*e;for(let i=0;i<6;i++)P([[-30,-8-i*18*e],[0,-24-i*18*e],[30,-8-i*18*e],[20,2-i*18*e],[-20,2-i*18*e]]);Cc(0,-h,26);}
+   else if(m==='dh'){const r=85*e;Cc(0,-5,r);if(t>.55)Cc(0,-5,r*(1-.3*out((t-.55)/.45)));}
+   else if(m==='sh'){const r=18+e*34;Cc(22,-48,r);if(t>.42)A(22,-48,70*out((t-.42)/.58),55*out((t-.42)/.58),8);}
+   break;
+ case'g4_vermilion':
+   if(m==='us'){const h=105*e;P([[0,-35-h],[22,-60-h],[8,-92-h],[-12,-70-h],[-24,-42-h]]);K(0,-30,0,-h,7);}
+   else if(m==='ds'){Cc(0,-6,28+e*22);for(let i=0;i<7;i++){const a=-Math.PI+i/6*Math.PI,r=25+e*35;K(Math.cos(a)*r,-8,Math.cos(a)*(r+22),-8-Math.abs(Math.sin(a))*38,6);}}
+   else if(m==='ss'){const q=inout(t),ang=-1.15+2.15*q;Cc(18+Math.cos(ang)*68,-48+Math.sin(ang)*68,16);K(18,-48,18+Math.cos(ang)*68,-48+Math.sin(ang)*68,10);}
+   else if(m==='uh'){const h=105*e;for(let i=0;i<4;i++){const a=i/4*Math.PI*2+t*2;K(Math.cos(a)*28,-5,Math.cos(a)*48,-h+Math.sin(a)*48,7);}Cc(0,-h,32);}
+   else if(m==='dh'){const by=-125+e*100;Cc(0,by,25+e*12);if(t>.55)K(0,by+25,0,by+90*out((t-.55)/.45),9);if(t>.55)Cc(0,0,20+65*out((t-.55)/.45));}
+   else if(m==='sh'){const len=115*e;P([[18,-72],[18+len,-48],[18+len,-22],[18,-36],[18+len+24,-35],[18+len,-22]]);}
+   break;
+ case'g4_umber':
+   if(m==='us'){K(-18,-6,0,-52-75*e,9);K(0,-52-75*e,18,-10,9);Cc(0,-85*e,18);}
+   else if(m==='ds'){Cc(0,-4,20+e*42);A(0,-4,22+e*50,10+e*15,8);}
+   else if(m==='ss'){const ang=-.25+inout(t)*.9,ex=30+Math.cos(ang)*50,ey=-48+Math.sin(ang)*35;K(12,-48,ex,ey,12);Cc(70*inout(t),-48,14);}
+   else if(m==='uh'){K(15,-45,32,-88-75*e,14);for(let i=0;i<5;i++)K((i-2)*14,0,(i-2)*14,-75*e,4);}
+   else if(m==='dh'){K(0,-42,0,-5,12);for(let i=0;i<6;i++)K(0,0,18+i*18*e,-5+(i%2)*8,7);}
+   else if(m==='sh'){const end=92*e;K(16,-52,16+end,-52,14);K(16+end,-52,16+end+35,-38,7);K(16+end+35,-38,16+end+50,-55,7);if(t>.6)Cc(16+end+35,-48,18);}
+   break;
+ case'g4_graphite':
+   if(m==='us'){for(let i=0;i<4;i++)Cc(0,-25-i*28*e,12+i*7);Cc(0,-105*e,24);}
+   else if(m==='ds'){Cc(0,-5,18+e*35);const x=62*e;Cc(x,-20,16);K(0,-5,x,-20,4);if(t>.5)Cc(x,-20,16+45*out((t-.5)/.5));}
+   else if(m==='ss'){K(18,-50,18+78*e,-50,8);Cc(18+78*e,-50,24);}
+   else if(m==='uh'){for(let i=0;i<6;i++)Cc(0,-20-i*18*e,14+i*5);Cc(0,-110*e,34);}
+   else if(m==='dh'){Cc(0,-4,26+e*50);for(let i=0;i<5;i++)K(-20+i*10,0,-20+i*10+(i%2?-45:45)*e,4,4);}
+   else if(m==='sh'){const x=42+80*e;K(18,-48,x,-48,8);Cc(x,-48,30);}
+   break;
+ case'g4_daichi':
+   if(m==='us'){B(-14,-100*e,28,22);Cc(0,-65*e,12);K(0,-50*e,0,-125*e,6);}
+   else if(m==='ds'){B(-16,-12,32,16);K(-35,-5,35,-5,3);Cc(0,-4,16+e*48);}
+   else if(m==='ss'){const len=110*e;K(18,-50,18+len,-50,9);B(18+len-10,-58,20,16);}
+   else if(m==='uh'){for(let i=0;i<4;i++){B(-48+i*24,-8-e*80,24,16);K(-36+i*24,-8,-36+i*24,-80*e,4);}Cc(0,-85*e,30);}
+   else if(m==='dh'){for(let i=0;i<5;i++){const a=i/5*Math.PI*2+inout(t),x=Math.cos(a)*55,y=-30+Math.sin(a)*35;Cc(x,y,9);K(x,y,0,0,3);}Cc(0,0,38*e);}
+   else if(m==='sh'){const len=145*e;B(20,-67,38,38);K(38,-48,38+len,-48,9);for(let i=0;i<4;i++)Cc(45+i*28*e,-48,10+i*3);}
+   break;
+ case'g4_renko':
+   if(m==='us'){Cc(0,-25-e*85,26);Cc(0,-48-e*55,18);K(0,0,0,-120*e,6);}
+   else if(m==='ds'){const r=24+e*28;Cc(0,-8,r);A(0,-8,40+e*35,12+e*18,10);}
+   else if(m==='ss'){const len=115*e;B(18,-60,28,24);K(30,-48,30+len,-48,10);Cc(30+len,-48,10);}
+   else if(m==='uh'){for(let i=0;i<4;i++)Cc(0,-15-i*22*e,20+i*4);K(-38,0,38,0,4);}
+   else if(m==='dh'){Cc(0,-8,75*e);Cc(0,-8,52*e);if(t>.55)Cc(0,0,24+55*out((t-.55)/.45));}
+   else if(m==='sh'){const len=155*e;B(18,-72,44,48);for(let i=0;i<4;i++)Cc(0,-64+i*10,12+i*3);K(42,-48,42+len,-48,11);Cc(42+len,-48,25);}
+   break;
+ }
+ return b;
 }
+
 function mirrorBoxes(bs,f){return bs.map(h=>h.shape==='circle'||h.shape==='box'?{...h,x:h.x*f}:h.shape==='capsule'?{...h,x1:h.x1*f,x2:h.x2*f}:h.shape==='polygon'?{...h,points:h.points.map(([x,y])=>[x*f,y])}:h);}
 export function getGen4Hitboxes(charId,move,t,facing=1){
  if(move==='sp'){
-   const e=out(t), b=[];
-   const Cc=(x,y,r)=>b.push({shape:'circle',x,y,r});
-   const B=(x,y,w,h)=>b.push({shape:'box',x,y,w,h});
-   const K=(x1,y1,x2,y2,r)=>b.push({shape:'capsule',x1,y1,x2,y2,r});
-   const P=points=>b.push({shape:'polygon',points});
-   const arc=(cx,cy,r,a0,a1,n=10,rad=10)=>{for(let i=0;i<n;i++){const u=n===1?0:i/(n-1),a=a0+(a1-a0)*u;Cc(cx+Math.cos(a)*r,cy+Math.sin(a)*r,rad);}};
+   const e=out(t), b=[]; const Cc=(x,y,r)=>b.push({shape:'circle',x,y,r}); const B=(x,y,w,h)=>b.push({shape:'box',x,y,w,h});
    switch(charId){
-    case'g4_cobalt': {
-      const r=46+58*e; for(let i=0;i<6;i++){const a=i/6*Math.PI*2;const x=Math.cos(a)*r*.55,y=-48+Math.sin(a)*r*.4;B(x,y,56,126);}
-      if(t>.45){const q=out((t-.45)/.55);B(-70,-112*q-48,26,70);B(70,-112*q-48,26,70);}
-      break;
-    }
-    case'g4_cyan': {
-      if(t<.35){for(let i=0;i<8;i++){const a=i/8*Math.PI*2,r=22+18*e;Cc(Math.cos(a)*r,-48+Math.sin(a)*r*.7,8);}}
-      else {const r=30+95*out((t-.35)/.65);arc(0,-48,r,0,Math.PI*2,16,8);arc(0,-48,r*.62,0,Math.PI*2,10,7);}
-      break;
-    }
-    case'g4_onyx': {
-      const r=28+82*e; arc(0,-48,r,0,Math.PI*2,16,10);
-      if(t>.28){const q=out((t-.28)/.72);P([[-34*q,-10],[0,-145*q],[34*q,-10],[17*q,-38*q],[-17*q,-38*q]]);}
-      break;
-    }
-    case'g4_gold': {
-      const r=28+70*e; arc(0,-52,r,0,Math.PI*2,14,9);
-      if(t>.48){const q=out((t-.48)/.52);arc(0,-52,48+68*q,0,Math.PI*2,16,9);}
-      break;
-    }
-    case'g4_vermilion': {
-      if(t<.48){const q=out(t/.48);Cc(0,-50,20+25*q);}
-      if(t>.34){const q=out((t-.34)/.66);P([[18,-70],[18+118*q,-52],[18+118*q+16,-36],[18+118*q,-22],[18,-36]]);K(24,-48,18+118*q,-40,10);}
-      break;
-    }
-    case'g4_umber': {
-      Cc(0,-4,22+55*e); if(t>.38){const q=out((t-.38)/.62);for(let i=0;i<12;i++){const a=i/12*Math.PI*2;K(Math.cos(a)*20,-4,Math.cos(a)*(38+88*q),-4+Math.sin(a)*(12+28*q),6);}}
-      break;
-    }
-    case'g4_graphite': {
-      const r=28+88*e; arc(0,-52,r,0,Math.PI*2,18,8); if(t>.42){const q=out((t-.42)/.58);for(let i=0;i<10;i++){const a=i/10*Math.PI*2;K(Math.cos(a)*30,-52+Math.sin(a)*18,Math.cos(a)*(55+75*q),-52+Math.sin(a)*(34+45*q),5);}}
-      break;
-    }
-    case'g4_daichi': {
-      const r=54+12*e; for(let i=0;i<8;i++){const a=i/8*Math.PI*2;const x=Math.cos(a)*r,y=-52+Math.sin(a)*r*.65;B(x-11,y-8,22,16);K(x,y,Math.cos(a)*(r+18),-52+Math.sin(a)*(r+18)*.65,4);} if(t>.4)Cc(0,-52,24+65*out((t-.4)/.6));
-      break;
-    }
-    case'g4_renko': {
-      const r=48+28*e; arc(0,-52,r,0,Math.PI*2,12,9); for(let i=0;i<6;i++){const a=i/6*Math.PI*2;K(Math.cos(a)*30,-52+Math.sin(a)*20,Math.cos(a)*r,-52+Math.sin(a)*r*.65,6);} if(t>.42)Cc(0,-52,34+92*out((t-.42)/.58));
-      break;
-    }
+    case'g4_cobalt': if(t<.32){for(let i=0;i<6;i++){const a=i/6*Math.PI*2,r=42+e*55;B(Math.cos(a)*r*.55-32,-48+Math.sin(a)*r*.4-70,64,140);} } else Cc(0,-48,35+out((t-.32)/.68)*120); break;
+    case'g4_cyan': if(t<.35){Cc(0,-48,24+Math.min(1,t/.55)*65);} else Cc(0,-48,18+out((t-.35)/.65)*70); break;
+    case'g4_onyx': Cc(0,-45,30+e*105); if(t>.2)b.push({shape:'polygon',points:[[-48*out((t-.2)/.8),-10],[0,-155*out((t-.2)/.8)],[48*out((t-.2)/.8),-10],[0,-40*out((t-.2)/.8)]]}); break;
+    case'g4_gold': Cc(0,-52,28+Math.min(1,t/.72)*82); if(t>.55)Cc(0,-52,35+out((t-.55)/.45)*115); break;
+    case'g4_vermilion': if(t<.62)Cc(0,-50,18+out(t/.62)*42); if(t>.48)B(18,-70,160*out((t-.48)/.52),46); break;
+    case'g4_umber': if(t<.7)Cc(0,-4,25+out(t/.7)*80); if(t>.55)B(15,-50,120*out((t-.55)/.45),24); break;
+    case'g4_graphite': Cc(0,-52,35+out(t)*100); if(t>.45)Cc(0,-52,30+out((t-.45)/.55)*110); break;
+    case'g4_daichi': for(let i=0;i<8;i++){const a=i/8*Math.PI*2,x=Math.cos(a)*55,y=-52+Math.sin(a)*38;B(x-14,y-9,28,18);} if(t>.35)Cc(0,-52,28+out((t-.35)/.65)*90); break;
+    case'g4_renko': for(let i=0;i<6;i++){const a=i/6*Math.PI*2,x=Math.cos(a)*60,y=-52+Math.sin(a)*38;Cc(x,y,22);} if(t>.4)Cc(0,-52,40+out((t-.4)/.6)*120); break;
    }
    return mirrorBoxes(b,facing<0?-1:1);
  }

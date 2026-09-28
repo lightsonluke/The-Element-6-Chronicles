@@ -1,13 +1,16 @@
-# Element 6 — Gen 4 Hitbox + Knockback Alignment Package
+# Element 6 — Revert Gen 5 Attacks, Keep Gen 4
 
-This package is a replacement for the Gen 4 combat files from the detailed Gen 4 animation package.
+This package reverses the Gen 5 attack overhaul from the most recent update while keeping the Gen 4 attack work.
 
-## Files
-- `gen4AttackAnims.js` — keeps the detailed Gen 4 animations and replaces the Gen 4 collision geometry with authored, shape-specific hitboxes. The hitboxes follow the visible barrier, blade, wind ribbon, shadow shape, ring, pillar, projectile, machine, and resonance geometry instead of using one large generic rectangle.
-- `attackSpecs.js` — adds per-move Gen 4 knockback direction and a modest per-move strength multiplier. Up attacks launch upward, forward attacks launch in the attack direction, radial attacks push away from the impact center, and the heavier/super attacks are tuned separately.
-- `fighter.js` — applies the per-move Gen 4 knockback multiplier while preserving the game's existing global knockback scaling and defender modifiers. It also contains the shared solid-wall/barrier collision fix from the previous package.
+Included:
+- fighter.js — Gen 4 fighter integration, including Gen 4 wall/hitbox behavior.
+- attackSpecs.js — Gen 4 hitbox/knockback alignment.
+- gen4AttackAnims.js — Gen 4 detailed attack animations.
+- charAttackAnims.js — the pre-Gen-5 animation router that includes Gen 4 routing.
 
-## Important
-Replace the corresponding files in the project. Do not rename the files.
+Not included:
+- gen5AttackOverhaul.js
+- Gen 5-specific fighter changes
+- Gen 5-specific animation routing
 
-This package does not change damage values or non-Gen-4 attack geometry.
+Replace the matching files in the project with these files. Do not add gen5AttackOverhaul.js.
