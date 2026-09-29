@@ -1,19 +1,26 @@
-# Element 6 — Gen 4 Animation-Matched Hitboxes
+# Element 6 — Clan + Volleyball Full Fix
 
-This package was made ONLY from the attached project ZIP.
+Built only from the supplied `The-Element-6-Chronicles-main-2.zip`.
 
-Replacement:
-- gen4AttackAnims.js
+## Included fixes
+- Clan tournament weekly matchups resolve and display the actual clan names instead of fallback `Clan B`.
+- Weekly matchup XP is shown for both clans.
+- Monthly standings are restricted to the current month.
+- Monthly championship reward uses the current month instead of incorrectly checking the previous month.
+- Monthly championship reward is locked until 4 weekly clan battles have completed.
+- Only the #1 clan can claim the championship reward after the four-battle requirement.
+- Clan meeting cards show a red X and `PASSED` after their scheduled time.
+- Clan badge update RPC is hardened and the UI refreshes the saved badge immediately.
+- Clan leaders and lieutenants can edit the clan bio.
+- Volleyball canvas gets a final CSS-level fixed-center override so the generic canvas CSS cannot move it to the right/top-left after the match loads.
 
-The Gen 4 hitbox generator was rebuilt from the Gen 4 attack/super animation geometry in this same file. It covers all nine Gen 4 characters and all seven Gen 4 move types:
-- Up Signature
-- Down Signature
-- Side Signature
-- Up Heavy
-- Down Heavy
-- Side Heavy
-- Super
+## Supabase
+Run `Supabase-clan-tournament-bio-volleyball-FIX.sql` in the Supabase SQL editor after the existing clan/tournament SQL.
 
-The hitboxes are kept in the same local coordinate system used by the animations and are mirrored with fighter facing.
+## Files to replace
+- `ClanTournamentPanel.jsx`
+- `ClansScreen.jsx`
+- `VolleyballGame.jsx`
+- `index.css`
 
-Decorative glow/trails/particles are not automatically treated as separate damaging hitboxes.
+No other project files are included.

@@ -352,3 +352,26 @@ input.el6-controller-focus { filter: brightness(1.12); }
   pointer-events: none !important;
 }
 .el6-online-match-topbar > * { pointer-events: auto !important; }
+
+/* Element 6 — Volleyball viewport hard lock.
+   The generic canvas rule above is intentionally broad for other game modes,
+   but it must not override Volleyball's fixed centered viewport. */
+.el6-game-canvas-host > canvas.el6-volleyball-canvas {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  inset: auto !important;
+  margin: 0 !important;
+  transform: translate3d(-50%, -50%, 0) !important;
+  transform-origin: center center !important;
+  width: min(100vw, calc(100dvh * 16 / 9)) !important;
+  height: min(100dvh, calc(100vw * 9 / 16)) !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: 16 / 9 !important;
+  object-fit: fill !important;
+}

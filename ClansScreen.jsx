@@ -88,6 +88,7 @@ export default function ClansScreen({
   const [chatText, setChatText] = useState('');
   const [meetingForm, setMeetingForm] = useState({ clanId: '', title: '', notes: '', scheduledAt: '' });
   const [badgeInput, setBadgeInput] = useState('');
+  const [bioInput, setBioInput] = useState('');
 
   const isLeader = myClan?.myRole === 'leader';
   const isLieutenant = myClan?.myRole === 'lieutenant';
@@ -127,6 +128,7 @@ export default function ClansScreen({
       setClans(clanRows || []);
       if (mine?.element6_clans) {
         setMyClan({ ...mine.element6_clans, myRole: mine.role });
+        setBioInput(mine.element6_clans?.bio || '');
         window.__e6ClanBadgeLogo = mine.element6_clans?.icon_url || '';
         try { localStorage.setItem('element6_clan_badge_logo', mine.element6_clans?.icon_url || ''); } catch {}
         await loadClan(mine.element6_clans, mine.role);
@@ -434,11 +436,34 @@ export default function ClansScreen({
     try {
       const { data, error } = await supabase.rpc('element6_update_clan_badge', { p_icon_url: icon || null });
       if (error) throw error;
-      setMyClan(prev => ({ ...prev, icon_url: (data?.icon_url ?? icon) || null }));
-      window.__e6ClanBadgeLogo = (data?.icon_url ?? icon) || '';
-      try { localStorage.setItem('element6_clan_badge_logo', (data?.icon_url ?? icon) || ''); } catch {}
+      const savedIcon = data?.icon_url ?? (icon || null);
+      setMyClan(prev => ({ ...prev, icon_url: savedIcon }));
+      setClans(prev => prev.map(c => c.id === myClan.id ? { ...c, icon_url: savedIcon } : c));
+      window.__e6ClanBadgeLogo = savedIcon || '';
+      try { localStorage.setItem('element6_clan_badge_logo', savedIcon || ''); } catch {}
       setBadgeInput('');
       setNotice('Clan badge updated.');
+      await loadClan({ ...myClan, icon_url: savedIcon }, myClan.myRole);
+    } catch (e) {
+      setNotice(safeError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function updateClanBio() {
+    if ((!isLeader && !isLieutenant) || !myClan) return;
+    const bio = bioInput.trim();
+    if (bio.length > 500) { setNotice('Clan bio must be 500 characters or fewer.'); return; }
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.rpc('element6_update_clan_bio', { p_bio: bio });
+      if (error) throw error;
+      const savedBio = data?.bio ?? bio;
+      setMyClan(prev => ({ ...prev, bio: savedBio }));
+      setClans(prev => prev.map(c => c.id === myClan.id ? { ...c, bio: savedBio } : c));
+      setBioInput(savedBio);
+      setNotice('Clan bio updated.');
     } catch (e) {
       setNotice(safeError(e));
     } finally {
@@ -682,13 +707,13 @@ export default function ClansScreen({
                 <div className="text-right"><div className="font-heading text-lg">{myClan.xp.toLocaleString()} XP</div><div className="text-xs text-muted-foreground">365-day minimum to Tier 10</div></div>
               </div>
               <div className="mt-3 h-3 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary" style={{width:`${tierProgress(myClan).percent}%`}} /></div>
-              {isLeader && <div className="mt-3 rounded-xl border border-accent/30 bg-secondary/30 p-3">
+              {(isLeader || isLieutenant) && <div className="mt-3 rounded-xl border border-accent/30 bg-secondary/30 p-3">
                 <div className="flex items-center gap-3">
                   {myClan.icon_url ? <img src={myClan.icon_url} alt="" className="h-12 w-12 rounded-xl object-cover border border-accent/40" /> : <div className="h-12 w-12 rounded-xl border border-dashed border-accent/40 flex items-center justify-center text-xl">🏳️</div>}
                   <div className="flex-1">
                     <p className="font-heading text-xs text-accent">CLAN BADGE</p>
-                    <p className="text-[10px] text-muted-foreground">Change it whenever you want. There is no cooldown.</p>
-                    <div className="mt-2 flex gap-2">
+{isLeader && <p className="text-[10px] text-muted-foreground">Change it whenever you want. There is no cooldown.</p>}
+{isLeader && <div className="mt-2 flex gap-2">
                       <input value={badgeInput} onChange={e=>setBadgeInput(e.target.value)} placeholder="Image URL (leave blank to remove)" className="flex-1 rounded-lg border bg-background px-2 py-1.5 text-xs" />
                       <input type="file" accept="image/*" className="max-w-[150px] text-[9px]" onChange={e => {
                         const file = e.target.files?.[0];
@@ -699,10 +724,16 @@ export default function ClansScreen({
                         reader.readAsDataURL(file);
                       }} />
                       <button onClick={updateClanBadge} disabled={busy} className="rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground">UPDATE</button>
-                    </div>
+                    </div>}
                   </div>
                 </div>
               </div>}
+              {(isLeader || isLieutenant) && <div className="mt-3 rounded-xl border border-accent/30 bg-secondary/30 p-3">
+                <p className="font-heading text-xs text-accent">CLAN BIO</p>
+                <textarea value={bioInput} onChange={e => setBioInput(e.target.value)} maxLength={500} className="mt-2 min-h-24 w-full rounded-lg border bg-background px-3 py-2 text-sm" placeholder="Describe your clan..." />
+                <div className="mt-2 flex items-center justify-between gap-2"><span className="text-[10px] text-muted-foreground">{bioInput.length}/500</span><button onClick={updateClanBio} disabled={busy} className="rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground">SAVE BIO</button></div>
+              </div>}
+
               <div className="mt-3 rounded-xl bg-secondary/40 p-3 text-sm">
                 <b>CLAN MILESTONE REWARDS</b>
                 <p className="mt-1 text-xs text-muted-foreground">Every reward is contribution-scaled: your token amount is based on your share of the clan XP earned during that tier, including the 50% and tier-completion milestones.</p>
@@ -813,7 +844,7 @@ export default function ClansScreen({
             </div>}
             <div className="rounded-2xl border bg-card p-4">
               <h2 className="font-heading">MEETINGS</h2>
-              <div className="mt-3 space-y-2">{meetings.map(m=><div key={m.id} className="rounded-xl border p-3"><b>{m.title}</b><div className="text-xs text-muted-foreground">{new Date(m.scheduled_at).toLocaleString()}</div><p className="text-sm">{m.notes}</p><span className="text-xs">{m.status}</span></div>)}</div>
+              <div className="mt-3 space-y-2">{meetings.map(m=>{ const passed = new Date(m.scheduled_at).getTime() <= Date.now(); return <div key={m.id} className={`rounded-xl border p-3 ${passed ? 'opacity-70' : ''}`}><div className="flex items-start justify-between gap-3"><div><b>{m.title}</b><div className="text-xs text-muted-foreground">{new Date(m.scheduled_at).toLocaleString()}</div></div>{passed && <span aria-label="Meeting passed" title="Meeting passed" className="text-lg font-bold text-destructive">✕</span>}</div><p className="text-sm">{m.notes}</p><span className="text-xs">{passed ? 'PASSED' : m.status}</span></div>})}</div>
             </div>
           </section>
         )}
