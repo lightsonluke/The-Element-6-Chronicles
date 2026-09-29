@@ -619,9 +619,26 @@ export default function Game() {
     }
   };
 
+  const syncClanTournamentWeeklyRewards = async () => {
+    if (!supabase || !me?.id) return [];
+    try {
+      const { data, error } = await supabase.rpc('element6_claim_pending_clan_weekly_rewards');
+      if (error) throw error;
+      const rewards = Array.isArray(data) ? data : [];
+      for (const reward of rewards) {
+        const tokens = Math.max(0, Number(reward?.tokens) || 0);
+        if (tokens > 0) await grantClanTokens(tokens);
+      }
+      return rewards;
+    } catch {
+      return [];
+    }
+  };
+
   useEffect(() => {
     if (!me?.id) return;
     syncClanMilestoneRewards();
+    syncClanTournamentWeeklyRewards();
   }, [me?.id]);
 
   const addXP = (charId, xp) => {

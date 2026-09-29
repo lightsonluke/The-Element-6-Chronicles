@@ -353,17 +353,44 @@ input.el6-controller-focus { filter: brightness(1.12); }
 }
 .el6-online-match-topbar > * { pointer-events: auto !important; }
 
-/* Element 6 — Volleyball viewport hard lock.
-   The generic canvas rule above is intentionally broad for other game modes,
-   but it must not override Volleyball's fixed centered viewport. */
-.el6-game-canvas-host > canvas.el6-volleyball-canvas {
+
+/* -------------------------------------------------------------------------
+   VOLLEYBALL HARD VIEWPORT LOCK
+   Volleyball has its own portal outside #root. Do not let document scrolling,
+   flex/grid alignment, scrollbar appearance, or shell transforms move it.
+   ------------------------------------------------------------------------- */
+html.el6-volleyball-active,
+body.el6-volleyball-active {
+  overflow: hidden !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+}
+
+#el6-volleyball-canvas-host {
   position: fixed !important;
-  left: 50% !important;
-  top: 50% !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  transform: none !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  z-index: 2147483000 !important;
+}
+
+#el6-volleyball-canvas-host > canvas.el6-volleyball-canvas {
+  position: fixed !important;
+  left: 50vw !important;
+  top: 50dvh !important;
   right: auto !important;
   bottom: auto !important;
   inset: auto !important;
-  margin: 0 !important;
   transform: translate3d(-50%, -50%, 0) !important;
   transform-origin: center center !important;
   width: min(100vw, calc(100dvh * 16 / 9)) !important;
@@ -372,6 +399,11 @@ input.el6-controller-focus { filter: brightness(1.12); }
   max-height: none !important;
   min-width: 0 !important;
   min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
   aspect-ratio: 16 / 9 !important;
-  object-fit: fill !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  z-index: 1 !important;
+  flex: none !important;
 }

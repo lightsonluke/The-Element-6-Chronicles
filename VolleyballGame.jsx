@@ -11,7 +11,7 @@ import PauseMenu from './PauseMenu.jsx';
 import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 import { getKeybinds, getSoloKeybinds } from './keybinds.js';
 
-import GameCanvasPortal from './GameCanvasPortal.jsx';
+import VolleyballCanvasPortal from './VolleyballCanvasPortal.jsx';
 const charFor = (id, element) => { const c = ALL_CHARS.find(c => c.id === id); if (!c) return null; if (element && element !== 'basic') return { ...c, stats: applyElement(c.stats || {}, element) }; return c; };
 
 const W = 1100, H = 660;
@@ -73,52 +73,8 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
       : equippedAccessories;
   }
   const mergedAccessories = botAccsRef.current;
-  // The canvas portal owns the viewport. Do not manipulate document scroll position;
-  // the old body/visualViewport lock caused the canvas to drift on browsers that
-  // restore scroll offsets during matchmaking.
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const host = canvas.parentElement;
-    const fit = () => {
-      if (!host) return;
-      host.style.position = 'fixed';
-      host.style.inset = '0';
-      host.style.width = '100vw';
-      host.style.height = '100dvh';
-      host.style.overflow = 'hidden';
-      canvas.style.position = 'absolute';
-      canvas.style.left = '50%';
-      canvas.style.top = '50%';
-      canvas.style.right = 'auto';
-      canvas.style.bottom = 'auto';
-      canvas.style.margin = '0';
-      canvas.style.transform = 'translate(-50%, -50%)';
-      canvas.style.width = 'min(100vw, calc(100dvh * 16 / 9))';
-      canvas.style.height = 'min(100dvh, calc(100vw * 9 / 16))';
-    };
-    fit();
-    window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
-  }, []);
-  useEffect(() => {
-    remoteStateRef.current = remoteState;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const lockCanvas = () => {
-      canvas.style.position = 'fixed';
-      canvas.style.left = '50%'; canvas.style.top = '50%';
-      canvas.style.right = 'auto'; canvas.style.bottom = 'auto';
-      canvas.style.margin = '0'; canvas.style.transform = 'translate3d(-50%, -50%, 0)';
-      canvas.style.width = 'min(100vw, calc(100dvh * 16 / 9))';
-      canvas.style.height = 'min(100dvh, calc(100vw * 9 / 16))';
-    };
-    lockCanvas();
-    window.addEventListener('resize', lockCanvas);
-    window.visualViewport?.addEventListener('resize', lockCanvas);
-    window.visualViewport?.addEventListener('scroll', lockCanvas);
-    return () => { window.removeEventListener('resize', lockCanvas); window.visualViewport?.removeEventListener('resize', lockCanvas); window.visualViewport?.removeEventListener('scroll', lockCanvas); };
-  }, [remoteState]);
+  // Volleyball uses its own viewport portal. The dedicated host is outside #root
+  // and is immune to page layout, game-shell transforms, and scrollbar shifts.
   useEffect(() => { onStateExportRef.current = onStateExport; }, [onStateExport]);
 
   // Initialize state once
@@ -1248,9 +1204,9 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
       </MatchPauseButtonPortal>
       {paused && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></MatchPausePortal>}
-      <GameCanvasPortal>
+      <VolleyballCanvasPortal>
         <canvas data-e6-game-canvas="true" ref={canvasRef} width={CANVAS_W} height={CANVAS_H} className="el6-match-canvas el6-sport-canvas el6-volleyball-canvas" onPointerDown={(e) => { e.preventDefault(); window.focus(); }} />
-      </GameCanvasPortal>
+      </VolleyballCanvasPortal>
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
