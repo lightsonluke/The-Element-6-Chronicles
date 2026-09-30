@@ -113,7 +113,7 @@ ctx.shadowBlur = 0;
       </h1>
       <h2 className="font-heading text-xl md:text-2xl tracking-[0.2em] mt-1"
         style={{ color: '#c090ff', textShadow: '0 0 18px rgba(192,144,255,0.5)' }}>
-        CHRONICLES
+        THE CHRONICLES
       </h2>
       <div className="my-3 w-16 h-16 rounded-full flex items-center justify-center relative"
         style={{ background: 'radial-gradient(circle, rgba(119,68,255,0.35), rgba(119,68,255,0.08))', border: '2px solid #7744FF', boxShadow: '0 0 30px rgba(119,68,255,0.5), inset 0 0 15px rgba(119,68,255,0.3)' }}>
