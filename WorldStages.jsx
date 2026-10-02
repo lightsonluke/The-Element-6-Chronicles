@@ -105,7 +105,6 @@ export default function WorldStages({ onBack, onPlay, onDownload }) {
   const [page, setPage] = useState(1);
   const [liking, setLiking] = useState({});
   const [likedIds, setLikedIds] = useState(() => { try { return JSON.parse(localStorage.getItem('e6_world_stage_likes') || '{}'); } catch { return {}; } });
-  const [liking, setLiking] = useState({});
 
   const load = async () => {
     setLoading(true); setError('');
