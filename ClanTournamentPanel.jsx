@@ -42,7 +42,7 @@ export default function ClanTournamentPanel({ supabase, myClan, onGrantTokens })
       if (myClan?.id) weeklyQuery.eq('user_clan_id', myClan.id);
       const [{data:w,error:we},{data:m,error:me},{data:weeks,error:ce}] = await Promise.all([
         weeklyQuery.maybeSingle(),
-        supabase.from('element6_clan_tournament_monthly').select('rank,clan_id,clan_name,clan_tag,tournament_points,monthly_xp,monthly_wins,qualified,month_key').order('rank',{ascending:true}).limit(100),
+        supabase.from('element6_clan_tournament_monthly').select('rank,clan_id,clan_name,clan_tag,tournament_points,monthly_xp,monthly_wins,qualified,month_key').order('rank',{ascending:true}).limit(300),
         supabase.from('element6_clan_tournament_weeks').select('week_key,starts_at,ends_at').order('starts_at',{ascending:false}).limit(20)
       ]);
       if(we) throw we; if(me) throw me;
@@ -52,7 +52,16 @@ export default function ClanTournamentPanel({ supabase, myClan, onGrantTokens })
         const pm = `${previousMonth.getFullYear()}-${String(previousMonth.getMonth()+1).padStart(2,'0')}`;
         setCompletedWeeks((weeks||[]).filter(x => String(x.starts_at||'').slice(0,7)===pm && new Date(x.ends_at).getTime()<=now).length);
       }
-      setWeek(w||null); setMonthly(m||[]);
+      setWeek(w||null);
+      const currentMonth = new Date().toISOString().slice(0,7);
+      const uniqueMonthly = new Map();
+      for (const row of (m || [])) {
+        if (row.month_key && row.month_key !== currentMonth) continue;
+        if (!row.clan_id) continue;
+        const prior = uniqueMonthly.get(row.clan_id);
+        if (!prior || Number(row.tournament_points||0) > Number(prior.tournament_points||0) || (Number(row.tournament_points||0) === Number(prior.tournament_points||0) && Number(row.monthly_xp||0) > Number(prior.monthly_xp||0))) uniqueMonthly.set(row.clan_id, row);
+      }
+      setMonthly([...uniqueMonthly.values()].sort((a,b) => Number(a.rank||999999)-Number(b.rank||999999)).slice(0,100));
     } catch(e){ setNotice(e?.message||'Tournament data could not be loaded.'); } finally { setLoading(false); }
   };
 

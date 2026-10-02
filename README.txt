@@ -1,22 +1,7 @@
-ELEMENT 6 — GLITCH FIX REPLACEMENT PACKAGE
+ELEMENT 6 — FOCUSED REPLACEMENT PACKAGE
 
-Replace only the files in this package in the project root.
+Replace the included files at the repository root. Run Supabase-Element6-focused-fixes.sql in the Supabase SQL editor after the existing World Stages and clan tournament migrations.
 
-Fixes in this package:
-- true fullscreen 16:9 match surface with centered letterboxing instead of upper-left rendering
-- super-attack renderer crash caused by an undefined facing variable
-- exact Gen 1 attack collision geometry instead of generic rectangles
-- Gen 1 attacks are authored facing-right and mirrored for left-facing attacks
-- Thunder Hero Up Signature follows the supplied 12-frame reference; only the moving dot is a hitbox
-- Gen 1 Up Heavy and Down Heavy attacks are fully wired into fighter state + rendering
-- Recovery explicitly reuses the Up Signature animation
-- Gen 1 supers use their actual authored shapes rather than a universal ring
-- Volleyball startup crash fixed by restoring the required keybind imports
-- all sports use logical Fight Mode keyboard actions rather than hard-coded gameplay keys
-- soccer bot controller replaced with direct ball/goal/interception logic
-- controller menu navigation now has a visible focus ring and can enter pause overlays
-- super render calls pass the fighter's facing direction so directional supers mirror correctly
+Changes: volleyball canvas is centered relative to its fixed host; World Stages adds authenticated persistent likes and deduplicates repeated stage rows; the existing StageEditor auto-publish flow is included unchanged for new creator-made stages; soccer AI no longer randomly reverses movement during attacks; the monthly Top 100 UI filters out repeated clan rows and stale months; badge data images are uploaded to the clan-logos Storage bucket before the URL is saved via the existing RPC.
 
-Validation:
-- JavaScript/JSX syntax was checked with the TypeScript parser/transpiler for every modified JS/JSX file.
-- A full production build was not run because project dependencies are not installed in this environment.
+Important: SQL migrations are required for persistent likes and Storage permissions. Badge uploads require the existing element6_update_clan_badge(text) RPC from Supabase-clan-tournaments-badge-FIX.sql. This package does not include secrets or dependencies.

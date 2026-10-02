@@ -103,17 +103,26 @@ export default function WorldStages({ onBack, onPlay, onDownload }) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
+  const [liking, setLiking] = useState({});
+  const [likedIds, setLikedIds] = useState(() => { try { return JSON.parse(localStorage.getItem('e6_world_stage_likes') || '{}'); } catch { return {}; } });
+  const [liking, setLiking] = useState({});
 
   const load = async () => {
     setLoading(true); setError('');
     try {
       const rows = await fetchPublicStages();
       // Defensive normalization + global public-only filtering.
+      const seen = new Set();
       const clean = rows
         .map(normalizeStage)
         .filter(Boolean)
         .filter(s => !s.is_private && !s.hidden)
-        .filter(s => Array.isArray(stageDataOf(s).platforms));
+        .filter(s => Array.isArray(stageDataOf(s).platforms))
+        .filter(s => {
+          const key = s.id ? `id:${s.id}` : `legacy:${s.owner_user_id || s.owner_username || ''}:${String(s.name || '').trim().toLowerCase()}`;
+          if (seen.has(key)) return false;
+          seen.add(key); return true;
+        });
       setStages(clean);
     } catch (e) {
       setStages([]);
@@ -136,6 +145,20 @@ export default function WorldStages({ onBack, onPlay, onDownload }) {
     return list;
   }, [stages, query, sort]);
 
+  const likeStage = async (stage) => {
+    if (!stage?.id || liking[stage.id]) return;
+    setLiking(prev => ({ ...prev, [stage.id]: true }));
+    try {
+      const { supabase } = await import('./supabaseClient.js');
+      const { data, error } = await supabase.rpc('element6_toggle_world_stage_like', { p_stage_id: stage.id });
+      if (error) throw error;
+      if (data && typeof data.likes === 'number') {
+        setStages(prev => prev.map(s => s.id === stage.id ? { ...s, likes: data.likes } : s));
+        setLikedIds(prev => { const next = { ...prev, [stage.id]: !!data.liked }; try { localStorage.setItem('e6_world_stage_likes', JSON.stringify(next)); } catch {} return next; });
+      }
+    } catch (e) { setError('Could not save your like. Sign in and apply the World Stages SQL migration.'); }
+    finally { setLiking(prev => ({ ...prev, [stage.id]: false })); }
+  };
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -181,6 +204,7 @@ export default function WorldStages({ onBack, onPlay, onDownload }) {
               </div>
               <div className="flex gap-2 mt-auto">
                 <button onClick={() => onPlay?.(stage)} className="flex-1 px-3 py-2 bg-accent text-accent-foreground rounded font-heading text-xs hover:opacity-80">PLAY / IMPORT</button>
+                <button onClick={() => likeStage(stage)} disabled={!!liking[stage.id]} aria-pressed={!!likedIds[stage.id]} title="Like this stage" className="px-3 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80 disabled:opacity-50">{likedIds[stage.id] ? '♥ LIKED' : '♡ LIKE'}</button>
                 <button onClick={() => onDownload?.(stage)} className="px-3 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80">SAVE</button>
               </div>
             </div>

@@ -385,13 +385,13 @@ body.el6-volleyball-active {
 }
 
 #el6-volleyball-canvas-host > canvas.el6-volleyball-canvas {
-  position: fixed !important;
-  left: 50vw !important;
-  top: 50dvh !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
   right: auto !important;
   bottom: auto !important;
   inset: auto !important;
-  transform: translate3d(-50%, -50%, 0) !important;
+  transform: translate(-50%, -50%) !important;
   transform-origin: center center !important;
   width: min(100vw, calc(100dvh * 16 / 9)) !important;
   height: min(100dvh, calc(100vw * 9 / 16)) !important;

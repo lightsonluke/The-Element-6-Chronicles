@@ -115,9 +115,8 @@ export function soccerAI(fighter, ball, opponent, difficultyKey='regular', perso
   if(ball.y < fighter.y-70 && fighter.grounded && Math.abs(dx)<150) out.jump=true;
 
   // 6. Small difficulty-based aim error only for lower tiers.
-  if(d.error>0 && (out.sig||out.power||out.superMove) && Math.random()<.22) {
-    if(Math.random()<.5) out.left=!out.left; else out.right=!out.right;
-  }
+  // Do not randomly reverse movement after choosing a shot. That causes the
+  // controller to walk away from the ball/goal even when its prediction is right.
 
   fighter.aiAction=out;
   return out;

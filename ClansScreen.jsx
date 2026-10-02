@@ -427,13 +427,30 @@ export default function ClansScreen({
 
   async function updateClanBadge() {
     if (!isLeader || !myClan) return;
-    const icon = badgeInput.trim();
+    let icon = badgeInput.trim();
     if (icon && !/^https?:\/\//i.test(icon) && !icon.startsWith('data:image/')) {
-      setNotice('Badge must be an image URL or data image.');
+      setNotice('Choose an image file or enter a valid image URL.');
       return;
     }
     setBusy(true);
     try {
+      if (icon.startsWith('data:image/')) {
+        const match = icon.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+        if (!match) throw new Error('The selected badge image could not be read. Please choose it again.');
+        const mime = match[1];
+        const bytes = Uint8Array.from(atob(match[2]), c => c.charCodeAt(0));
+        const blob = new Blob([bytes], { type: mime });
+        const ext = ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/svg+xml': 'svg' })[mime] || 'png';
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        if (!authData?.user?.id) throw new Error('Please sign in again before uploading a badge.');
+        const path = `${authData.user.id}/${myClan.id}/badge-${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from('clan-logos').upload(path, blob, { contentType: mime, upsert: true, cacheControl: '3600' });
+        if (uploadError) throw uploadError;
+        const { data: publicData } = supabase.storage.from('clan-logos').getPublicUrl(path);
+        icon = publicData?.publicUrl;
+        if (!icon) throw new Error('Badge uploaded but its public URL could not be created.');
+      }
       const { data, error } = await supabase.rpc('element6_update_clan_badge', { p_icon_url: icon || null });
       if (error) throw error;
       const savedIcon = data?.icon_url ?? (icon || null);
