@@ -5,21 +5,6 @@
 
 const TAU = Math.PI * 2;
 const clamp01 = v => Math.max(0, Math.min(1, v));
-const frame12 = p => Math.min(12, Math.max(1, 1 + Math.floor(clamp01(p) * 12)));
-const moveFrame = p => 1 + clamp01(p) * 11;
-const stageFade = (f,a,b) => Math.max(0,Math.min(1,(f-a)/Math.max(.001,b-a)));
-function ring(ctx,x,y,rx,ry,color,a=.8,width=6,rotation=0){ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';glow(ctx,color,width*2.4);ctx.beginPath();ctx.ellipse(x,y,rx,ry,rotation,0,TAU);ctx.stroke();ctx.restore();}
-function streak(ctx,x1,y1,x2,y2,color,width=4,a=.7){strokePath(ctx,[[x1,y1],[x2,y2]],color,width,a);}
-function g1Glow(ctx,color,blur=18){ctx.shadowColor=color;ctx.shadowBlur=blur;}
-function g1Dot(ctx,x,y,r,color,a=1){ctx.save();ctx.globalAlpha=a;ctx.fillStyle=color;g1Glow(ctx,color,Math.max(4,r*2));ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();ctx.restore();}
-function g1Line(ctx,pts,color,width=6,a=1){ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.lineJoin='round';g1Glow(ctx,color,width*2);ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();ctx.restore();}
-function g1Ring(ctx,x,y,rx,ry,color,a=.9,w=6,rot=0){ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=color;ctx.lineWidth=w;ctx.lineCap='round';g1Glow(ctx,color,w*2.5);ctx.beginPath();ctx.ellipse(x,y,rx,ry,rot,0,TAU);ctx.stroke();ctx.restore();}
-function g1Flame(ctx,x,y,r,color,a=1,ang=0){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.globalAlpha=a;g1Glow(ctx,color,r*2.2);ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(0,-r*1.45);ctx.bezierCurveTo(r*.95,-r*.45,r*.8,r*.65,0,r);ctx.bezierCurveTo(-r*.75,r*.45,-r*.55,-r*.4,0,-r*1.45);ctx.fill();ctx.fillStyle='#FFD66B';ctx.globalAlpha*=.75;ctx.beginPath();ctx.moveTo(0,-r*.85);ctx.bezierCurveTo(r*.4,-r*.2,r*.3,r*.45,0,r*.65);ctx.bezierCurveTo(-r*.3,r*.3,-r*.25,-r*.25,0,-r*.85);ctx.fill();ctx.restore();}
-function g1Water(ctx,pts,color='#48D9FF',w=9,a=1){g1Line(ctx,pts,color,w,a);}
-function g1Leaf(ctx,x,y,rx,ry,ang,color='#63E63C',a=1){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.globalAlpha=a;ctx.fillStyle=color;g1Glow(ctx,color,10);ctx.beginPath();ctx.moveTo(0,-ry);ctx.bezierCurveTo(rx,-ry*.35,rx,ry*.5,0,ry);ctx.bezierCurveTo(-rx,ry*.5,-rx,-ry*.35,0,-ry);ctx.fill();ctx.restore();}
-function g1Shard(ctx,x,y,w,h,ang,color='#BDEFFF',a=1){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.globalAlpha=a;ctx.fillStyle=color;g1Glow(ctx,color,14);ctx.beginPath();ctx.moveTo(0,-h);ctx.lineTo(w*.65,-h*.2);ctx.lineTo(w*.42,h);ctx.lineTo(-w*.45,h*.45);ctx.closePath();ctx.fill();ctx.restore();}
-function g1Particles(ctx,x,y,color,t,count=10,r=28){for(let i=0;i<count;i++){const a=i/count*TAU+t*2.5,rr=r*(.35+.65*((i*7)%13)/13);g1Dot(ctx,x+Math.cos(a)*rr,y+Math.sin(a)*rr,1.4+(i%3)*.6,color,.35+.3*Math.sin(t*4+i));}}
-function g1Trail(ctx,x,y,color,dx,dy,n=6){for(let i=1;i<=n;i++){const q=i/n;g1Dot(ctx,x-dx*q,y-dy*q,2.5*(1-q),color,.45*(1-q));}}
 const ease = v => { v = clamp01(v); return v * v * (3 - 2 * v); };
 const easeOut = v => 1 - Math.pow(1 - clamp01(v), 3);
 const alpha = p => Math.sin(clamp01(p) * Math.PI);
@@ -77,6 +62,18 @@ function particles(ctx, x, y, color, p, count, radius, spread = TAU) {
 // circle continues, 11 near-end, 12 recovery. The hitbox is NOT the circle.
 // It is only the moving dot at the beginning of the circular path.
 function thunderUp(ctx, x, y, p) {
+  // Negative progress is the pre-release hold stance. The released Thunder
+  // animation below remains the original supplied 12-frame sequence.
+  if (p < 0) {
+    const q = Math.max(0, Math.min(1, -p - 1));
+    const c = '#FFFF44', cy = y - 112, rx = 86, ry = 34;
+    ctx.save(); ctx.globalAlpha = .5 + q * .35; ctx.strokeStyle = c; ctx.lineWidth = 2.5 + q * 2; ctx.shadowColor = c; ctx.shadowBlur = 16 + q * 12;
+    ctx.beginPath(); ctx.ellipse(x, cy, rx, ry, 0, 0, TAU); ctx.stroke();
+    const theta = -Math.PI/2 + q * Math.PI * 1.15;
+    dot(ctx, x + Math.cos(theta) * rx, cy + Math.sin(theta) * ry, 5 + q * 3, '#FFFFFF', .9);
+    dot(ctx, x + Math.cos(theta) * rx, cy + Math.sin(theta) * ry, 3.5 + q * 2, c, 1);
+    ctx.restore(); return;
+  }
   // This is intentionally authored as the supplied 12-frame reference:
   // 1 startup, 2 circle begins, 3-8 orbit, 9 launch, 10 continue,
   // 11 near-end, 12 recovery. The visible circle is never the hitbox.
@@ -205,160 +202,273 @@ function thunderSuper(ctx, x, y, p) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Generation I — authored, frame-driven attack animation set.
+// The four non-Thunder heroes use deliberate 12-frame silhouettes inspired by
+// the supplied reference sheets.  The up-signatures are kept on the same
+// frame beats: startup -> formation -> travel -> hit/launch -> recovery.
+// p >= 0 is the released animation. p < 0 is the 3-second charging/hold pose;
+// charge is encoded as -p-1 so the effect visibly forms while held.
 
-// ── Exact supplied Up Signature sequences ────────────────────────────────────
-function fireUp(ctx,x,y,p){
-  const f=frame12(p),c='#FF5A12',cx=x+18,cy=y-88;
-  if(f===1)return;
-  if(f===2){g1Line(ctx,[[x+8,y-38],[cx,cy]],c,10,.95);g1Flame(ctx,cx+4,cy-4,7,c,.9,-.3);return;}
-  g1Line(ctx,[[x+8,y-38],[cx,cy]],c,9,.95);
-  if(f===3){ctx.save();ctx.strokeStyle=c;ctx.lineWidth=10;ctx.lineCap='round';g1Glow(ctx,c,24);ctx.beginPath();ctx.arc(cx,cy,36,-2.35,-.2);ctx.stroke();ctx.restore();g1Flame(ctx,cx+30,cy-13,10,c,.95,-.3);return;}
-  ctx.save();ctx.strokeStyle=c;ctx.lineWidth=10;ctx.lineCap='round';g1Glow(ctx,c,24);ctx.beginPath();ctx.arc(cx,cy,36,-2.35,-.2);ctx.stroke();ctx.restore();g1Flame(ctx,cx+30,cy-13,11,c,.95,-.3);
-  if(f===4){g1Particles(ctx,cx+36,cy-22,c,.2,7,18);return;}
-  if(f===5){g1Trail(ctx,cx+38,cy-20,c,18,-12,7);return;}
-  if(f===6){for(let i=0;i<8;i++)g1Flame(ctx,cx+28+i*4,cy-14-i*3,7,c,.7,-.3);return;}
-  if(f===7)return;
-  if(f===8){g1Ring(ctx,cx,cy,39,32,c,.45,4);return;}
-  if(f===9){g1Ring(ctx,cx,cy,39,32,c,.32,4);return;}
-  if(f===10){ctx.save();ctx.globalAlpha=.45;ctx.strokeStyle=c;ctx.lineWidth=8;ctx.beginPath();ctx.arc(cx,cy,36,-2.35,-.2);ctx.stroke();ctx.restore();return;}
-  if(f===11||f===12){g1Particles(ctx,cx,cy,c,.65,8,26);}
+const REF_TAU = Math.PI * 2;
+const holdCharge = p => p < 0 ? Math.max(0, Math.min(1, -p - 1)) : 0;
+const attackP = p => Math.max(0, Math.min(1, p));
+const refFrame = p => 1 + attackP(p) * 11;
+
+function spark(ctx, x, y, r, c, a=1) {
+  ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=c; ctx.shadowColor=c; ctx.shadowBlur=14;
+  ctx.beginPath(); ctx.arc(x,y,r,0,REF_TAU); ctx.fill(); ctx.restore();
 }
-function waterUp(ctx,x,y,p){
-  const f=frame12(p),c='#27BFFF';
-  if(f===1){g1Ring(ctx,x+4,y-33,23,16,c,.95,8,-.1);g1Water(ctx,[[x-10,y-20],[x+7,y-39]],c,5,.8);return;}
-  if(f===2){g1Ring(ctx,x+12,y-52,22,15,c,.95,8,-.1);g1Water(ctx,[[x+7,y-40],[x+16,y-55]],c,5,.7);return;}
-  const pos=[null,[28,-74],[43,-92],[57,-111],[64,-119],[64,-119],[64,-119],[64,-119],[64,-119],[64,-119],[64,-119]];
-  const k=Math.min(10,f); const [px,py]=pos[k]||[64,-119];
-  if(f>=3&&f<=6){const prev=f===3?[x+12,y-52]:[x+28+(f-3)*9,y-74-(f-3)*9];g1Water(ctx,[prev,[x+px,y+py]],c,4,.35);}
-  g1Ring(ctx,x+px,y+py,22,14,c,f<=6?.98:.35,8,-.15);
-  for(let i=0;i<5;i++)g1Dot(ctx,x+px+Math.cos(i*1.7)*18,y+py+Math.sin(i*1.7)*9,1.7,'#D9FBFF',.55);
-  if(f===7)return;
-  if(f>=8&&f<=12)g1Particles(ctx,x+px,y+py,c,.2+f*.03,7,20);
+function glowStroke(ctx, pts, c, w, a=1) {
+  ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle=c; ctx.lineWidth=w; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.shadowColor=c; ctx.shadowBlur=Math.max(8,w*2.5); ctx.beginPath();
+  pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.stroke(); ctx.restore();
 }
-function grassUp(ctx,x,y,p){
-  const f=frame12(p),c='#62E63A',cy=y-112;
-  if(f===1){g1Dot(ctx,x,cy,5,'#E5C84A',1);return;}
-  const spinFrames={2:0,3:.8,4:1.65,5:2.55,6:3.45,7:4.35};
-  const spin=spinFrames[f]??4.35;
-  for(let i=0;i<3;i++)g1Leaf(ctx,x,cy,13,34,i*TAU/3+spin,c,.98);
-  g1Dot(ctx,x,cy,6,'#DDE85A',.9);
-  if(f>=3&&f<=7)g1Ring(ctx,x,cy,40,17,c,.28,2);
-  if(f===8){g1Particles(ctx,x,cy,c,.4,12,30);for(let i=0;i<6;i++)g1Line(ctx,[[x-12+i*5,cy+8],[x-8+i*5,cy-70-i*8]],c,2,.55);}
-  if(f>=9&&f<=11)g1Particles(ctx,x,cy,c,.8,10,24);
+function glowArc(ctx, x,y,rx,ry,a0,a1,c,w,a=1,rot=0) {
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.globalAlpha=a; ctx.strokeStyle=c; ctx.lineWidth=w; ctx.lineCap='round'; ctx.shadowColor=c; ctx.shadowBlur=Math.max(10,w*2.5);
+  ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,a0,a1); ctx.stroke(); ctx.restore();
 }
-function iceUp(ctx,x,y,p){
-  const f=frame12(p),c='#BDEFFF';
-  if(f===1){g1Shard(ctx,x+18,y-92,10,24,0,c,1);return;}
-  if(f===2){g1Shard(ctx,x+18,y-82,11,28,-.08,c,1);g1Line(ctx,[[x+9,y-38],[x+18,y-62]],c,7,.9);return;}
-  const t=Math.min(1,Math.max(0,(f-3)/6)),sx=x+18+58*t,sy=y-82-112*t-.0*Math.sin(t*Math.PI);
-  const ang=(f-3)*.95;
-  g1Shard(ctx,sx,sy,12,30,ang,c,1);
-  if(f>=4&&f<=8)g1Trail(ctx,sx,sy,c,34,24,8);
-  if(f===4||f===5){g1Ring(ctx,sx,sy,22,13,c,.3,3,ang);}
-  if(f===6||f===7){g1Dot(ctx,sx,sy,15,c,.22);}
-  if(f===8||f===9){g1Trail(ctx,sx,sy,c,45,28,9);g1Particles(ctx,sx,sy,c,.5,7,18);}
-  if(f===10){g1Particles(ctx,sx,sy,c,.8,10,25);}
-  if(f>=11)g1Particles(ctx,sx,sy,c,1,8,30);
+function core(ctx,x,y,r,c,a=1){ spark(ctx,x,y,r,'#fff',a*.85); spark(ctx,x,y,r*.58,c,a); }
+function trail(ctx,x,y,dx,dy,c,n=5,a=.55) {
+  for(let i=1;i<=n;i++){ const t=i/(n+1); glowStroke(ctx,[[x-dx*t,y-dy*t],[x-dx*(t+.07),y-dy*(t+.07)]],c,Math.max(1.5,4-i*.45),a*(1-t)); }
+}
+function flameShape(ctx,x,y,r,c,a=1,rot=0){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.globalAlpha=a; ctx.fillStyle=c; ctx.shadowColor=c; ctx.shadowBlur=18;
+  ctx.beginPath(); ctx.moveTo(0,-r); ctx.bezierCurveTo(r*.75,-r*.15,r*.65,r*.55,0,r); ctx.bezierCurveTo(-r*.75,r*.5,-r*.5,-r*.05,0,-r); ctx.fill();
+  ctx.fillStyle='#FFF3B0'; ctx.globalAlpha*=.75; ctx.beginPath(); ctx.moveTo(0,-r*.55); ctx.bezierCurveTo(r*.28,-r*.05,r*.25,r*.35,0,r*.52); ctx.bezierCurveTo(-r*.25,r*.3,-r*.18,-r*.05,0,-r*.55); ctx.fill(); ctx.restore();
+}
+function waterRing(ctx,x,y,rx,ry,c,a=1,rot=0){
+  glowArc(ctx,x,y,rx,ry,0,REF_TAU,c,7,a,rot);
+  glowArc(ctx,x,y,rx*.72,ry*.62,0,REF_TAU,'#dffaff',2,a*.65,rot);
+  for(let i=0;i<8;i++){const t=i/8*REF_TAU; spark(ctx,x+Math.cos(t)*rx,y+Math.sin(t)*ry,2.2,c,a*.8);}
+}
+function leafBlade(ctx,x,y,rx,ry,rot,c,a=1){
+  ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.globalAlpha=a;ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=12;
+  ctx.beginPath();ctx.moveTo(0,-ry);ctx.quadraticCurveTo(rx,-ry*.2,0,ry);ctx.quadraticCurveTo(-rx,-ry*.2,0,-ry);ctx.fill();ctx.restore();
+}
+function iceShard(ctx,x,y,w,h,rot,c,a=1){
+  ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.globalAlpha=a;ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=18;
+  ctx.beginPath();ctx.moveTo(0,-h);ctx.lineTo(w,h*.35);ctx.lineTo(w*.35,h);ctx.lineTo(-w*.65,h*.55);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#F4FFFF';ctx.lineWidth=1.5;ctx.stroke();ctx.restore();
 }
 
-// ── Authored 12-frame non-Up moves ───────────────────────────────────────────
-function fireDown(ctx,x,y,p){const f=frame12(p),c='#FF5A12';if(f<=2){g1Flame(ctx,x-8,y-20,8,c,.65,-.2);return;}if(f===3){for(let i=-1;i<=1;i++)g1Flame(ctx,x+i*12,y-12,9,c,.8,-Math.PI/2);return;}const q=Math.min(1,(f-3)/4);for(let i=-2;i<=2;i++){const xx=x+i*(10+12*q);g1Flame(ctx,xx,y-8,10+q*5,c,.9,-Math.PI/2);}if(f>=8)g1Particles(ctx,x,y-22,c,.5,12,45);}
-function fireSide(ctx,x,y,p){const f=frame12(p),c='#FF5A12';if(f<=2){g1Line(ctx,[[x+6,y-40],[x+25,y-52]],c,9,.7);g1Flame(ctx,x+26,y-52,9,c,.7);return;}const q=Math.min(1,(f-2)/4),ex=x+24+70*q,ey=y-44-Math.sin(q*Math.PI)*20;g1Line(ctx,[[x+8,y-40],[ex,ey]],c,12,.9);g1Flame(ctx,ex,ey,18+q*5,c,1,-.25);if(f>=7)g1Trail(ctx,ex,ey,c,45,-8,7);if(f>=10)g1Particles(ctx,ex,ey,c,.8,9,24);}
-function fireUpHeavy(ctx,x,y,p){const f=frame12(p),c='#FF5A12',q=Math.min(1,Math.max(0,(f-2)/6)),r=25+55*q;for(let i=0;i<10;i++){const a=i/10*TAU+q*TAU;g1Flame(ctx,x+Math.cos(a)*r,y-92+Math.sin(a)*r*.7,10,c,.85,a+.4);}g1Ring(ctx,x,y-92,r,r*.7,c,.55,8);if(f>=9)g1Particles(ctx,x,y-92,c,.7,12,r*.7);}
-function fireDownHeavy(ctx,x,y,p){const f=frame12(p),c='#FF5A12',q=Math.min(1,Math.max(0,(f-2)/6));for(let i=0;i<5;i++){const xx=x+(i-2)*28*q;g1Line(ctx,[[x,y-8],[xx,y+2],[xx+(i-2)*8,y-32]],c,6,.8);g1Flame(ctx,xx+(i-2)*8,y-34,11,c,.9,-Math.PI/2);}if(f>=9)g1Particles(ctx,x,y-28,c,.5,14,80);}
-function fireSideHeavy(ctx,x,y,p){const f=frame12(p),c='#FF5A12',q=Math.min(1,Math.max(0,(f-2)/6)),ang=-1.05+q*1.9,cx=x+28+Math.cos(ang)*50,cy=y-45+Math.sin(ang)*50;g1Line(ctx,[[x+7,y-45],[cx,cy]],c,15,.9);g1Flame(ctx,cx,cy,22,c,1,ang);if(f>=8)for(let i=0;i<7;i++)g1Flame(ctx,cx+Math.cos(i)*24,cy+Math.sin(i)*18,7,c,.6,i*.7);}
-
-function waterDown(ctx,x,y,p){const f=frame12(p),c='#27BFFF',q=Math.min(1,Math.max(0,(f-2)/5));for(const s of[-1,1]){const ex=x+s*(18+30*q),ey=y-10-58*q;g1Water(ctx,[[x+s*10,y-10],[ex,ey+24],[ex+s*8,ey]],c,11,.9);for(let i=0;i<4;i++)g1Dot(ctx,ex+s*i*5,ey-i*6,2.5,'#D9FBFF',.7);}if(f>=8)g1Ring(ctx,x,y-20,38,22,c,.45,3);}
-function waterSide(ctx,x,y,p){const f=frame12(p),c='#27BFFF',q=Math.min(1,Math.max(0,(f-2)/5));const pts=[];for(let i=0;i<=18;i++){const t=i/18;pts.push([x+10+88*q*t,y-44-Math.sin(t*Math.PI)*32*q]);}g1Water(ctx,pts,c,10,.95);const e=pts.at(-1);g1Ring(ctx,e[0],e[1],11,7,c,.9,5,.2);if(f>=8)g1Trail(ctx,e[0],e[1],c,55,-10,8);}
-function waterUpHeavy(ctx,x,y,p){const f=frame12(p),c='#27BFFF',q=Math.min(1,Math.max(0,(f-2)/6)),spin=q*TAU*1.1;const pts=[];for(let i=0;i<42;i++){const t=i/41,a=t*TAU+spin;pts.push([x+Math.cos(a)*(45+18*q),y-64+Math.sin(a)*(78+18*q)]);}g1Water(ctx,pts,c,13,.9);if(f>=7)for(let i=0;i<10;i++){const a=i/10*TAU+spin;g1Dot(ctx,x+Math.cos(a)*58,y-64+Math.sin(a)*92,3,'#D9FBFF',.7);}}
-function waterDownHeavy(ctx,x,y,p){const f=frame12(p),c='#27BFFF',q=Math.min(1,Math.max(0,(f-2)/7)),bx=x+72-144*q,by=y-48+Math.max(0,q-.45)*95;g1Ring(ctx,bx,by,28,22,c,.8,8);g1Dot(ctx,bx,by,18,c,.65);if(f>=7)for(let i=0;i<9;i++)g1Water(ctx,[[bx,by],[bx+(i-4)*12,by-55*(q-.55)]],c,4,.6);}
-function waterSideHeavy(ctx,x,y,p){const f=frame12(p),c='#27BFFF',q=Math.min(1,Math.max(0,(f-2)/7)),ang=-.95+q*1.9;ctx.save();ctx.translate(x+25,y-48);ctx.rotate(ang);ctx.strokeStyle=c;ctx.lineWidth=18;g1Glow(ctx,c,24);ctx.beginPath();ctx.arc(0,0,78,-.85,.85);ctx.stroke();ctx.restore();if(f>=8)g1Particles(ctx,x+95*q,y-48,c,.7,10,20);}
-
-function grassDown(ctx,x,y,p){const f=frame12(p),c='#62E63A',q=Math.min(1,Math.max(0,(f-2)/5));for(const s of[-1,1]){const ex=x+s*(18+30*q),ey=y-18;g1Line(ctx,[[x+s*12,y-4],[x+s*34,y-24],[ex,ey-32]],c,7,.9);for(let i=0;i<3;i++)g1Leaf(ctx,ex+s*i*6,ey-32-i*4,5,11,s*.7,c,.85);}if(f>=8)g1Particles(ctx,x,y-30,c,.7,10,35);}
-function grassSide(ctx,x,y,p){const f=frame12(p),c='#62E63A',wood='#8C6B3D',q=Math.min(1,Math.max(0,(f-2)/5));g1Line(ctx,[[x+8,y-44],[x+18+80*q,y-44]],wood,13,.95);for(let i=0;i<5;i++)g1Leaf(ctx,x+25+i*15*q,y-42,4,10,i*.6,c,.7);if(f>=8)g1Trail(ctx,x+18+80*q,y-44,c,50,0,7);}
-function grassUpHeavy(ctx,x,y,p){const f=frame12(p),c='#62E63A',q=Math.min(1,Math.max(0,(f-2)/7)),r=22+68*q;for(let i=0;i<9;i++){const a=i/9*TAU;g1Leaf(ctx,x+Math.cos(a)*r,y-52+Math.sin(a)*r*.55,12,28,a,c,.9);}g1Ring(ctx,x,y-52,r,r*.55,c,.55,5);if(f>=8)g1Particles(ctx,x,y-52,c,.7,12,r*.5);}
-function grassDownHeavy(ctx,x,y,p){const f=frame12(p),c='#62E63A',q=Math.min(1,Math.max(0,(f-2)/7));g1Line(ctx,[[x-35,y-105],[x+25*q,y-30],[x+12*q,y+4]],c,11,.9);g1Line(ctx,[[x+12*q,y+4],[x-24*q,y-26],[x-10*q,y-66]],c,10,.9);for(let i=0;i<7;i++)g1Leaf(ctx,x-25+i*7*q,y-30+i*2,5,12,i*.8,c,.65);if(f>=9)g1Particles(ctx,x+10,y-24,c,.7,10,60);}
-function grassSideHeavy(ctx,x,y,p){const f=frame12(p),c='#62E63A',wood='#8C6B3D',q=Math.min(1,Math.max(0,(f-2)/7));g1Line(ctx,[[x+8,y-46],[x+30+110*q,y-48]],wood,16,.9);for(let i=0;i<8;i++)g1Leaf(ctx,x+45+i*12*q,y-48+(i-4)*3,5,12,i*.5,c,.7);if(f>=9)g1Particles(ctx,x+130*q,y-48,c,.6,8,28);}
-
-function iceDown(ctx,x,y,p){const f=frame12(p),c='#BDEFFF',q=Math.min(1,Math.max(0,(f-2)/6));g1Ring(ctx,x,y-10,45,12,c,.65,5);if(f>=5)for(let i=0;i<8;i++){const a=Math.PI*1.05+i/7*Math.PI*.9,sx=x+Math.cos(a)*52*q,sy=y-18+Math.sin(a)*35*q;g1Shard(ctx,sx,sy,9,22,a,c,.9);}if(f>=9)g1Particles(ctx,x,y-20,c,.8,10,55);}
-function iceSide(ctx,x,y,p){const f=frame12(p),c='#BDEFFF',q=Math.min(1,Math.max(0,(f-2)/6)),a=-1.15+q*2.3;g1Line(ctx,[[x+8,y-44],[x+20+Math.cos(a)*64,y-44+Math.sin(a)*64]],c,15,.9);g1Shard(ctx,x+20+Math.cos(a)*64,y-44+Math.sin(a)*64,12,30,a,c,1);if(f>=8)g1Trail(ctx,x+80*q,y-45,c,55,-5,8);}
-function iceUpHeavy(ctx,x,y,p){const f=frame12(p),c='#BDEFFF',q=Math.min(1,Math.max(0,(f-2)/6));for(let i=0;i<3;i++){const a=-Math.PI/2+i*TAU/3+q*.7,sx=x+Math.cos(a)*76*q,sy=y-70+Math.sin(a)*76*q;g1Shard(ctx,sx,sy,16,42,a,c,.95);}if(f>=8)g1Particles(ctx,x,y-70,c,.7,12,70);}
-function iceDownHeavy(ctx,x,y,p){const f=frame12(p),c='#BDEFFF',q=Math.min(1,Math.max(0,(f-2)/7)),bx=x+28+104*q;ctx.save();ctx.fillStyle=c;g1Glow(ctx,c,20);ctx.globalAlpha=.9;ctx.fillRect(bx-34,y-18,68,34);ctx.restore();if(f>=8){g1Shard(ctx,bx+42,y-32,14,28,-.6,c,.95);g1Shard(ctx,bx-42,y-5,14,28,.6,c,.95);}}
-function iceSideHeavy(ctx,x,y,p){const f=frame12(p),c='#BDEFFF',q=Math.min(1,Math.max(0,(f-2)/7)),a=-1.15+q*2.3;g1Line(ctx,[[x+8,y-44],[x+25,y-42]],c,17,.9);g1Shard(ctx,x+25+Math.cos(a)*68,y-42+Math.sin(a)*68,17,50,a,c,1);if(f>=8)for(let i=0;i<7;i++)g1Shard(ctx,x+85+i*9,y-42+Math.sin(i)*8,6,16,i*.6,c,.8);}
-
-function fireSuper(ctx,x,y,p){
-  const c='#FF6600',f=moveFrame(p);
-  if(f<4){flame(ctx,x-22,y-56,22,c,.7,-.25);flame(ctx,x+22,y-56,22,c,.7,.25);return;}
-  const q=stageFade(f,4,7); const r=18+q*22;
-  ctx.save();ctx.fillStyle='#FFF2A8';glow(ctx,c,30);ctx.globalAlpha=.95;ctx.beginPath();ctx.arc(x+14,y-58,r,0,TAU);ctx.fill();ctx.restore();
-  if(f>=7){const e=stageFade(f,7,10),cx=x+82,cy=y-50,rr=10+e*62;ctx.save();ctx.fillStyle=c;glow(ctx,c,30);ctx.globalAlpha=1-e*.25;ctx.beginPath();ctx.arc(cx,cy,rr,0,TAU);ctx.fill();ctx.restore();for(let i=0;i<16;i++){const a=i/16*TAU;streak(ctx,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,cx+Math.cos(a)*(rr+26*e),cy+Math.sin(a)*(rr+26*e),c,4,.65);}}
-  if(f>=10){ctx.save();ctx.globalAlpha=1-stageFade(f,10,12);ctx.strokeStyle=c;ctx.lineWidth=8;glow(ctx,c,26);ctx.beginPath();ctx.arc(x+82,y-50,68,0,TAU);ctx.stroke();ctx.restore();}
-}
-
-function waterSuper(ctx,x,y,p){
-  const c='#3399CC',f=moveFrame(p);
-  const r=30+stageFade(f,2,6)*68;
-  if(f<7)ring(ctx,x,y-52,r,r*.68,c,.85,14);
-  if(f>=6){const e=stageFade(f,6,10),rr=r*(1-e);for(let i=0;i<20;i++){const a=i/20*TAU;streak(ctx,x+Math.cos(a)*r,y-52+Math.sin(a)*r*.68,x+Math.cos(a)*rr,y-52+Math.sin(a)*rr*.68,c,5,.6);}}
-  if(f>=9){const e=stageFade(f,9,11),rr=8+e*112;ring(ctx,x,y-52,rr,rr*.68,c,1-e*.15,9);}
-}
-
-function grassSuper(ctx,x,y,p){
-  const c='#44AA44',f=moveFrame(p),q=stageFade(f,2,9),r=28+q*92;
-  for(let i=0;i<12;i++){const a=i/12*TAU;leaf(ctx,x+Math.cos(a)*r,y-48+Math.sin(a)*r*.65,16,38,a,c,.85);}
-  if(f>=6){const rr=r*(1-stageFade(f,6,10));for(let i=0;i<12;i++){const a=i/12*TAU;streak(ctx,x+Math.cos(a)*r,y-48+Math.sin(a)*r*.65,x+Math.cos(a)*rr,y-48+Math.sin(a)*rr*.65,c,8,.7);}}
-}
-
-function iceSuper(ctx,x,y,p){
-  const c='#AAEEFF',f=moveFrame(p),cx=x+52,cy=y-54;
-  if(f<7){ctx.save();ctx.fillStyle=c;glow(ctx,c,24);ctx.globalAlpha=.9;ctx.beginPath();ctx.moveTo(cx,cy-100);ctx.lineTo(cx+42,cy-22);ctx.lineTo(cx+30,cy+70);ctx.lineTo(cx-18,cy+45);ctx.lineTo(cx-44,cy-24);ctx.closePath();ctx.fill();ctx.restore();}
-  if(f>=5){const e=stageFade(f,5,11),r=24+e*110;for(let i=0;i<16;i++){const a=i/16*TAU;const sx=cx+Math.cos(a)*r,sy=cy+Math.sin(a)*r*.72;shard(ctx,sx,sy,10,28,a,c,.95);}}
-}
-
-function drawGen1AttackVisual(ctx,x,y,p,charId,move){
-  if(charId==='g1_thunder'){
-    if(move==='us') thunderUp(ctx,x,y,p);
-    else if(move==='ds') thunderDown(ctx,x,y,p);
-    else if(move==='ss') thunderSide(ctx,x,y,p,false);
-    else if(move==='sh') thunderSide(ctx,x,y,p,true);
-    else if(move==='upHeavy'||move==='uh') thunderUpHeavy(ctx,x,y,p);
-    else if(move==='dh') thunderDownHeavy(ctx,x,y,p);
+// ── Exact reference-style UP SIGNATURES ─────────────────────────────────────
+function fireUpReference(ctx,x,y,p){
+  const c='#FF5A16', hot='#FF9A22', white='#FFF2B0';
+  if(p<0){
+    const q=holdCharge(p);
+    // User-specified hold stance: frame 2 silhouette, with a growing flame hook.
+    const lift=.05*q, r=15+22*q;
+    glowStroke(ctx,[[x+8,y-30],[x+20,y-48],[x+25,y-70-lift*8]],c,8+q*2,.8);
+    glowArc(ctx,x+28,y-76,10+r*.45,8+r*.3,-2.25,-.45,c,5+q*5,.85);
+    flameShape(ctx,x+30,y-78,r*.42,hot,.9,.2);
+    spark(ctx,x+30,y-78,3+q*2,white,.7);
     return;
   }
-  if(charId==='g1_fire'){if(move==='us')fireUp(ctx,x,y,p);else if(move==='ds')fireDown(ctx,x,y,p);else if(move==='ss')fireSide(ctx,x,y,p);else if(move==='upHeavy'||move==='uh')fireUpHeavy(ctx,x,y,p);else if(move==='dh')fireDownHeavy(ctx,x,y,p);else fireSideHeavy(ctx,x,y,p);return;}
-  if(charId==='g1_water'){if(move==='us')waterUp(ctx,x,y,p);else if(move==='ds')waterDown(ctx,x,y,p);else if(move==='ss')waterSide(ctx,x,y,p);else if(move==='upHeavy'||move==='uh')waterUpHeavy(ctx,x,y,p);else if(move==='dh')waterDownHeavy(ctx,x,y,p);else waterSideHeavy(ctx,x,y,p);return;}
-  if(charId==='g1_grass'){if(move==='us')grassUp(ctx,x,y,p);else if(move==='ds')grassDown(ctx,x,y,p);else if(move==='ss')grassSide(ctx,x,y,p);else if(move==='upHeavy'||move==='uh')grassUpHeavy(ctx,x,y,p);else if(move==='dh')grassDownHeavy(ctx,x,y,p);else grassSideHeavy(ctx,x,y,p);return;}
-  if(charId==='g1_ice'){if(move==='us')iceUp(ctx,x,y,p);else if(move==='ds')iceDown(ctx,x,y,p);else if(move==='ss')iceSide(ctx,x,y,p);else if(move==='upHeavy'||move==='uh')iceUpHeavy(ctx,x,y,p);else if(move==='dh')iceDownHeavy(ctx,x,y,p);else iceSideHeavy(ctx,x,y,p);}
+  const f=refFrame(p);
+  // Frames 1-2: idle -> upward swing. Frame 3 forms the hook.
+  if(f<2.0){ return; }
+  const swing=Math.min(1,(f-2)/1.25);
+  const armX=x+18+swing*8, armY=y-42-swing*34;
+  glowStroke(ctx,[[x+10,y-24],[x+18,y-38],[armX,armY]],c,8,.9);
+  if(f>=2.6){
+    const hookT=Math.min(1,(f-2.6)/1.7), ang=-2.45+hookT*2.0;
+    const hx=armX+Math.cos(ang)*38, hy=armY+Math.sin(ang)*38;
+    glowArc(ctx,armX,armY,42+hookT*8,30+hookT*7,-2.55,ang,c,9,.95,-.05);
+    flameShape(ctx,hx,hy,11,hot,1,ang+.4); spark(ctx,hx,hy,3,white,.9);
+    for(let i=0;i<7;i++){const a=ang-.8+i*.22; spark(ctx,armX+Math.cos(a)*48,armY+Math.sin(a)*36,1.5,c,.6);}
+    if(f>=4 && f<7){ trail(ctx,hx,hy,-26,-26,c,5,.6); }
+    if(f>=4 && f<6.5){
+      const launch=(f-4)/2.5;
+      glowStroke(ctx,[[hx,hy],[hx+18*launch,hy-22*launch]],hot,3,.55);
+    }
+  }
+  if(f>=7){
+    // Reference hold visual can remain readable after the hit; actual game hold is pre-attack.
+    const a=Math.max(.2,1-(f-7)/5);
+    glowArc(ctx,armX,armY,48,35,-2.55,.25,c,8,a,-.05);
+    flameShape(ctx,armX+32,armY-28,12,hot,a,.2);
+  }
 }
 
-function holdFrameFor(charId,move){
-  if(charId==='g1_water'&&move==='us')return 1;
-  if(charId==='g1_grass'&&move==='us')return 3;
-  if((charId==='g1_fire'||charId==='g1_ice'||charId==='g1_thunder')&&move==='us')return 2;
-  return 2;
+function waterUpReference(ctx,x,y,p){
+  const c='#24BFFF', white='#DDFBFF';
+  if(p<0){
+    // User-specified hold frame: frame 1 — ring begins around the lower arm.
+    const q=holdCharge(p), rr=17+q*9;
+    waterRing(ctx,x+4,y-34,rr+8,rr*.45,c,.75+q*.2,-.15);
+    glowStroke(ctx,[[x+5,y-25],[x+12,y-42]],c,5,.8);
+    return;
+  }
+  const f=refFrame(p);
+  if(f<1.8){ waterRing(ctx,x+4,y-34,22,10,c,.75,-.15); return; }
+  const travel=Math.min(1,Math.max(0,(f-2)/5.2));
+  const tx=x+30+travel*130, ty=y-55-travel*70+Math.sin(travel*Math.PI)*20;
+  const prevX=x+18+(travel-.12)*130, prevY=y-48-(travel-.12)*70+Math.sin(Math.max(0,travel-.12)*Math.PI)*20;
+  glowStroke(ctx,[[x+10,y-34],[x+25,y-52],[tx,ty]],c,6,.55);
+  for(let i=0;i<6;i++) spark(ctx,tx-Math.cos(.5)*i*7,ty+i*4,1.7,c,.65);
+  if(f<3.1){ waterRing(ctx,x+18,y-48,25,12,c,.95,-.1); }
+  if(f>=3){ waterRing(ctx,tx,ty,27,11,c,.98,.2+travel*.3); }
+  if(f>=5){ trail(ctx,tx,ty,tx-prevX,ty-prevY,c,7,.5); }
+  if(f>=6 && f<8){
+    const vanish=(f-6)/2; glowArc(ctx,tx,ty,25*(1-vanish),10*(1-vanish),0,REF_TAU,c,5,1-vanish,.25);
+  }
 }
-function drawGen1ChargeLayer(ctx,x,y,charId,move,tick){
-  if(charId==='g1_thunder')return;
-  const q=Math.max(0,Math.min(1,(tick||0)/180)),pulse=.55+.45*Math.sin((tick||0)*.18);
-  if(charId==='g1_fire'){const r=8+q*28;g1Flame(ctx,x+18,y-48,r,'#FF5A12',.18+.45*q*pulse,-.35);g1Ring(ctx,x+18,y-48,r+8,r*.7,'#FFD66B',.18+.25*q,3);}
-  else if(charId==='g1_water'){const r=12+q*32;g1Ring(ctx,x+18,y-48,r,r*.62,'#27BFFF',.25+.5*q*pulse,4);for(let i=0;i<8;i++)g1Dot(ctx,x+18+Math.cos(i*TAU/8+tick*.04)*(r+5),y-48+Math.sin(i*TAU/8+tick*.04)*r*.62,1.8,'#D9FBFF',.25+.3*q);}
-  else if(charId==='g1_grass'){const r=10+q*25;for(let i=0;i<3;i++)g1Leaf(ctx,x+Math.cos(i*TAU/3+tick*.08)*r,y-112+Math.sin(i*TAU/3+tick*.08)*r*.35,6+q*5,14+q*9,i*TAU/3+tick*.08,'#8BFF48',.25+.5*q);}
-  else if(charId==='g1_ice'){const r=8+q*24;g1Shard(ctx,x+18,y-82,9+q*5,20+q*10,-.15,'#BDEFFF',.25+.5*q);for(let i=0;i<8;i++)g1Dot(ctx,x+18+Math.cos(i*TAU/8+tick*.02)*r,y-82+Math.sin(i*TAU/8+tick*.02)*r,1.5+q,'#E7FCFF',.25+.35*q);}
-}
-function drawGen1HoldPose(ctx,x,y,charId,move,holdTick){const hf=holdFrameFor(charId,move),hp=(hf-1)/11;drawGen1AttackVisual(ctx,x,y,hp,charId,move);drawGen1ChargeLayer(ctx,x,y,charId,move,holdTick);}
 
-export function drawGen1Attack(ctx,x,y,color,p,facing,charId,move,attackData=null){
-  ctx.save();ctx.translate(x,y);ctx.scale(facing<0?-1:1,1);
-  if(attackData?.holding){drawGen1HoldPose(ctx,0,0,charId,move,attackData.holdTick||0);ctx.restore();return;}
-  drawGen1AttackVisual(ctx,0,0,p,charId,move);ctx.restore();
+function grassUpReference(ctx,x,y,p){
+  const c='#7CFF28', pale='#D9FF7A';
+  if(p<0){
+    // User-specified hold frame: frame 3 — propeller is visible and charging,
+    // but the leaves are not collision-active until release.
+    const q=holdCharge(p), cy=y-92;
+    glowArc(ctx,x,cy,35+q*5,15+q*3,0,REF_TAU,c,4,.7,.0);
+    for(let i=0;i<3;i++) leafBlade(ctx,x,cy,8+q*3,23+q*6,i*REF_TAU/3+q*1.2,c,.95);
+    spark(ctx,x,cy,4+q*2,pale,.75);
+    return;
+  }
+  const f=refFrame(p);
+  if(f<2){ spark(ctx,x,y-88,4,c,.9); return; }
+  const cy=y-92;
+  const rot=Math.min(1,(f-2)/5.2)*REF_TAU;
+  const radius=32;
+  for(let i=0;i<3;i++) leafBlade(ctx,x+Math.cos(rot+i*REF_TAU/3)*radius,cy+Math.sin(rot+i*REF_TAU/3)*radius*.38,9,25,rot+i*REF_TAU/3,c,.95);
+  glowArc(ctx,x,cy,42,17,0,REF_TAU,c,5,.55,rot*.12);
+  if(f>=4 && f<8){
+    const drop=Math.min(1,(f-4)/3.2), yy=cy+drop*72;
+    glowArc(ctx,x,yy,39,15,0,REF_TAU,c,4,.8,rot*.2);
+    for(let i=0;i<3;i++) leafBlade(ctx,x+Math.cos(rot+i*REF_TAU/3)*34,yy+Math.sin(rot+i*REF_TAU/3)*34*.4,8,22,rot+i*REF_TAU/3,c,.9);
+  }
+  if(f>=7){
+    const burst=(f-7)/2.0;
+    for(let i=0;i<12;i++){const a=i/12*REF_TAU; trail(ctx,x+Math.cos(a)*12,cy+Math.sin(a)*8,Math.cos(a)*28,Math.sin(a)*20,c,2,.5*(1-burst));}
+  }
 }
 
+function iceUpReference(ctx,x,y,p){
+  const c='#79DFFF', white='#EFFFFF';
+  if(p<0){
+    // User-specified hold frame: frame 2 — shard is formed and visibly charging.
+    const q=holdCharge(p), sy=y-88-q*6;
+    iceShard(ctx,x+1,sy,10+q*3,22+q*7,-.1-q*.25,c,.95);
+    glowArc(ctx,x,sy+10,18+q*8,8+q*3,0,REF_TAU,c,3,.55,0);
+    return;
+  }
+  const f=refFrame(p);
+  const q=Math.min(1,Math.max(0,(f-2)/7));
+  const sx=x+8+q*110, sy=y-88-q*92;
+  if(f<2.1){ iceShard(ctx,x+1,y-88,10,24,0,c,.95); return; }
+  if(f<4){ iceShard(ctx,sx,sy,12,30,q*6,c,1); }
+  if(f>=4){
+    glowArc(ctx,sx,sy+8,20,9,0,REF_TAU,c,3,.65,q*1.5);
+    iceShard(ctx,sx,sy,13,31,q*9,c,1);
+    trail(ctx,sx,sy,Math.max(20,sx-x),Math.max(20,sy-y),c,8,.65);
+  }
+  if(f>=8 && f<10){
+    const launch=(f-8)/2;
+    // Slight directional launch matching the reference's side-biased trajectory.
+    trail(ctx,sx,sy,40,55,c,7,.8);
+  }
+  if(f>=10){ spark(ctx,sx,sy,3,white,.7); }
+}
+
+// ── Detailed non-up signatures/heavies ─────────────────────────────────────
+function fireAttack(ctx,x,y,p,move){
+  const c='#FF5A16', hot='#FFB12B', q=attackP(p), a=.25+.75*Math.sin(q*Math.PI);
+  if(move==='us'){fireUpReference(ctx,x,y,p);return;}
+  if(move==='ss'){
+    const t=Math.min(1,q/.72), ex=x+18+t*90, ey=y-43-Math.sin(t*Math.PI)*18;
+    glowStroke(ctx,[[x+8,y-25],[x+25,y-43],[ex,ey]],c,8,a); flameShape(ctx,ex,ey,18,hot,a,.15); trail(ctx,ex,ey,75,15,c,6,.45); return;
+  }
+  if(move==='ds'){
+    const spread=18+q*38; for(let i=-2;i<=2;i++){const xx=x+i*spread*.42; flameShape(ctx,xx,y-15-Math.abs(i)*3,14+q*5,c,a,.1*i); glowStroke(ctx,[[xx,y-2],[xx+i*5,y-28]],hot,3,a*.65);} return;
+  }
+  if(move==='sh'){
+    const t=easeOut(q), ang=-.9+t*1.8, ex=x+26+Math.cos(ang)*58, ey=y-46+Math.sin(ang)*58;
+    glowStroke(ctx,[[x+8,y-34],[x+28,y-48],[ex,ey]],c,13,a); flameShape(ctx,ex,ey,25,hot,a,ang); glowArc(ctx,x+35,y-46,58,44,-.9,ang,c,6,a*.7,-.15); return;
+  }
+  if(move==='uh'){
+    const t=easeOut(q), r=58; glowArc(ctx,x,y-92,r,r*.62,-Math.PI*.15,Math.PI*1.85,c,10,a); for(let i=0;i<9;i++){const ang=i/9*REF_TAU+t*REF_TAU; flameShape(ctx,x+Math.cos(ang)*r,y-92+Math.sin(ang)*r*.62,10,hot,a*.8,ang);} return;
+  }
+  if(move==='dh'){
+    for(let i=0;i<6;i++){const xx=x+(i-2.5)*25*q; glowStroke(ctx,[[x,y-5],[xx,y-38-Math.abs(i-2.5)*8]],c,5,a*.8); flameShape(ctx,xx,y-40-Math.abs(i-2.5)*7,12,hot,a,.2*(i-2.5));} return;
+  }
+}
+function waterAttack(ctx,x,y,p,move){
+  const c='#24BFFF', white='#DDFBFF', q=attackP(p), a=.3+.7*Math.sin(q*Math.PI);
+  if(move==='us'){waterUpReference(ctx,x,y,p);return;}
+  if(move==='ss'){
+    const t=easeOut(q), ex=x+18+t*105, ey=y-44-Math.sin(t*Math.PI)*24;
+    glowStroke(ctx,[[x+5,y-30],[x+32,y-48],[ex,ey]],c,7,a); waterRing(ctx,ex,ey,14,7,c,.9,.3+t*2); trail(ctx,ex,ey,90,20,c,8,.45); return;
+  }
+  if(move==='ds'){
+    const spread=28+q*30; glowArc(ctx,x,y-24,spread,18,Math.PI,REF_TAU,c,8,a,.0); for(let s of [-1,1]){waterRing(ctx,x+s*spread,y-38,14,6,c,.9,s*.4); trail(ctx,x+s*spread,y-38,s*20,-50,c,4,.5);} return;
+  }
+  if(move==='sh'){
+    const t=easeOut(q), ang=-.9+t*1.8; glowArc(ctx,x+26,y-48,78,48,-.9,ang,c,13,a,-.08); waterRing(ctx,x+26+Math.cos(ang)*70,y-48+Math.sin(ang)*42,18,8,c,.9,ang); return;
+  }
+  if(move==='uh'){
+    const r=62; const t=easeOut(q); glowArc(ctx,x,y-76,r,r*1.15,-1.0+t*REF_TAU,-1.0+t*REF_TAU+2.8,c,9,a,.0); for(let i=0;i<10;i++){const ang=i/10*REF_TAU+t*1.5; spark(ctx,x+Math.cos(ang)*r,y-76+Math.sin(ang)*r*1.15,3,c,.6);} return;
+  }
+  if(move==='dh'){
+    const bx=x+80-160*easeOut(q), by=y-45+Math.max(0,q-.45)*70; waterRing(ctx,bx,by,22,16,c,a,.3); trail(ctx,bx,by,80,15,c,7,.5); return;
+  }
+}
+function grassAttack(ctx,x,y,p,move){
+  const c='#7CFF28', pale='#D9FF7A', wood='#9B6A3B', q=attackP(p), a=.3+.7*Math.sin(q*Math.PI);
+  if(move==='us'){grassUpReference(ctx,x,y,p);return;}
+  if(move==='ss'){
+    const t=easeOut(q), ex=x+18+t*100, ey=y-45-Math.sin(t*Math.PI)*10; glowStroke(ctx,[[x+8,y-25],[x+25,y-45],[ex,ey]],wood,10,a); glowStroke(ctx,[[x+18,y-42],[ex,ey]],c,3,a); for(let i=0;i<4;i++)leafBlade(ctx,x+35+t*50+i*8,ey+(i%2?6:-6),4,10,i*.8,c,a*.7); return;
+  }
+  if(move==='ds'){
+    const t=easeOut(q); for(const s of [-1,1]){const bx=x+s*(22+32*t); glowStroke(ctx,[[x+s*10,y-4],[bx,y-34]],c,7,a); for(let i=0;i<3;i++)leafBlade(ctx,bx+s*i*9,y-34-i*6,4,10,s*.7+i*.2,c,a*.8);} return;
+  }
+  if(move==='sh'){
+    const t=easeOut(q), ex=x+25+t*100; glowStroke(ctx,[[x+8,y-42],[ex,y-42]],wood,15,a); for(let i=0;i<5;i++)leafBlade(ctx,x+48+t*55+i*7,y-42+(i%2?8:-8),5,12,-.4+i*.25,c,a*.8); return;
+  }
+  if(move==='uh'){
+    const r=68; glowArc(ctx,x,y-82,r,r*.55,0,REF_TAU,c,8,a); for(let i=0;i<9;i++){const ang=i/9*REF_TAU+q*4;leafBlade(ctx,x+Math.cos(ang)*r,y-82+Math.sin(ang)*r*.55,8,20,ang,c,a*.85);} return;
+  }
+  if(move==='dh'){
+    glowStroke(ctx,[[x-40,y-100],[x+30,y-25],[x+5,y+2]],c,10,a); glowStroke(ctx,[[x+5,y+2],[x-30,y-35],[x-15,y-75]],c,8,a*.8); for(let i=0;i<8;i++)leafBlade(ctx,x-20+i*8,y-35+i*2,4,10,i*.6,c,a*.65); return;
+  }
+}
+function iceAttack(ctx,x,y,p,move){
+  const c='#79DFFF', white='#EFFFFF', q=attackP(p), a=.3+.7*Math.sin(q*Math.PI);
+  if(move==='us'){iceUpReference(ctx,x,y,p);return;}
+  if(move==='ss'){
+    const t=easeOut(q), ang=-1+t*2; const ex=x+22+Math.cos(ang)*58, ey=y-45+Math.sin(ang)*58; glowStroke(ctx,[[x+8,y-30],[x+24,y-44],[ex,ey]],c,12,a); iceShard(ctx,ex,ey,13,32,ang,c,a); trail(ctx,ex,ey,50,20,c,6,.45); return;
+  }
+  if(move==='ds'){
+    glowArc(ctx,x,y-10,55,15,0,REF_TAU,c,5,a); for(let i=0;i<7;i++){const ang=Math.PI*1.05+i/6*Math.PI*.9; iceShard(ctx,x+Math.cos(ang)*52*q,y-15+Math.sin(ang)*28*q,8,22,ang,c,a);} return;
+  }
+  if(move==='sh'){
+    const t=easeOut(q), ang=-1+t*2; glowStroke(ctx,[[x+12,y-45],[x+28+Math.cos(ang)*50,y-45+Math.sin(ang)*50]],c,16,a); iceShard(ctx,x+28+Math.cos(ang)*60,y-45+Math.sin(ang)*60,16,42,ang,c,a); glowArc(ctx,x+28,y-45,62,52,-1,ang,c,4,a*.7); return;
+  }
+  if(move==='uh'){
+    for(let i=0;i<3;i++){const ang=-Math.PI/2+i*REF_TAU/3+q*.8; const sx=x+Math.cos(ang)*72*q, sy=y-76+Math.sin(ang)*72*q; iceShard(ctx,sx,sy,13,34,ang,c,a);} return;
+  }
+  if(move==='dh'){
+    const bx=x+25+q*110; ctx.save();ctx.globalAlpha=a;ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=18;ctx.beginPath();ctx.roundRect(bx-34,y-25,68,38,8);ctx.fill();ctx.restore(); for(let i=0;i<5;i++)iceShard(ctx,bx-30+i*15,y-28-(i%2)*10,6,15,i*.8,c,a*.7); return;
+  }
+}
+
+// Improved supers. They deliberately have no hold state.
+function fireSuper(ctx,x,y,p){const c='#FF5A16',hot='#FFB12B',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const cx=x+90,cy=y-60; if(q<.45){for(let i=0;i<3;i++)flameShape(ctx,x+(i-1)*22,y-60,22+q*20,hot,a*.7,(i-1)*.35);core(ctx,x+18,y-58,16,c,a);} if(q>.25){const r=20+easeOut((q-.25)/.75)*92; spark(ctx,cx,cy,r*.72,c,a*.65); spark(ctx,cx,cy,r*.32,hot,a); glowArc(ctx,cx,cy,r,r,0,REF_TAU,c,10,a); for(let i=0;i<14;i++){const ang=i/14*REF_TAU; flameShape(ctx,cx+Math.cos(ang)*r,cy+Math.sin(ang)*r,9,hot,a*.75,ang);}}}
+function waterSuper(ctx,x,y,p){const c='#24BFFF',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=35+easeOut(q)*110; waterRing(ctx,x,y-58,r,r*.55,c,a,.1); for(let i=0;i<16;i++){const ang=i/16*REF_TAU+q*2; glowStroke(ctx,[[x+Math.cos(ang)*(r-20),y-58+Math.sin(ang)*(r-20)*.55],[x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.55]],c,6,a*.65);}}
+function grassSuper(ctx,x,y,p){const c='#7CFF28',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*105; for(let i=0;i<14;i++){const ang=i/14*REF_TAU+q*1.8; leafBlade(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.62,13,34,ang,c,a*.85);} glowArc(ctx,x,y-58,r,r*.62,0,REF_TAU,c,6,a);}
+function iceSuper(ctx,x,y,p){const c='#79DFFF',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*120; for(let i=0;i<18;i++){const ang=i/18*REF_TAU;iceShard(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.68,10,28,ang,c,a);} glowArc(ctx,x,y-58,r,r*.68,0,REF_TAU,c,5,a*.8);}
+
+export function drawGen1Attack(ctx,x,y,color,p,facing,charId,move){
+  ctx.save(); ctx.translate(x,y); ctx.scale(facing<0?-1:1,1);
+  if(charId==='g1_thunder'){
+    if(move==='us') thunderUp(ctx,0,0,p); else if(move==='ds') thunderDown(ctx,0,0,Math.max(0,p)); else if(move==='ss') thunderSide(ctx,0,0,Math.max(0,p),false); else if(move==='sh') thunderSide(ctx,0,0,Math.max(0,p),true); else if(move==='uh'||move==='upHeavy') thunderUpHeavy(ctx,0,0,Math.max(0,p)); else if(move==='dh') thunderDownHeavy(ctx,0,0,Math.max(0,p));
+  } else if(charId==='g1_fire') fireAttack(ctx,0,0,p,move);
+  else if(charId==='g1_water') waterAttack(ctx,0,0,p,move);
+  else if(charId==='g1_grass') grassAttack(ctx,0,0,p,move);
+  else if(charId==='g1_ice') iceAttack(ctx,0,0,p,move);
+  ctx.restore();
+}
 export function drawGen1Super(ctx,x,y,p,facing,charId){
   ctx.save();ctx.translate(x,y);ctx.scale(facing<0?-1:1,1);
-  if(charId==='g1_thunder') thunderSuper(ctx,0,0,p);
-  else if(charId==='g1_fire') fireSuper(ctx,0,0,p);
-  else if(charId==='g1_water') waterSuper(ctx,0,0,p);
-  else if(charId==='g1_grass') grassSuper(ctx,0,0,p);
-  else if(charId==='g1_ice') iceSuper(ctx,0,0,p);
-  ctx.restore();
+  if(charId==='g1_thunder') thunderSuper(ctx,0,0,p); else if(charId==='g1_fire') fireSuper(ctx,0,0,p); else if(charId==='g1_water') waterSuper(ctx,0,0,p); else if(charId==='g1_grass') grassSuper(ctx,0,0,p); else if(charId==='g1_ice') iceSuper(ctx,0,0,p); ctx.restore();
 }

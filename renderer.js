@@ -1630,6 +1630,111 @@ export function drawTimer(ctx, canvasWidth, seconds) {
 
 // ─── Stage / Environment ────────────────────────────────────────────────────
 
+
+function drawMainPlatformDecor(ctx, p, frame, mapId, accent) {
+  const id = String(mapId || '').toLowerCase();
+  const t = frame * 0.035;
+  const leftX = p.x + Math.min(34, p.w * 0.07);
+  const rightX = p.x + p.w - Math.min(34, p.w * 0.07);
+  const top = p.y;
+  const sway = Math.sin(t) * 2.5;
+  const theme = /lava|inferno|volcano|underworld|ember|blood|phoenix|forge/.test(id) ? 'fire'
+    : /ice|glacier|frozen|aurora|snow|opal/.test(id) ? 'ice'
+    : /ocean|tidal|coral|cove|reef/.test(id) ? 'water'
+    : /forest|grove|jungle|garden|marsh|meadow|verdant|harvest|mountain/.test(id) ? 'nature'
+    : /city|tower|neon|lab|town|dojo|castle|temple|arena|coliseum|sanctum|keep/.test(id) ? 'structure'
+    : /void|rift|cosmic|nebula|shadow|mind|element6/.test(id) ? 'void' : 'nature';
+
+  ctx.save();
+  ctx.lineCap='round'; ctx.lineJoin='round';
+
+  const bush = (x, flip=1) => {
+    const baseY=top+1;
+    const green = theme==='nature' ? '#43A047' : theme==='ice' ? '#7EDCFF' : accent;
+    const dark = theme==='nature' ? '#174A2A' : theme==='ice' ? '#2E78A6' : '#152033';
+    ctx.fillStyle=dark; ctx.globalAlpha=.96;
+    for(let i=0;i<5;i++){
+      const bx=x+flip*(i-2)*9, by=baseY-10-Math.sin(i*1.7+t)*2;
+      ctx.beginPath();ctx.arc(bx,by,11+(i%2)*3,0,Math.PI*2);ctx.fill();
+    }
+    ctx.fillStyle=green; ctx.globalAlpha=.98;
+    for(let i=0;i<5;i++){
+      const bx=x+flip*(i-2)*8, by=baseY-15-Math.sin(i+t)*2;
+      ctx.beginPath();ctx.arc(bx,by,7+(i%2)*3,0,Math.PI*2);ctx.fill();
+    }
+    // small leaves and stems for a readable layered silhouette
+    ctx.strokeStyle=theme==='nature'?'#8BE36A':green;ctx.lineWidth=2;
+    for(let i=0;i<6;i++){
+      const bx=x+flip*((i%3)-1)*11, by=baseY-18-(i%2)*6;
+      ctx.beginPath();ctx.moveTo(bx,baseY);ctx.quadraticCurveTo(bx+flip*4,by+6,bx+flip*(7+(i%2)*3),by);ctx.stroke();
+    }
+  };
+
+  const vines = (x,flip=1) => {
+    const c=theme==='ice'?'#79DFFF':theme==='water'?'#4DFFCF':theme==='nature'?'#62C94B':accent;
+    ctx.strokeStyle=c;ctx.lineWidth=3;ctx.globalAlpha=.9;
+    ctx.beginPath();ctx.moveTo(x,top+2);ctx.bezierCurveTo(x+flip*4,top+13,x-flip*2,top+21+Math.sin(t)*2,x+flip*9,top+31);ctx.stroke();
+    for(let i=0;i<4;i++){const yy=top+10+i*6;ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(x+flip*(5+(i%2)*4),yy,6,3,flip*.45,0,Math.PI*2);ctx.fill();}
+  };
+
+  const flame = (x,flip=1) => {
+    for(let i=0;i<4;i++){
+      const xx=x+flip*(i-1.5)*7, h=22+(i%2)*9+Math.sin(t*2+i)*3;
+      ctx.fillStyle=i%2?'#FFB300':'#FF5A16';ctx.globalAlpha=.95;ctx.beginPath();ctx.moveTo(xx,top+2);ctx.quadraticCurveTo(xx+flip*7,top-h*.45,xx,top-h);ctx.quadraticCurveTo(xx-flip*6,top-h*.45,xx,top+2);ctx.fill();
+    }
+    ctx.fillStyle='#FFE66D';ctx.globalAlpha=.85;ctx.beginPath();ctx.ellipse(x,top-9,5,10,0,0,Math.PI*2);ctx.fill();
+  };
+
+  const ice = (x,flip=1) => {
+    ctx.fillStyle='#BDF4FF';ctx.globalAlpha=.92;
+    for(let i=0;i<4;i++){const xx=x+flip*(i-1.5)*9,h=18+(i%3)*7;ctx.beginPath();ctx.moveTo(xx-6,top+1);ctx.lineTo(xx,top-h);ctx.lineTo(xx+6,top+1);ctx.closePath();ctx.fill();}
+    ctx.strokeStyle='#EFFFFF';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x,top-2);ctx.lineTo(x+flip*12,top-25);ctx.stroke();
+  };
+
+  const water = (x,flip=1) => {
+    ctx.strokeStyle='#61DFFF';ctx.lineWidth=3;ctx.globalAlpha=.9;
+    ctx.beginPath();ctx.moveTo(x,top+2);ctx.quadraticCurveTo(x+flip*10,top-20+Math.sin(t)*3,x+flip*23,top-8);ctx.quadraticCurveTo(x+flip*30,top-2,x+flip*36,top-17);ctx.stroke();
+    ctx.fillStyle='#BDFBFF';ctx.globalAlpha=.8;ctx.beginPath();ctx.arc(x+flip*28,top-14,3,0,Math.PI*2);ctx.fill();
+  };
+
+  const structure = (x,flip=1) => {
+    ctx.fillStyle='#252B46';ctx.globalAlpha=.98;ctx.fillRect(x-10,top-25,20,26);
+    ctx.fillStyle=accent;ctx.globalAlpha=.75;ctx.fillRect(x-7,top-21,5,6);ctx.fillRect(x+2,top-21,5,6);ctx.fillRect(x-7,top-11,5,6);ctx.fillRect(x+2,top-11,5,6);
+    ctx.fillStyle='#4A5270';ctx.beginPath();ctx.moveTo(x-16,top-25);ctx.lineTo(x,top-36);ctx.lineTo(x+16,top-25);ctx.closePath();ctx.fill();
+    ctx.strokeStyle=accent;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-flip*15,top-34);ctx.lineTo(x-flip*15,top-18);ctx.stroke();
+  };
+
+  const voidShard = (x,flip=1) => {
+    ctx.fillStyle=accent;ctx.globalAlpha=.72;ctx.shadowColor=accent;ctx.shadowBlur=12;
+    ctx.beginPath();ctx.moveTo(x,top-34);ctx.lineTo(x+flip*13,top-12);ctx.lineTo(x+flip*4,top-2);ctx.lineTo(x-flip*7,top-19);ctx.closePath();ctx.fill();
+    ctx.shadowBlur=0;ctx.strokeStyle='#FFFFFF';ctx.lineWidth=1;ctx.stroke();
+  };
+
+  if(theme==='fire'){flame(leftX);flame(rightX,-1);}
+  else if(theme==='ice'){ice(leftX);ice(rightX,-1);}
+  else if(theme==='water'){water(leftX);water(rightX,-1);}
+  else if(theme==='structure'){structure(leftX);structure(rightX,-1);}
+  else if(theme==='void'){voidShard(leftX);voidShard(rightX,-1);}
+  else {bush(leftX);bush(rightX,-1);vines(leftX+12);vines(rightX-12,-1);}
+
+  // Every main platform gets a subtle designed top layer across the edges —
+  // never through the center where fighters and items need clear visibility.
+  ctx.globalAlpha=.9;ctx.strokeStyle=accent;ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(p.x+6,top+1);ctx.lineTo(p.x+Math.min(90,p.w*.12),top+1);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(p.x+p.w-Math.min(90,p.w*.12),top+1);ctx.lineTo(p.x+p.w-6,top+1);ctx.stroke();
+
+  // Animated micro-details make the decorations feel alive without becoming
+  // collision objects: leaves, embers, droplets, snow motes or energy sparks.
+  for(let i=0;i<5;i++){
+    const side=i%2===0?1:-1;
+    const xx=side>0?leftX+8+i*3:rightX-8-i*3;
+    const yy=top-18-((i*7+frame*.45)%18);
+    ctx.fillStyle=accent;ctx.globalAlpha=.25+.12*Math.sin(t+i);
+    ctx.beginPath();ctx.arc(xx+Math.sin(t+i)*2,yy,1.5+(i%2),0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+
 export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
   const map = STAGE_MAPS.find(m => m.id === mapId) || STAGE_MAPS[0];
   const accent = map.accentColor;
@@ -1689,6 +1794,13 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
       ctx.globalAlpha = 1;
     }
   });
+
+  // The widest solid platform is the stage's main platform. Its decorations
+  // are drawn here (after the platform, before fighters/items) so they track
+  // the camera/world perfectly and sit visually above the playable surface.
+  const main = platforms.filter(p => p && !p._freehandSegment && p.h >= 18)
+    .sort((a,b) => (b.w*b.h) - (a.w*a.h))[0];
+  if (main) drawMainPlatformDecor(ctx, main, frame, mapId, accent);
 }
 
 export function drawBackground(ctx, w, h, frame = 0, mapId = 'splitcity', eventColor) {
