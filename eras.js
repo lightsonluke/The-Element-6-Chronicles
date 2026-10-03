@@ -102,11 +102,11 @@ const G1_CHARS = [
     lore: 'One of the five original heroes. A master of water who controlled battlefields through adaptability.',
     heavyAttack: { name: 'Tidal Crush', desc: 'Summons a massive wave that crashes forward, sweeping enemies away', damage: 21, range: 200, duration: 24, color: '#00CCFF', type: 'wave', knockback: 1.3 },
     signatures: {
-      side: { name: 'Water Whip', desc: 'Lashes out with a whip of high-pressure water', duration: 18, damage: 17, range: 190, color: '#00CCFF', type: 'vineWhip' },
-      up: { name: 'Water Ring', desc: 'Creates a spinning water ring around the arm, then sends it upward along a short curved path', duration: 24, damage: 16, range: 106, color: '#24BFFF', type: 'waterRing', holdFrames: 12 },
-      down: { name: 'Whirlpool', desc: 'Creates a whirlpool that traps and damages enemies', duration: 26, damage: 15, range: 150, color: '#0088CC', type: 'rootBind' },
+      side: { name: 'Water Whip', desc: 'Lashes out with a whip of high-pressure water', duration: 20, damage: 17, range: 190, color: '#00CCFF', type: 'vineWhip' },
+      up: { name: 'Geyser', desc: 'Erupts a water geyser from beneath the enemy', duration: 20, damage: 16, range: 145, color: '#66DDFF', type: 'geyser' },
+      down: { name: 'Whirlpool', desc: 'Creates a whirlpool that traps and damages enemies', duration: 20, damage: 15, range: 150, color: '#0088CC', type: 'rootBind' },
     },
-    superMove: { name: 'Ocean\'s Wrath', desc: 'A massive tidal wave sweeps across the entire stage, followed by whirlpools and water spikes', duration: 55, damage: 40, color: '#00CCFF' },
+    superMove: { name: 'Ocean\'s Wrath', desc: 'A massive tidal wave sweeps across the entire stage, followed by whirlpools and water spikes', duration: 42, damage: 40, color: '#00CCFF' },
   },
   {
     id: 'g1_grass', name: 'Grass Hero', title: 'The First Growth', era: 'g1', role: 'Hero',

@@ -590,91 +590,189 @@ function fireAttack(ctx,x,y,p,move){
   } finally { FIRE_PERF_MODE=prev; }
 }
 
+function waterDroplets(ctx, x, y, count, spreadX, spreadY, color, a=1, phase=0){
+  for(let i=0;i<count;i++){
+    const t=i/Math.max(1,count-1);
+    const ang=-Math.PI*.95 + t*Math.PI*1.9 + phase;
+    const rr=.45+.55*((i*7)%11)/11;
+    spark(ctx,x+Math.cos(ang)*spreadX*rr,y+Math.sin(ang)*spreadY*rr,1.4+(i%3)*.55,color,a*(.45+.45*(1-t)));
+  }
+}
+function waterArm(ctx,x,y,ex,ey,c,a=.8,w=6){
+  waterStroke(ctx,[[x+7,y-24],[x+16,y-39],[ex,ey]],c,w,a);
+}
+function waterWhipPath(ctx,x,y,t,c,a=1,width=7){
+  const ex=x+18+t*112;
+  const ey=y-43-Math.sin(t*Math.PI)*18;
+  ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle=c; ctx.lineWidth=width; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.shadowColor=c; ctx.shadowBlur=12;
+  ctx.beginPath();
+  ctx.moveTo(x+8,y-30);
+  ctx.quadraticCurveTo(x+42+t*42,y-60-Math.sin(t*Math.PI)*10,ex,ey);
+  ctx.stroke();
+  ctx.restore();
+  waterStroke(ctx,[[x+10,y-31],[x+34+t*42,y-53-Math.sin(t*Math.PI)*9],[ex,ey]],'#DDFBFF',Math.max(1.5,width*.16),a*.75);
+  waterRing(ctx,ex,ey,10+4*Math.sin(t*Math.PI),4+2*Math.sin(t*Math.PI),c,a*.9,.15+t*1.4);
+  waterDroplets(ctx,ex,ey,6,16,9,c,a*.65,t*2);
+}
+function waterCrescent(ctx,x,y,t,c,a=1){
+  // Six-frame crescent: forms, grows around the body, spins, then sheds droplets.
+  const ang0=-1.15 + t*.25;
+  const ang1=1.15 + t*REF_TAU*.95;
+  const cx=x+34, cy=y-48, rx=70, ry=60;
+  ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle=c; ctx.lineWidth=13; ctx.lineCap='round'; ctx.shadowColor=c; ctx.shadowBlur=16;
+  ctx.beginPath();
+  for(let i=0;i<=28;i++){
+    const u=i/28, ang=ang0+(ang1-ang0)*u;
+    const px=cx+Math.cos(ang)*rx, py=cy+Math.sin(ang)*ry;
+    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.stroke(); ctx.restore();
+  waterStroke(ctx,[[cx+Math.cos(ang0)*rx,cy+Math.sin(ang0)*ry],[cx+Math.cos((ang0+ang1)*.5)*rx,cy+Math.sin((ang0+ang1)*.5)*ry],[cx+Math.cos(ang1)*rx,cy+Math.sin(ang1)*ry]],'#DDFBFF',2,a*.75);
+  const tipX=cx+Math.cos(ang1)*rx, tipY=cy+Math.sin(ang1)*ry;
+  waterDroplets(ctx,tipX,tipY,9,24,18,c,a*.8,t*4);
+}
+function waterRibbon(ctx,x,y,t,c,a=1){
+  const cx=x, cy=y-56;
+  const twist=t*REF_TAU*1.25;
+  ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle=c; ctx.lineWidth=11; ctx.lineCap='round'; ctx.shadowColor=c; ctx.shadowBlur=16;
+  ctx.beginPath();
+  for(let i=0;i<=46;i++){
+    const u=i/46;
+    const ang=twist + u*REF_TAU*1.15;
+    const rx=30+u*42, ry=72-u*18;
+    const px=cx+Math.cos(ang)*rx, py=cy+Math.sin(ang)*ry;
+    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.stroke(); ctx.restore();
+  waterStroke(ctx,[[x,y-18],[x+Math.sin(t*REF_TAU)*32,y-70],[x+Math.cos(t*REF_TAU)*60,y-112]],'#DDFBFF',2,a*.7);
+  waterDroplets(ctx,x+Math.cos(t*REF_TAU)*62,y-112,12,22,15,c,a*.75,t*3);
+}
+function waterDownSplash(ctx,x,y,t,side,c,a=1){
+  const sx=x+side*(18+22*t);
+  const baseY=y-5;
+  const h=18+38*Math.sin(Math.PI*Math.min(1,t*1.05));
+  ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle=c; ctx.lineWidth=9; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.shadowColor=c; ctx.shadowBlur=14;
+  ctx.beginPath();
+  ctx.moveTo(x+side*8,baseY);
+  ctx.quadraticCurveTo(x+side*28,baseY-h*.25,sx,baseY-h);
+  ctx.quadraticCurveTo(x+side*42,baseY-h*.45,x+side*54,baseY-8);
+  ctx.stroke(); ctx.restore();
+  waterStroke(ctx,[[x+side*10,baseY],[sx,baseY-h],[x+side*50,baseY-10]],'#DDFBFF',1.8,a*.7);
+  waterDroplets(ctx,sx,baseY-h,7,18,22,c,a*.8,side*.2);
+}
+function waterSphere(ctx,x,y,r,c,a=1){
+  waterRing(ctx,x,y,r,r*.78,c,a,.08);
+  spark(ctx,x-r*.18,y-r*.12,r*.22,'#DDFBFF',a*.6);
+}
+
 function waterUpReference(ctx,x,y,p){
   const c='#24BFFF', white='#DDFBFF';
-  // The supplied 12-frame blueprint is used as the released animation.
-  // While held, the ring remains attached to the raised/lead arm and has no hitbox.
   if(p<0){
     const q=holdCharge(p);
-    const pulse=1+Math.sin(q*Math.PI*4)*.04;
-    const rx=17+q*4, ry=9+q*3;
-    waterRing(ctx,x+5,y-34,rx*pulse,ry*pulse,c,.78+q*.16,-.18+q*.08);
-    glowStroke(ctx,[[x+4,y-26],[x+12,y-42]],c,4.5,.72+q*.12);
+    // Hold on reference frame 1: ring is low and tight around the raised hand.
+    waterArm(ctx,x,y,x+18,y-42,c,.7,.5+q*5);
+    waterRing(ctx,x+24,y-32,20+q*4,9+q*2,c,.8+q*.15,-.15);
+    waterDroplets(ctx,x+24,y-32,5,13+q*5,6,c,.55+q*.2,q*2);
     return;
   }
-
-  const frame=1+clamp01(p)*11;
-  const easeT=t=>t*t*(3-2*t);
-  const point=(a,b,t)=>a+(b-a)*easeT(t);
-
-  // Reference positions: frame 3 is the separation point, frames 4-6 travel
-  // upward on a short curved path, and frame 7 is the disappearance point.
-  const pts=[
-    {x:x+6,   y:y-34,  rx:22, ry:10},
-    {x:x+28,  y:y-56,  rx:24, ry:11},
-    {x:x+72,  y:y-82,  rx:24, ry:11},
-    {x:x+112, y:y-103, rx:22, ry:10},
-    {x:x+126, y:y-111, rx:19, ry:9},
-    {x:x+118, y:y-106, rx:13, ry:7},
-  ];
-
-  // Frame 1 — ring begins around the lower arm.
-  if(frame < 1.65){
-    waterRing(ctx,pts[0].x,pts[0].y,pts[0].rx,pts[0].ry,c,.8,-.18);
-    glowStroke(ctx,[[x+5,y-25],[x+12,y-42]],c,5,.72);
+  const f=refFrame(p), t=clamp01((f-1)/3);
+  const armT=ease(clamp01((f-1)/1.25));
+  const handX=x+18+armT*8, handY=y-42-armT*40;
+  waterArm(ctx,x,y,handX,handY,c,.82,6);
+  if(f<1.8){ waterRing(ctx,x+24,y-32,22,10,c,.9,-.15); return; }
+  if(f<2.35){
+    waterRing(ctx,handX+2,handY-10,23,11,c,.98,-.1);
+    waterDroplets(ctx,handX+2,handY-10,7,17,8,c,.75,.5);
     return;
   }
-
-  // Frame 2 — swing upward and form the complete ring around the hand.
-  if(frame < 2.7){
-    const t=(frame-1.65)/1.05;
-    const cx=point(pts[0].x,pts[1].x,t), cy=point(pts[0].y,pts[1].y,t);
-    const rx=point(pts[0].rx,pts[1].rx,t), ry=point(pts[0].ry,pts[1].ry,t);
-    waterRing(ctx,cx,cy,rx,ry,c,.95,-.18+t*.18);
-    glowStroke(ctx,[[x+7,y-29],[x+20,y-48],[cx,cy]],c,5.5,.72);
-    return;
+  const u=clamp01((f-2.2)/1.8);
+  const tx=x+26+u*112, ty=y-54-u*66+Math.sin(u*Math.PI)*17;
+  waterStroke(ctx,[[handX+2,handY-10],[tx-26,ty+12],[tx,ty]],c,5.5,.65);
+  waterRing(ctx,tx,ty,26-2*u,11-1*u,c,.98,.2+u*.8);
+  waterDroplets(ctx,tx,ty,9,26,13,c,.8,u*3);
+  if(f>=3.45){
+    const fade=clamp01((f-3.45)/.55);
+    waterRing(ctx,tx,ty,26*(1-fade),11*(1-fade),c,.98*(1-fade),.2+u*.8);
+    waterDroplets(ctx,tx,ty,8,30,15,c,.6*(1-fade),u*4);
   }
+  if(f>=3.8) spark(ctx,tx+5,ty+2,2,white,.45);
+}
 
-  // Frames 3-7 — the ring separates from the arm and travels along the
-  // reference path. The trail stays behind the ring and fades toward the end.
-  const t=clamp01((frame-3)/4);
-  const seg=Math.min(4,Math.floor(t*4));
-  const local=t*4-seg;
-  const a=pts[seg+1], b=pts[Math.min(5,seg+2)];
-  const cx=point(a.x,b.x,local), cy=point(a.y,b.y,local);
-  const rx=point(a.rx,b.rx,local), ry=point(a.ry,b.ry,local);
-  const fade=frame>=6.25 ? Math.max(0,1-(frame-6.25)/.9) : 1;
-
-  if(frame < 7.05){
-    // Short broken trail, never a giant continuous beam.
-    const trailCount=frame<4 ? 3 : 5;
-    for(let i=trailCount;i>=1;i--){
-      const tt=Math.max(0,t-i*.075);
-      const sg=Math.min(4,Math.floor(tt*4));
-      const lu=tt*4-sg;
-      const aa=pts[sg+1], bb=pts[Math.min(5,sg+2)];
-      const tx=point(aa.x,bb.x,lu), ty=point(aa.y,bb.y,lu);
-      glowStroke(ctx,[[tx-7,ty+3],[tx+2,ty-2]],c,2.2,.18*(1-i/(trailCount+1))*fade);
+function waterAttack(ctx,x,y,p,move){
+  const c='#24BFFF', white='#DDFBFF';
+  if(move==='us'){waterUpReference(ctx,x,y,p);return;}
+  const q=attackP(p), a=.28+.72*Math.sin(q*Math.PI);
+  if(p<0){
+    const h=holdCharge(p);
+    if(move==='ds'){
+      waterArm(ctx,x,y,x-12,y-12,c,.65+h*.2,5+h*2);
+      waterRing(ctx,x,y-3,18+h*5,7+h*2,c,.65+h*.2,0);
+    } else if(move==='ss'){
+      waterArm(ctx,x,y,x+28+h*8,y-39-h*5,c,.65+h*.25,5+h*2);
+      waterRing(ctx,x+30+h*8,y-40-h*5,11+h*5,5+h*2,c,.7+h*.2,.2);
+    } else if(move==='uh'){
+      waterRibbon(ctx,x,y,.02+h*.05,c,.65+h*.2);
+    } else if(move==='dh'){
+      waterSphere(ctx,x+58,y-38,20+h*6,c,.7+h*.2);
+    } else if(move==='sh'){
+      waterCrescent(ctx,x,y,.08+h*.08,c,.65+h*.2);
+    } else {
+      waterRing(ctx,x,y-56,28+h*10,18+h*7,c,.55+h*.2,0);
     }
-    waterRing(ctx,cx,cy,rx,ry,c,.98*fade,.18+t*.35);
-    for(let i=0;i<5;i++){
-      const ang=-2.55+i*.16;
-      spark(ctx,cx+Math.cos(ang)*rx*.9,cy+Math.sin(ang)*ry*.9,1.5,c,.45*fade);
+    return;
+  }
+  const f=refFrame(p);
+  if(move==='ds'){
+    const t=clamp01((f-1)/3);
+    if(f<1.45){ waterArm(ctx,x,y,x-8,y-8,c,.75,6); return; }
+    waterDownSplash(ctx,x,y,t,-1,c,a);
+    waterDownSplash(ctx,x,y,t,1,c,a);
+    if(f>3.2){ waterRing(ctx,x,y-3,42,9,c,a*.65,0); }
+    return;
+  }
+  if(move==='ss'){
+    const t=clamp01((f-1)/3);
+    waterArm(ctx,x,y,x+22+t*9,y-39-t*5,c,.8,6);
+    if(f<1.45) return;
+    waterWhipPath(ctx,x,y,ease(t),c,a);
+    if(f>=3.25) waterDroplets(ctx,x+120,y-43,10,28,13,c,a*.55,1.2);
+    return;
+  }
+  if(move==='uh'){
+    const t=clamp01((f-1)/3);
+    waterRibbon(ctx,x,y,ease(t),c,a);
+    if(f>=3.25){
+      const u=clamp01((f-3.25)/.75), ex=x+54+u*52, ey=y-105-u*42;
+      waterStroke(ctx,[[x+20,y-62],[ex,ey]],c,8,a);
+      waterRing(ctx,ex,ey,16,8,c,a,.25);
+      waterDroplets(ctx,ex,ey,10,24,14,c,a*.7,2);
     }
+    return;
   }
-
-  // Frame 7 — final bright flicker, then the ring is gone.
-  if(frame>=6.55 && frame<7.15){
-    const k=Math.max(0,1-(frame-6.55)/.6);
-    waterRing(ctx,cx,cy,rx*k,ry*k,c,.85*k,.18);
-    spark(ctx,cx,cy,3.5,white,.65*k);
+  if(move==='dh'){
+    const t=clamp01((f-1)/3);
+    const bx=x+54-34*t, by=y-40+Math.sin(t*Math.PI)*28;
+    if(f<1.45){waterSphere(ctx,x+58,y-38,21,c,a);return;}
+    if(f<2.25){waterSphere(ctx,bx,by,22,c,a); waterArm(ctx,x,y,bx-14,by+8,c,.65,5);return;}
+    const rise=clamp01((f-2.1)/1.3), sy=by-rise*82;
+    waterSphere(ctx,bx,sy,22-4*rise,c,a);
+    waterStroke(ctx,[[bx,by+10],[bx,sy+15]],c,7,a*.7);
+    waterDroplets(ctx,bx,sy,12,26,22,c,a*.8,rise*3);
+    if(f>=3.25){
+      const burst=clamp01((f-3.25)/.75);
+      waterRing(ctx,bx,sy,16+burst*28,10+burst*18,c,a*(1-burst*.25),0);
+      waterDroplets(ctx,bx,sy,16,35,28,c,a*.85,burst*4);
+    }
+    return;
   }
-
-  // Frame 8 — only a couple of fading droplets remain.
-  if(frame>=7.15 && frame<8.25){
-    const k=1-(frame-7.15)/1.1;
-    spark(ctx,x+118,y-106,2.2,c,.45*k);
-    spark(ctx,x+108,y-101,1.5,white,.35*k);
+  if(move==='sh'){
+    const t=clamp01((f-1)/5);
+    waterCrescent(ctx,x,y,ease(t),c,a);
+    if(f>=5.2){
+      const fade=clamp01((f-5.2)/.8);
+      waterDroplets(ctx,x+95,y-48,16,40,24,c,a*(1-fade),t*5);
+    }
+    return;
   }
 }
 
@@ -706,6 +804,7 @@ function grassUpReference(ctx,x,y,p){
   }
 }
 
+
 function iceUpReference(ctx,x,y,p){
   const c='#79DFFF', white='#EFFFFF';
   if(p<0){
@@ -733,45 +832,7 @@ function iceUpReference(ctx,x,y,p){
   if(f>=10){ spark(ctx,sx,sy,3,white,.7); }
 }
 
-// ── Detailed non-up signatures/heavies ─────────────────────────────────────
-// Improved supers. They deliberately have no hold state.
-function fireFlameOrbitLegacy(ctx,cx,cy,rx,ry,start,end,color,alpha=1,count=7){
-  glowArc(ctx,cx,cy,rx,ry,start,end,color,5,alpha);
-  for(let i=0;i<count;i++){
-    const t=count===1 ? 0 : i/(count-1);
-    const a=start+(end-start)*t;
-    flameShape(ctx,cx+Math.cos(a)*rx,cy+Math.sin(a)*ry,5.5,color,alpha*.9,a+Math.PI/2);
-  }
-}
-function fireLineBurstLegacy(ctx,x,y,r,alpha=1){
-  for(let i=0;i<10;i++){
-    const a=i/10*REF_TAU;
-    const len=r*(.75+.18*Math.sin(i*2.7));
-    const x2=x+Math.cos(a)*len, y2=y+Math.sin(a)*len*.68;
-    flameShape(ctx,x2,y2,7,'#FF9A22',alpha*.85,a+Math.PI/2);
-  }
-}
 
-function waterAttack(ctx,x,y,p,move){
-  const c='#24BFFF', white='#DDFBFF', q=attackP(p), a=.3+.7*Math.sin(q*Math.PI);
-  if(move==='us'){waterUpReference(ctx,x,y,p);return;}
-  if(move==='ss'){
-    const t=easeOut(q), ex=x+18+t*105, ey=y-44-Math.sin(t*Math.PI)*24;
-    glowStroke(ctx,[[x+5,y-30],[x+32,y-48],[ex,ey]],c,7,a); waterRing(ctx,ex,ey,14,7,c,.9,.3+t*2); return;
-  }
-  if(move==='ds'){
-    const spread=28+q*30; glowArc(ctx,x,y-24,spread,18,Math.PI,REF_TAU,c,8,a,.0); for(let s of [-1,1]){waterRing(ctx,x+s*spread,y-38,14,6,c,.9,s*.4);} return;
-  }
-  if(move==='sh'){
-    const t=easeOut(q), ang=-.9+t*1.8; glowArc(ctx,x+26,y-48,78,48,-.9,ang,c,13,a,-.08); waterRing(ctx,x+26+Math.cos(ang)*70,y-48+Math.sin(ang)*42,18,8,c,.9,ang); return;
-  }
-  if(move==='uh'){
-    const r=62; const t=easeOut(q); glowArc(ctx,x,y-76,r,r*1.15,-1.0+t*REF_TAU,-1.0+t*REF_TAU+2.8,c,9,a,.0); for(let i=0;i<10;i++){const ang=i/10*REF_TAU+t*1.5; spark(ctx,x+Math.cos(ang)*r,y-76+Math.sin(ang)*r*1.15,3,c,.6);} return;
-  }
-  if(move==='dh'){
-    const bx=x+80-160*easeOut(q), by=y-45+Math.max(0,q-.45)*70; waterRing(ctx,bx,by,22,16,c,a,.3); return;
-  }
-}
 function grassAttack(ctx,x,y,p,move){
   const c='#7CFF28', pale='#D9FF7A', wood='#9B6A3B', q=attackP(p), a=.3+.7*Math.sin(q*Math.PI);
   if(move==='us'){grassUpReference(ctx,x,y,p);return;}
@@ -791,6 +852,7 @@ function grassAttack(ctx,x,y,p,move){
     glowStroke(ctx,[[x-40,y-100],[x+30,y-25],[x+5,y+2]],c,10,a); glowStroke(ctx,[[x+5,y+2],[x-30,y-35],[x-15,y-75]],c,8,a*.8); for(let i=0;i<8;i++)leafBlade(ctx,x-20+i*8,y-35+i*2,4,10,i*.6,c,a*.65); return;
   }
 }
+
 function iceAttack(ctx,x,y,p,move){
   const c='#79DFFF', white='#EFFFFF', q=attackP(p), a=.3+.7*Math.sin(q*Math.PI);
   if(move==='us'){iceUpReference(ctx,x,y,p);return;}
@@ -811,6 +873,24 @@ function iceAttack(ctx,x,y,p,move){
   }
 }
 
+
+// Improved supers. They deliberately have no hold state.
+function fireFlameOrbitLegacy(ctx,cx,cy,rx,ry,start,end,color,alpha=1,count=7){
+  glowArc(ctx,cx,cy,rx,ry,start,end,color,5,alpha);
+  for(let i=0;i<count;i++){
+    const t=count===1 ? 0 : i/(count-1);
+    const a=start+(end-start)*t;
+    flameShape(ctx,cx+Math.cos(a)*rx,cy+Math.sin(a)*ry,5.5,color,alpha*.9,a+Math.PI/2);
+  }
+}
+function fireLineBurstLegacy(ctx,x,y,r,alpha=1){
+  for(let i=0;i<10;i++){
+    const a=i/10*REF_TAU;
+    const len=r*(.75+.18*Math.sin(i*2.7));
+    const x2=x+Math.cos(a)*len, y2=y+Math.sin(a)*len*.68;
+    flameShape(ctx,x2,y2,7,'#FF9A22',alpha*.85,a+Math.PI/2);
+  }
+}
 
 function fireSuper(ctx,x,y,p){
   const prev=FIRE_PERF_MODE; FIRE_PERF_MODE=true;
@@ -857,7 +937,47 @@ function fireSuper(ctx,x,y,p){
   }
   } finally { FIRE_PERF_MODE=prev; }
 }
-function waterSuper(ctx,x,y,p){const c='#24BFFF',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=35+easeOut(q)*110; waterRing(ctx,x,y-58,r,r*.55,c,a,.1); for(let i=0;i<16;i++){const ang=i/16*REF_TAU+q*2; glowStroke(ctx,[[x+Math.cos(ang)*(r-20),y-58+Math.sin(ang)*(r-20)*.55],[x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.55]],c,6,a*.65);}}
+function waterSuper(ctx,x,y,p){
+  const c='#24BFFF', white='#DDFBFF';
+  const q=attackP(p), a=.25+.75*Math.sin(q*Math.PI);
+  // Seven reference beats: gather -> form -> rotate -> collapse -> explode -> recover.
+  if(q<.14){
+    const t=q/.14;
+    waterRing(ctx,x,y-52,20+18*t,13+10*t,c,a,.0);
+    waterStroke(ctx,[[x-34*t,y-70],[x,y-52],[x+34*t,y-70]],c,6,a);
+    return;
+  }
+  if(q<.34){
+    const t=ease((q-.14)/.20), r=30+34*t;
+    waterRing(ctx,x,y-55,r,r*.72,c,a,.2+t*2.2);
+    waterDroplets(ctx,x,y-55,14,r+14,r*.65,c,a*.7,t*2);
+    return;
+  }
+  if(q<.55){
+    const t=(q-.34)/.21, r=64+12*Math.sin(t*Math.PI);
+    waterRing(ctx,x,y-55,r,r*.72,c,a,.2+t*REF_TAU);
+    for(let i=0;i<18;i++){
+      const ang=i/18*REF_TAU+t*REF_TAU;
+      const rr=r*(.75+.25*Math.sin(t*Math.PI));
+      spark(ctx,x+Math.cos(ang)*rr,y-55+Math.sin(ang)*rr*.72,2.2,c,a*.7);
+    }
+    return;
+  }
+  if(q<.68){
+    const t=ease((q-.55)/.13), r=76*(1-t);
+    waterRing(ctx,x,y-55,r,r*.72,c,a*(1-.25*t),.2+(1-t)*REF_TAU);
+    waterDroplets(ctx,x,y-55,18,70*(1-t),45*(1-t),c,a*.7,t*4);
+    return;
+  }
+  const t=clamp01((q-.68)/.32), r=18+92*easeOut(t);
+  waterRing(ctx,x,y-55,r,r*.66,c,a,.15);
+  waterRing(ctx,x,y-55,r*.68,r*.42,white,a*.42,.15);
+  waterDroplets(ctx,x,y-55,24,r+24,r*.8,c,a*.8,t*5);
+  if(t>.55){
+    const fade=(t-.55)/.45;
+    waterRing(ctx,x,y-55,r*(1-fade*.45),r*.66*(1-fade*.45),c,a*(1-fade*.55),.15);
+  }
+}
 function grassSuper(ctx,x,y,p){const c='#7CFF28',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*105; for(let i=0;i<14;i++){const ang=i/14*REF_TAU+q*1.8; leafBlade(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.62,13,34,ang,c,a*.85);} glowArc(ctx,x,y-58,r,r*.62,0,REF_TAU,c,6,a);}
 function iceSuper(ctx,x,y,p){const c='#79DFFF',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*120; for(let i=0;i<18;i++){const ang=i/18*REF_TAU;iceShard(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.68,10,28,ang,c,a);} glowArc(ctx,x,y-58,r,r*.68,0,REF_TAU,c,5,a*.8);}
 

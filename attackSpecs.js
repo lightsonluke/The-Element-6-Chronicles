@@ -38,13 +38,13 @@ const GEN1_MOVE_SPECS = {
     super:{name:'Fireball Detonation',shape:'explosion',range:160,knockback:'radialContact',duration:48,damage:42},
   },
   g1_water: {
-    us:{name:'Water Ring',shape:'waterRing',range:106,knockback:'waterRingVelocity',duration:24,damage:16},
-    ds:{name:'Twin Splashes',shape:'twinSplashes',range:78,knockback:'forwardContact',duration:22,damage:17},
-    ss:{name:'Water Whip Tip',shape:'whipTip',range:118,knockback:'forwardContact',duration:20,damage:16},
-    upHeavy:{name:'Spiral Water Ribbon',shape:'waterRibbon',range:154,knockback:'upContact',duration:28,damage:25},
-    dh:{name:'Bouncing Water Sphere',shape:'waterBounce',range:110,knockback:'radialContact',duration:28,damage:22},
-    sh:{name:'Water Crescent',shape:'crescent',range:132,knockback:'forwardContact',duration:26,damage:25},
-    super:{name:'Collapse Ring',shape:'collapseRing',range:165,knockback:'radialContact',duration:48,damage:40},
+    us:{name:'Water Ring',shape:'waterRing',range:145,knockback:'waterRingTravel',duration:20,damage:16},
+    ds:{name:'Twin Splashes',shape:'twinSplashes',range:105,knockback:'waterSplashSide',duration:20,damage:17},
+    ss:{name:'Water Whip Tip',shape:'whipTip',range:135,knockback:'forwardContact',duration:20,damage:16},
+    upHeavy:{name:'Spiral Water Ribbon',shape:'waterRibbon',range:155,knockback:'upContact',duration:24,damage:25},
+    dh:{name:'Bouncing Water Sphere',shape:'waterBounce',range:125,knockback:'waterBounce',duration:24,damage:22},
+    sh:{name:'Water Crescent',shape:'crescent',range:145,knockback:'waterCrescent',duration:26,damage:25},
+    super:{name:'Collapse Ring',shape:'collapseRing',range:170,knockback:'radialUp',duration:42,damage:40},
   },
   g1_grass: {
     us:{name:'Leaf Propeller',shape:'propellerLeaves',range:78,knockback:'up',duration:24,damage:16},
@@ -242,29 +242,59 @@ export function getActiveSpecHitboxes(attacker) {
     case 'gauntlet': { const ang=-.8+q*1.7, cx=28+Math.cos(ang)*42, cy=-42+Math.sin(ang)*42; K(8,-42,cx,cy,15); C(cx,cy,20); break; }
     case 'explosion': { if(q<.5) break; const e=(q-.5)/.5; C(78,-48,Math.min(88,34+e*54)); break; }
     case 'waterRing': {
-      // Active only during the reference's separated/traveling frames 3-7.
-      const frame=1+q*11;
-      if(frame<3 || frame>7) break;
-      const pts=[
-        {f:3,x:34,y:-56,r:14},
-        {f:4,x:72,y:-82,r:14},
-        {f:5,x:112,y:-103,r:13},
-        {f:6,x:126,y:-111,r:11},
-        {f:7,x:118,y:-106,r:8}
-      ];
-      const u=Math.max(0,Math.min(1,(frame-3)/4));
-      const seg=Math.min(3,Math.floor(u*4));
-      const lt=u*4-seg;
-      const a=pts[seg],b=pts[seg+1];
-      const tx=a.x+(b.x-a.x)*lt, ty=a.y+(b.y-a.y)*lt;
-      const r=a.r+(b.r-a.r)*lt;
-      C(tx,ty,r); break; }
-    case 'twinSplashes': { const sy=-8-62*q; C(-42,sy,11); C(42,sy,11); break; }
-    case 'whipTip': { C(16+72*q,-42-Math.sin(q*Math.PI)*26,10); break; }
-    case 'waterRibbon': { for(let i=0;i<10;i++){const a=-1.25+i/9*2.5+q*1.9; C(Math.cos(a)*54,-64+Math.sin(a)*92,9);} break; }
-    case 'waterBounce': { const bx=70-140*q, by=-46+Math.max(0,q-.45)*90; C(bx,by,22); if(q>.65) for(let i=0;i<8;i++) C(bx+(i-3.5)*12,by-70*(q-.65),8); break; }
-    case 'crescent': { const pts=[]; for(let i=0;i<=12;i++){const a=-.85+i/12*1.7; pts.push([20+Math.cos(a)*78,-48+Math.sin(a)*78]);} P(pts); break; }
-    case 'collapseRing': { if(q<.45) break; const r=10+(q-.45)/.55*110; for(let i=0;i<18;i++){const a=i/18*TAU; C(Math.cos(a)*r,-52+Math.sin(a)*r*.7,10);} break; }
+      if(q<.34 || q>.9) break;
+      const u=Math.max(0,Math.min(1,(q-.34)/.56));
+      const tx=26+u*112, ty=-54-u*66+Math.sin(u*Math.PI)*17;
+      const rx=26-2*u, ry=11-1*u;
+      for(let i=0;i<10;i++){const a=i/10*TAU; C(tx+Math.cos(a)*rx,ty+Math.sin(a)*ry,6);}
+      break;
+    }
+    case 'twinSplashes': {
+      if(q<.22 || q>.9) break;
+      const u=Math.max(0,Math.min(1,(q-.22)/.68));
+      const h=18+38*Math.sin(Math.PI*u);
+      C(-28-24*u,-5-h,11); C(28+24*u,-5-h,11);
+      C(-20-18*u,-8-h*.55,8); C(20+18*u,-8-h*.55,8);
+      break;
+    }
+    case 'whipTip': {
+      if(q<.18 || q>.88) break;
+      const u=Math.max(0,Math.min(1,(q-.18)/.70));
+      C(18+112*u,-43-Math.sin(u*Math.PI)*18,10);
+      break;
+    }
+    case 'waterRibbon': {
+      if(q<.08 || q>.9) break;
+      const u=Math.max(0,Math.min(1,(q-.08)/.82));
+      const twist=u*TAU*1.25;
+      for(let i=0;i<12;i++){const z=i/11,a=twist+z*TAU*1.15; C(Math.cos(a)*(30+z*42),-56+Math.sin(a)*(72-z*18),9);}
+      break;
+    }
+    case 'waterBounce': {
+      if(q<.12 || q>.9) break;
+      const u=Math.max(0,Math.min(1,(q-.12)/.78));
+      const bx=58-34*u, by=-40+Math.sin(u*Math.PI)*28;
+      if(u<.42) C(bx,by,22);
+      else { const rise=Math.max(0,Math.min(1,(u-.42)/.58)); C(bx,by-rise*82,Math.max(14,22-4*rise)); for(let i=0;i<8;i++) C(bx+(i-3.5)*5,by-rise*82-(i%2)*12,6); }
+      break;
+    }
+    case 'crescent': {
+      if(q<.08 || q>.92) break;
+      const u=Math.max(0,Math.min(1,(q-.08)/.84));
+      const a0=-1.15+u*.25, a1=1.15+u*TAU*.95, pts=[];
+      for(let i=0;i<=20;i++){const z=i/20,a=a0+(a1-a0)*z; pts.push([34+Math.cos(a)*70,-48+Math.sin(a)*60]);}
+      P(pts);
+      break;
+    }
+    case 'collapseRing': {
+      if(q<.2 || q>.96) break;
+      let r;
+      if(q<.55) r=20+55*Math.max(0,(q-.2)/.35);
+      else if(q<.68) r=75-(q-.55)/.13*57;
+      else r=18+(q-.68)/.28*92;
+      for(let i=0;i<18;i++){const a=i/18*TAU; C(Math.cos(a)*r,-55+Math.sin(a)*r*.66,7);}
+      break;
+    }
     case 'propellerLeaves': { if(q<.12 || q>.78) break; const u=Math.max(0,Math.min(1,(q-.12)/.66)), cy=-92+u*72, rot=u*TAU; for(let i=0;i<3;i++){const a=rot+i*TAU/3, cx=Math.cos(a)*34, sy=cy+Math.sin(a)*34*.38; P([[cx-7,sy-24],[cx+10,sy],[cx-7,sy+24]]);} break; }
     case 'thornTips': { C(-38+q*24,-42,9); C(38-q*24,-42,9); break; }
     case 'branchEnd': { B(12+70*q,-44,20,16); C(82*q+12,-44,11); break; }
@@ -318,18 +348,23 @@ export function specKnockbackVector(attacker, defender, profile){
   if(p==='inward'){const dx=attacker.x-defender.x,dy=attacker.y-defender.y,len=Math.hypot(dx,dy)||1;return{x:dx/len,y:dy/len};}
   if(p==='forwardcontact'){const dy=(defender.y-attacker.y)/90;return{x:f,y:Math.max(-.75,Math.min(.35,dy))};}
   if(p==='radialup'){const dx=defender.x-attacker.x;return{x:Math.max(-.8,Math.min(.8,dx/100)),y:-1};}
-  if(p==='velocity'){const vx=attacker.vx||f,vy=attacker.vy||0,len=Math.hypot(vx,vy)||1;return{x:vx/len,y:vy/len};}
-  if(p==='waterringvelocity'){
-    // Knockback follows the ring's current path, not the fighter's velocity.
-    const q=clamp01(attacker.attackData?.progress || 0);
-    const frame=1+q*11;
-    const u=clamp01((frame-3)/4);
-    // Path derivative of the authored ring travel.
-    const dx=(u<.75 ? 39 : -8);
-    const dy=(u<.75 ? -24 : 5);
-    const len=Math.hypot(dx,dy)||1;
-    return{x:(dx/len)*f,y:dy/len};
+  if(p==='waterringtravel'){
+    const q=Number(attacker.attackData?.progress)||0;
+    const u=Math.max(0,Math.min(1,(q-.34)/.56));
+    const dx=112; const dy=-66+Math.cos(u*Math.PI)*17*Math.PI;
+    const len=Math.hypot(dx,dy)||1; return {x:dx/len,y:dy/len};
   }
+  if(p==='watersplashside'){
+    const side=defender.x>=attacker.x?1:-1; return {x:side*.95,y:-.25};
+  }
+  if(p==='waterbounce'){
+    const dx=defender.x-attacker.x; return {x:Math.max(-.55,Math.min(.55,dx/100)),y:-1};
+  }
+  if(p==='watercrescent'){
+    const dx=defender.x-attacker.x,dy=defender.y-attacker.y,len=Math.hypot(dx,dy)||1;
+    return {x:dx/len,y:Math.max(-.55,Math.min(.35,dy/len))};
+  }
+  if(p==='velocity'){const vx=attacker.vx||f,vy=attacker.vy||0,len=Math.hypot(vx,vy)||1;return{x:vx/len,y:vy/len};}
   return {x:f,y:-.38};
 }
 export function describeAttackSpec(spec){return spec?.description||'';}

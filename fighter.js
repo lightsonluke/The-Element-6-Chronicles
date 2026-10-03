@@ -1217,11 +1217,14 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
   // ── Hitstun: smooth knockback with DI influence ──
   if (fighter.hitstun > 0) {
-    // A third-party hit always cancels an attack/charge immediately. This
-    // prevents a broken attack/run pose from surviving into or after hitstun.
-    fighter.attackData = null;
-    fighter.attackHold = null;
-    fighter.state = 'hitstun';
+    // A third-party hit immediately cancels any attack/charge state.
+    // This prevents a broken attack pose from leaking into running/idle.
+    if (fighter.attackData || fighter.attackHold) {
+      fighter.attackData = null;
+      fighter.attackHold = null;
+      fighter.attackTimer = 0;
+      fighter.state = 'hitstun';
+    }
     fighter.hitstun--;
     fighter.vx *= KNOCKBACK_DECAY;
     // Apply DI — slight steering during knockback (Brawlhalla-style)
@@ -1235,17 +1238,8 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     fighter.y += fighter.vy;
     resolveCollisions(fighter, platforms, stageWidth, stageHeight);
     onMovementAbilityLanded(fighter, inputs);
+    if (fighter.attackData) updateAttackProgress(fighter);
     return fighter;
-  }
-
-  // If hitstun ended on the previous update, force a clean neutral state.
-  // This is intentionally universal: it applies to every character and every
-  // attack type, not just Generation I.
-  if (fighter.state === 'hitstun' && fighter.hitstun <= 0) {
-    fighter.attackData = null;
-    fighter.attackHold = null;
-    fighter.attackTimer = 0;
-    fighter.state = fighter.grounded ? 'idle' : 'jumping';
   }
 
   // ── Generation I attack hold system ──────────────────────────────────────
@@ -1278,10 +1272,8 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     // Reduced friction during attacks so you slide a bit (Brawlhalla momentum)
     fighter.vx *= fighter.grounded ? 0.88 : 0.96;
     if (fighter.attackTimer <= 0) {
-      fighter.attackData = null;
-      fighter.attackHold = null;
-      fighter.attackTimer = 0;
       fighter.state = fighter.grounded ? 'idle' : 'jumping';
+      fighter.attackData = null;
     }
   }
 
