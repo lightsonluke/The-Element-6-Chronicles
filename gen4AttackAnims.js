@@ -19,7 +19,6 @@ function poly(ctx,pts,c,a=1,fill=true,sw=4){ctx.save();ctx.globalAlpha=a;ctx.str
 function particleBurst(ctx,x,y,c,p,count=12,spread=70,r=3,a=.75){for(let i=0;i<count;i++){const ang=i/count*TAU+p*TAU*1.7;const rr=spread*(.2+.8*out(p));dot(ctx,x+Math.cos(ang)*rr,y+Math.sin(ang)*rr*.65,r*(1-.35*p),c,a*(1-.45*p));}}
 function sparks(ctx,x,y,c,p,count=8,len=18,a=.8){for(let i=0;i<count;i++){const ang=i/count*TAU+p*5;const rr=12+(i%4)*8;const sx=x+Math.cos(ang)*rr,sy=y+Math.sin(ang)*rr*.6;line(ctx,[[sx,sy],[sx+Math.cos(ang)*len,sy+Math.sin(ang)*len*.6]],c,2.5,a*(1-p*.3));}}
 function shards(ctx,x,y,c,p,count=8,rad=70,len=28,a=.8){for(let i=0;i<count;i++){const ang=i/count*TAU+p*1.8;const rr=rad*(.2+.8*out(p));const sx=x+Math.cos(ang)*rr,sy=y+Math.sin(ang)*rr*.65;line(ctx,[[sx-Math.cos(ang)*len*.3,sy-Math.sin(ang)*len*.3],[sx+Math.cos(ang)*len,sy+Math.sin(ang)*len]],c,4,a*(1-.35*p));}}
-function trail(ctx,x1,y1,x2,y2,c,p,w=8,a=.8){line(ctx,[[x1,y1],[x2,y2]],c,w,a*(1-.35*p));line(ctx,[[x1,y1],[x2,y2]],'#FFFFFF',Math.max(1,w*.18),a*.65*(1-.4*p));}
 function slash(ctx,x,y,r,a0,a1,c,p,w=12){ctx.save();ctx.globalAlpha=.95;ctx.strokeStyle=c;ctx.lineWidth=w;ctx.lineCap='round';glow(ctx,c,w*2);ctx.beginPath();ctx.arc(x,y,r,a0,a0+(a1-a0)*out(p));ctx.stroke();ctx.restore();}
 function crack(ctx,x,y,c,p,dir=1){const q=out(p);line(ctx,[[x,y],[x+25*q*dir,y+12*q],[x+43*q*dir,y-10*q],[x+72*q*dir,y+5*q]],c,4,.75);}
 function facingWrap(ctx,x,y,facing,fn){ctx.save();ctx.translate(x,y);ctx.scale(facing<0?-1:1,1);fn(ctx);ctx.restore();}
@@ -75,8 +74,6 @@ function cobaltAttack(ctx,p,m){
    }
    if(frame>=5 && frame<8){
      const k=out((frame-5)/2.1);
-     trail(ctx,80*k,-138*k,125*k,-165*k,c2,k,.9,.7);
-     trail(ctx,88*k,-130*k,145*k,-150*k,c,k,.6,.45);
      particleBurst(ctx,70*k,-125*k,c2,k,8,32,3,.55);
    }
    if(frame>=8){
@@ -117,7 +114,7 @@ function cobaltSuper(ctx,p){const c=C.cobalt,c2=C.cobalt2,r=42+out(p)*108;for(le
 function cyanAttack(ctx,p,m){const c=C.cyan,c2=C.cyan2,q=out(p),a=pulse(p);
  if(m==='us'){const h=118*q;for(let i=0;i<5;i++){const x=-24+i*12;windRibbon(ctx,x,0,-h,.16,c,p,5,.55);}for(let i=0;i<4;i++)ring(ctx,0,-h*(.45+i*.12),18+i*8,c2,3,.65,a);particleBurst(ctx,0,-h,c2,p,10,35,2,.5);
  } else if(m==='ds'){const dip=38*q;ellipse(ctx,0,-12+dip,34,12,c,5,.8);if(p>.38){const k=out((p-.38)/.62);ring(ctx,0,-12+dip,25+65*k,c2,7,.9);for(let i=0;i<12;i++){const ang=i/12*TAU;line(ctx,[[Math.cos(ang)*25,-12+dip+Math.sin(ang)*8],[Math.cos(ang)*(25+65*k),-12+dip+Math.sin(ang)*(8+30*k)]],c,3,.55);}}
- } else if(m==='ss'){const len=92*q;const pts=[];for(let i=0;i<24;i++){const t=i/23;pts.push([22+len*t,-50+Math.sin(t*Math.PI)*24+Math.sin(t*9+p*8)*4]);}line(ctx,pts,c,9,.9);line(ctx,pts,c2,2,.8);if(p>.45){const k=out((p-.45)/.55);trail(ctx,22,-50,22+len*k,-50,c2,k,4,.55);}}
+ } else if(m==='ss'){const len=92*q;const pts=[];for(let i=0;i<24;i++){const t=i/23;pts.push([22+len*t,-50+Math.sin(t*Math.PI)*24+Math.sin(t*9+p*8)*4]);}line(ctx,pts,c,9,.9);line(ctx,pts,c2,2,.8);}
  else if(m==='uh'){const h=122*q;for(let i=0;i<4;i++){const ang=i/4*TAU+p*TAU*1.6;const rx=42+q*20,ry=55+q*52;const pts=[];for(let j=0;j<=28;j++){const t=j/28;pts.push([Math.cos(ang+t*TAU)*rx,-68+Math.sin(ang+t*TAU)*ry]);}line(ctx,pts,c,7,.75);line(ctx,pts,c2,2,.55);}ring(ctx,0,-68,24+q*40,c2,5,.75);line(ctx,[[-8,0],[0,-h]],c2,4,.35);
  } else if(m==='dh'){const by=-120+q*86;for(let i=0;i<10;i++){const ang=i/10*TAU;windRibbon(ctx,Math.cos(ang)*18,by+Math.sin(ang)*7,0,0,c,p,3,.4);}dot(ctx,0,by,27,c,.7);ring(ctx,0,by,30,c2,5,.85);if(p>.5){const k=out((p-.5)/.5);ring(ctx,0,0,20+64*k,c,7,.9);particleBurst(ctx,0,0,c2,k,14,70,3,.6);}}
  else if(m==='sh'){const len=145*q;for(let k=0;k<5;k++)windRibbon(ctx,22,-70+k*11,len,7,c,p+k*.02,8-k,.72);for(let i=0;i<8;i++)line(ctx,[[35+i*14*q,-82],[50+i*14*q,-67]],c2,2,.35);}

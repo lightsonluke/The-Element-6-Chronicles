@@ -23,7 +23,6 @@ function circle(ctx,x,y,r,c,a=1,fill=true) { ctx.save(); ctx.globalAlpha=a; fill
 function capsule(ctx,x1,y1,x2,y2,r,c,a=1) { ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle=c; ctx.lineWidth=r*2; ctx.lineCap='round'; glow(ctx,c,12); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore(); }
 function ring(ctx,x,y,rx,ry,c,a=1,w=3,rot=0) { ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle=c; ctx.lineWidth=w; glow(ctx,c,12); ctx.beginPath(); ctx.ellipse(x,y,rx,ry,rot,0,TAU); ctx.stroke(); ctx.restore(); }
 function spark(ctx,x,y,r,c,a=1,n=6) { for(let i=0;i<n;i++){const q=i/n*TAU; stroke(ctx,[[x+Math.cos(q)*r*.4,y+Math.sin(q)*r*.4],[x+Math.cos(q)*r,y+Math.sin(q)*r]],c,1.7,a);}}
-function trail(ctx,pts,c,w,a=.45){ for(let i=1;i<pts.length;i++) stroke(ctx,[pts[i-1],pts[i]],c,w*(i/pts.length),a*(i/pts.length)); }
 function flame(ctx,x,y,r,c,a=1,ang=0){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.globalAlpha=a;ctx.fillStyle=c;glow(ctx,c,18);ctx.beginPath();ctx.moveTo(0,-r);ctx.quadraticCurveTo(r*.8,-r*.15,r*.2,r);ctx.quadraticCurveTo(-r*.9,r*.4,0,-r);ctx.fill();ctx.globalAlpha=a*.75;ctx.fillStyle='#FFF4B0';ctx.beginPath();ctx.moveTo(0,-r*.55);ctx.quadraticCurveTo(r*.3,0,0,r*.5);ctx.quadraticCurveTo(-r*.3,0,0,-r*.55);ctx.fill();ctx.restore();}
 function water(ctx,pts,c='#44BFFF',w=10,a=.8){stroke(ctx,pts,c,w,a);stroke(ctx,pts,'#E9FBFF',Math.max(1.5,w*.16),a*.6);}
 function leaf(ctx,x,y,rx,ry,ang,c,a=1){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.globalAlpha=a;ctx.fillStyle=c;glow(ctx,c,10);ctx.beginPath();ctx.moveTo(0,-ry);ctx.quadraticCurveTo(rx,-ry*.1,0,ry);ctx.quadraticCurveTo(-rx,-ry*.1,0,-ry);ctx.fill();ctx.restore();}
@@ -93,7 +92,7 @@ function daigo(ctx,p){
   if(this==='ds'){const e=phase(p,.2,.6); poly(ctx,[[-38,4],[-12,-30*e],[0,-50*e],[12,-30*e],[38,4]],c,pulse(p),'#F0E0C5'); return;}
   if(this==='ss'){const e=smooth(phase(p,.15,.7)); stone(ctx,35+e*45,-44,58,48,hi,pulse(p),-.08); capsule(ctx,8,-42,68+e*45,-44,17,c,pulse(p)); return;}
   if(this==='uh'){const e=smooth(phase(p,.1,.7)); stone(ctx,0,-20-e*90,80,36,c,pulse(p),0); if(p>.45){stone(ctx,-32,-80-e*70,52,34,hi,.8*pulse(p),-.35);stone(ctx,32,-80-e*70,52,34,hi,.8*pulse(p),.35);} return;}
-  if(this==='sh'){const e=smooth(phase(p,.12,.8)); const a=-.9+e*1.7; const bx=28+Math.cos(a)*80,by=-45+Math.sin(a)*80; stone(ctx,bx,by,105,58,c,pulse(p),a); trail(ctx,[[25,-45],[bx,by]],hi,8,.35*pulse(p)); return;}
+  if(this==='sh'){const e=smooth(phase(p,.12,.8)); const a=-.9+e*1.7; const bx=28+Math.cos(a)*80,by=-45+Math.sin(a)*80; stone(ctx,bx,by,105,58,c,pulse(p),a); return;}
   if(this==='dh'){const e=phase(p,.05,.58); stone(ctx,30,-160*e,95,62,hi,pulse(p),.05); if(p>.55){const z=phase(p,.55,.95); for(let i=0;i<5;i++) stone(ctx,(i-2)*24*z,-4,38,30,c,pulse(z),i*.3); } return;}
   if(this==='sp'){const e=phase(p,.0,.35),h=phase(p,.4,.75); stone(ctx,40,-48,100+e*30,90+e*20,hi,.65); const px=30+smooth(h)*130; stone(ctx,px,-48,105,100,c,pulse(h),-.03); capsule(ctx,5,-48,px,-48,27,c,pulse(h)); if(p>.65) spark(ctx,px,-48,55,hi,pulse(p),12); return;}
   stone(ctx,50,-46,75,35,c,pulse(p));
@@ -107,7 +106,7 @@ function suzu(ctx,p){
   if(this==='uh'){const e=smooth(phase(p,.12,.82)); const a=-1.0+e*2.2; for(let i=0;i<3;i++) gust(ctx,25+Math.cos(a+i*.1)*70,-48+Math.sin(a+i*.1)*50,48,c,.55*pulse(p),a+.7); capsule(ctx,8,-42,25+Math.cos(a)*90,-48+Math.sin(a)*65,12,c,pulse(p)); return;}
   if(this==='sh'){const e=smooth(phase(p,.15,.82)); const px=40+e*100; gust(ctx,px,-48,42,c,.75*pulse(p),0); gust(ctx,px-45,-35,34,hi,.55*pulse(p),Math.PI); stroke(ctx,[[10,-42],[px,-48],[px-30,-85]],c,5,.7*pulse(p)); return;}
   if(this==='dh'){const e=smooth(phase(p,.1,.7)); gust(ctx,20,-20,60,c,.7*pulse(p),Math.PI/2); ring(ctx,20,-10,70*e,28*e,hi,.6*pulse(p),3); return;}
-  if(this==='sp'){const e=phase(p,.0,.45),dash=phase(p,.45,.8); ring(ctx,0,-48,62+e*10,52+e*8,c,.35+.15*p,4); const a=-Math.PI/2+smooth(dash)*TAU; const px=Math.cos(a)*70,py=-48+Math.sin(a)*55; gust(ctx,px,py,45,c,pulse(dash),a); trail(ctx,[[0,-48],[px,py]],hi,8,.35*pulse(dash)); if(p>.75) ring(ctx,0,-48,85,70,c,pulse(p),5); return;}
+  if(this==='sp'){const e=phase(p,.0,.45),dash=phase(p,.45,.8); ring(ctx,0,-48,62+e*10,52+e*8,c,.35+.15*p,4); const a=-Math.PI/2+smooth(dash)*TAU; const px=Math.cos(a)*70,py=-48+Math.sin(a)*55; gust(ctx,px,py,45,c,pulse(dash),a); if(p>.75) ring(ctx,0,-48,85,70,c,pulse(p),5); return;}
   gust(ctx,55,-45,25,c,pulse(p),0);
 }
 
@@ -139,7 +138,7 @@ function yui(ctx,p){
   const c='#FFF2A8', hi='#FFFFFF', q=out(p);
   if(this==='us'){const e=phase(p,.15,.65); star(ctx,0,-70-e*35,20+e*10,c,pulse(p)); ring(ctx,0,-8,30+e*20,12+e*6,hi,.6*pulse(p),3); return;}
   if(this==='ds'){const e=phase(p,.2,.65); star(ctx,0,-8,14+e*20,c,pulse(p)); ring(ctx,0,-8,28+e*25,12+e*10,hi,.5*pulse(p),3); return;}
-  if(this==='ss'){const e=smooth(phase(p,.1,.7)); star(ctx,25+e*65,-45,10+e*5,c,pulse(p)); trail(ctx,[[8,-45],[25+e*65,-45]],hi,4,.55*pulse(p)); return;}
+  if(this==='ss'){const e=smooth(phase(p,.1,.7)); star(ctx,25+e*65,-45,10+e*5,c,pulse(p)); return;}
   if(this==='uh'){const e=smooth(phase(p,.1,.7)); star(ctx,0,-125*e-25,34,c,pulse(p)); for(let i=0;i<5;i++)stroke(ctx,[[0,-95*e-25],[(i-2)*14,-30]],hi,3,.45*pulse(p)); return;}
   if(this==='sh'){const e=smooth(phase(p,.12,.8)); const a=-1+e*2; star(ctx,35+Math.cos(a)*75,-45+Math.sin(a)*60,30,c,pulse(p),a); ring(ctx,35+Math.cos(a)*75,-45+Math.sin(a)*60,42,20,hi,.55*pulse(p),3,a); return;}
   if(this==='dh'){const e=phase(p,.15,.75); ring(ctx,0,2,70*e,22*e,c,.7*pulse(p),5); for(let i=0;i<8;i++) star(ctx,(i-3.5)*18*e,-5,8,c,.55*pulse(p)); return;}
@@ -184,7 +183,7 @@ function itto(ctx,p){
 
 function foxes(ctx,p){
   const c='#FF8A2A', hi='#FFD77A', white='#FFF4DD', q=out(p);
-  if(this==='us'){const e=smooth(phase(p,.1,.7)); flame(ctx,-22,-28-e*65,16,c,pulse(p),-.2); flame(ctx,22,-28-e*80,16,hi,pulse(p),.2); trail(ctx,[[-22,-28],[22,-28-e*80]],white,3,.4*pulse(p)); return;}
+  if(this==='us'){const e=smooth(phase(p,.1,.7)); flame(ctx,-22,-28-e*65,16,c,pulse(p),-.2); flame(ctx,22,-28-e*80,16,hi,pulse(p),.2); return;}
   if(this==='ds'){const e=phase(p,.15,.75); const a=-.8+e*1.6; flame(ctx,Math.cos(a)*38,-42+Math.sin(a)*30,15,c,pulse(p),a); flame(ctx,-Math.cos(a)*38,-42-Math.sin(a)*30,15,hi,pulse(p),a+Math.PI); return;}
   if(this==='ss'){const e=smooth(phase(p,.12,.8)); const a=1.0+e*1.2; const p1=[Math.cos(a)*70,-45+Math.sin(a)*45],p2=[Math.cos(Math.PI-a)*70,-45+Math.sin(Math.PI-a)*45]; flame(ctx,p1[0],p1[1],14,c,pulse(p),a);flame(ctx,p2[0],p2[1],14,hi,pulse(p),Math.PI-a); return;}
   if(this==='uh'){const e=smooth(phase(p,.1,.75)); flame(ctx,-22,-30-e*70,18,c,pulse(p),-.2); flame(ctx,22,-30-e*80,18,hi,pulse(p),.2); stroke(ctx,[[-22,-30],[22,-30-e*80]],white,4,.45*pulse(p)); return;}
@@ -314,7 +313,7 @@ export function drawGen2Super(ctx,x,y,color,p,charId){
   else if(charId==='g2_kaito'){const h=phase(q,.4,.75);flame(ctx,0,-48,65+q*10,c,.65);for(let i=0;i<10;i++)flame(ctx,Math.cos(i)*30+smooth(h)*120,-48+Math.sin(i)*25,14,c,.6*pulse(h),i*.6);capsule(ctx,5,-48,30+smooth(h)*150,-48,28,c,pulse(h));circle(ctx,30+smooth(h)*150,-48,32,'#FFD27A',pulse(h));}
   else if(charId==='g2_hana'){const e=phase(q,.0,.42),h=phase(q,.45,.82);ring(ctx,0,-48,80+e*12,60+e*8,c,.45);for(let i=0;i<22;i++){const a=i/22*TAU;const r=20+smooth(h)*120;circle(ctx,Math.cos(a)*r,-48+Math.sin(a)*r*.72,7,'#E7FAFF',.75*pulse(h));}ring(ctx,0,-48,125,90,c,pulse(q),5);}
   else if(charId==='g2_daigo'){const e=phase(q,.0,.45),h=phase(q,.45,.78);stone(ctx,55,-45,150+e*30,130+e*20,c,.7);stone(ctx,55+smooth(h)*140,-45,125,110,c,pulse(h));for(let i=0;i<8;i++)stone(ctx,55+Math.cos(i)*50,-45+Math.sin(i)*35,30,25,'#D7C4A8',.6*pulse(h),i*.4);}
-  else if(charId==='g2_suzu'){const h=phase(q,.38,.8);ring(ctx,0,-48,75,58,c,.4,4);const a=-Math.PI/2+smooth(h)*TAU;const px=Math.cos(a)*90,py=-48+Math.sin(a)*65;gust(ctx,px,py,55,c,pulse(h),a);trail(ctx,[[0,-48],[px,py]],'#F4FFFF',9,.4*pulse(h));if(q>.72)ring(ctx,0,-48,115,85,c,pulse(q),5);}
+  else if(charId==='g2_suzu'){const h=phase(q,.38,.8);ring(ctx,0,-48,75,58,c,.4,4);const a=-Math.PI/2+smooth(h)*TAU;const px=Math.cos(a)*90,py=-48+Math.sin(a)*65;gust(ctx,px,py,55,c,pulse(h),a);if(q>.72)ring(ctx,0,-48,115,85,c,pulse(q),5);}
   else if(charId==='g2_mai'){const h=phase(q,.4,.8);shadow(ctx,0,-48,95,70,'#171322',.8);shadow(ctx,0,-48,105,72,c,.35);const a=-.7+smooth(h)*1.4;shadow(ctx,Math.cos(a)*100,-48+Math.sin(a)*55,65,14,c,pulse(h),a);shadow(ctx,Math.cos(a+Math.PI)*100,-48+Math.sin(a+Math.PI)*55,65,14,c,pulse(h),a+Math.PI);}
   else if(charId==='g2_osamu'){const h=phase(q,.45,.82);ring(ctx,0,-48,95,72,c,.4,4);for(let i=0;i<20;i++){const a=i/20*TAU;const r=20+smooth(h)*125;soundRing(ctx,Math.cos(a)*r,-48+Math.sin(a)*r*.7,9,c,.7*pulse(h));}ring(ctx,0,-48,130,96,'#FFFFFF',pulse(q),5);}
   else if(charId==='g2_yui'){const e=phase(q,0,.4),h=phase(q,.45,.8);star(ctx,0,-48,78+e*10,c,.55);ring(ctx,0,-48,92+e*10,70+e*8,'#FFFFFF',.5);for(let i=0;i<14;i++){const a=i/14*TAU;const r=25+smooth(h)*115;star(ctx,Math.cos(a)*r,-48+Math.sin(a)*r*.7,10,c,.7*pulse(h),a);}}

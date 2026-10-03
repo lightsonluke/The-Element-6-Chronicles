@@ -62,18 +62,6 @@ function particles(ctx, x, y, color, p, count, radius, spread = TAU) {
 // circle continues, 11 near-end, 12 recovery. The hitbox is NOT the circle.
 // It is only the moving dot at the beginning of the circular path.
 function thunderUp(ctx, x, y, p) {
-  // Negative progress is the pre-release hold stance. The released Thunder
-  // animation below remains the original supplied 12-frame sequence.
-  if (p < 0) {
-    const q = Math.max(0, Math.min(1, -p - 1));
-    const c = '#FFFF44', cy = y - 112, rx = 86, ry = 34;
-    ctx.save(); ctx.globalAlpha = .5 + q * .35; ctx.strokeStyle = c; ctx.lineWidth = 2.5 + q * 2; ctx.shadowColor = c; ctx.shadowBlur = 16 + q * 12;
-    ctx.beginPath(); ctx.ellipse(x, cy, rx, ry, 0, 0, TAU); ctx.stroke();
-    const theta = -Math.PI/2 + q * Math.PI * 1.15;
-    dot(ctx, x + Math.cos(theta) * rx, cy + Math.sin(theta) * ry, 5 + q * 3, '#FFFFFF', .9);
-    dot(ctx, x + Math.cos(theta) * rx, cy + Math.sin(theta) * ry, 3.5 + q * 2, c, 1);
-    ctx.restore(); return;
-  }
   // This is intentionally authored as the supplied 12-frame reference:
   // 1 startup, 2 circle begins, 3-8 orbit, 9 launch, 10 continue,
   // 11 near-end, 12 recovery. The visible circle is never the hitbox.
@@ -229,9 +217,6 @@ function glowArc(ctx, x,y,rx,ry,a0,a1,c,w,a=1,rot=0) {
   ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,a0,a1); ctx.stroke(); ctx.restore();
 }
 function core(ctx,x,y,r,c,a=1){ spark(ctx,x,y,r,'#fff',a*.85); spark(ctx,x,y,r*.58,c,a); }
-function trail(ctx,x,y,dx,dy,c,n=5,a=.55) {
-  for(let i=1;i<=n;i++){ const t=i/(n+1); glowStroke(ctx,[[x-dx*t,y-dy*t],[x-dx*(t+.07),y-dy*(t+.07)]],c,Math.max(1.5,4-i*.45),a*(1-t)); }
-}
 function flameShape(ctx,x,y,r,c,a=1,rot=0){
   ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.globalAlpha=a; ctx.fillStyle=c; ctx.shadowColor=c; ctx.shadowBlur=18;
   ctx.beginPath(); ctx.moveTo(0,-r); ctx.bezierCurveTo(r*.75,-r*.15,r*.65,r*.55,0,r); ctx.bezierCurveTo(-r*.75,r*.5,-r*.5,-r*.05,0,-r); ctx.fill();
@@ -277,7 +262,6 @@ function fireUpReference(ctx,x,y,p){
     glowArc(ctx,armX,armY,42+hookT*8,30+hookT*7,-2.55,ang,c,9,.95,-.05);
     flameShape(ctx,hx,hy,11,hot,1,ang+.4); spark(ctx,hx,hy,3,white,.9);
     for(let i=0;i<7;i++){const a=ang-.8+i*.22; spark(ctx,armX+Math.cos(a)*48,armY+Math.sin(a)*36,1.5,c,.6);}
-    if(f>=4 && f<7){ trail(ctx,hx,hy,-26,-26,c,5,.6); }
     if(f>=4 && f<6.5){
       const launch=(f-4)/2.5;
       glowStroke(ctx,[[hx,hy],[hx+18*launch,hy-22*launch]],hot,3,.55);
@@ -309,7 +293,6 @@ function waterUpReference(ctx,x,y,p){
   for(let i=0;i<6;i++) spark(ctx,tx-Math.cos(.5)*i*7,ty+i*4,1.7,c,.65);
   if(f<3.1){ waterRing(ctx,x+18,y-48,25,12,c,.95,-.1); }
   if(f>=3){ waterRing(ctx,tx,ty,27,11,c,.98,.2+travel*.3); }
-  if(f>=5){ trail(ctx,tx,ty,tx-prevX,ty-prevY,c,7,.5); }
   if(f>=6 && f<8){
     const vanish=(f-6)/2; glowArc(ctx,tx,ty,25*(1-vanish),10*(1-vanish),0,REF_TAU,c,5,1-vanish,.25);
   }
@@ -340,7 +323,6 @@ function grassUpReference(ctx,x,y,p){
   }
   if(f>=7){
     const burst=(f-7)/2.0;
-    for(let i=0;i<12;i++){const a=i/12*REF_TAU; trail(ctx,x+Math.cos(a)*12,cy+Math.sin(a)*8,Math.cos(a)*28,Math.sin(a)*20,c,2,.5*(1-burst));}
   }
 }
 
@@ -361,12 +343,12 @@ function iceUpReference(ctx,x,y,p){
   if(f>=4){
     glowArc(ctx,sx,sy+8,20,9,0,REF_TAU,c,3,.65,q*1.5);
     iceShard(ctx,sx,sy,13,31,q*9,c,1);
-    trail(ctx,sx,sy,Math.max(20,sx-x),Math.max(20,sy-y),c,8,.65);
+   
   }
   if(f>=8 && f<10){
     const launch=(f-8)/2;
     // Slight directional launch matching the reference's side-biased trajectory.
-    trail(ctx,sx,sy,40,55,c,7,.8);
+   
   }
   if(f>=10){ spark(ctx,sx,sy,3,white,.7); }
 }
@@ -377,7 +359,7 @@ function fireAttack(ctx,x,y,p,move){
   if(move==='us'){fireUpReference(ctx,x,y,p);return;}
   if(move==='ss'){
     const t=Math.min(1,q/.72), ex=x+18+t*90, ey=y-43-Math.sin(t*Math.PI)*18;
-    glowStroke(ctx,[[x+8,y-25],[x+25,y-43],[ex,ey]],c,8,a); flameShape(ctx,ex,ey,18,hot,a,.15); trail(ctx,ex,ey,75,15,c,6,.45); return;
+    glowStroke(ctx,[[x+8,y-25],[x+25,y-43],[ex,ey]],c,8,a); flameShape(ctx,ex,ey,18,hot,a,.15); return;
   }
   if(move==='ds'){
     const spread=18+q*38; for(let i=-2;i<=2;i++){const xx=x+i*spread*.42; flameShape(ctx,xx,y-15-Math.abs(i)*3,14+q*5,c,a,.1*i); glowStroke(ctx,[[xx,y-2],[xx+i*5,y-28]],hot,3,a*.65);} return;
@@ -398,10 +380,10 @@ function waterAttack(ctx,x,y,p,move){
   if(move==='us'){waterUpReference(ctx,x,y,p);return;}
   if(move==='ss'){
     const t=easeOut(q), ex=x+18+t*105, ey=y-44-Math.sin(t*Math.PI)*24;
-    glowStroke(ctx,[[x+5,y-30],[x+32,y-48],[ex,ey]],c,7,a); waterRing(ctx,ex,ey,14,7,c,.9,.3+t*2); trail(ctx,ex,ey,90,20,c,8,.45); return;
+    glowStroke(ctx,[[x+5,y-30],[x+32,y-48],[ex,ey]],c,7,a); waterRing(ctx,ex,ey,14,7,c,.9,.3+t*2); return;
   }
   if(move==='ds'){
-    const spread=28+q*30; glowArc(ctx,x,y-24,spread,18,Math.PI,REF_TAU,c,8,a,.0); for(let s of [-1,1]){waterRing(ctx,x+s*spread,y-38,14,6,c,.9,s*.4); trail(ctx,x+s*spread,y-38,s*20,-50,c,4,.5);} return;
+    const spread=28+q*30; glowArc(ctx,x,y-24,spread,18,Math.PI,REF_TAU,c,8,a,.0); for(let s of [-1,1]){waterRing(ctx,x+s*spread,y-38,14,6,c,.9,s*.4);} return;
   }
   if(move==='sh'){
     const t=easeOut(q), ang=-.9+t*1.8; glowArc(ctx,x+26,y-48,78,48,-.9,ang,c,13,a,-.08); waterRing(ctx,x+26+Math.cos(ang)*70,y-48+Math.sin(ang)*42,18,8,c,.9,ang); return;
@@ -410,7 +392,7 @@ function waterAttack(ctx,x,y,p,move){
     const r=62; const t=easeOut(q); glowArc(ctx,x,y-76,r,r*1.15,-1.0+t*REF_TAU,-1.0+t*REF_TAU+2.8,c,9,a,.0); for(let i=0;i<10;i++){const ang=i/10*REF_TAU+t*1.5; spark(ctx,x+Math.cos(ang)*r,y-76+Math.sin(ang)*r*1.15,3,c,.6);} return;
   }
   if(move==='dh'){
-    const bx=x+80-160*easeOut(q), by=y-45+Math.max(0,q-.45)*70; waterRing(ctx,bx,by,22,16,c,a,.3); trail(ctx,bx,by,80,15,c,7,.5); return;
+    const bx=x+80-160*easeOut(q), by=y-45+Math.max(0,q-.45)*70; waterRing(ctx,bx,by,22,16,c,a,.3); return;
   }
 }
 function grassAttack(ctx,x,y,p,move){
@@ -436,7 +418,7 @@ function iceAttack(ctx,x,y,p,move){
   const c='#79DFFF', white='#EFFFFF', q=attackP(p), a=.3+.7*Math.sin(q*Math.PI);
   if(move==='us'){iceUpReference(ctx,x,y,p);return;}
   if(move==='ss'){
-    const t=easeOut(q), ang=-1+t*2; const ex=x+22+Math.cos(ang)*58, ey=y-45+Math.sin(ang)*58; glowStroke(ctx,[[x+8,y-30],[x+24,y-44],[ex,ey]],c,12,a); iceShard(ctx,ex,ey,13,32,ang,c,a); trail(ctx,ex,ey,50,20,c,6,.45); return;
+    const t=easeOut(q), ang=-1+t*2; const ex=x+22+Math.cos(ang)*58, ey=y-45+Math.sin(ang)*58; glowStroke(ctx,[[x+8,y-30],[x+24,y-44],[ex,ey]],c,12,a); iceShard(ctx,ex,ey,13,32,ang,c,a); return;
   }
   if(move==='ds'){
     glowArc(ctx,x,y-10,55,15,0,REF_TAU,c,5,a); for(let i=0;i<7;i++){const ang=Math.PI*1.05+i/6*Math.PI*.9; iceShard(ctx,x+Math.cos(ang)*52*q,y-15+Math.sin(ang)*28*q,8,22,ang,c,a);} return;

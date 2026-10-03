@@ -62,20 +62,12 @@ function poseDetail(ctx,p,m,col,lean=0,lift=0,a=1){
   else if(m==='sp'){ax=-32-15*wind;ay=-55-22*wind;bx=32+15*wind;by=-55-22*wind;}
   line(ctx,lean-7,-49-lift,lean+ax,ay,dark,8,a*.95); line(ctx,lean+7,-49-lift,lean+bx,by,dark,8,a*.95);
   circ(ctx,lean+ax,ay,5,col,a); circ(ctx,lean+bx,by,5,col,a);
-  // directional afterimage gives the limbs a sense of acceleration.
-  if(q>.12 && q<.88){ctx.globalAlpha=a*.16;line(ctx,lean+ax*.7,ay+6,lean+ax*.92,ay+2,hi,3);line(ctx,lean+bx*.7,by+6,lean+bx*.92,by+2,hi,3);ctx.globalAlpha=1;}
-}
-function slashTrail(ctx,x1,y1,x2,y2,col,p,w=5){
-  for(let i=5;i>=1;i--) { const t=i/6; line(ctx,x1+(x2-x1)*t*.35,y1+(y2-y1)*t*.35,x2-(x2-x1)*t*.15,y2-(y2-y1)*t*.15,col,w*t,.12*t); }
-  line(ctx,x1,y1,x2,y2,col,w,.95);
-  sparks(ctx,x2,y2,col,5,p);
 }
 function sandArc(ctx,cx,cy,r,a0,a1,col,p){
   stroke(ctx,col,7,.9); ctx.beginPath(); ctx.arc(cx,cy,r,a0,a1); ctx.stroke();
   for(let i=0;i<8;i++){const a=a0+(a1-a0)*i/7;sand(ctx,cx+Math.cos(a)*r,cy+Math.sin(a)*r,4,.75);}
 }
 function shardBurst(ctx,cx,cy,count,r,col,p){for(let i=0;i<count;i++){const a=i/count*TAU+p*2;const rr=r*(.35+.65*p);poly(ctx,[[cx+Math.cos(a)*rr,cy+Math.sin(a)*rr],[cx+Math.cos(a+.09)*(rr+18),cy+Math.sin(a+.09)*(rr+18)],[cx+Math.cos(a-.07)*(rr+6),cy+Math.sin(a-.07)*(rr+6)]],col,true,.8);}}
-function venomTrail(ctx,x1,y1,x2,y2,col,p){line(ctx,x1,y1,x2,y2,col,11,.65);for(let i=0;i<9;i++){const t=i/8;venom(ctx,x1+(x2-x1)*t,y1+(y2-y1)*t,4+3*Math.sin(t*Math.PI),col,.8);}}
 function ashCloud(ctx,cx,cy,rx,ry,p,alpha=.6){for(let i=0;i<18;i++){const a=i/18*TAU+p*2;const rr=.3+.7*((i*7)%10)/10;ash(ctx,cx+Math.cos(a)*rx*rr,cy+Math.sin(a)*ry*rr,5+7*rr,alpha);}}
 function mistRibbon(ctx,cx,cy,r,p,col){for(let i=0;i<12;i++){const a=i/11*TAU+p*1.8;mist(ctx,cx+Math.cos(a)*r,cy+Math.sin(a)*r*.55,12,6,.38);}}
 function techBeam(ctx,x1,y1,x2,y2,col,p){line(ctx,x1,y1,x2,y2,col,16,.2);line(ctx,x1,y1,x2,y2,'#E8F7FF',5,.8);for(let i=0;i<5;i++){const t=(i/5+p)%1;circ(ctx,x1+(x2-x1)*t,y1+(y2-y1)*t,4,col,.8);}}
@@ -92,16 +84,16 @@ function drawTakeshi(ctx,p,m){const c=C.g3_takeshi; const q=clamp(p),s=Math.sin(
  else {const r=20+90*q; circ(ctx,45,-48,20+12*(1-q),c,.45); for(let i=0;i<30;i++){const a=i/30*TAU+q*5;const rr=r*(.55+.45*((i*3)%10)/10);sand(ctx,Math.cos(a)*rr, -48+Math.sin(a)*rr*.62,4,.8);} ring(ctx,0,-48,r,c,.65,6); if(q>.7) shardBurst(ctx,0,-48,16,r,c,q);}
 }
 function drawAiko(ctx,p,m){const c=C.g3_aiko,q=clamp(p),s=Math.sin(q*Math.PI); const boneHi='#FFF9F0';
- if(m==='ss'){const len=42+72*q; bone(ctx,12,-48,12+len,-48,15,c); bone(ctx,12+len,-48,12+len+16,-58,11,c); slashTrail(ctx,20,-52,12+len,-48,boneHi,q,3);}
+ if(m==='ss'){const len=42+72*q; bone(ctx,12,-48,12+len,-48,15,c); bone(ctx,12+len,-48,12+len+16,-58,11,c);}
  else if(m==='us'){const len=75+75*q; bone(ctx,10,-45,15,-45-len,18,c); for(let i=0;i<5;i++)bone(ctx,15,-65-i*len/5,17,-72-i*len/5,10,boneHi); poly(ctx,[[8,-45-len],[22,-45-len],[15,-45-len-26]],c,true,.95);}
  else if(m==='ds'){for(let side of [-1,1]){bone(ctx,side*12,-45,side*30,-10,17,c);bone(ctx,side*30,-10,side*45,-8,12,c);} poly(ctx,[[-50,-8],[0,-27],[50,-8],[42,3],[-42,3]],c,true,.9); sparks(ctx,0,-6,boneHi,8,q);}
  else if(m==='uh'){for(let i=0;i<7;i++){const yy=-50-i*15; bone(ctx,0,yy,Math.sin(i*.8)*10,yy-18,9,c);} bone(ctx,0,-145,0,-185,12,boneHi); for(let i=0;i<6;i++)circ(ctx,Math.sin(i)*8,-65-i*20,4,boneHi,.8);}
  else if(m==='dh'){for(let i=0;i<6;i++){const x=-72+i*29;ctx.beginPath();ctx.arc(x,-5,27,Math.PI,TAU);ctx.strokeStyle=c;ctx.lineWidth=10;ctx.stroke();line(ctx,x,-5,x+Math.sin(i)*9,-42,c,5);} for(let i=0;i<7;i++)sparks(ctx,-55+i*18,-12,c,2,q);}
- else if(m==='sh'){const ang=-1.2+2.4*q; const pts=[];for(let i=0;i<=18;i++){const a=ang+i/18*1.45;pts.push([20+Math.cos(a)*112,-48+Math.sin(a)*112]);}poly(ctx,pts,c,true,.82); poly(ctx,[[20,-48],[128,-72],[140,-48],[128,-24]],boneHi,true,.62); slashTrail(ctx,22,-48,130,-52,boneHi,q,2);}
+ else if(m==='sh'){const ang=-1.2+2.4*q; const pts=[];for(let i=0;i<=18;i++){const a=ang+i/18*1.45;pts.push([20+Math.cos(a)*112,-48+Math.sin(a)*112]);}poly(ctx,pts,c,true,.82); poly(ctx,[[20,-48],[128,-72],[140,-48],[128,-24]],boneHi,true,.62);}
  else {for(let i=0;i<9;i++)bone(ctx,20+i*3,-105+i*4,48+i*9,-80+i*4,12,c,.75); bone(ctx,40,-62,155,-38,32,c); poly(ctx,[[150,-38],[178,-58],[175,-18]],c,true,.95); for(let i=0;i<14;i++)sparks(ctx,75,-48,boneHi,2,q); ring(ctx,75,-48,68,boneHi,.2,3);}
 }
 function drawHaru(ctx,p,m){const c=C.g3_haru,q=clamp(p),s=Math.sin(q*Math.PI); const hi='#FFFFFF';
- if(m==='ss'){const x=25+100*q; glass(ctx,[[12,-67],[x,-67],[x+8,-58],[12,-58]],c,.75,3); line(ctx,12,-62,x,-62,hi,2,.9); slashTrail(ctx,18,-62,x,-62,hi,q,2);}
+ if(m==='ss'){const x=25+100*q; glass(ctx,[[12,-67],[x,-67],[x+8,-58],[12,-58]],c,.75,3);}
  else if(m==='us'){const len=55+95*q; poly(ctx,[[-5,-45],[5,-45],[5,-45-len],[-5,-45-len]],c,true,.45); line(ctx,0,-45,0,-45-len,hi,3,.95); for(let i=0;i<5;i++)line(ctx,-8,-65-i*20,8,-65-i*20,c,2,.6); poly(ctx,[[-7,-45-len],[7,-45-len],[0,-45-len-22]],hi,true,.9);}
  else if(m==='ds'){for(let i=0;i<9;i++){const x=-65+i*16;const y=-7+Math.sin(i)*5;poly(ctx,[[x,y],[x+8,y-25-(i%3)*7],[x+14,y+2]],c,true,.7);line(ctx,x,y,x+8,y-25,hi,1,.7);}}
  else if(m==='uh'){const h=80+70*q;for(let i=0;i<6;i++){const x=-32+i*13;glass(ctx,[[x,-12],[x+12,-12],[x+18,-h],[x-8,-h]],c,.42,3);line(ctx,x+5,-h,x+10,-12,hi,1,.7);} shardBurst(ctx,0,-h,10,45,c,q);}
@@ -110,13 +102,13 @@ function drawHaru(ctx,p,m){const c=C.g3_haru,q=clamp(p),s=Math.sin(q*Math.PI); c
  else {const r=15+95*q; circ(ctx,0,-50,8,hi,.9); for(let i=0;i<28;i++){const a=i/28*TAU+q*3;const rr=r*(.5+.5*((i*11)%10)/10);const x=Math.cos(a)*rr,y=-50+Math.sin(a)*rr*.7;poly(ctx,[[x,y-12],[x+8,y],[x,y+12],[x-8,y]],c,true,.65);line(ctx,x-7,y,x+7,y,hi,1,.6);} ring(ctx,0,-50,r,hi,.55,3);}
 }
 function drawChiyo(ctx,p,m){const c=C.g3_chiyo,q=clamp(p),s=Math.sin(q*Math.PI);
- if(m==='ss'){const x=30+75*q;venomTrail(ctx,18,-50,x,-50-18*s,c,q); if(q>.7){for(let i=0;i<7;i++)venom(ctx,x+Math.sin(i)*10,-50+(i-3)*7,5,c,.8);}}
+ if(m==='ss'){const x=30+75*q; if(q>.7){for(let i=0;i<7;i++)venom(ctx,x+Math.sin(i)*10,-50+(i-3)*7,5,c,.8);}}
  else if(m==='us'){const y=-38-92*q;venom(ctx,8,y,8,c);line(ctx,8,-42,8,y,c,8,.55);if(q>.62){for(let i=0;i<8;i++)venom(ctx,8+(i-4)*5,y,4,c,.8);}}
  else if(m==='ds'){for(let i=0;i<8;i++)venom(ctx,(i-3.5)*15,-4,11,c,.55);for(let i=0;i<7;i++){const x=-45+i*15;venom(ctx,x,-12-30*q,5,c,.8);}}
  else if(m==='uh'){for(let i=0;i<14;i++){const a=-Math.PI/2+i/13*Math.PI*1.6;const r=28+18*q;venom(ctx,Math.cos(a)*r,-58+Math.sin(a)*(80+35*q),7,c,.7);} line(ctx,0,-35,0,-145,c,15,.35);}
  else if(m==='dh'){for(let i=0;i<12;i++)venom(ctx,(i-5.5)*14,-8,11,c,.5);for(let i=0;i<9;i++){const x=-62+i*15;poly(ctx,[[x,-5],[x+6,-45-28*s],[x+13,-5]],c,true,.9);venom(ctx,x+7,-48-28*s,5,c,.8);}}
- else if(m==='sh'){for(let side of [-1,1]){const ex=20+side*55;venom(ctx,side*15,-48,17,c,.75);venomTrail(ctx,side*25,-48,side*(55+55*q),-42-10*s,c,q);poly(ctx,[[side*(55+55*q),-42-10*s],[side*(90+55*q),-52],[side*(78+55*q),-22]],c,true,.95);}}
- else {circ(ctx,45,-50,26,c,.8);for(let i=0;i<12;i++){const a=i/12*TAU;const rr=25+70*q;venomTrail(ctx,45+Math.cos(a)*20,-50+Math.sin(a)*15,45+Math.cos(a)*rr,-50+Math.sin(a)*rr*.7,c,q);}circ(ctx,45,-50,9,'#CFFF8A',.9);}
+ else if(m==='sh'){for(let side of [-1,1]){const ex=20+side*55;venom(ctx,side*15,-48,17,c,.75);poly(ctx,[[side*(55+55*q),-42-10*s],[side*(90+55*q),-52],[side*(78+55*q),-22]],c,true,.95);}}
+ else {circ(ctx,45,-50,26,c,.8);circ(ctx,45,-50,9,'#CFFF8A',.9);}
 }
 function drawEmi(ctx,p,m){const c=C.g3_emi,q=clamp(p),s=Math.sin(q*Math.PI); const pulse='#FFDCE1';
  if(m==='ss'){const dx=28+80*q; ring(ctx,dx,-50,10+9*s,c,.75,3);line(ctx,15,-50,dx,-50,pulse,2,.65);for(let i=0;i<5;i++)circ(ctx,dx-20+i*8,-50+Math.sin(i)*5,3,pulse,.8);}
@@ -151,7 +143,7 @@ function drawRyo(ctx,p,m){const c=C.g3_ryo,q=clamp(p),s=Math.sin(q*Math.PI);
  else if(m==='ds'){mistRibbon(ctx,0,-8,35+25*s,q,c);for(let i=0;i<8;i++)mist(ctx,(i-3.5)*14,-5,18,8,.45);for(let i=0;i<7;i++)mist(ctx,0,-12-i*12,14,7,.5);}
  else if(m==='uh'){for(let i=0;i<18;i++){const a=i/18*TAU+p*2;mist(ctx,Math.cos(a)*38,-70+Math.sin(a)*70,13,8,.45);}ring(ctx,0,-140,45,c,.55,4);}
  else if(m==='dh'){mistRibbon(ctx,0,-20,55+30*s,q,c);for(let i=0;i<12;i++)mist(ctx,Math.cos(i/12*TAU)*(40+35*s),-20+Math.sin(i/12*TAU)*18,15,8,.5);ring(ctx,0,-20,70*s+25,c,.45,4);}
- else if(m==='sh'){const x=35+100*q;mist(ctx,x,-50,60,16,.7);line(ctx,18,-50,x,-50,'#FFFFFF',8,.5);slashTrail(ctx,25,-48,x,-50,c,q,5);}
+ else if(m==='sh'){const x=35+100*q;mist(ctx,x,-50,60,16,.7);line(ctx,18,-50,x,-50,'#FFFFFF',8,.5);}
  else {const r=25+80*q;for(let i=0;i<26;i++){const a=i/26*TAU+p*3;mist(ctx,Math.cos(a)*r,-50+Math.sin(a)*r*.7,15,8,.5);}circ(ctx,0,-50,40+30*q,c,.18);ring(ctx,0,-50,r,c,.65,5);if(q>.7)sparks(ctx,0,-50,'#F4FBFF',16,q);}
 }
 function drawSouta(ctx,p,m){const c=C.g3_souta,q=clamp(p),s=Math.sin(q*Math.PI);
