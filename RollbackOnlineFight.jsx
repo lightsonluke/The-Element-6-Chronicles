@@ -185,7 +185,7 @@ export default function RollbackOnlineFight({
       const skinColor = getCharRenderColor(character.id, loadout?.equippedSkins);
       skinParts.filter(part => isBehindAccessory(part.type)).forEach(part => drawAccessory(ctx, fighter.x, fighter.y, part.type, part.color, fighter.frame, 1, character.id, fighter.state, fighter.facing, fighter.powerActive));
       accessories.filter(accessory => isBehindAccessory(accessory.type)).forEach(accessory => drawAccessory(ctx, fighter.x, fighter.y, accessory.type, skinColor && accessory.type === 'soccer_kit' ? skinColor : resolveAccColor(accessory, character), fighter.frame, 1, character.id, fighter.state, fighter.facing, fighter.powerActive));
-      drawStickman(ctx, fighter.x, fighter.y, renderColor, fighter.facing, fighter.frame, 1, character.isSpirit, fighter.state, character, fighter.powerActive, false, null, fighter.emote);
+      drawStickman(ctx, fighter.x, fighter.y, renderColor, fighter.facing, fighter.frame, 1, character.isSpirit, fighter.state, character, fighter.powerActive, false, null, fighter.emote, fighter.attackData);
       skinParts.filter(part => !isBehindAccessory(part.type)).forEach(part => drawAccessory(ctx, fighter.x, fighter.y, part.type, part.color, fighter.frame, 1, character.id, fighter.state, fighter.facing, fighter.powerActive));
       accessories.filter(accessory => !isBehindAccessory(accessory.type)).forEach(accessory => drawAccessory(ctx, fighter.x, fighter.y, accessory.type, skinColor && accessory.type === 'soccer_kit' ? skinColor : resolveAccColor(accessory, character), fighter.frame, 1, character.id, fighter.state, fighter.facing, fighter.powerActive));
       drawShikigamiFollower(ctx, fighter, loadout?.equippedShikigami?.[character.id], fighter.frame, 1);

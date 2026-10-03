@@ -4,6 +4,7 @@ import { drawCharAttack, drawCharSuper, drawCharPowerAura } from './charAttackAn
 import { drawStageBackground } from './stageBackgrounds.js';
 import { getMaterial } from './materials.js';
 import { getEmotePoseVars } from './emotePose.js';
+import { getGen1AttackPose } from './gen1AttackAnims.js';
 
 // ─── STAGE MAPS ─────────────────────────────────────────────────────────────
 export const STAGE_MAPS = [
@@ -598,60 +599,6 @@ export function getLimbPose(frame, state = 'idle', facing = 1, scale = 1, powerA
   };
 }
 
-function applyFireAttackPose(vars, attackData, facing=1){
-  if(!attackData || attackData.charId !== 'g1_fire') return;
-  const move = attackData.isSuper ? 'super' : attackData.isHeavy ? (attackData.sigType === 'downHeavy' ? 'dh' : attackData.sigType === 'upHeavy' ? 'uh' : 'sh') : (attackData.sigType === 'up' ? 'us' : attackData.sigType === 'down' ? 'ds' : 'ss');
-  const p = attackData.holding ? Math.max(0, Math.min(1, Number(attackData.holdProgress)||0)) : Math.max(0, Math.min(1, Number(attackData.progress)||0));
-  const count = move==='dh' ? 6 : move==='super' ? 7 : 4;
-  const z=p*count;
-  const i=Math.min(count-1,Math.floor(z));
-  const u=z-Math.floor(z);
-  const s=u*u*(3-2*u);
-  const lerp=(a,b)=>a+(b-a)*s;
-  const lead=(angle)=>{
-    // The leading hand changes sides with facing: right hand when facing right,
-    // left hand when facing left. This is NOT just a mirrored copy of the body pose.
-    if(facing>=0) vars.punchArmR=angle;
-    else vars.punchArmL=-angle;
-  };
-  const clearLead=()=>{ if(facing>=0) vars.punchArmR=0; else vars.punchArmL=0; };
-  const beat=(arr)=>lerp(arr[i],arr[Math.min(i+1,count-1)]);
-
-  if(move==='us'){
-    const a=beat([0,-2.05,-2.25,-2.15]);
-    lead(a); vars.lean=facing*lerp([0,.02,.03,.08][i],[0,.02,.03,.08][Math.min(i+1,3)]);
-  } else if(move==='ss'){
-    const a=beat([0,-1.05,-1.72,-1.15]);
-    lead(a); vars.lean=facing*beat([0,.08,.20,.16]); vars.legSwing=beat([0,.04,.22,.12]);
-  } else if(move==='ds'){
-    vars.lean=facing*beat([0,.10,.03,-.10]);
-    vars.bob=beat([0,5,8,2]);
-    lead(beat([0,.30,.20,.05]));
-  } else if(move==='uh'){
-    // Both arms rise continuously into the overhead wheel.
-    const aR=beat([-1.0,-2.55,-2.70,-2.20]);
-    const aL=beat([-1.0,-2.85,-2.95,-2.45]);
-    vars.punchArmR=aR; vars.punchArmL=aL; vars.lean=facing*beat([0,0,.02,.05]);
-  } else if(move==='dh'){
-    vars.lean=facing*beat([0,.18,.06,-.02,-.04,-.02]);
-    vars.bob=beat([0,9,6,4,2,0]);
-    vars.legLOver=beat([null,-.60,-.65,-.25,-.12,null].map(v=>v===null?0:v));
-    vars.legROver=beat([null,.20,.28,.12,.05,null].map(v=>v===null?0:v));
-    lead(beat([0,.62,.55,.35,.18,.05]));
-  } else if(move==='sh'){
-    const a=beat([-1.15,-1.45,-1.75,-.55]);
-    lead(a); vars.lean=facing*beat([.02,.08,.18,.10]); vars.legSwing=beat([0,.05,.18,.08]);
-  } else if(move==='super'){
-    // Reverted to the exact discrete Super body-pose timing from the
-    // Fire Hero Exact Native Animation — 3.5x Slower package.
-    if(i===0){ vars.punchArmR = -0.85; vars.punchArmL = -0.65; vars.lean = facing*0.03; }
-    else if(i===1 || i===2){ vars.punchArmR = -1.15; vars.punchArmL = -0.95; vars.lean = facing*0.06; }
-    else if(i===3 || i===4){ vars.punchArmR = -1.7; vars.punchArmL = -1.55; vars.lean = facing*0.22; vars.legSwing = 0.2; }
-    else if(i===5){ vars.punchArmR = 0.2; vars.punchArmL = 0.1; vars.lean = -facing*0.12; }
-    else { vars.punchArmR = -0.1; vars.punchArmL = -0.05; vars.lean = -facing*0.05; }
-  }
-}
-
 function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActive, noWeapon = false, emote = null, attackData = null) {
   // Yellow turns white when enhanced (power active)
   if (powerActive && charData?.id === 'yellow' && powerActive === 'stat_boost') {
@@ -721,7 +668,25 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
     lean = 0;
   }
 
-  { const firePose = { bob, legSwing, armSwingL, armSwingR, lean, punchArmL, punchArmR, legLOver, legROver }; applyFireAttackPose(firePose, attackData, facing); bob=firePose.bob; legSwing=firePose.legSwing; armSwingL=firePose.armSwingL; armSwingR=firePose.armSwingR; lean=firePose.lean; punchArmL=firePose.punchArmL; punchArmR=firePose.punchArmR; legLOver=firePose.legLOver; legROver=firePose.legROver; }
+  // Gen I attacks have authored body motion, not just effect motion.  The
+  // attack effect and the fighter pose use the same progress value, and the
+  // existing facing system swaps the lead limb for left/right attacks.
+  if (charData?.id?.startsWith('g1_') && attackData && (state === 'attacking' || state === 'superAttack')) {
+    const st = attackData.isSuper ? 'super' : (attackData.isHeavy ?
+      ((attackData.sigType === 'upHeavy' || attackData.sigType === 'up') ? 'uh' :
+       (attackData.sigType === 'downHeavy' || attackData.isGroundPound || attackData.sigType === 'down') ? 'dh' : 'sh') :
+      (attackData.sigType === 'up' || attackData.sigType === 'aerial' ? 'us' :
+       attackData.sigType === 'down' || attackData.sigType === 'downNormal' ? 'ds' : 'ss'));
+    const held = Math.max(0, Number(attackData.holdProgress) || 0);
+    const prog = attackData.isSuper ? Math.max(0, Number(attackData.progress) || 0) :
+      (held > 0 && !(Number(attackData.progress) > 0) ? held * 0.55 : Math.max(0, Number(attackData.progress) || 0));
+    const pose = getGen1AttackPose(st, prog, facing, charData.id);
+    armSwingL += pose.punchArmL || 0;
+    armSwingR += pose.punchArmR || 0;
+    legSwing = pose.legSwing || 0;
+    lean += pose.lean || 0;
+    bob += pose.bob || 0;
+  }
 
   ctx.save();
   ctx.rotate(lean);

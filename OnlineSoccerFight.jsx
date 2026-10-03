@@ -459,7 +459,7 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
         const skinColor = getCharRenderColor(charData.id, loadout?.equippedSkins);
         skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive));
         accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, charData), f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive));
-        drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame || 0, 1, charData.isSpirit, f.state || 'idle', charData, f.powerActive, true, null, f.emote);
+        drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame || 0, 1, charData.isSpirit, f.state || 'idle', charData, f.powerActive, true, null, f.emote, f.attackData);
         drawSoccerKit(ctx, f.x, f.y, renderColor, charData.id, f.frame || 0, 1, f.state || 'idle', f.facing, f.powerActive);
         skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive));
         accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, charData), f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive));

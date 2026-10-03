@@ -790,7 +790,7 @@ function drawScene(ctx, g, frame, camX, camY, vp) {
     ctx.save(); ctx.globalAlpha = 0.2; ctx.fillStyle = TEAM_COLORS[f.team];
     ctx.beginPath(); ctx.ellipse(f.x, f.y + 3, 28, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     // Draw stickman with character's own color (NOT team color)
-    drawStickman(ctx, f.x, f.y, charColor, f.facing, frame, 1, false, f.state, f.char, f.powerActive, false, null, f.emote);
+    drawStickman(ctx, f.x, f.y, charColor, f.facing, frame, 1, false, f.state, f.char, f.powerActive, false, null, f.emote, f.attackData);
     if (f.emote) drawEmote(ctx, f.x, f.y, f.emote.id, f.emote.timer, f.emote.maxTimer, frame);
     // Team uniform overlay — colored jersey band on torso
     ctx.fillStyle = TEAM_COLORS[f.team];

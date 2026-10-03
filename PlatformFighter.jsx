@@ -1584,77 +1584,28 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       }
       }
 
-      // Dynamic camera — ZOOM IN for 1v1 (closer than before).
-      // Super-specific safeguard: a super can create a large knockback/update
-      // spike for one or both fighters. Never let that transient value feed the
-      // camera fit calculation and collapse the entire canvas. During a super,
-      // preserve the last stable zoom and only resume normal fitting afterward.
+      // Dynamic camera — ZOOM IN for 1v1 (closer than before)
       const g = gameRef.current;
-      const finiteF1X = Number.isFinite(f1.x) ? f1.x : (Number.isFinite(g._lastSafeF1X) ? g._lastSafeF1X : W * 0.35);
-      const finiteF1Y = Number.isFinite(f1.y) ? f1.y : (Number.isFinite(g._lastSafeF1Y) ? g._lastSafeF1Y : H * 0.65);
-      const finiteF2X = Number.isFinite(f2.x) ? f2.x : (Number.isFinite(g._lastSafeF2X) ? g._lastSafeF2X : W * 0.65);
-      const finiteF2Y = Number.isFinite(f2.y) ? f2.y : (Number.isFinite(g._lastSafeF2Y) ? g._lastSafeF2Y : H * 0.65);
-      if (Number.isFinite(f1.x)) g._lastSafeF1X = f1.x;
-      if (Number.isFinite(f1.y)) g._lastSafeF1Y = f1.y;
-      if (Number.isFinite(f2.x)) g._lastSafeF2X = f2.x;
-      if (Number.isFinite(f2.y)) g._lastSafeF2Y = f2.y;
-
-      const f1SuperActive = f1.state === 'superAttack' && f1.attackData?.isSuper;
-      const f2SuperActive = f2.state === 'superAttack' && f2.attackData?.isSuper;
-      const superCameraLock = f1SuperActive || f2SuperActive;
-
-      // HARD super-camera lock. Capture the camera transform at the exact
-      // moment a super becomes active and keep that transform frozen for the
-      // entire super. Do not let super knockback, hitboxes, or effects feed
-      // into the normal dynamic camera fitting at all.
-      if (superCameraLock && !g._superCameraSnapshot) {
-        g._superCameraSnapshot = {
-          zoom: Number.isFinite(g.camZoom) ? g.camZoom : 0.85,
-          x: Number.isFinite(g.camX) ? g.camX : 0,
-          y: Number.isFinite(g.camY) ? g.camY : 0,
-        };
-      }
-      if (!superCameraLock) g._superCameraSnapshot = null;
-
-      const fdx = Math.abs(finiteF2X - finiteF1X), fdy = Math.abs(finiteF2Y - finiteF1Y);
+      const fdx = Math.abs(f2.x - f1.x), fdy = Math.abs(f2.y - f1.y);
       const zoomMul = settings.cameraZoom === 'close' ? 1.15 : settings.cameraZoom === 'far' ? 0.85 : 1.0;
       const stageZoom = activeStageCamera?.zoom != null ? Number(activeStageCamera.zoom) : (settings.stageZoom != null ? settings.stageZoom : 1.0);
-      let targetZoom;
-      if (superCameraLock) {
-        // Never change zoom while a super is active.
-        targetZoom = g._superCameraSnapshot?.zoom ?? 0.85;
-      } else {
-        // Prevent a transient signature/attack separation from collapsing the game view.
-        targetZoom = Math.max(0.78, Math.min(0.95, 0.95 - fdx / 1200 - fdy / 1000));
-        const spreadX = fdx + 280;
-        const spreadY = fdy + 280;
-        const fitZoomX = W / Math.max(spreadX, 200);
-        const fitZoomY = H / Math.max(spreadY, 200);
-        const fitZoom = Math.min(fitZoomX, fitZoomY);
-        targetZoom = Math.min(targetZoom, Math.max(0.78, fitZoom));
-        targetZoom *= zoomMul * stageZoom;
-        targetZoom = Math.max(0.72, Math.min(1.05, targetZoom));
-      }
-      if (!Number.isFinite(targetZoom)) targetZoom = 0.85;
-      if (superCameraLock && g._superCameraSnapshot) {
-        // Restore the exact pre-super transform every frame. This also prevents
-        // camera drift if a super sends a fighter far outside the normal stage.
-        g.camZoom = g._superCameraSnapshot.zoom;
-        g.camX = g._superCameraSnapshot.x;
-        g.camY = g._superCameraSnapshot.y;
-      } else {
-        g.camZoom += (targetZoom - g.camZoom) * 0.05;
-        if (!Number.isFinite(g.camZoom)) g.camZoom = 0.85;
-        g.camZoom = Math.max(0.72, Math.min(1.05, g.camZoom));
-        if (hitstop > 0) g.camZoom = Math.min(1.05, g.camZoom + 0.015);
-        const midX = (finiteF1X + finiteF2X) / 2;
-        const midY = ((finiteF1Y + finiteF2Y) / 2) - 70;
-        const targetCamX = (midX - W / 2) * (1 - g.camZoom) * 0.35;
-        const targetCamY = (midY - H / 2) * (1 - g.camZoom) * 0.35;
-        const stageCamMotion = stageMotionOffset(activeStageCamera?.motion, (now - g.stageStartTime) / 1000);
-        g.camX += (targetCamX + stageCamMotion.x - g.camX) * 0.07;
-        g.camY += (targetCamY + stageCamMotion.y - g.camY) * 0.07;
-      }
+      let targetZoom = Math.max(0.60, Math.min(0.95, 0.95 - fdx / 1200 - fdy / 1000));
+      const spreadX = fdx + 280;
+      const spreadY = fdy + 280;
+      const fitZoomX = W / Math.max(spreadX, 200);
+      const fitZoomY = H / Math.max(spreadY, 200);
+      const fitZoom = Math.min(fitZoomX, fitZoomY);
+      targetZoom = Math.min(targetZoom, Math.max(0.50, fitZoom));
+      targetZoom *= zoomMul * stageZoom;
+      g.camZoom += (targetZoom - g.camZoom) * 0.05;
+      if (hitstop > 0) g.camZoom += 0.015;
+      const midX = (f1.x + f2.x) / 2;
+      const midY = ((f1.y + f2.y) / 2) - 70;
+      const targetCamX = (midX - W / 2) * (1 - g.camZoom) * 0.35;
+      const targetCamY = (midY - H / 2) * (1 - g.camZoom) * 0.35;
+      const stageCamMotion = stageMotionOffset(activeStageCamera?.motion, (now - g.stageStartTime) / 1000);
+      g.camX += (targetCamX + stageCamMotion.x - g.camX) * 0.07;
+      g.camY += (targetCamY + stageCamMotion.y - g.camY) * 0.07;
       if (settings.reducedMotion || settings.screenShake === false) { g.shakeX = 0; g.shakeY = 0; g.shakeMag = 0; shakeMag = 0; }
       else { g.shakeMag = Math.max(g.shakeMag, shakeMag); if (g.shakeMag > 0.3) { g.shakeX = (Math.random() - 0.5) * g.shakeMag; g.shakeY = (Math.random() - 0.5) * g.shakeMag; g.shakeMag *= 0.72; shakeMag = g.shakeMag; } else { g.shakeX = 0; g.shakeY = 0; g.shakeMag = 0; shakeMag = 0; } }
 
@@ -1758,7 +1709,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         }
         // Shikigami — purely cosmetic floating companion (behind + above the fighter)
         drawShikigamiFollower(ctx, f, botShikigamiRef.current?.[effId], f.frame, fScale);
-        if (!flashing) drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote, f.attackData ? { ...f.attackData, charId: effId } : null);
+        if (!flashing) drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote, f.attackData);
         if (!flashing) {
           const skinParts = getSkinParts(effId, equippedSkins);
           const accs = getEquippedAccessories(botAccessoriesRef.current, effId);

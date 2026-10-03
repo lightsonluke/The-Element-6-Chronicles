@@ -549,7 +549,7 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
           skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, 1, f.char.id, f.state, f.facing, f.powerActive));
           accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, 1, f.char.id, f.state, f.facing, f.powerActive));
           drawShikigamiFollower(ctx, f, botShikigamiRef.current?.[f.char.id], f.frame, 1);
-          drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, 1, f.char.isSpirit, f.state, f.char, f.powerActive, false, null, f.emote);
+          drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, 1, f.char.isSpirit, f.state, f.char, f.powerActive, false, null, f.emote, f.attackData);
           skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, 1, f.char.id, f.state, f.facing, f.powerActive));
           accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, 1, f.char.id, f.state, f.facing, f.powerActive));
           if (f.attackData && f.state === 'attacking') drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || f.char.color, f.attackData.isNormal, f.char.id, f.char.power, f.powerActive);

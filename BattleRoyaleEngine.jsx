@@ -490,7 +490,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
         ctx.fillText(charData?.name || 'Clone', f._clone.x, f._clone.y - 72);
         ctx.restore();
       }
-      if (!flashing) drawStickman(ctx, f.x, f.y, col, f.facing, f.frame || 0, 1, charData?.isSpirit, f.state, charData, f.powerActive, false, null, f.emote);
+      if (!flashing) drawStickman(ctx, f.x, f.y, col, f.facing, f.frame || 0, 1, charData?.isSpirit, f.state, charData, f.powerActive, false, null, f.emote, f.attackData);
       // front accessories
       if (!flashing) {
         accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive));

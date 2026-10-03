@@ -1,24 +1,16 @@
-WATER HERO — FLUID FRAME-BY-FRAME SCREEN-SAFE FIX
+WATER HERO — FLUID FRAME / LIMB / PERFORMANCE PATCH
 
-This patch fixes the runtime error that caused the canvas to remain translated/scaled after a Water attack. The missing lerp helper is restored, all Gen 1 attack/super draw wrappers now use try/finally so canvas transforms are ALWAYS restored, and the Water attacks remain native Canvas animations (reference images are not used as sprites).
+Purpose:
+- Rebuilds all Generation I Water Hero attack visuals as native Canvas animation based on the supplied frame-by-frame sheet.
+- Uses flowing/tapered water bodies, internal highlights, spray, droplets, rings, ribbons, crescents and spheres.
+- No reference image is loaded or used as a sprite.
+- Adds attack-synchronized body/limb poses for Gen I characters, with lead-limb selection based on facing direction.
+- Reduces Water attack lag by removing repeated expensive shadowBlur calls from the Water rendering path.
+- Keeps canvas transforms protected with save/restore in Gen I attack rendering.
+- Preserves the third-party hit cancellation/idle reset changes in fighter.js.
 
-Water moves are reconstructed from the supplied frame sheet with flowing layered water bodies, tapered streams, droplets/spray, and frame-to-frame motion:
-- Up Signature: ring forms, separates, arcs upward, fades.
-- Down Signature: twin rising splash sheets.
-- Side Signature: forming/curling water whip.
-- Up Heavy: wrapping spiral/ribbon and upward launch.
-- Down Heavy: floating sphere, drop/impact, upward burst.
-- Side Heavy: thick crescent water blade and breakup spray.
-- Super: gather, rotating sphere, collapse/explosion, expanding ring stages.
+IMPORTANT:
+- Do NOT replace renderer.js with an older Water patch after installing this package.
+- The JSX files included here are the battle render callsites that pass live attackData into the character renderer so limb poses can follow the current move.
 
-The reference images are not loaded or drawn in-game.
-
-Replace:
-  gen1AttackAnims.js
-  attackSpecs.js
-  fighter.js
-  eras.js
-  upHeavies.js
-  downHeavies.js
-
-Do NOT replace renderer.js.
+Replace the matching files in the project with these files.

@@ -344,7 +344,7 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
         const skinColor = getCharRenderColor(charData.id, loadout?.equippedSkins);
         skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, 1, charData.id, f.state, f.facing, f.powerActive));
         accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, charData), f.frame, 1, charData.id, f.state, f.facing, f.powerActive));
-        drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, 1, charData.isSpirit, f.state, charData, f.powerActive, false, null, f.emote);
+        drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, 1, charData.isSpirit, f.state, charData, f.powerActive, false, null, f.emote, f.attackData);
         skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, 1, charData.id, f.state, f.facing, f.powerActive));
         accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, charData), f.frame, 1, charData.id, f.state, f.facing, f.powerActive));
         drawShikigamiFollower(ctx, f, loadout?.equippedShikigami?.[charData.id], f.frame, 1);

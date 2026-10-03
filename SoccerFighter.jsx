@@ -1065,7 +1065,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         const _jerseyOn = (f === f1 || (teamMode && f === f1b)) ? p1Jersey : (f === f2 || (teamMode && f === f2b)) ? p2Jersey : true;
         if (_jerseyOn) {
           // Jersey on — base character only, no skins/accessories underneath.
-          drawStickman(ctx, f.x, f.y, f.char.color, f.facing, f.frame, fScale, f.char.isSpirit, f.state, f.char, f.powerActive, true, null, f.emote);
+          drawStickman(ctx, f.x, f.y, f.char.color, f.facing, f.frame, fScale, f.char.isSpirit, f.state, f.char, f.powerActive, true, null, f.emote, f.attackData);
           drawSoccerKit(ctx, f.x, f.y, f.char.color, f.char.id, f.frame, fScale, f.state, f.facing, f.powerActive);
         } else {
           // No jersey — render skins + accessories normally.
@@ -1076,7 +1076,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
           const skinColor = crossoverColors ? crossoverColors.primary : getCharRenderColor(f.char.id, equippedSkins);
           skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, f.char.id, f.state, f.facing, f.powerActive));
           accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, fScale, f.char.id, f.state, f.facing, f.powerActive));
-          drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, f.char.isSpirit, f.state, f.char, f.powerActive, true, null, f.emote);
+          drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, f.char.isSpirit, f.state, f.char, f.powerActive, true, null, f.emote, f.attackData);
           skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, f.char.id, f.state, f.facing, f.powerActive));
           accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, fScale, f.char.id, f.state, f.facing, f.powerActive));
         }
