@@ -404,258 +404,240 @@ function fireAttack(ctx,x,y,p,move){
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
-// WATER HERO — native frame-by-frame animation reconstruction.
-// The supplied blueprint is treated as animation keyframes, never as sprites.
-// Every reference frame below is interpolated into a continuous water motion.
+// WATER HERO — true frame-by-frame native water animation.
+// The supplied sheet is treated as a motion/design blueprint. Nothing from the
+// sheet is drawn in-game. Every keyframe is reconstructed from native Canvas
+// curves, layered translucent bodies, bright cores, tapering streams and spray.
 
-function waterGlowStroke(ctx, pts, a=1, width=7) {
-  const c='#24BFFF', hi='#DDFBFF';
-  glowStroke(ctx, pts, c, width, a);
-  glowStroke(ctx, pts, hi, Math.max(1.2,width*.18), a*.78);
+const WATER_C = '#18BFFF';
+const WATER_HI = '#DDFBFF';
+const WATER_MID = '#55D9FF';
+
+function waterBezier(p0,p1,p2,p3,t){
+  const u=1-t,uu=u*u,tt=t*t;
+  return [uu*u*p0[0]+3*uu*t*p1[0]+3*u*tt*p2[0]+tt*t*p3[0],
+          uu*u*p0[1]+3*uu*t*p1[1]+3*u*tt*p2[1]+tt*t*p3[1]];
 }
-function waterDrop(ctx,x,y,r=2,a=.8) {
-  ctx.save(); ctx.globalAlpha=a; ctx.fillStyle='#9CEEFF'; ctx.shadowColor='#24BFFF'; ctx.shadowBlur=10;
-  ctx.beginPath(); ctx.ellipse(x,y,r*.7,r*1.35,-.35,0,TAU); ctx.fill(); ctx.restore();
+function waterCurve(ctx, pts, a=1, width=8){
+  if(pts.length<2)return;
+  ctx.save();
+  ctx.globalAlpha=a;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  // broad translucent body
+  ctx.strokeStyle=WATER_C; ctx.lineWidth=width; ctx.shadowColor=WATER_C; ctx.shadowBlur=Math.max(7,width*1.6);
+  ctx.beginPath(); pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.stroke();
+  // brighter, narrower core
+  ctx.globalAlpha=a*.78; ctx.strokeStyle=WATER_MID; ctx.lineWidth=Math.max(2,width*.46); ctx.shadowBlur=5;
+  ctx.beginPath(); pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.stroke();
+  ctx.globalAlpha=a*.9; ctx.strokeStyle=WATER_HI; ctx.lineWidth=Math.max(1,width*.12); ctx.shadowBlur=3;
+  ctx.beginPath(); pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.stroke();
+  ctx.restore();
 }
-function waterTrail(ctx, pts, a=1, width=8) {
-  if (pts.length<2) return;
-  // broad body + bright inner stream = flowing water instead of a static neon line
-  waterGlowStroke(ctx, pts, a, width);
-  for(let i=1;i<pts.length;i++){
-    const t=i/(pts.length-1), q=pts[i];
-    if(i%2===0) waterDrop(ctx,q[0]+Math.sin(i*2.7)*2,q[1]-Math.cos(i*1.8)*2,1.3+2*(1-t),a*.62*(1-t*.35));
+function waterStream(ctx, points, a=1, width=8, phase=0){
+  waterCurve(ctx,points,a,width);
+  // broken filaments peel away from the main body, giving the stream motion.
+  for(let i=1;i<points.length-1;i+=2){
+    const q=points[i], n=points[Math.min(points.length-1,i+1)];
+    const dx=n[0]-q[0],dy=n[1]-q[1],len=Math.max(1,Math.hypot(dx,dy));
+    const nx=-dy/len, ny=dx/len, wob=Math.sin(phase*9+i*1.7)*3;
+    waterDrop(ctx,q[0]+nx*wob,q[1]+ny*wob,1.2+(i%3)*.45,a*.48);
   }
 }
-function waterJet(ctx, start, end, bend=0, a=1, width=9) {
-  const [x1,y1]=start,[x2,y2]=end;
-  const mx=(x1+x2)/2, my=(y1+y2)/2+bend;
-  const pts=[];
-  for(let i=0;i<=12;i++){
-    const t=i/12, u=1-t;
-    pts.push([u*u*x1+2*u*t*mx+t*t*x2, u*u*y1+2*u*t*my+t*t*y2]);
-  }
-  waterTrail(ctx,pts,a,width);
-  return pts;
+function waterDrop(ctx,x,y,r=2,a=.8,ang=-.4){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(ang); ctx.globalAlpha=a;
+  ctx.fillStyle=WATER_HI; ctx.shadowColor=WATER_C; ctx.shadowBlur=8;
+  ctx.beginPath(); ctx.ellipse(0,0,r*.65,r*1.55,0,0,TAU); ctx.fill();
+  ctx.restore();
 }
-function waterCrescent(ctx,cx,cy,r,ang0,ang1,a=1,width=13) {
+function waterSpray(ctx,x,y,dir,spread,count,a=1,phase=0){
+  for(let i=0;i<count;i++){
+    const t=i/Math.max(1,count-1), ang=dir+(t-.5)*spread;
+    const len=10+24*t+Math.sin(phase*7+i)*3;
+    waterDrop(ctx,x+Math.cos(ang)*len,y+Math.sin(ang)*len*.72,1.1+(i%3)*.35,a*(1-.45*t),ang+.2);
+  }
+}
+function waterIrregularRing(ctx,cx,cy,rx,ry,a=1,rot=0,phase=0,gap=0){
   const pts=[];
-  for(let i=0;i<=24;i++){
-    const t=i/24, ang=ang0+(ang1-ang0)*t;
+  const seg=34;
+  for(let i=0;i<=seg;i++){
+    const t=i/seg, ang=t*TAU+rot;
+    const wob=1+Math.sin(ang*3+phase*8)*.045+Math.sin(ang*7-phase*5)*.025;
+    pts.push([cx+Math.cos(ang)*rx*wob,cy+Math.sin(ang)*ry*wob]);
+  }
+  if(gap>0){
+    // Draw as short pieces, leaving the intentional broken-water gaps from the sheet.
+    const cut=Math.max(1,Math.floor(seg*gap));
+    for(let i=0;i<seg;i+=cut+6){ waterCurve(ctx,pts.slice(i,Math.min(seg+1,i+cut)),a*.92,7); }
+  }else waterCurve(ctx,pts,a,7);
+  for(let i=0;i<12;i++){
+    const ang=i/12*TAU+rot+phase*.35, rr=1+Math.sin(i*4+phase*5)*.08;
+    waterDrop(ctx,cx+Math.cos(ang)*rx*rr,cy+Math.sin(ang)*ry*rr,1.1+(i%3)*.35,a*.52,ang+.2);
+  }
+}
+function waterOrb(ctx,cx,cy,r,a=1,phase=0){
+  ctx.save();
+  ctx.globalAlpha=a*.22; ctx.fillStyle=WATER_C; ctx.shadowColor=WATER_C; ctx.shadowBlur=22;
+  ctx.beginPath();ctx.arc(cx,cy,r,0,TAU);ctx.fill();
+  ctx.globalAlpha=a*.85;ctx.strokeStyle=WATER_C;ctx.lineWidth=5;ctx.shadowBlur=10;
+  ctx.beginPath();ctx.arc(cx,cy,r*.92,0,TAU);ctx.stroke();
+  ctx.globalAlpha=a*.7;ctx.strokeStyle=WATER_HI;ctx.lineWidth=2;
+  for(let i=0;i<3;i++){
+    const off=phase*2+i*TAU/3;
+    ctx.beginPath();ctx.ellipse(cx+Math.cos(off)*r*.12,cy+Math.sin(off)*r*.08,r*.78,r*(.18+i*.035),off*.45,0,TAU);ctx.stroke();
+  }
+  ctx.restore();
+  for(let i=0;i<8;i++){
+    const ang=phase*1.8+i*TAU/8;
+    waterDrop(ctx,cx+Math.cos(ang)*r*.98,cy+Math.sin(ang)*r*.78,1.3+(i%2),a*.5,ang);
+  }
+}
+function waterTaperedArc(ctx,cx,cy,r,ang0,ang1,a=1,phase=0,thick=13){
+  const pts=[]; const n=30;
+  for(let i=0;i<=n;i++){
+    const t=i/n,ang=ang0+(ang1-ang0)*t;
     const rr=r*(.82+.18*Math.sin(t*Math.PI));
     pts.push([cx+Math.cos(ang)*rr,cy+Math.sin(ang)*rr*.72]);
   }
-  waterTrail(ctx,pts,a,width);
-  // detached spray follows the outer edge
-  for(let i=2;i<22;i+=3){
-    const t=i/24, ang=ang0+(ang1-ang0)*t, rr=r*(.98+.12*Math.sin(t*Math.PI));
-    waterDrop(ctx,cx+Math.cos(ang)*rr+Math.sin(i)*2,cy+Math.sin(ang)*rr*.72-Math.cos(i)*2,1.6,a*.72*(1-t*.25));
+  // layered body; taper is simulated by short trailing segments.
+  for(let i=0;i<pts.length-1;i+=2){
+    const t=i/(pts.length-1); waterCurve(ctx,pts.slice(i,Math.min(i+4,pts.length)),a*(.52+.48*t),thick*(.38+.62*Math.sin(t*Math.PI)));
+  }
+  waterCurve(ctx,pts,a,Math.max(2,thick*.22));
+  for(let i=4;i<n;i+=4){
+    const t=i/n,ang=ang0+(ang1-ang0)*t;
+    waterDrop(ctx,cx+Math.cos(ang)*r*(1+.05*Math.sin(phase+i)),cy+Math.sin(ang)*r*.72,1.3+(i%3)*.35,a*.55*(1-t*.35),ang+.4);
   }
 }
-function waterSphere(ctx,x,y,r,a=1,phase=0) {
-  ctx.save();
-  ctx.globalAlpha=a;
-  ctx.fillStyle='rgba(36,191,255,.20)'; ctx.shadowColor='#24BFFF'; ctx.shadowBlur=20;
-  ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.fill();
-  ctx.strokeStyle='#24BFFF'; ctx.lineWidth=5; ctx.beginPath(); ctx.arc(x,y,r*.9,phase,phase+TAU*.86); ctx.stroke();
-  ctx.strokeStyle='#DDFBFF'; ctx.lineWidth=1.7; ctx.beginPath(); ctx.arc(x,y,r*.66,phase+.8,phase+TAU*.66); ctx.stroke();
-  ctx.restore();
-  for(let i=0;i<8;i++){
-    const a2=phase+i/8*TAU;
-    waterDrop(ctx,x+Math.cos(a2)*r*1.02,y+Math.sin(a2)*r*1.02,1.4,a*.7);
-  }
+function waterSheet(ctx,x,y,side,scale=1,a=1,phase=0){
+  const s=side;
+  const p0=[x,y], p1=[x+s*8,y-28*scale], p2=[x+s*30,y-48*scale], p3=[x+s*42,y-6*scale];
+  const pts=[];for(let i=0;i<=18;i++)pts.push(waterBezier(p0,p1,p2,p3,i/18));
+  waterStream(ctx,pts,a,10*scale,phase);
+  const p4=[x+s*7,y],p5=[x+s*18,y-12*scale],p6=[x+s*34,y-34*scale],p7=[x+s*58,y-22*scale];
+  const pts2=[];for(let i=0;i<=18;i++)pts2.push(waterBezier(p4,p5,p6,p7,i/18));
+  waterStream(ctx,pts2,a*.7,5*scale,phase+1.3);
+  waterSpray(ctx,x+s*40,y-20*scale,s*(-1.1),1.15,8,a*.7,phase);
 }
-function waterSplash(ctx,x,y,dir=1,scale=1,a=1) {
-  // Two curved sheets rise from one contact point, with a tapered breaking edge.
-  const s=dir*scale;
-  const p1=waterJet(ctx,[x,y],[x+s*34,y-42*scale],-14*scale,a,8*scale);
-  const p2=waterJet(ctx,[x+s*3,y-1],[x+s*52,y-30*scale],-24*scale,a*.82,5*scale);
-  for(let i=0;i<5;i++){
-    const t=.45+i*.1, q=p1[Math.min(p1.length-1,Math.floor(t*(p1.length-1)))];
-    waterDrop(ctx,q[0]+dir*i*3,q[1]-i*3,1.5+scale*.45,a*.72);
-  }
-  return p1;
-}
-function waterRingMoving(ctx,x,y,rx,ry,rot,a=1,broken=0) {
-  glowArc(ctx,x,y,rx,ry,0,TAU,'#24BFFF',7,a,rot);
-  glowArc(ctx,x,y,rx*.72,ry*.58,0,TAU,'#DDFBFF',1.8,a*.7,rot);
-  const gaps=Math.max(0,Math.min(8,broken));
-  for(let i=0;i<10;i++){
-    if(gaps && i<gaps) continue;
-    const t=i/10*TAU;
-    waterDrop(ctx,x+Math.cos(t+rot)*rx,y+Math.sin(t+rot)*ry,1.5,a*.65);
-  }
-}
-function waterFrame(p,count){ return 1+attackP(p)*(count-1); }
-function lerp(a,b,t){return a+(b-a)*t;}
-function lerp2(a,b,t){return [lerp(a[0],b[0],t),lerp(a[1],b[1],t)];}
-function frameSegment(f,keys){
-  if(f<=1)return {i:0,t:0};
-  if(f>=keys.length)return {i:keys.length-2,t:1};
-  const z=f-1, i=Math.floor(z), t=z-i; return {i,t:ease(t)};
-}
-
-function waterUpReference(ctx,x,y,p){
-  const f=waterFrame(p,4);
-  if(p<0){
-    const q=holdCharge(p);
-    waterRingMoving(ctx,x+22,y-42,15+q*5,8+q*2,-.15,.72+.2*q);
-    waterJet(ctx,[x+12,y-25],[x+24,y-48],-3,.65,5);
-    return;
-  }
-  const keys=[[x+22,y-43],[x+34,y-76],[x+84,y-116],[x+116,y-122]];
-  const seg=frameSegment(f,keys), pos=lerp2(keys[seg.i],keys[seg.i+1],seg.t);
-  // Frame 1: ring is still wrapped around the raised hand.
-  if(f<1.65){
-    const k=Math.max(0,(f-1)/.65); waterRingMoving(ctx,lerp(x+20,x+30,k),lerp(y-43,y-73,k),18+7*k,9+3*k,-.2+k*.2,.95);
-    waterJet(ctx,[x+8,y-24],[x+28,y-69],-3,.7,6);
-    return;
-  }
-  // Frame 2: ring is pulled off the hand.
-  if(f<2.55){
-    const u=ease((f-1.65)/.9), hand=[x+31,y-73];
-    waterRingMoving(ctx,lerp2(hand,keys[1],u)[0],lerp2(hand,keys[1],u)[1],24+5*u,11+3*u,.25+u*.25,1);
-    waterJet(ctx,[hand[0],hand[1]],[pos[0],pos[1]],-10,.8,6);
-  }
-  // Frames 3-4: detached ring follows the exact rising/curving path and breaks apart.
-  const u=Math.max(0,Math.min(1,(f-2)/2));
-  const a=1-u*.72;
-  waterRingMoving(ctx,pos[0],pos[1],26-4*u,11-2*u,.18+u*.35,a,Math.floor(u*5));
-  const prev=lerp2(keys[Math.max(0,seg.i)],keys[seg.i+1],Math.max(0,seg.t-.18));
-  waterTrail(ctx,[prev,pos],a*.7,6);
-  if(u>.5) for(let i=0;i<8;i++){
-    const t=i/8, dx=pos[0]-Math.cos(i)*8, dy=pos[1]-Math.sin(i)*5;
-    waterDrop(ctx,dx-t*26,dy+t*16,1.3,a*(1-t)*.75);
-  }
-}
-
-function waterDownReference(ctx,x,y,p){
-  const f=waterFrame(p,4);
-  if(p<0){
-    const q=holdCharge(p); waterJet(ctx,[x-2,y-6],[x-38,y-18],-16,.55+.25*q,6); waterJet(ctx,[x+2,y-6],[x+38,y-18],-16,.55+.25*q,6); return;
-  }
-  if(f<1.55) return;
-  const u=Math.max(0,Math.min(1,(f-1)/3));
-  const rise=ease(Math.min(1,u*1.25));
-  // Left and right sheets are independent hit regions and mirror each other.
-  const lx=lerp(x-10,x-54,rise), rx=lerp(x+10,x+54,rise), yy=y-10-rise*35;
-  waterSplash(ctx,lx,yy,-1,.95+.2*rise,1);
-  waterSplash(ctx,rx,yy,1,.95+.2*rise,1);
-  if(f>2.5){
-    waterDrop(ctx,lx-10,yy-38,2,Math.max(.2,1-(f-2.5)/1.5));
-    waterDrop(ctx,rx+10,yy-38,2,Math.max(.2,1-(f-2.5)/1.5));
-  }
-}
-
-function waterSideReference(ctx,x,y,p){
-  const f=waterFrame(p,4);
-  if(p<0){
-    const q=holdCharge(p); waterJet(ctx,[x+12,y-38],[x+32+q*12,y-44-q*8],-4,.45+.35*q,5); return;
-  }
-  if(f<1.45) return;
-  const u=Math.max(0,Math.min(1,(f-1)/3));
-  const hand=[x+27,y-47];
-  const tip=[x+28+u*92,y-47-Math.sin(u*Math.PI)*45];
-  // The reference is a short whip that curves upward only at the end.
+function waterWhip(ctx,x,y,t,a=1,phase=0){
+  // Starts at the hand, stays thick near the hand, then tapers into the hooked tip.
+  const hand=[x+22,y-46];
+  const tip=[x+34+82*t,y-47-34*Math.sin(t*Math.PI)];
   const pts=[];
-  for(let i=0;i<=18;i++){
-    const t=i/18;
-    const px=lerp(hand[0],tip[0],t);
-    const py=lerp(hand[1],tip[1],t)-Math.sin(t*Math.PI)*22*u;
+  for(let i=0;i<=28;i++){
+    const u=i/28;
+    const px=lerp(hand[0],tip[0],u);
+    const py=lerp(hand[1],tip[1],u)-Math.sin(u*Math.PI)*10*t;
     pts.push([px,py]);
   }
-  waterTrail(ctx,pts,1-.48*Math.max(0,u-.7),8);
-  // bright hooked tip at the apex
-  if(u>.2){
-    waterCrescent(ctx,tip[0]-4,tip[1]+2,16+10*u,-2.5,-.35,.95,5);
+  waterCurve(ctx,pts,a,10*(1-.38*t));
+  // hook curls upward at the tip in the reference.
+  if(t>.28){
+    const ca=-.35, cb=1.18;
+    waterTaperedArc(ctx,tip[0]-7,tip[1]+3,20+10*t,ca,cb,a*.95,phase,7);
   }
-  for(let i=0;i<8;i++){
-    const t=.45+i*.065; waterDrop(ctx,lerp(hand[0],tip[0],t),lerp(hand[1],tip[1],t)-Math.sin(t*Math.PI)*22*u,1.2,.65*(1-t*.45));
+  for(let i=0;i<10;i++){
+    const u=.25+i*.07; const q=pts[Math.min(28,Math.floor(u*28))];
+    waterDrop(ctx,q[0],q[1]-Math.sin(u*Math.PI)*5,1.1+(i%3)*.35,a*.55,0);
   }
 }
+function waterBlade(ctx,x,y,t,a=1,phase=0){
+  // Giant crescent is a thick, hollow ribbon; it sweeps once and then tears into spray.
+  const cx=x+34+18*t, cy=y-50;
+  const r=50+18*Math.sin(t*Math.PI);
+  const start=-1.35+.12*t, end=.92+1.15*t;
+  waterTaperedArc(ctx,cx,cy,r,start,end,a,phase,15);
+  // secondary inner stream makes the blade read as liquid, not a neon line.
+  waterTaperedArc(ctx,cx-3,cy+1,r*.86,start+.1,end-.15,a*.52,phase+1.5,5);
+  if(t>.62) waterSpray(ctx,cx+Math.cos(end)*r,cy+Math.sin(end)*r*.72,end+.35,1.2,14,a*.75,phase);
+}
+function waterSpiral(ctx,x,y,t,a=1,phase=0){
+  const cx=x+3, cy=y-78-8*t;
+  const turns=1.55+t*.45, r0=28+18*t, r1=66+18*t;
+  const pts=[];
+  for(let i=0;i<=44;i++){
+    const u=i/44, ang=-Math.PI*.25-u*turns*TAU;
+    const r=lerp(r0,r1,u);
+    pts.push([cx+Math.cos(ang)*r,cy+Math.sin(ang)*r*.62]);
+  }
+  waterCurve(ctx,pts,a,12);
+  // outer spray follows the final turn.
+  for(let i=0;i<16;i++){
+    const u=i/15, ang=-Math.PI*.25-u*turns*TAU;
+    const r=r1+8+u*18;
+    waterDrop(ctx,cx+Math.cos(ang)*r,cy+Math.sin(ang)*r*.62,1.2+(i%3)*.35,a*.55*(1-u*.3),ang);
+  }
+}
+function waterBounceSphere(ctx,x,y,p,a=1,phase=0){
+  waterOrb(ctx,x,y,21,a,phase);
+  waterSpray(ctx,x,y,Math.PI*1.5,.9,8,a*.45,phase);
+}
+function waterAttackFrame(p,count){ return 1+attackP(p)*(count-1); }
 
+function waterUpReference(ctx,x,y,p){
+  const f=waterAttackFrame(p,4), phase=attackP(p);
+  if(p<0){ const q=holdCharge(p); waterIrregularRing(ctx,x+24,y-45,16+5*q,8+2*q,.72+.2*q,-.2,q); return; }
+  // Keyframe 1: ring is low around the hand.
+  if(f<1.5){ const u=ease((f-1)*2); waterIrregularRing(ctx,x+24,y-43-u*4,17+7*u,8+3*u,.9,.1,phase,.18); }
+  // Keyframe 2: arm swings up and the ring follows the hand.
+  else if(f<2.5){ const u=ease(f-1.5); const cx=lerp(x+26,x+30,u),cy=lerp(y-48,y-72,u); waterIrregularRing(ctx,cx,cy,22+5*u,10+2*u,.98,-.15+u*.3,phase,.08); waterStream(ctx,[[x+12,y-25],[x+20,y-45],[cx,cy+4]],.75,5,phase); }
+  // Keyframes 3-4: ring has detached and travels in the curved path above him.
+  else { const u=ease((f-2.5)/1.5); const cx=lerp(x+35,x+86,u),cy=lerp(y-78,y-108,u)+Math.sin(u*Math.PI)*-12; waterIrregularRing(ctx,cx,cy,24-2*u,10-1*u,1,-.05+u*.2,phase,.12); const trail=[];for(let i=0;i<=20;i++){const z=i/20;trail.push([lerp(x+34,cx,z),lerp(y-78,cy,z)+Math.sin(z*Math.PI)*18]);} waterStream(ctx,trail,.82,6,phase+2); waterSpray(ctx,cx-20,cy+4,-2.6,.8,9,.75,phase); }
+}
+function waterDownReference(ctx,x,y,p){
+  const f=waterAttackFrame(p,4), phase=attackP(p);
+  if(p<0){ const q=holdCharge(p); waterIrregularRing(ctx,x,y-2,38+8*q,9+2*q,.35,0,q); return; }
+  if(f<1.5){ // crouch/start: only a small puddle.
+    waterIrregularRing(ctx,x,y-3,38,9,.55,0,phase,.25);
+  } else if(f<2.5){ const u=ease((f-1.5)); waterSheet(ctx,x-8,y-2,-1,0.9+u*.2,1,phase); waterSheet(ctx,x+8,y-2,1,0.9+u*.2,1,phase+1.4); }
+  else { const u=ease((f-2.5)/1.5); waterSheet(ctx,x-12-u*4,y-4,-1,1.15-u*.15,1-u*.15,phase+1); waterSheet(ctx,x+12+u*4,y-4,1,1.15-u*.15,1-u*.15,phase+2); waterSpray(ctx,x-35,y-20,-2.4,.7,8,.7*(1-u*.3),phase); waterSpray(ctx,x+35,y-20,-.7,.7,8,.7*(1-u*.3),phase+1); }
+}
+function waterSideReference(ctx,x,y,p){
+  const f=waterAttackFrame(p,4), phase=attackP(p);
+  if(p<0){ const q=holdCharge(p); waterWhip(ctx,x,y,.25+.25*q,.45+.25*q,phase); return; }
+  if(f<1.5){ const u=ease((f-1)*2); waterStream(ctx,[[x+12,y-35],[x+25,y-44-u*4]],.65,6,phase); }
+  else { const u=ease((f-1.5)/2.5); waterWhip(ctx,x,y,u,1,phase); }
+}
 function waterUpHeavyReference(ctx,x,y,p){
-  const f=waterFrame(p,4);
-  if(p<0){
-    const q=holdCharge(p); waterCrescent(ctx,x,y-70,58+q*8,-Math.PI*.98,Math.PI*.95,.65+.25*q,8); return;
-  }
-  const q=Math.max(0,Math.min(1,(f-1)/3));
-  if(f<1.6){
-    waterCrescent(ctx,x,y-70,52,-Math.PI*.98,Math.PI*.98,.95,10);
-  } else if(f<2.5){
-    const u=ease((f-1.6)/.9);
-    // ribbon twists clockwise from a vertical wrap into a diagonal spiral
-    waterCrescent(ctx,x,y-68,54+12*u,-Math.PI*.98+u*.8,Math.PI*.95+u*1.0,1,10);
-    waterJet(ctx,[x-12,y-12],[x+42*u,y-96],-28*u,.75,7);
-  } else {
-    const u=ease((f-2.5)/1.5);
-    waterCrescent(ctx,x+12*u,y-72-u*20,66+10*u,-1.95+u*.6,.95+u*.75,1-u*.18,11);
-    waterJet(ctx,[x+12,y-18],[x+48+u*48,y-96-u*28],-20,.8,8);
-    if(f>3.35){
-      for(let i=0;i<12;i++){const a=-1.2+i/11*2.4;waterDrop(ctx,x+58+Math.cos(a)*28,y-132+Math.sin(a)*16,1.5,(f-3.35)/.65*.7);}
-    }
-  }
+  const f=waterAttackFrame(p,4), phase=attackP(p);
+  if(p<0){ const q=holdCharge(p); waterSpiral(ctx,x,y,q*.45,.55+.2*q,phase); return; }
+  if(f<1.5){ const u=ease((f-1)*2); waterTaperedArc(ctx,x,y-80,52+8*u,-1.4,1.5,.95,phase,12); }
+  else if(f<2.5){ const u=ease(f-1.5); waterSpiral(ctx,x,y,u,.98,phase); }
+  else { const u=ease((f-2.5)/1.5); waterSpiral(ctx,x,y,1,.98,phase); const launch=[];for(let i=0;i<=18;i++){const z=i/18;launch.push([x+10+z*54,y-40-z*76]);} waterStream(ctx,launch,.95,9,phase); waterSpray(ctx,x+64,y-116,-1.6,1.1,12,.85,phase); }
 }
-
 function waterDownHeavyReference(ctx,x,y,p){
-  const f=waterFrame(p,4);
-  if(p<0){const q=holdCharge(p);waterSphere(ctx,x+54,y-48,20+q*5,.75+.2*q,q*TAU);return;}
-  // Reference: sphere beside fighter -> kicked downward -> ground contact -> upward burst.
-  if(f<1.6){
-    const u=ease((f-1)/.6); waterSphere(ctx,x+54+u*9,y-50+u*10,22,.95,u*2);
-    waterJet(ctx,[x+28,y-28],[x+52,y-46],-8,.75,6);
-  } else if(f<2.55){
-    const u=ease((f-1.6)/.95), sx=lerp(x+63,x+62,u), sy=lerp(y-40,y-8,u);
-    waterSphere(ctx,sx,sy,21,.95,u*3);
-    waterTrail(ctx,[[x+60,y-48],[sx,sy]],.65,6);
-  } else {
-    const u=ease((f-2.55)/1.45), sx=x+62, sy=y-8;
-    // First hit: the sphere bursts at the ground.
-    waterSphere(ctx,sx,sy,20*(1-u*.75),1-u*.35,u*5);
-    for(let i=0;i<12;i++){
-      const a=-Math.PI*.9+i/11*Math.PI*.8, rr=18+u*42;
-      waterDrop(ctx,sx+Math.cos(a)*rr,sy+Math.sin(a)*rr*.35,1.7,(.55+u*.4)*(1-i/18));
-    }
-    // Second hit: a concentrated vertical water burst.
-    if(f>2.85){
-      const rise=ease((f-2.85)/1.15), top=sy-74*rise;
-      waterJet(ctx,[sx,sy],[sx,top],-8,.95,10);
-      waterCrescent(ctx,sx,top,18+14*rise,-2.7,-.45,.95,5);
-      for(let i=0;i<9;i++) waterDrop(ctx,sx+(i-4)*6,top-i*3,1.5,.8*(1-i/12));
-    }
-  }
+  const f=waterAttackFrame(p,4), phase=attackP(p);
+  if(p<0){ const q=holdCharge(p); waterBounceSphere(ctx,x+52,y-50,0,.65+.25*q,phase+q); return; }
+  if(f<1.5){ const u=ease((f-1)*2); waterBounceSphere(ctx,x+50+u*8,y-50+u*2,0,1,phase); waterStream(ctx,[[x+24,y-30],[x+48,y-45]],.7,5,phase); }
+  else if(f<2.5){ const u=ease(f-1.5); const sx=x+58, sy=lerp(y-48,y-7,u); waterBounceSphere(ctx,sx,sy,0,1,phase+u*2); waterStream(ctx,[[sx,sy-30],[sx,sy]],.65,6,phase); }
+  else { const u=ease((f-2.5)/1.5), sx=x+58, sy=y-7; waterOrb(ctx,sx,sy,21*(1-.2*u),1-u*.2,phase); for(let i=0;i<12;i++){const a=-2.9+i*.22;waterDrop(ctx,sx+Math.cos(a)*(24+30*u),sy+Math.sin(a)*(14+24*u),1.4,.75*(1-u*.2),a);} const top=sy-74*u; waterStream(ctx,[[sx,sy],[sx-2,top]],1,11,phase); waterSpray(ctx,sx,top,-Math.PI/2,1.2,12,.9,phase); }
 }
-
 function waterSideHeavyReference(ctx,x,y,p){
-  const f=waterFrame(p,6);
-  if(p<0){const q=holdCharge(p);waterCrescent(ctx,x+34,y-52,54+q*10,-1.0,.85,.7+.25*q,11);return;}
-  const u=Math.max(0,Math.min(1,(f-1)/5));
-  // Frame 1: arm starts. Frame 2: crescent forms. 3-4: blade grows and sweeps.
-  // 5: blade rotates. 6: spray/dissipation.
-  const sweep=ease(u);
-  const cx=x+32+sweep*20, cy=y-50;
-  let a=1;
-  if(f>5) a=1-(f-5);
-  const start=-1.15 + sweep*.18, end=.85 + sweep*1.55;
-  waterCrescent(ctx,cx,cy,58+34*Math.sin(Math.min(1,u*1.1)*Math.PI*.75),start,end,Math.max(.15,a),14);
-  if(f>=2){
-    const tipAng=end, rr=72+22*sweep, tx=cx+Math.cos(tipAng)*rr, ty=cy+Math.sin(tipAng)*rr*.72;
-    waterTrail(ctx,[[x+26,y-46],[tx,ty]],.45,5);
-    for(let i=0;i<10;i++){
-      const t=i/10; waterDrop(ctx,lerp(cx,tx,t),lerp(cy,ty,t)-Math.sin(t*Math.PI)*10,1.4,.6*(1-t*.5));
-    }
-  }
-  if(f>=5){
-    for(let i=0;i<14;i++){const ang=end+i*.12, rr=72+(i%4)*7;waterDrop(ctx,cx+Math.cos(ang)*rr,cy+Math.sin(ang)*rr*.72,1.4,.6-(i*.025));}
-  }
+  const f=waterAttackFrame(p,6), phase=attackP(p);
+  if(p<0){ const q=holdCharge(p); waterBlade(ctx,x,y,q*.25,.6+.25*q,phase); return; }
+  const u=clamp01((f-1)/5);
+  if(f<1.5){ waterStream(ctx,[[x+14,y-40],[x+30,y-48]],.65,6,phase); }
+  else if(f<5.5){ waterBlade(ctx,x,y,ease(u),1,phase); }
+  else { const t=ease((f-5.5)/.5); waterBlade(ctx,x,y,1,1-t,phase); waterSpray(ctx,x+88,y-64,.2,1.6,18,(1-t)*.9,phase); }
+}
+function waterAttack(ctx,x,y,p,move){
+  if(move==='us')return waterUpReference(ctx,x,y,p);
+  if(move==='ds')return waterDownReference(ctx,x,y,p);
+  if(move==='ss')return waterSideReference(ctx,x,y,p);
+  if(move==='uh')return waterUpHeavyReference(ctx,x,y,p);
+  if(move==='dh')return waterDownHeavyReference(ctx,x,y,p);
+  if(move==='sh'||move==='heavy')return waterSideHeavyReference(ctx,x,y,p);
 }
 
-function waterAttack(ctx,x,y,p,move){
-  if(move==='us'){waterUpReference(ctx,x,y,p);return;}
-  if(move==='ds'){waterDownReference(ctx,x,y,p);return;}
-  if(move==='ss'){waterSideReference(ctx,x,y,p);return;}
-  if(move==='uh'){waterUpHeavyReference(ctx,x,y,p);return;}
-  if(move==='dh'){waterDownHeavyReference(ctx,x,y,p);return;}
-  if(move==='sh' || move==='heavy'){waterSideHeavyReference(ctx,x,y,p);return;}
+function waterSuper(ctx,x,y,p){
+  const f=waterAttackFrame(p,7),phase=attackP(p);
+  if(p<0){ const q=holdCharge(p); waterOrb(ctx,x,y-62,24+12*q,.65+.2*q,phase); return; }
+  const cy=y-62;
+  if(f<2){ const u=ease(f-1); waterOrb(ctx,x,cy,28+18*u,.95,phase); waterStream(ctx,[[x-24,y-24],[x-8,cy]],.65,6,phase); waterStream(ctx,[[x+24,y-24],[x+8,cy]],.65,6,phase+1); }
+  else if(f<3){ const u=ease(f-2),r=46+20*u; waterOrb(ctx,x,cy,r,1,phase*2+u*3); }
+  else if(f<4.1){ const u=ease((f-3)/1.1),r=66+32*u; waterOrb(ctx,x,cy,r,1,phase*3); for(let i=0;i<20;i++){const a=i/20*TAU+phase*3;waterDrop(ctx,x+Math.cos(a)*r,cy+Math.sin(a)*r*.75,1.3+(i%3)*.3,.7,a);} }
+  else if(f<5.1){ const u=ease((f-4.1)); const r=96-52*u; waterIrregularRing(ctx,x,cy,r,r*.72,1,.05,phase,.1); for(let i=0;i<22;i++){const a=i/22*TAU;waterDrop(ctx,x+Math.cos(a)*(104-65*u),cy+Math.sin(a)*(76-48*u),1.4,.75,a);} }
+  else if(f<6.1){ const u=ease(f-5.1),r=42+86*u; waterIrregularRing(ctx,x,cy,r,r*.68,1,.08,phase,.12); waterStream(ctx,[[x,cy],[x+20*u,cy-56*u]],.85,6,phase); }
+  else { const u=ease(f-6.1),r=128-12*u; waterIrregularRing(ctx,x,cy,r,r*.68,1,.12,phase,.1); waterStream(ctx,[[x+12,cy],[x+42,cy-54]],.7*(1-u),5,phase); waterSpray(ctx,x+42,cy-54,-1.5,1.1,12,.8*(1-u),phase); }
 }
 
 function grassAttack(ctx,x,y,p,move){
