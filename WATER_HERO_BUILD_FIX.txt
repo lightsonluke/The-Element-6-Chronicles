@@ -1,0 +1,17 @@
+Water Hero build fix
+
+Fixed the Vite build failure caused by duplicate waterSuper declarations in gen1AttackAnims.js.
+The duplicate implementation referenced non-existent helpers and was removed; the earlier native Water implementation remains the active one.
+
+Files in this patch:
+- gen1AttackAnims.js
+- attackSpecs.js
+- fighter.js
+- eras.js
+- upHeavies.js
+- downHeavies.js
+
+Validation performed:
+- Node module syntax checks passed for all six JavaScript files.
+- Duplicate function-name scan found no duplicate function declarations in the patched project JS files.
+- Full Vite build could not be executed in this environment because the uploaded repository does not include node_modules and pnpm/vite are unavailable here.

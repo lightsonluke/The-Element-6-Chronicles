@@ -679,45 +679,8 @@ function iceAttack(ctx,x,y,p,move){
   }
 }
 
-// Improved supers. They deliberately have no hold state.
+// Improved supers. Fire keeps its existing design; Water uses the single reference-native implementation above.
 function fireSuper(ctx,x,y,p){const c='#FF5A16',hot='#FFB12B',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const cx=x+90,cy=y-60; if(q<.45){for(let i=0;i<3;i++)flameShape(ctx,x+(i-1)*22,y-60,22+q*20,hot,a*.7,(i-1)*.35);core(ctx,x+18,y-58,16,c,a);} if(q>.25){const r=20+easeOut((q-.25)/.75)*92; spark(ctx,cx,cy,r*.72,c,a*.65); spark(ctx,cx,cy,r*.32,hot,a); glowArc(ctx,cx,cy,r,r,0,REF_TAU,c,10,a); for(let i=0;i<14;i++){const ang=i/14*REF_TAU; flameShape(ctx,cx+Math.cos(ang)*r,cy+Math.sin(ang)*r,9,hot,a*.75,ang);}}}
-function waterSuper(ctx,x,y,p){
-  // Seven reference frames: gather -> sphere -> rapid spin -> collapse/explosion
-  // -> outward ring -> upward-biased launch -> final ring. The motion is continuous.
-  const f=waterFrame(p,7), c='#24BFFF';
-  if(p<0){const q=holdCharge(p);waterSphere(ctx,x,y-66,22+q*10,.65+.25*q,q*TAU);waterJet(ctx,[x-22,y-28],[x-6,y-58],-5,.45,5);waterJet(ctx,[x+22,y-28],[x+6,y-58],-5,.45,5);return;}
-  const q=Math.max(0,Math.min(1,(f-1)/6));
-  const centerY=y-62;
-  if(f<2.0){
-    const u=ease(f-1); waterJet(ctx,[x-28,y-28],[x-8-u*12,centerY],-10,.7,7); waterJet(ctx,[x+28,y-28],[x+8+u*12,centerY],-10,.7,7); waterSphere(ctx,x,centerY,24+20*u,.9,u*2);
-  } else if(f<3.1){
-    const u=ease((f-2)/1.1), r=42+26*u;
-    waterSphere(ctx,x,centerY,r,1,u*TAU*1.7);
-    for(let i=0;i<14;i++){const a=i/14*TAU+u*TAU*1.8;waterDrop(ctx,x+Math.cos(a)*r,y-62+Math.sin(a)*r*.72,1.7,.7);}
-  } else if(f<4.15){
-    const u=ease((f-3.1)/1.05), r=68+26*u;
-    waterSphere(ctx,x,centerY,r,1-u*.15,u*TAU*3.2);
-    waterCrescent(ctx,x,centerY,r,-Math.PI*.9,Math.PI*.95,1,9);
-    if(u>.45){
-      for(let i=0;i<18;i++){const a=i/18*TAU;waterDrop(ctx,x+Math.cos(a)*r*(1+u*.25),centerY+Math.sin(a)*r*.7,1.5,.7);}
-    }
-  } else if(f<5.1){
-    // Collapse inward, then explode outward as the sheet's bright fourth/fifth frame.
-    const u=ease((f-4.15)/.95), r=94*(1-u)+18*u;
-    waterCrescent(ctx,x,centerY,r,-Math.PI,Math.PI,1,10);
-    for(let i=0;i<20;i++){const a=i/20*TAU;const rr=lerp(100,22,u);waterDrop(ctx,x+Math.cos(a)*rr,centerY+Math.sin(a)*rr*.68,1.7,1-u*.4);}
-  } else if(f<6.15){
-    const u=ease((f-5.1)/1.05), r=22+102*u;
-    waterCrescent(ctx,x,centerY,r,-Math.PI,Math.PI,1-u*.15,11);
-    for(let i=0;i<22;i++){const a=i/22*TAU;waterDrop(ctx,x+Math.cos(a)*r,centerY+Math.sin(a)*r*.7,1.5,(1-u)*.7+.25);}
-  } else {
-    const u=ease((f-6.15)/.85), r=124-22*u;
-    // Final reference frame is a clean ring with a directional upper launch.
-    waterRingMoving(ctx,x,centerY,r,r*.68,.12,u*.8+.2,Math.floor((1-u)*2));
-    waterJet(ctx,[x,y-12],[x,y-78-u*38],-10,.7,6);
-    for(let i=0;i<10;i++){const a=-Math.PI*.95+i/9*Math.PI*.45;waterDrop(ctx,x+Math.cos(a)*r*.86,centerY+Math.sin(a)*r*.58,1.5,.6*(1-i/14));}
-  }
-}
 
 function grassSuper(ctx,x,y,p){const c='#7CFF28',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*105; for(let i=0;i<14;i++){const ang=i/14*REF_TAU+q*1.8; leafBlade(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.62,13,34,ang,c,a*.85);} glowArc(ctx,x,y-58,r,r*.62,0,REF_TAU,c,6,a);}
 function iceSuper(ctx,x,y,p){const c='#79DFFF',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*120; for(let i=0;i<18;i++){const ang=i/18*REF_TAU;iceShard(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.68,10,28,ang,c,a);} glowArc(ctx,x,y-58,r,r*.68,0,REF_TAU,c,5,a*.8);}
