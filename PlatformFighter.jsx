@@ -1602,19 +1602,27 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const f1SuperActive = f1.state === 'superAttack' && f1.attackData?.isSuper;
       const f2SuperActive = f2.state === 'superAttack' && f2.attackData?.isSuper;
       const superCameraLock = f1SuperActive || f2SuperActive;
-      if (superCameraLock && !Number.isFinite(g._superStableZoom)) {
-        g._superStableZoom = Number.isFinite(g.camZoom) ? Math.max(0.72, Math.min(1.05, g.camZoom)) : 0.85;
+
+      // HARD super-camera lock. Capture the camera transform at the exact
+      // moment a super becomes active and keep that transform frozen for the
+      // entire super. Do not let super knockback, hitboxes, or effects feed
+      // into the normal dynamic camera fitting at all.
+      if (superCameraLock && !g._superCameraSnapshot) {
+        g._superCameraSnapshot = {
+          zoom: Number.isFinite(g.camZoom) ? g.camZoom : 0.85,
+          x: Number.isFinite(g.camX) ? g.camX : 0,
+          y: Number.isFinite(g.camY) ? g.camY : 0,
+        };
       }
-      if (!superCameraLock) g._superStableZoom = null;
+      if (!superCameraLock) g._superCameraSnapshot = null;
 
       const fdx = Math.abs(finiteF2X - finiteF1X), fdy = Math.abs(finiteF2Y - finiteF1Y);
       const zoomMul = settings.cameraZoom === 'close' ? 1.15 : settings.cameraZoom === 'far' ? 0.85 : 1.0;
       const stageZoom = activeStageCamera?.zoom != null ? Number(activeStageCamera.zoom) : (settings.stageZoom != null ? settings.stageZoom : 1.0);
       let targetZoom;
       if (superCameraLock) {
-        // Keep the camera completely stable through the super so its large
-        // visual/hitbox footprint cannot make the screen shrink or disappear.
-        targetZoom = g._superStableZoom;
+        // Never change zoom while a super is active.
+        targetZoom = g._superCameraSnapshot?.zoom ?? 0.85;
       } else {
         // Prevent a transient signature/attack separation from collapsing the game view.
         targetZoom = Math.max(0.78, Math.min(0.95, 0.95 - fdx / 1200 - fdy / 1000));
@@ -1628,17 +1636,25 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         targetZoom = Math.max(0.72, Math.min(1.05, targetZoom));
       }
       if (!Number.isFinite(targetZoom)) targetZoom = 0.85;
-      g.camZoom += (targetZoom - g.camZoom) * (superCameraLock ? 0.18 : 0.05);
-      if (!Number.isFinite(g.camZoom)) g.camZoom = 0.85;
-      g.camZoom = Math.max(0.72, Math.min(1.05, g.camZoom));
-      if (hitstop > 0 && !superCameraLock) g.camZoom = Math.min(1.05, g.camZoom + 0.015);
-      const midX = (finiteF1X + finiteF2X) / 2;
-      const midY = ((finiteF1Y + finiteF2Y) / 2) - 70;
-      const targetCamX = (midX - W / 2) * (1 - g.camZoom) * 0.35;
-      const targetCamY = (midY - H / 2) * (1 - g.camZoom) * 0.35;
-      const stageCamMotion = stageMotionOffset(activeStageCamera?.motion, (now - g.stageStartTime) / 1000);
-      g.camX += (targetCamX + stageCamMotion.x - g.camX) * 0.07;
-      g.camY += (targetCamY + stageCamMotion.y - g.camY) * 0.07;
+      if (superCameraLock && g._superCameraSnapshot) {
+        // Restore the exact pre-super transform every frame. This also prevents
+        // camera drift if a super sends a fighter far outside the normal stage.
+        g.camZoom = g._superCameraSnapshot.zoom;
+        g.camX = g._superCameraSnapshot.x;
+        g.camY = g._superCameraSnapshot.y;
+      } else {
+        g.camZoom += (targetZoom - g.camZoom) * 0.05;
+        if (!Number.isFinite(g.camZoom)) g.camZoom = 0.85;
+        g.camZoom = Math.max(0.72, Math.min(1.05, g.camZoom));
+        if (hitstop > 0) g.camZoom = Math.min(1.05, g.camZoom + 0.015);
+        const midX = (finiteF1X + finiteF2X) / 2;
+        const midY = ((finiteF1Y + finiteF2Y) / 2) - 70;
+        const targetCamX = (midX - W / 2) * (1 - g.camZoom) * 0.35;
+        const targetCamY = (midY - H / 2) * (1 - g.camZoom) * 0.35;
+        const stageCamMotion = stageMotionOffset(activeStageCamera?.motion, (now - g.stageStartTime) / 1000);
+        g.camX += (targetCamX + stageCamMotion.x - g.camX) * 0.07;
+        g.camY += (targetCamY + stageCamMotion.y - g.camY) * 0.07;
+      }
       if (settings.reducedMotion || settings.screenShake === false) { g.shakeX = 0; g.shakeY = 0; g.shakeMag = 0; shakeMag = 0; }
       else { g.shakeMag = Math.max(g.shakeMag, shakeMag); if (g.shakeMag > 0.3) { g.shakeX = (Math.random() - 0.5) * g.shakeMag; g.shakeY = (Math.random() - 0.5) * g.shakeMag; g.shakeMag *= 0.72; shakeMag = g.shakeMag; } else { g.shakeX = 0; g.shakeY = 0; g.shakeMag = 0; shakeMag = 0; } }
 
