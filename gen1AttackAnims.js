@@ -8,8 +8,12 @@ const clamp01 = v => Math.max(0, Math.min(1, v));
 const ease = v => { v = clamp01(v); return v * v * (3 - 2 * v); };
 const easeOut = v => 1 - Math.pow(1 - clamp01(v), 3);
 const alpha = p => Math.sin(clamp01(p) * Math.PI);
+let FIRE_PERF_MODE = false;
 
-function glow(ctx, color, blur = 18) { ctx.shadowColor = color; ctx.shadowBlur = blur; }
+function glow(ctx, color, blur = 18) {
+  if (FIRE_PERF_MODE) { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; return; }
+  ctx.shadowColor = color; ctx.shadowBlur = blur;
+}
 function strokePath(ctx, pts, color, width, a = 1, dash = null) {
   ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   if (dash) ctx.setLineDash(dash);
@@ -255,21 +259,21 @@ const attackP = p => Math.max(0, Math.min(1, p));
 const refFrame = p => 1 + attackP(p) * 11;
 
 function spark(ctx, x, y, r, c, a=1) {
-  ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=c; ctx.shadowColor=c; ctx.shadowBlur=14;
+  ctx.save(); ctx.globalAlpha=a; ctx.fillStyle=c; if(!FIRE_PERF_MODE){ctx.shadowColor=c;ctx.shadowBlur=14;} else ctx.shadowBlur=0;
   ctx.beginPath(); ctx.arc(x,y,r,0,REF_TAU); ctx.fill(); ctx.restore();
 }
 function glowStroke(ctx, pts, c, w, a=1) {
   ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle=c; ctx.lineWidth=w; ctx.lineCap='round'; ctx.lineJoin='round';
-  ctx.shadowColor=c; ctx.shadowBlur=Math.max(8,w*2.5); ctx.beginPath();
+  if(!FIRE_PERF_MODE){ctx.shadowColor=c;ctx.shadowBlur=Math.max(8,w*2.5);} else ctx.shadowBlur=0; ctx.beginPath();
   pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.stroke(); ctx.restore();
 }
 function glowArc(ctx, x,y,rx,ry,a0,a1,c,w,a=1,rot=0) {
-  ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.globalAlpha=a; ctx.strokeStyle=c; ctx.lineWidth=w; ctx.lineCap='round'; ctx.shadowColor=c; ctx.shadowBlur=Math.max(10,w*2.5);
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.globalAlpha=a; ctx.strokeStyle=c; ctx.lineWidth=w; ctx.lineCap='round'; if(!FIRE_PERF_MODE){ctx.shadowColor=c;ctx.shadowBlur=Math.max(10,w*2.5);} else ctx.shadowBlur=0;
   ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,a0,a1); ctx.stroke(); ctx.restore();
 }
 function core(ctx,x,y,r,c,a=1){ spark(ctx,x,y,r,'#fff',a*.85); spark(ctx,x,y,r*.58,c,a); }
 function flameShape(ctx,x,y,r,c,a=1,rot=0){
-  ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.globalAlpha=a; ctx.fillStyle=c; ctx.shadowColor=c; ctx.shadowBlur=18;
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.globalAlpha=a; ctx.fillStyle=c; if(!FIRE_PERF_MODE){ctx.shadowColor=c; ctx.shadowBlur=18;} else {ctx.shadowBlur=0;}
   ctx.beginPath(); ctx.moveTo(0,-r); ctx.bezierCurveTo(r*.75,-r*.15,r*.65,r*.55,0,r); ctx.bezierCurveTo(-r*.75,r*.5,-r*.5,-r*.05,0,-r); ctx.fill();
   ctx.fillStyle='#FFF3B0'; ctx.globalAlpha*=.75; ctx.beginPath(); ctx.moveTo(0,-r*.55); ctx.bezierCurveTo(r*.28,-r*.05,r*.25,r*.35,0,r*.52); ctx.bezierCurveTo(-r*.25,r*.3,-r*.18,-r*.05,0,-r*.55); ctx.fill(); ctx.restore();
 }
@@ -323,10 +327,10 @@ function fireBlob(ctx,cx,cy,r,c='#FF5A16',a=1,seed=0){
     const wob=1+.14*Math.sin(i*2.13+seed)+.07*Math.sin(i*4.7-seed);
     pts.push([cx+Math.cos(t)*r*wob,cy+Math.sin(t)*r*.82*wob]);
   }
-  ctx.save();ctx.globalAlpha=a;ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=24;ctx.beginPath();
+  ctx.save();ctx.globalAlpha=a;ctx.fillStyle=c;if(!FIRE_PERF_MODE){ctx.shadowColor=c;ctx.shadowBlur=24;}else ctx.shadowBlur=0;ctx.beginPath();
   pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.fill();ctx.restore();
   const inner=Math.max(4,r*.45);
-  ctx.save();ctx.globalAlpha=a*.72;ctx.fillStyle='#FFF0A0';ctx.shadowColor='#FFB12B';ctx.shadowBlur=18;ctx.beginPath();ctx.arc(cx-r*.08,cy-r*.08,inner,0,REF_TAU);ctx.fill();ctx.restore();
+  ctx.save();ctx.globalAlpha=a*.72;ctx.fillStyle='#FFF0A0';if(!FIRE_PERF_MODE){ctx.shadowColor='#FFB12B';ctx.shadowBlur=18;}else ctx.shadowBlur=0;ctx.beginPath();ctx.arc(cx-r*.08,cy-r*.08,inner,0,REF_TAU);ctx.fill();ctx.restore();
   for(let i=0;i<7;i++){
     const t=-2.7+i*.22;
     flameShape(ctx,cx+Math.cos(t)*r*.8,cy+Math.sin(t)*r*.62,r*(.18+.03*(i%3)), '#FF9A22',a*.8,t+Math.PI/2);
@@ -467,7 +471,7 @@ function fireWheelFast(ctx,cx,cy,rx,ry,c,a=1,rot=0,seed=0){
   ctx.save();
   ctx.globalAlpha=a;
   ctx.strokeStyle=c; ctx.lineWidth=4.5; ctx.lineCap='round'; ctx.lineJoin='round';
-  ctx.shadowColor=c; ctx.shadowBlur=9;
+  if(!FIRE_PERF_MODE){ctx.shadowColor=c;ctx.shadowBlur=9;}else ctx.shadowBlur=0;
   ctx.beginPath(); pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.stroke();
   ctx.shadowBlur=0;
   for(let i=0;i<8;i++){
@@ -575,12 +579,15 @@ function fireSideHeavyReference(ctx,x,y,p){
 }
 
 function fireAttack(ctx,x,y,p,move){
+  const prev=FIRE_PERF_MODE; FIRE_PERF_MODE=true;
+  try {
   if(move==='us'){fireUpReference(ctx,x,y,p);return;}
   if(move==='ss'){fireSideReference(ctx,x,y,p);return;}
   if(move==='ds'){fireDownReference(ctx,x,y,p);return;}
   if(move==='uh'||move==='upHeavy'){fireUpHeavyReference(ctx,x,y,p);return;}
   if(move==='dh'||move==='downHeavy'){fireDownHeavyReference(ctx,x,y,p);return;}
   if(move==='sh'||move==='heavy'){fireSideHeavyReference(ctx,x,y,p);return;}
+  } finally { FIRE_PERF_MODE=prev; }
 }
 
 function waterUpReference(ctx,x,y,p){
@@ -681,46 +688,50 @@ function fireLineBurstLegacy(ctx,x,y,r,alpha=1){
 }
 
 function fireSuper(ctx,x,y,p){
+  const prev=FIRE_PERF_MODE; FIRE_PERF_MODE=true;
+  try {
+  // Smooth native interpolation through the same seven reference beats.
+  // No hard frame-to-frame snapping: position, size and opacity all ease.
   const c='#FF5A16', hot='#FFB12B', white='#FFF3B0';
-  const f=fireRefFrame(p,7);
-  if(f===1){
-    flameShape(ctx,x-18,y-56,7,hot,.5,-.2);
-    flameShape(ctx,x+18,y-56,7,hot,.5,.2);
-    return;
+  const q=clamp01(p)*6, seg=Math.min(5,Math.floor(q)), t=ease(q-seg);
+  const lerp=(a,b,k)=>a+(b-a)*k;
+  const stages=[
+    {cx:18,cy:-56,r:7,a:.55},
+    {cx:26,cy:-60,r:17,a:.95},
+    {cx:26,cy:-60,r:24,a:.98},
+    {cx:62,cy:-58,r:27,a:1},
+    {cx:80,cy:-58,r:22,a:1},
+    {cx:105,cy:-48,r:34,a:1},
+    {cx:105,cy:-48,r:18,a:.35}
+  ];
+  const a=stages[seg], b=stages[Math.min(6,seg+1)];
+  const cx=lerp(a.cx,b.cx,t), cy=lerp(a.cy,b.cy,t), r=lerp(a.r,b.r,t), op=lerp(a.a,b.a,t);
+  // Startup flames smoothly gather toward the hand.
+  if(q<1.2){
+    flameShape(ctx,x-18,y-56,7,hot,.5*(1-q/1.2),-.2);
+    flameShape(ctx,x+18,y-56,7,hot,.5*(1-q/1.2),.2);
   }
-  if(f===2 || f===3){
-    const r=f===2?17:24;
-    core(ctx,x+26,y-60,r,c,.95);
-    fireFlameOrbitLegacy(ctx,x+26,y-60,r+6,r+2,-2.8,.3,hot,.9,10);
-    return;
+  // The core and its irregular orbit remain visually consistent while moving.
+  core(ctx,x+cx,y+cy,Math.max(5,r),c,op);
+  fireFlameOrbitLegacy(ctx,x+cx,y+cy,r+5,r*.7,-2.8,.35,hot,op*.95,10);
+  // Keep the travel trail short near the hand, then extend it as the projectile accelerates.
+  const launchT=ease(clamp01((q-1.8)/2.7));
+  if(launchT>0){
+    glowStroke(ctx,[[x+12,y-25],[x+27+launchT*34,y-47-2*launchT]],c,5.5,.48*launchT);
+    for(let i=0;i<5;i++) spark(ctx,x+cx-18-i*5,y+cy+(i-2)*2,1.3,hot,.35*launchT);
   }
-  if(f===4 || f===5){
-    const cx=x+62+(f-4)*18, cy=y-58, r=f===4?27:22;
-    glowStroke(ctx,[[x+12,y-25],[x+27,y-47]],c,7,.55);
-    core(ctx,cx,cy,r,c,1);
-    fireFlameOrbitLegacy(ctx,cx,cy,r+5,r*.7,-2.8,.35,hot,.95,10);
-    for(let i=0;i<7;i++) spark(ctx,cx-28-i*4,cy+(i-3)*2,1.5,hot,.45);
-    return;
-  }
-  if(f===6){
-    const cx=x+105, cy=y-48;
-    core(ctx,cx,cy,34,c,1);
-    fireLineBurstLegacy(ctx,cx,cy,96,1);
-    for(let i=0;i<12;i++){
-      const a=i/12*REF_TAU;
-      flameShape(ctx,cx+Math.cos(a)*54,cy+Math.sin(a)*35,10,hot,.95,a+Math.PI/2);
+  // Explosion grows smoothly instead of popping at one discrete frame.
+  const blast=ease(clamp01((q-4.45)/1.05));
+  if(blast>0){
+    fireLineBurstLegacy(ctx,x+105,y-48,70+50*blast,blast);
+    for(let i=0;i<10;i++){
+      const ang=i/10*TAU;
+      flameShape(ctx,x+105+Math.cos(ang)*(38+38*blast),y-48+Math.sin(ang)*(25+25*blast),7+4*blast,hot,blast*.72,ang+Math.PI/2);
     }
-    spark(ctx,cx,cy,18,white,.8);
-    return;
+    spark(ctx,x+105,y-48,14+10*blast,white,.55*blast);
   }
-  const cx=x+105, cy=y-48;
-  fireLineBurstLegacy(ctx,cx,cy,120,.35);
-  for(let i=0;i<14;i++){
-    const a=i/14*REF_TAU;
-    spark(ctx,cx+Math.cos(a)*100,cy+Math.sin(a)*58,1.7,hot,.35);
-  }
+  } finally { FIRE_PERF_MODE=prev; }
 }
-
 function waterSuper(ctx,x,y,p){const c='#24BFFF',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=35+easeOut(q)*110; waterRing(ctx,x,y-58,r,r*.55,c,a,.1); for(let i=0;i<16;i++){const ang=i/16*REF_TAU+q*2; glowStroke(ctx,[[x+Math.cos(ang)*(r-20),y-58+Math.sin(ang)*(r-20)*.55],[x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.55]],c,6,a*.65);}}
 function grassSuper(ctx,x,y,p){const c='#7CFF28',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*105; for(let i=0;i<14;i++){const ang=i/14*REF_TAU+q*1.8; leafBlade(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.62,13,34,ang,c,a*.85);} glowArc(ctx,x,y-58,r,r*.62,0,REF_TAU,c,6,a);}
 function iceSuper(ctx,x,y,p){const c='#79DFFF',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*120; for(let i=0;i<18;i++){const ang=i/18*REF_TAU;iceShard(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.68,10,28,ang,c,a);} glowArc(ctx,x,y-58,r,r*.68,0,REF_TAU,c,5,a*.8);}
