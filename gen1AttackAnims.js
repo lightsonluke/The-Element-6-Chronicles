@@ -7,6 +7,7 @@ const TAU = Math.PI * 2;
 const clamp01 = v => Math.max(0, Math.min(1, v));
 const ease = v => { v = clamp01(v); return v * v * (3 - 2 * v); };
 const easeOut = v => 1 - Math.pow(1 - clamp01(v), 3);
+const lerp = (a, b, t) => a + (b - a) * t;
 const alpha = p => Math.sin(clamp01(p) * Math.PI);
 
 function glow(ctx, color, blur = 18) { ctx.shadowColor = color; ctx.shadowBlur = blur; }
@@ -686,18 +687,28 @@ function grassSuper(ctx,x,y,p){const c='#7CFF28',q=attackP(p),a=.2+.8*Math.sin(q
 function iceSuper(ctx,x,y,p){const c='#79DFFF',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*120; for(let i=0;i<18;i++){const ang=i/18*REF_TAU;iceShard(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.68,10,28,ang,c,a);} glowArc(ctx,x,y-58,r,r*.68,0,REF_TAU,c,5,a*.8);}
 
 export function drawGen1Attack(ctx,x,y,color,p,facing,charId,move){
-  ctx.save(); ctx.translate(x,y); ctx.scale(facing<0?-1:1,1);
-  if(charId==='g1_thunder'){
-    if(p < 0){
-      thunderHold(ctx,0,0,move,Math.max(0,Math.min(1,-p-1)));
-    } else if(move==='us') thunderUp(ctx,0,0,p); else if(move==='ds') thunderDown(ctx,0,0,Math.max(0,p)); else if(move==='ss') thunderSide(ctx,0,0,Math.max(0,p),false); else if(move==='sh'||move==='heavy') thunderSide(ctx,0,0,Math.max(0,p),true); else if(move==='uh'||move==='upHeavy') thunderUpHeavy(ctx,0,0,Math.max(0,p)); else if(move==='dh'||move==='downHeavy') thunderDownHeavy(ctx,0,0,Math.max(0,p));
-  } else if(charId==='g1_fire') fireAttack(ctx,0,0,p,move);
-  else if(charId==='g1_water') waterAttack(ctx,0,0,p,move);
-  else if(charId==='g1_grass') grassAttack(ctx,0,0,p,move);
-  else if(charId==='g1_ice') iceAttack(ctx,0,0,p,move);
-  ctx.restore();
+  ctx.save();
+  try {
+    ctx.translate(x,y); ctx.scale(facing<0?-1:1,1);
+    if(charId==='g1_thunder'){
+      if(p < 0){
+        thunderHold(ctx,0,0,move,Math.max(0,Math.min(1,-p-1)));
+      } else if(move==='us') thunderUp(ctx,0,0,p); else if(move==='ds') thunderDown(ctx,0,0,Math.max(0,p)); else if(move==='ss') thunderSide(ctx,0,0,Math.max(0,p),false); else if(move==='sh'||move==='heavy') thunderSide(ctx,0,0,Math.max(0,p),true); else if(move==='uh'||move==='upHeavy') thunderUpHeavy(ctx,0,0,Math.max(0,p)); else if(move==='dh'||move==='downHeavy') thunderDownHeavy(ctx,0,0,Math.max(0,p));
+    } else if(charId==='g1_fire') fireAttack(ctx,0,0,p,move);
+    else if(charId==='g1_water') waterAttack(ctx,0,0,p,move);
+    else if(charId==='g1_grass') grassAttack(ctx,0,0,p,move);
+    else if(charId==='g1_ice') iceAttack(ctx,0,0,p,move);
+  } finally {
+    // Never allow a broken attack effect to leak its translate/scale into the main canvas.
+    ctx.restore();
+  }
 }
 export function drawGen1Super(ctx,x,y,p,facing,charId){
-  ctx.save();ctx.translate(x,y);ctx.scale(facing<0?-1:1,1);
-  if(charId==='g1_thunder') thunderSuper(ctx,0,0,p); else if(charId==='g1_fire') fireSuper(ctx,0,0,p); else if(charId==='g1_water') waterSuper(ctx,0,0,p); else if(charId==='g1_grass') grassSuper(ctx,0,0,p); else if(charId==='g1_ice') iceSuper(ctx,0,0,p); ctx.restore();
+  ctx.save();
+  try {
+    ctx.translate(x,y);ctx.scale(facing<0?-1:1,1);
+    if(charId==='g1_thunder') thunderSuper(ctx,0,0,p); else if(charId==='g1_fire') fireSuper(ctx,0,0,p); else if(charId==='g1_water') waterSuper(ctx,0,0,p); else if(charId==='g1_grass') grassSuper(ctx,0,0,p); else if(charId==='g1_ice') iceSuper(ctx,0,0,p);
+  } finally {
+    ctx.restore();
+  }
 }

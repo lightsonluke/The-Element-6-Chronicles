@@ -1,21 +1,24 @@
-Water Hero — clean restart patch
+WATER HERO — FLUID FRAME-BY-FRAME SCREEN-SAFE FIX
 
-This patch starts from the uploaded game plus the completed Fire Hero animation file.
+This patch fixes the runtime error that caused the canvas to remain translated/scaled after a Water attack. The missing lerp helper is restored, all Gen 1 attack/super draw wrappers now use try/finally so canvas transforms are ALWAYS restored, and the Water attacks remain native Canvas animations (reference images are not used as sprites).
 
-What changed:
-- Restored the missing Water Hero attack dispatcher so every Water attack has a valid renderer.
-- Rebuilt Water Hero Up Signature from the supplied 12-frame blueprint: ring forms on the arm, separates at frame 3, travels upward on a short curved path, fades at frame 7, then returns to neutral.
-- Water Up Signature hitbox is the moving ring only and is active on reference frames 3–7.
-- Water Up Signature knockback follows the ring's current travel direction.
-- Water Up Signature hold/charge window is 12 frames.
-- Added a universal attack/charge reset when an attack is interrupted by hitstun, and a clean idle/jumping reset when any attack ends.
-- No camera, zoom, or renderer changes are included in this patch.
-- Fire Hero animation code is taken from the latest completed Fire Hero package.
+Water moves are reconstructed from the supplied frame sheet with flowing layered water bodies, tapered streams, droplets/spray, and frame-to-frame motion:
+- Up Signature: ring forms, separates, arcs upward, fades.
+- Down Signature: twin rising splash sheets.
+- Side Signature: forming/curling water whip.
+- Up Heavy: wrapping spiral/ribbon and upward launch.
+- Down Heavy: floating sphere, drop/impact, upward burst.
+- Side Heavy: thick crescent water blade and breakup spray.
+- Super: gather, rotating sphere, collapse/explosion, expanding ring stages.
 
-Replace these four files:
+The reference images are not loaded or drawn in-game.
+
+Replace:
   gen1AttackAnims.js
   attackSpecs.js
-  eras.js
   fighter.js
+  eras.js
+  upHeavies.js
+  downHeavies.js
 
-The other Water attacks are left at their existing designs because the supplied reference only specifies the Up Signature.
+Do NOT replace renderer.js.
