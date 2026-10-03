@@ -237,18 +237,24 @@ export function getActiveSpecHitboxes(attacker) {
     case 'orbitBall': { const a=-Math.PI/2+q*TAU; C(20+Math.cos(a)*94,-72+Math.sin(a)*55,13); break; }
     case 'bottomBolt': { if(q < .35) break; P([[-15,-95],[15,-95],[9,-42],[14,-10],[-14,-10],[-9,-42]]); break; }
     case 'fireUpHand': {
-      const f=Math.min(4,Math.floor(q*4)+1);
-      if(f===2){ C(28,-92,20); }
-      else if(f===3){ C(28,-92,22); C(40,-118,14); }
-      else if(f===4){ C(90,-150,16); }
+      const z=q*4, f=Math.min(4,Math.floor(z)+1), u=z-Math.floor(z), v=u*u*(3-2*u);
+      // Collision follows the fire itself: attached to the hand until launch,
+      // then the detached irregular fire travels away from the hand.
+      if(f===2){ C(28,-92,15+3*v); }
+      else if(f===3){
+        C(28,-92,13*(1-v));
+        C(35+34*v,-96-35*v,10+3*(1-v));
+      } else if(f===4){
+        const d=39+34*v; C(28+d,-92-40*v,7+3*(1-v));
+      }
       break;
     }
     case 'fireDownBurst': {
-      const f=Math.min(4,Math.floor(q*4)+1);
-      if(f===1){ C(24,-44,9); }
-      else if(f===2){ C(24,-7,11); }
-      else if(f===3){ for(let i=0;i<8;i++){const a=i/8*TAU; C(24+Math.cos(a)*38,-4+Math.sin(a)*24,8);} }
-      else if(f===4){ for(let i=0;i<10;i++){const a=i/10*TAU; C(24+Math.cos(a)*58,-4+Math.sin(a)*36,7);} }
+      const z=q*4, f=Math.min(4,Math.floor(z)+1), u=z-Math.floor(z), v=u*u*(3-2*u);
+      if(f===1){ /* visual-only dark ember */ }
+      else if(f===2){ C(24,-44+38*v,8+2*v); }
+      else if(f===3){ const r=24+42*v; for(let i=0;i<10;i++){const a=i/10*TAU; C(24+Math.cos(a)*r,-3+Math.sin(a)*r*.48,6.5);} }
+      else { const r=60+10*v; for(let i=0;i<10;i++){const a=i/10*TAU; C(24+Math.cos(a)*r,-3+Math.sin(a)*r*.48,5.5); } }
       break;
     }
     case 'fireElbow': {
@@ -258,32 +264,37 @@ export function getActiveSpecHitboxes(attacker) {
       break;
     }
     case 'fireWheelEdge': {
-      const f=Math.min(4,Math.floor(q*4)+1);
+      const z=q*4, f=Math.min(4,Math.floor(z)+1), u=z-Math.floor(z), v=u*u*(3-2*u);
       if(f===2||f===3){
-        const r=58; for(let i=0;i<12;i++){const a=i/12*TAU; C(Math.cos(a)*r,-96+Math.sin(a)*r*.42,9);}
+        const r=58+3*v; for(let i=0;i<16;i++){const a=i/16*TAU; const wob=1+.06*Math.sin(i*2.1); C(Math.cos(a)*r*wob,-96+Math.sin(a)*r*.42*wob,6.5);}
       } else if(f===4){
-        const r=76; for(let i=0;i<10;i++){const a=i/10*TAU; C(Math.cos(a)*r,-96+Math.sin(a)*r*.5,8);}
+        const r=58+18*v; for(let i=0;i<14;i++){const a=i/14*TAU; C(Math.cos(a)*r,-96+Math.sin(a)*r*.48,5.5);}
       }
       break;
     }
     case 'fireGroundBurst': {
-      const f=Math.min(6,Math.floor(q*6)+1);
-      if(f>=3){ const r=f===3?34:f===4||f===5?58:72; for(let i=0;i<10;i++){const a=i/10*TAU; C(24+Math.cos(a)*r,-2+Math.sin(a)*r*.62,8); } }
+      const z=q*6, f=Math.min(6,Math.floor(z)+1), u=z-Math.floor(z), v=u*u*(3-2*u);
+      if(f===2){ C(24,-1,5); C(24-14,-1,4); C(24+14,-1,4); }
+      else if(f>=3){
+        const r=f===3?28+34*v:f===4?62+10*v:f===5?72:76;
+        for(let i=0;i<12;i++){const a=i/12*TAU; const len=r*(.7+.2*Math.sin(i*2.1)); C(24+Math.cos(a)*len,-1+Math.sin(a)*len*.46,5.5); }
+      }
       break;
     }
     case 'fireHandBall': {
-      const f=Math.min(4,Math.floor(q*4)+1);
-      if(f===2) C(47,-45,18);
-      else if(f===3) C(90,-48,25);
-      else if(f===4) C(142,-48,13);
+      const z=q*4, f=Math.min(4,Math.floor(z)+1), u=z-Math.floor(z), v=u*u*(3-2*u);
+      if(f===1){ C(48,-45,6); }
+      else if(f===2){ C(48,-45,12+10*v); }
+      else if(f===3){ C(48+10+55*v,-45-2*v,16+7*v); }
+      else { C(48+68+70*v,-45-4*v,7+5*(1-v)); }
       break;
     }
     case 'fireSuperBurst': {
-      const f=Math.min(7,Math.floor(q*7)+1);
-      if(f===2||f===3) C(26,-60,f===2?20:27);
-      else if(f===4||f===5) C(f===4?62:80,-58,f===4?28:23);
-      else if(f===6) C(105,-48,92);
-      else if(f===7) C(105,-48,72);
+      const z=q*7, f=Math.min(7,Math.floor(z)+1), u=z-Math.floor(z), v=u*u*(3-2*u);
+      if(f===2||f===3) C(26,-60,f===2?18:25);
+      else if(f===4||f===5) C(f===4?62+10*v:80+12*v,-58, f===4?25:20);
+      else if(f===6) C(105,-48,78+14*v);
+      else if(f===7) C(105,-48,66*(1-v));
       break;
     }
     case 'waterRing': { if(q<.16 || q>.72) break; const u=Math.max(0,Math.min(1,(q-.16)/.56)); const tx=30+u*110, ty=-55-u*70+Math.sin(u*Math.PI)*20; C(tx,ty,14); break; }

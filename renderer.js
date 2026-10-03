@@ -603,40 +603,48 @@ function applyFireAttackPose(vars, attackData, facing=1){
   const move = attackData.isSuper ? 'super' : attackData.isHeavy ? (attackData.sigType === 'downHeavy' ? 'dh' : attackData.sigType === 'upHeavy' ? 'uh' : 'sh') : (attackData.sigType === 'up' ? 'us' : attackData.sigType === 'down' ? 'ds' : 'ss');
   const p = attackData.holding ? Math.max(0, Math.min(1, Number(attackData.holdProgress)||0)) : Math.max(0, Math.min(1, Number(attackData.progress)||0));
   const count = move==='dh' ? 6 : move==='super' ? 7 : 4;
-  const f = Math.min(count, Math.floor(p*count)+1);
-  // These are pose beats copied from the reference sheet, not a generic punch animation.
+  const z=p*count;
+  const i=Math.min(count-1,Math.floor(z));
+  const u=z-Math.floor(z);
+  const s=u*u*(3-2*u);
+  const lerp=(a,b)=>a+(b-a)*s;
+  const lead=(angle)=>{
+    // The leading hand changes sides with facing: right hand when facing right,
+    // left hand when facing left. This is NOT just a mirrored copy of the body pose.
+    if(facing>=0) vars.punchArmR=angle;
+    else vars.punchArmL=-angle;
+  };
+  const clearLead=()=>{ if(facing>=0) vars.punchArmR=0; else vars.punchArmL=0; };
+  const beat=(arr)=>lerp(arr[i],arr[Math.min(i+1,count-1)]);
+
   if(move==='us'){
-    if(f===1){ vars.punchArmR = -1.55; vars.punchArmL = -0.25; vars.lean = facing*0.02; }
-    if(f>=2){ vars.punchArmR = -2.15; vars.punchArmL = -0.35; vars.lean = facing*0.03; }
-    if(f===4){ vars.punchArmR = -2.38; vars.lean = facing*0.08; }
+    const a=beat([0,-2.05,-2.25,-2.15]);
+    lead(a); vars.lean=facing*lerp([0,.02,.03,.08][i],[0,.02,.03,.08][Math.min(i+1,3)]);
   } else if(move==='ss'){
-    if(f===1){ vars.punchArmR = -0.2; }
-    else if(f===2){ vars.punchArmR = -1.05; vars.lean = facing*0.08; }
-    else if(f===3){ vars.punchArmR = -1.55; vars.lean = facing*0.18; vars.legSwing = 0.18; }
-    else { vars.punchArmR = -1.9; vars.lean = facing*0.28; vars.legSwing = 0.28; }
+    const a=beat([0,-1.05,-1.72,-1.15]);
+    lead(a); vars.lean=facing*beat([0,.08,.20,.16]); vars.legSwing=beat([0,.04,.22,.12]);
   } else if(move==='ds'){
-    if(f===1){ vars.punchArmR = 0; vars.punchArmL = 0; vars.lean = 0; vars.legSwing = 0; }
-    else if(f===2){ vars.lean = facing*0.12; vars.bob = 7; vars.punchArmR = 0.4; vars.legSwing = 0.05; }
-    else if(f===3){ vars.lean = facing*0.05; vars.bob = 9; vars.punchArmR = 0.25; }
-    else { vars.lean = -facing*0.12; vars.bob = 2; vars.legSwing = -0.18; }
+    vars.lean=facing*beat([0,.10,.03,-.10]);
+    vars.bob=beat([0,5,8,2]);
+    lead(beat([0,.30,.20,.05]));
   } else if(move==='uh'){
-    vars.punchArmR = -2.55; vars.punchArmL = -2.85; vars.lean = 0;
-    if(f===4){ vars.punchArmR = -2.2; vars.punchArmL = -2.45; vars.lean = facing*0.05; }
+    // Both arms rise continuously into the overhead wheel.
+    const aR=beat([-1.0,-2.55,-2.70,-2.20]);
+    const aL=beat([-1.0,-2.85,-2.95,-2.45]);
+    vars.punchArmR=aR; vars.punchArmL=aL; vars.lean=facing*beat([0,0,.02,.05]);
   } else if(move==='dh'){
-    if(f<=2){ vars.lean = facing*0.02; }
-    if(f===2 || f===3){ vars.bob = 10; vars.lean = facing*0.18; vars.punchArmR = 0.75; vars.punchArmL = 0.5; vars.legLOver = -0.65; vars.legROver = 0.25; }
-    if(f===4 || f===5){ vars.bob = 4; vars.lean = facing*0.04; vars.punchArmR = 0.45; vars.punchArmL = 0.2; }
-    if(f===6){ vars.bob = 0; vars.lean = -facing*0.05; vars.punchArmR = 0.15; vars.punchArmL = 0; }
+    vars.lean=facing*beat([0,.18,.06,-.02,-.04,-.02]);
+    vars.bob=beat([0,9,6,4,2,0]);
+    vars.legLOver=beat([null,-.60,-.65,-.25,-.12,null].map(v=>v===null?0:v));
+    vars.legROver=beat([null,.20,.28,.12,.05,null].map(v=>v===null?0:v));
+    lead(beat([0,.62,.55,.35,.18,.05]));
   } else if(move==='sh'){
-    if(f<=2){ vars.punchArmR = -1.65; vars.lean = facing*0.1; }
-    else if(f===3){ vars.punchArmR = -1.9; vars.lean = facing*0.22; vars.legSwing = 0.2; }
-    else { vars.punchArmR = -2.0; vars.lean = facing*0.26; }
+    const a=beat([-1.15,-1.45,-1.75,-.55]);
+    lead(a); vars.lean=facing*beat([.02,.08,.18,.10]); vars.legSwing=beat([0,.05,.18,.08]);
   } else if(move==='super'){
-    if(f===1){ vars.punchArmR = -0.85; vars.punchArmL = -0.65; vars.lean = facing*0.03; }
-    else if(f===2 || f===3){ vars.punchArmR = -1.15; vars.punchArmL = -0.95; vars.lean = facing*0.06; }
-    else if(f===4 || f===5){ vars.punchArmR = -1.7; vars.punchArmL = -1.55; vars.lean = facing*0.22; vars.legSwing = 0.2; }
-    else if(f===6){ vars.punchArmR = 0.2; vars.punchArmL = 0.1; vars.lean = -facing*0.12; }
-    else { vars.punchArmR = -0.1; vars.punchArmL = -0.05; vars.lean = -facing*0.05; }
+    const r=beat([-.75,-1.05,-1.25,-1.65,-1.75,.25,-.10]);
+    const l=beat([-.55,-.85,-1.05,-1.55,-1.65,.15,-.05]);
+    vars.punchArmR=r; vars.punchArmL=l; vars.lean=facing*beat([.02,.06,.08,.18,.20,-.12,-.05]); vars.legSwing=beat([0,.02,.04,.16,.20,-.12,-.05]);
   }
 }
 

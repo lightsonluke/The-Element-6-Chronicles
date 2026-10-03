@@ -292,254 +292,203 @@ function iceShard(ctx,x,y,w,h,rot,c,a=1){
 function fireRefFrame(p, count){
   return Math.min(count, Math.floor(attackP(p) * count) + 1);
 }
-
-function fireFlameOrbit(ctx,cx,cy,rx,ry,start,end,color,alpha=1, count=7){
-  glowArc(ctx,cx,cy,rx,ry,start,end,color,5,alpha);
-  for(let i=0;i<count;i++){
-    const t=count===1 ? 0 : i/(count-1);
-    const a=start+(end-start)*t;
-    flameShape(ctx,cx+Math.cos(a)*rx,cy+Math.sin(a)*ry,5.5,color,alpha*.9,a+Math.PI/2);
+function fireRefPhase(p, count){
+  const z=attackP(p)*count;
+  const frame=Math.min(count, Math.floor(z)+1);
+  const u=Math.max(0,Math.min(1,z-Math.floor(z)));
+  return {frame,u,z};
+}
+function smoothFire(u){ return u*u*(3-2*u); }
+function fireRing(ctx,cx,cy,rx,ry,c,a=1,rot=0,seed=0){
+  // Irregular, broken fire wheel/ring: deliberately NOT a smooth ellipse.
+  const n=18, pts=[];
+  for(let i=0;i<=n;i++){
+    const t=i/n*REF_TAU;
+    const wob=1 + .09*Math.sin(i*2.71+seed) + .045*Math.sin(i*5.17-seed*.6);
+    pts.push([cx+Math.cos(t)*rx*wob, cy+Math.sin(t)*ry*wob]);
+  }
+  glowStroke(ctx,pts,c,4.5,a);
+  for(let i=0;i<10;i++){
+    const t=(i+.18*Math.sin(i*3.1+seed))/10*REF_TAU;
+    const rr=1+.08*Math.sin(i*2.3+seed);
+    const fx=cx+Math.cos(t)*rx*rr, fy=cy+Math.sin(t)*ry*rr;
+    flameShape(ctx,fx,fy,5.5+.8*Math.sin(i+seed),i%2?'#FF9A22':'#FF6A18',a*.9,t+Math.PI/2);
   }
 }
-
-function fireLineBurst(ctx,x,y,r,alpha=1){
-  // Radial flame "fingers" — deliberately disconnected from the fighter.
-  for(let i=0;i<10;i++){
-    const a=i/10*REF_TAU;
-    const len=r*(.75+.18*Math.sin(i*2.7));
-    const x1=x+Math.cos(a)*5, y1=y+Math.sin(a)*4;
-    const x2=x+Math.cos(a)*len, y2=y+Math.sin(a)*len*.68;
-    flameShape(ctx,x2,y2,7,'#FF9A22',alpha*.85,a+Math.PI/2);
+function fireBlob(ctx,cx,cy,r,c='#FF5A16',a=1,seed=0){
+  // Lopsided fireball with flame lobes, matching the reference rather than a circle.
+  const n=14, pts=[];
+  for(let i=0;i<n;i++){
+    const t=i/n*REF_TAU;
+    const wob=1+.14*Math.sin(i*2.13+seed)+.07*Math.sin(i*4.7-seed);
+    pts.push([cx+Math.cos(t)*r*wob,cy+Math.sin(t)*r*.82*wob]);
   }
+  ctx.save();ctx.globalAlpha=a;ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=24;ctx.beginPath();
+  pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.fill();ctx.restore();
+  const inner=Math.max(4,r*.45);
+  ctx.save();ctx.globalAlpha=a*.72;ctx.fillStyle='#FFF0A0';ctx.shadowColor='#FFB12B';ctx.shadowBlur=18;ctx.beginPath();ctx.arc(cx-r*.08,cy-r*.08,inner,0,REF_TAU);ctx.fill();ctx.restore();
+  for(let i=0;i<7;i++){
+    const t=-2.7+i*.22;
+    flameShape(ctx,cx+Math.cos(t)*r*.8,cy+Math.sin(t)*r*.62,r*(.18+.03*(i%3)), '#FF9A22',a*.8,t+Math.PI/2);
+  }
+}
+function fireRay(ctx,x,y,angle,len,a=1,hot='#FF9A22'){
+  const ux=Math.cos(angle), uy=Math.sin(angle), px=-uy, py=ux;
+  const s=.12*len, m=.52*len;
+  const pts=[[x+ux*4,y+uy*4],[x+ux*s+px*3,y+uy*s+py*3],[x+ux*m-px*2,y+uy*m-py*2],[x+ux*len,y+uy*len]];
+  glowStroke(ctx,pts,hot,3.4,a);
+  flameShape(ctx,x+ux*len,y+uy*len,5.5,hot,a*.9,angle+Math.PI/2);
+  if(len>35) glowStroke(ctx,[[x+ux*18+px*2,y+uy*18+py*2],[x+ux*(len*.68)-px*1,y+uy*(len*.68)-py*1]],'#FF5A16',1.7,a*.75);
+}
+function fireLineBurst(ctx,x,y,r,alpha=1,phase=0){
+  // Short jagged flame rays radiating from the impact point.
+  const count=10;
+  for(let i=0;i<count;i++){
+    const a=i/count*REF_TAU + phase*.08;
+    const len=r*(.68+.22*Math.sin(i*2.1+phase));
+    fireRay(ctx,x,y,a,len,alpha*(.86+.12*Math.sin(i+phase)));
+  }
+  fireBlob(ctx,x,y,Math.max(6,r*.18),'#FF6A18',alpha*.9,phase);
+}
+function handPosePoint(x,y,facing,move){
+  // Effects are authored in forward-local coordinates. The renderer mirrors them.
+  if(move==='us') return [28,-91];
+  if(move==='sh') return [48,-45];
+  return [38,-42];
 }
 
 function fireUpReference(ctx,x,y,p){
-  const c='#FF5A16', hot='#FF9A22', white='#FFF2B0';
+  const c='#FF5A16', hot='#FF9A22';
   if(p<0){
-    const q=holdCharge(p);
-    // Hold mirrors the attack concept: the arm rises and fire circles the hand,
-    // but the flame does NOT form a solid sleeve around the arm.
-    const handX=x+28, handY=y-86-q*8;
-    fireFlameOrbit(ctx,handX,handY,17+q*8,12+q*5,-2.55,-.15,hot,.55+q*.3,6);
+    const q=holdCharge(p), [hx,hy]=handPosePoint(x,y,1,'us');
+    fireRing(ctx,hx,hy,18+q*5,11+q*3,hot,.58+q*.3,0,q*2);
     return;
   }
-  const f=fireRefFrame(p,4);
-  // 1: raise arm, no detached projectile.
-  if(f===1){
+  const {frame,u}=fireRefPhase(p,4), v=smoothFire(u);
+  const [hx,hy]=handPosePoint(x,y,1,'us');
+  if(frame===1){ return; }
+  if(frame===2){
+    const pulse=1+.06*Math.sin(u*REF_TAU);
+    fireRing(ctx,hx,hy,20*pulse,13*pulse,hot,.98,0,u*2);
     return;
   }
-  const handX=x+28, handY=y-92;
-  // 2: fire surrounds the hand/forearm without enclosing the arm itself.
-  if(f===2){
-    fireFlameOrbit(ctx,handX,handY,22,14,-2.7,.15,hot,.95,8);
-    flameShape(ctx,handX+7,handY-1,7,white,.7,-.5);
+  if(frame===3){
+    // It leaves the hand quickly, but begins at the hand and remains close for the start of the launch.
+    const launch=v;
+    fireRing(ctx,hx,hy,19-4*launch,12-3*launch,c,.85*(1-launch),0,u);
+    const fx=hx+7+32*launch, fy=hy-4-35*launch;
+    fireBlob(ctx,fx,fy,11+3*(1-launch),hot,.95,u*3);
+    for(let i=0;i<5;i++) fireRay(ctx,fx,fy,-2.55+i*.16,10+i*3,.55);
     return;
   }
-  // 3: the flame leaves the hand and launches upward. No line connects it.
-  if(f===3){
-    const fx=handX+10, fy=handY-26;
-    fireFlameOrbit(ctx,handX,handY,24,15,-2.9,.05,c,.65,7);
-    fireFlameOrbit(ctx,fx,fy,13,9,-2.6,.2,hot,.95,6);
-    for(let i=0;i<7;i++){
-      const a=-2.5+i*.13;
-      flameShape(ctx,fx+Math.cos(a)*15,fy+Math.sin(a)*10,4.5,hot,.65,a+Math.PI/2);
-    }
-    return;
-  }
-  // 4: detached fire has traveled farther and dissipates into sparks/flames.
-  const fx=handX+62, fy=handY-58;
-  for(let i=0;i<6;i++){
-    const a=-2.4+i*.18;
-    flameShape(ctx,fx+Math.cos(a)*13,fy+Math.sin(a)*9,4.5-i*.35,hot,.75-i*.08,a+Math.PI/2);
-  }
+  const launch=smoothFire(u);
+  const fx=hx+39+34*launch, fy=hy-40-26*launch;
+  fireBlob(ctx,fx,fy,12*(1-launch)+5,hot,.9*(1-.45*launch),u*4);
   for(let i=0;i<8;i++){
-    const a=-2.35+i*.2;
-    spark(ctx,fx+Math.cos(a)*(18+i*3),fy+Math.sin(a)*(12+i*2),1.7,c,.6);
+    const a=-2.55+i*.18;
+    fireRay(ctx,fx,fy,a,10+i*2,.55*(1-launch));
   }
 }
 
 function fireSideReference(ctx,x,y,p){
   const c='#FF5A16', hot='#FF9A22';
-  const f=fireRefFrame(p,4);
   if(p<0){
-    const q=holdCharge(p);
-    const elbowX=x+30, elbowY=y-44;
-    fireFlameOrbit(ctx,elbowX,elbowY,12+q*6,10+q*4,-2.2,.4,hot,.6+q*.3,6);
+    const q=holdCharge(p),[hx,hy]=handPosePoint(x,y,1,'ss');
+    fireRing(ctx,hx,hy,12+q*5,9+q*4,hot,.58+q*.3,-.3,q);
     return;
   }
-  // 1: twist/prepare the elbow. No projectile.
-  if(f===1){
+  const {frame,u}=fireRefPhase(p,4),v=smoothFire(u), hx=x+47,hy=y-45;
+  if(frame===1) return;
+  if(frame===2){
+    fireRing(ctx,hx,hy,14+4*v,10+3*v,hot,.95,-.25,u);
     return;
   }
-  // 2: flame wraps around the elbow itself.
-  if(f===2){
-    fireFlameOrbit(ctx,x+38,y-37,15,11,-2.4,.55,hot,.95,7);
+  if(frame===3){
+    fireRing(ctx,hx+8*v,hy-3*v,18+4*v,12+3*v,hot,1,-.2,u);
+    for(let i=0;i<5;i++) fireRay(ctx,hx+10*v,hy-3*v,-2.25+i*.12,8+i*2,.5);
     return;
   }
-  // 3: elbow strike connects; flame stays concentrated at elbow.
-  if(f===3){
-    fireFlameOrbit(ctx,x+48,y-40,20,14,-2.45,.65,hot,1,8);
-    flameShape(ctx,x+55,y-43,8,hot,.9,.2);
-    return;
-  }
-  // 4: impact has launched the target; fire dissipates behind the elbow.
   for(let i=0;i<8;i++){
-    const a=-.75+i*.18;
-    spark(ctx,x+65+Math.cos(a)*i*3,y-47+Math.sin(a)*i*4,1.8,hot,.65-i*.05);
+    const a=-.8+i*.18; fireRay(ctx,hx+20,hy,a,8+i*3,.52*(1-v));
   }
 }
 
 function fireDownReference(ctx,x,y,p){
-  const c='#FF5A16', hot='#FF9A22', dark='#2A0B04';
-  const f=fireRefFrame(p,4);
+  const hot='#FF9A22',dark='#160604';
   if(p<0){
-    const q=holdCharge(p);
-    const ox=x+20, oy=y-42+q*36;
-    dot(ctx,ox,oy,7+q*5,dark,.65);
-    flameShape(ctx,ox,oy,8+q*5,c,.8,.2);
+    const q=holdCharge(p),ox=x+24,oy=y-44+q*35;
+    fireBlob(ctx,ox,oy,6+q*3,dark,.7+q*.15,q);
     return;
   }
-  // 1: a small dark ember/fireball starts in front of the fighter.
-  if(f===1){
-    const ox=x+24, oy=y-44;
-    dot(ctx,ox,oy,7,dark,.9);
-    flameShape(ctx,ox,oy,7,hot,.95,.1);
+  const {frame,u}=fireRefPhase(p,4),v=smoothFire(u),ox=x+24;
+  if(frame===1){ fireBlob(ctx,ox,y-44,7,'#180504',.9,u); return; }
+  if(frame===2){
+    const oy=y-44+40*v;
+    fireBlob(ctx,ox,oy,8+3*v,'#180504',1,u);
     return;
   }
-  // 2: the fireball drops straight down to the feet.
-  if(f===2){
-    const ox=x+24, oy=y-6;
-    dot(ctx,ox,oy,10,dark,.95);
-    flameShape(ctx,ox,oy,9,hot,1,.15);
+  if(frame===3){
+    fireLineBurst(ctx,ox,y-3,18+46*v,1,u*5);
     return;
   }
-  // 3: immediate radial eruption directly underneath.
-  if(f===3){
-    fireLineBurst(ctx,x+24,y-4,42,1);
-    flameShape(ctx,x+24,y-4,13,hot,1,0);
-    return;
-  }
-  // 4: lines continue outward and begin to dissipate.
-  fireLineBurst(ctx,x+24,y-4,62,.62);
-  for(let i=0;i<8;i++){
-    const a=i/8*REF_TAU;
-    spark(ctx,x+24+Math.cos(a)*68,y-4+Math.sin(a)*45,1.5,hot,.5);
-  }
+  fireLineBurst(ctx,ox,y-3,60+12*v,.72*(1-.3*v),u*6);
 }
 
 function fireUpHeavyReference(ctx,x,y,p){
-  const c='#FF5A16', hot='#FF9A22';
-  const f=fireRefFrame(p,4);
-  if(p<0){
-    const q=holdCharge(p);
-    const cy=y-94;
-    fireFlameOrbit(ctx,x,cy,30+q*8,13+q*4,0,REF_TAU,hot,.5+q*.35,10);
-    return;
-  }
-  if(f===1){
-    // Both hands rise toward the future wheel.
-    flameShape(ctx,x,y-105,7,hot,.55,-Math.PI/2);
-    return;
-  }
-  if(f===2 || f===3){
-    const cy=y-96, r=58;
-    fireFlameOrbit(ctx,x,cy,r,r*.42,0,REF_TAU,c,.95,12);
-    for(let i=0;i<10;i++){
-      const a=i/10*REF_TAU;
-      flameShape(ctx,x+Math.cos(a)*r,cy+Math.sin(a)*r*.42,5.5,hot,.9,a+Math.PI/2);
-    }
-    return;
-  }
-  // 4: the wheel breaks apart into independent fire pieces. No continuous line.
-  const cy=y-96, r=58;
-  for(let i=0;i<10;i++){
-    const a=i/10*REF_TAU;
-    const rr=r+18;
-    const px=x+Math.cos(a)*rr, py=cy+Math.sin(a)*rr*.55;
-    flameShape(ctx,px,py,5.5,hot,.7,a+Math.PI/2);
-    spark(ctx,px+Math.cos(a)*8,py+Math.sin(a)*8,1.7,c,.55);
+  const c='#FF5A16',hot='#FF9A22';
+  if(p<0){ const q=holdCharge(p); fireRing(ctx,x,y-94,30+q*6,13+q*3,hot,.5+q*.3,0,q); return; }
+  const {frame,u}=fireRefPhase(p,4),v=smoothFire(u),cy=y-96;
+  if(frame===1){ flameShape(ctx,x-5,y-104,7,hot,.5,-Math.PI/2); flameShape(ctx,x+5,y-104,7,hot,.5,-Math.PI/2); return; }
+  if(frame===2){ fireRing(ctx,x,cy,58,25,c,.98,0,u*2); return; }
+  if(frame===3){ fireRing(ctx,x,cy,58+3*v,25+2*v,c,.98,0,u*3); return; }
+  for(let i=0;i<11;i++){
+    const a=i/11*REF_TAU, rr=58+18*v;
+    const px=x+Math.cos(a)*rr,py=cy+Math.sin(a)*rr*.55;
+    fireBlob(ctx,px,py,4.5+2*v,hot,.75*(1-.2*v),i);
   }
 }
 
 function fireDownHeavyReference(ctx,x,y,p){
-  const c='#FF5A16', hot='#FF9A22';
-  const f=fireRefFrame(p,6);
-  if(p<0){
-    const q=holdCharge(p);
-    // Hold mirrors the crouch/touch-the-ground setup.
-    if(q>.25) fireLineBurst(ctx,x+25,y,25*q,.25+q*.25);
+  const hot='#FF9A22';
+  if(p<0){ const q=holdCharge(p); if(q>.45) fireLineBurst(ctx,x+24,y,20*q,.22+q*.2,q*4); return; }
+  const {frame,u}=fireRefPhase(p,6),v=smoothFire(u),ox=x+24,oy=y-1;
+  if(frame===1){ return; }
+  if(frame===2){
+    // Contact is a short, visible ground spark before the full eruption.
+    fireRay(ctx,ox,oy,Math.PI*.98,16,.55); fireRay(ctx,ox,oy,.02,16,.55); fireRay(ctx,ox,oy,-Math.PI/2,10,.4); return;
+  }
+  if(frame===3){ fireLineBurst(ctx,ox,oy,28+34*v,1,u*5); return; }
+  if(frame===4){ fireLineBurst(ctx,ox,oy,62+10*v,1,u*5); return; }
+  if(frame===5){
+    fireLineBurst(ctx,ox,oy,72,.86,u*7);
+    for(let i=0;i<8;i++){const a=i/8*REF_TAU;fireBlob(ctx,ox+Math.cos(a)*42,oy+Math.sin(a)*26,6,hot,.78,i);}
     return;
   }
-  if(f===1){
-    // Standing setup; no fire yet.
-    return;
-  }
-  if(f===2){
-    // Bend down and touch the ground; the first tiny lines appear at contact.
-    fireLineBurst(ctx,x+24,y,24,.45);
-    return;
-  }
-  if(f===3){
-    // The full fire-line explosion shoots in every direction.
-    fireLineBurst(ctx,x+24,y,42,.95);
-    return;
-  }
-  if(f===4 || f===5){
-    // Eruptions continue in every direction around the contact point.
-    fireLineBurst(ctx,x+24,y,58,.95);
-    for(let i=0;i<8;i++){
-      const a=i/8*REF_TAU;
-      flameShape(ctx,x+24+Math.cos(a)*42,y+Math.sin(a)*25,6,hot,.8,a+Math.PI/2);
-    }
-    return;
-  }
-  // 6: the eruption is fading while the hero returns upright.
-  fireLineBurst(ctx,x+24,y,72,.35);
-  for(let i=0;i<10;i++){
-    const a=i/10*REF_TAU;
-    spark(ctx,x+24+Math.cos(a)*76,y+Math.sin(a)*45,1.5,c,.35);
-  }
+  fireLineBurst(ctx,ox,oy,76,.35*(1-v),u*8);
 }
 
 function fireSideHeavyReference(ctx,x,y,p){
-  const c='#FF5A16', hot='#FF9A22';
-  const f=fireRefFrame(p,4);
-  if(p<0){
-    const q=holdCharge(p);
-    const hx=x+48, hy=y-46;
-    // Fireball grows around the hand; it never becomes a connected beam.
-    dot(ctx,hx,hy,10+q*13,hot,.7);
-    fireFlameOrbit(ctx,hx,hy,10+q*11,8+q*7,-2.8,.4,hot,.65+q*.25,7);
+  const hot='#FF9A22';
+  if(p<0){ const q=holdCharge(p),hx=x+48,hy=y-45; fireBlob(ctx,hx,hy,9+q*12,hot,.68+q*.25,q); fireRing(ctx,hx,hy,10+q*10,7+q*6,hot,.65+q*.2,-.2,q); return; }
+  const {frame,u}=fireRefPhase(p,4),v=smoothFire(u),hx=x+48,hy=y-45;
+  if(frame===1){
+    // Hand extends; the fire remains glued to the hand.
+    fireBlob(ctx,hx,hy,7+3*v,hot,.8,u); fireRing(ctx,hx,hy,9+2*v,7+2*v,hot,.7,-.15,u); return;
+  }
+  if(frame===2){
+    // Fireball grows around the hand before it ever becomes a projectile.
+    const r=10+12*v; fireBlob(ctx,hx,hy,r,hot,.98,u*2); fireRing(ctx,hx,hy,r+4,r*.62,hot,.85,-.15,u*2); return;
+  }
+  if(frame===3){
+    // Launch starts from the hand; it travels only a little at first, then accelerates.
+    const d=10+55*v; const cx=hx+d,cy=hy-2*v; const r=22+4*v;
+    fireBlob(ctx,cx,cy,r,hot,1,u*3); fireRing(ctx,cx,cy,r+4,r*.62,hot,.85,-.1,u*3);
+    for(let i=0;i<6;i++) fireRay(ctx,cx-r*.75,cy,-.18+i*.07,16+i*3,.4);
     return;
   }
-  const hx1=x+47, hy1=y-45;
-  if(f===1){
-    // Hand extends first; a small fire starts around the fist.
-    fireFlameOrbit(ctx,hx1,hy1,10,7,-2.7,.35,hot,.75,6);
-    return;
-  }
-  if(f===2){
-    // Fireball encompasses the hand and grows around it.
-    fireFlameOrbit(ctx,hx1,hy1,18,13,-2.7,.45,hot,.95,8);
-    return;
-  }
-  if(f===3){
-    // The fireball launches forward as a detached, growing projectile.
-    const cx=x+90, cy=y-48, r=22;
-    fireFlameOrbit(ctx,cx,cy,r,r*.7,-2.8,.55,hot,.95,9);
-    for(let i=0;i<6;i++){
-      const a=-.9+i*.18;
-      flameShape(ctx,cx+Math.cos(a)*25,cy+Math.sin(a)*17,5.5,hot,.8,a+Math.PI/2);
-    }
-    return;
-  }
-  // 4: detached projectile has traveled forward and dissipates.
-  const cx=x+142, cy=y-48;
-  for(let i=0;i<7;i++){
-    const a=-.85+i*.2;
-    flameShape(ctx,cx+Math.cos(a)*(10+i*2),cy+Math.sin(a)*(7+i),4.5,hot,.65-i*.06,a+Math.PI/2);
-    spark(ctx,cx+12+i*4,cy+(i-3)*3,1.5,c,.45);
-  }
+  const d=68+70*v,cx=hx+d,cy=hy-4*v,r=12*(1-v)+5;
+  fireBlob(ctx,cx,cy,r,hot,.9*(1-.45*v),u*4);
+  for(let i=0;i<8;i++) fireRay(ctx,cx,cy,-.2+i*.06,10+i*2,.5*(1-v));
 }
 
 function fireAttack(ctx,x,y,p,move){
