@@ -29,13 +29,20 @@ const GEN1_MOVE_SPECS = {
     super:{name:'Thunder Strike',shape:'bottomBolt',range:90,knockback:'radialUp',duration:42,damage:38},
   },
   g1_fire: {
-    us:{name:'Flaming Hook',shape:'hook',range:94,knockback:'upContact',duration:24,damage:17},
-    ds:{name:'Ember Stamp',shape:'stampFlames',range:60,knockback:'radialContact',duration:22,damage:16},
-    ss:{name:'Flaming Elbow',shape:'elbow',range:104,knockback:'forwardContact',duration:20,damage:16},
-    upHeavy:{name:'Spinning Fire Wheel',shape:'fireWheel',range:132,knockback:'upContact',duration:28,damage:25},
-    dh:{name:'Burning Cracks',shape:'cracks',range:126,knockback:'radialContact',duration:28,damage:22},
-    sh:{name:'Flaming Gauntlet',shape:'gauntlet',range:118,knockback:'forwardContact',duration:26,damage:25},
-    super:{name:'Fireball Detonation',shape:'explosion',range:160,knockback:'radialContact',duration:48,damage:42},
+    // Up Signature — only the hook is active on the snap/connection frame.
+    us:{name:'Flaming Hook',shape:'hook',range:94,knockback:'upContact',duration:24,damage:17,description:'Frame 2 forms the hook; frame 3 is the connection/launch; no body-sized hitbox.'},
+    // Down Signature — only the four-point ember burst is active.
+    ds:{name:'Ember Stamp',shape:'stampFlames',range:60,knockback:'radialContact',duration:22,damage:16,description:'The ember is cosmetic until the four flames pop out beneath the fighter.'},
+    // Side Signature — elbow-only contact, directed along the strike.
+    ss:{name:'Flaming Elbow',shape:'elbow',range:104,knockback:'forwardContact',duration:20,damage:16,description:'The hitbox stays on the flaming elbow during the strike and follow-through.'},
+    // Up Heavy — collision follows the outer circumference of the rising wheel.
+    upHeavy:{name:'Spinning Fire Wheel',shape:'fireWheel',range:132,knockback:'upContact',duration:28,damage:25,description:'Outer wheel edge only; bottom contacts launch upward, side contacts launch diagonally.'},
+    // Down Heavy — only the erupting ends of the five cracks are active.
+    dh:{name:'Burning Cracks',shape:'cracks',range:126,knockback:'radialContact',duration:28,damage:22,description:'Five cracks travel first; hitboxes appear only when their ends erupt upward.'},
+    // Side Heavy — gauntlet follows the hook, with the knuckles as the strongest contact area.
+    sh:{name:'Flaming Gauntlet',shape:'gauntlet',range:118,knockback:'forwardContact',duration:26,damage:25,description:'The gauntlet sweeps with the punch; the forward knuckles are the primary contact.'},
+    // Super — projectile is cosmetic until it reaches the short-distance detonation point.
+    super:{name:'Fireball Detonation',shape:'explosion',range:160,knockback:'radialContact',duration:48,damage:42,description:'The fireball forms and compresses, then detonates a short distance ahead in a concentrated circular blast.'},
   },
   g1_water: {
     us:{name:'Water Ring',shape:'waterRing',range:106,knockback:'velocity',duration:24,damage:16},
@@ -234,13 +241,13 @@ export function getActiveSpecHitboxes(attacker) {
     case 'threeBolts': { const top = -38 - 150*q; for(const dx of [24,82,140]) P([[dx-10,-38],[dx+10,-38],[dx+10,top],[dx-10,top]]); break; }
     case 'orbitBall': { const a=-Math.PI/2+q*TAU; C(20+Math.cos(a)*94,-72+Math.sin(a)*55,13); break; }
     case 'bottomBolt': { if(q < .35) break; P([[-15,-95],[15,-95],[9,-42],[14,-10],[-14,-10],[-9,-42]]); break; }
-    case 'hook': { if(q<.16 || q>.82) break; const u=Math.max(0,Math.min(1,(q-.16)/.66)); const a=-2.45+u*2.0, r=42+u*8; const ex=18+Math.cos(a)*r, ey=-48+Math.sin(a)*r; K(18,-48,18+r*.50*Math.cos(a*.55),-48+r*.50*Math.sin(a*.55),9); K(18+r*.50*Math.cos(a*.55),-48+r*.50*Math.sin(a*.55),ex,ey,9); C(ex,ey,12); break; }
-    case 'stampFlames': { for(let i=0;i<4;i++) C((i-1.5)*13,-9-Math.abs(i-1.5)*4,11); break; }
-    case 'elbow': { K(20,-42,20+q*48,-42,14); break; }
-    case 'fireWheel': { const r=70; for(let i=0;i<14;i++){const a=i/14*TAU+q*TAU; C(Math.cos(a)*r,-92+Math.sin(a)*r,11);} break; }
-    case 'cracks': { if(q<.2) break; for(let i=0;i<5;i++){const dx=(i-2)*30*q; C(dx,-34-(i%2)*4,13);} break; }
-    case 'gauntlet': { const ang=-.8+q*1.7, cx=28+Math.cos(ang)*42, cy=-42+Math.sin(ang)*42; K(8,-42,cx,cy,15); C(cx,cy,20); break; }
-    case 'explosion': { if(q<.5) break; const e=(q-.5)/.5; C(78,-48,Math.min(88,34+e*54)); break; }
+    case 'hook': { if(q<.42 || q>.72) break; const u=Math.max(0,Math.min(1,(q-.42)/.30)); const a=-2.45+u*2.15, r=32+u*13; const ex=18+Math.cos(a)*r, ey=-40+Math.sin(a)*r; K(18,-40,18+r*.45*Math.cos(a*.55),-40+r*.45*Math.sin(a*.55),7); K(18+r*.45*Math.cos(a*.55),-40+r*.45*Math.sin(a*.55),ex,ey,8); C(ex,ey,10); break; }
+    case 'stampFlames': { if(q<.48 || q>.68) break; const r=8+Math.min(1,(q-.48)/.20)*12; for(let i=0;i<4;i++){ const a=i*Math.PI/2; C(12+Math.cos(a)*r,-2+Math.sin(a)*r,8); } break; }
+    case 'elbow': { if(q<.34 || q>.68) break; const u=(q-.34)/.34; const ex=20+u*58, ey=-44-Math.sin(u*Math.PI)*10; K(18,-42,ex,ey,11); C(ex,ey,13); break; }
+    case 'fireWheel': { if(q<.24 || q>.76) break; const u=(q-.24)/.52, cy=-70-u*72, r=52; const rot=u*TAU*.9; for(let i=0;i<18;i++){const a=i/18*TAU+rot; C(Math.cos(a)*r,cy+Math.sin(a)*r*.58,9); } break; }
+    case 'cracks': { if(q<.50 || q>.86) break; const u=(q-.50)/.36; const dirs=[-2.65,-2.05,-1.57,-1.09,-.49]; for(let i=0;i<5;i++){const d=dirs[i], len=58*u; const ex=Math.cos(d)*len, ey=4+Math.sin(d)*len*.45; const erupt=Math.max(0,Math.min(1,(u-(i*.025))/.55)); if(erupt>.05) C(ex,ey-18*erupt,11+4*erupt); } break; }
+    case 'gauntlet': { if(q<.28 || q>.80) break; const u=(q-.28)/.52, ang=-2.15+u*2.05, r=40+20*Math.min(1,u+.15), cx=24+Math.cos(ang)*r, cy=-45+Math.sin(ang)*r; K(8,-42,cx,cy,12); C(cx,cy,16); if(u>.55) C(cx+10,cy-4,20); break; }
+    case 'explosion': { if(q<.50 || q>.88) break; const e=(q-.50)/.38; C(78,-48,Math.min(78,30+e*48)); break; }
     case 'waterRing': { if(q<.16 || q>.72) break; const u=Math.max(0,Math.min(1,(q-.16)/.56)); const tx=30+u*110, ty=-55-u*70+Math.sin(u*Math.PI)*20; C(tx,ty,14); break; }
     case 'twinSplashes': { const sy=-8-62*q; C(-42,sy,11); C(42,sy,11); break; }
     case 'whipTip': { C(16+72*q,-42-Math.sin(q*Math.PI)*26,10); break; }
