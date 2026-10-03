@@ -57,6 +57,57 @@ function particles(ctx, x, y, color, p, count, radius, spread = TAU) {
   }
 }
 
+// Thunder charging/hold frames. These are deliberately separate from the
+// released Thunder animations below: the released animation is unchanged.
+// While the button is held, the move is only a translucent visual preview and
+// has no hitbox because fighter.js does not execute the attack until release.
+function thunderHold(ctx, x, y, move, q) {
+  const c = '#FFFF44';
+  const charge = Math.max(0, Math.min(1, q));
+  const a = 0.16 + charge * 0.22;
+  const pulse = 1 + Math.sin(charge * Math.PI * 6) * 0.04;
+  ctx.save();
+  ctx.globalAlpha = a;
+
+  if (move === 'us') {
+    const cy = y - 112, rx = 86 * pulse, ry = 34 * pulse;
+    ctx.strokeStyle = c; ctx.lineWidth = 2.5; glow(ctx, c, 12);
+    ctx.setLineDash([7, 8]);
+    ctx.beginPath(); ctx.ellipse(x, cy, rx, ry, 0, 0, REF_TAU); ctx.stroke();
+    const theta = -Math.PI / 2 + charge * REF_TAU;
+    dot(ctx, x + Math.cos(theta) * rx, cy + Math.sin(theta) * ry, 5 + charge * 2, '#FFFFFF', .8);
+  } else if (move === 'ds') {
+    dot(ctx, x - 22, y - 45, 8 + charge * 3, '#FFFFFF', .8);
+    dot(ctx, x + 22, y - 45, 8 + charge * 3, '#FFFFFF', .8);
+    dot(ctx, x - 22, y - 45, 5 + charge * 2, c, .9);
+    dot(ctx, x + 22, y - 45, 5 + charge * 2, c, .9);
+    ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.setLineDash([5, 7]);
+    ctx.beginPath(); ctx.arc(x, y - 24, 18 + charge * 35, Math.PI, REF_TAU); ctx.stroke();
+  } else if (move === 'ss' || move === 'heavy') {
+    const len = move === 'heavy' ? 100 : 68;
+    ctx.strokeStyle = c; ctx.lineWidth = move === 'heavy' ? 5 : 3;
+    ctx.setLineDash([8, 9]);
+    glow(ctx, c, 14);
+    ctx.beginPath(); ctx.moveTo(x + 24, y - 50);
+    ctx.lineTo(x + 24 + len * (0.25 + charge * 0.75), y - 50); ctx.stroke();
+    lineBolt(ctx, x + 24 + len * (0.15 + charge * .5), y - 50, len * .35, move === 'heavy' ? 34 : 24, c, .55);
+  } else if (move === 'uh' || move === 'upHeavy') {
+    for (const dx of [24, 82, 140]) {
+      const top = y - 38 - (65 + charge * 85);
+      lineBolt(ctx, x + dx, top, 22, 42, c, .6);
+    }
+  } else if (move === 'dh' || move === 'downHeavy') {
+    const r = 94;
+    ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.setLineDash([7, 9]);
+    ctx.beginPath(); ctx.arc(x + 20, y - 72, r, 0, REF_TAU); ctx.stroke();
+    const ang = -Math.PI / 2 + charge * REF_TAU;
+    dot(ctx, x + 20 + Math.cos(ang) * r, y - 72 + Math.sin(ang) * r * .6, 10, c, .75);
+  }
+
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
 // Thunder Up Signature — deliberately follows the supplied 12-frame reference:
 // 1 startup, 2 circle begins, 3-8 moving dot around the ring, 9 launch, 10
 // circle continues, 11 near-end, 12 recovery. The hitbox is NOT the circle.
@@ -443,7 +494,9 @@ function iceSuper(ctx,x,y,p){const c='#79DFFF',q=attackP(p),a=.2+.8*Math.sin(q*M
 export function drawGen1Attack(ctx,x,y,color,p,facing,charId,move){
   ctx.save(); ctx.translate(x,y); ctx.scale(facing<0?-1:1,1);
   if(charId==='g1_thunder'){
-    if(move==='us') thunderUp(ctx,0,0,p); else if(move==='ds') thunderDown(ctx,0,0,Math.max(0,p)); else if(move==='ss') thunderSide(ctx,0,0,Math.max(0,p),false); else if(move==='sh') thunderSide(ctx,0,0,Math.max(0,p),true); else if(move==='uh'||move==='upHeavy') thunderUpHeavy(ctx,0,0,Math.max(0,p)); else if(move==='dh') thunderDownHeavy(ctx,0,0,Math.max(0,p));
+    if(p < 0){
+      thunderHold(ctx,0,0,move,Math.max(0,Math.min(1,-p-1)));
+    } else if(move==='us') thunderUp(ctx,0,0,p); else if(move==='ds') thunderDown(ctx,0,0,Math.max(0,p)); else if(move==='ss') thunderSide(ctx,0,0,Math.max(0,p),false); else if(move==='sh'||move==='heavy') thunderSide(ctx,0,0,Math.max(0,p),true); else if(move==='uh'||move==='upHeavy') thunderUpHeavy(ctx,0,0,Math.max(0,p)); else if(move==='dh'||move==='downHeavy') thunderDownHeavy(ctx,0,0,Math.max(0,p));
   } else if(charId==='g1_fire') fireAttack(ctx,0,0,p,move);
   else if(charId==='g1_water') waterAttack(ctx,0,0,p,move);
   else if(charId==='g1_grass') grassAttack(ctx,0,0,p,move);

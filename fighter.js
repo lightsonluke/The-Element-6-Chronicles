@@ -1275,6 +1275,37 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     !fighter.trapped;
 
   if (canAct) {
+    // Recovery takes priority over Gen I's signature-hold capture.
+    // Up + Signature while airborne is the dedicated recovery move, so it must
+    // execute immediately instead of being intercepted by the 3-second hold
+    // system. Grounded Up+Signature still uses the normal Gen I hold behavior.
+    if (!fighter.grounded && inputs.sig && inputs.up &&
+        fighter.recoveryCooldown <= 0 && fighter.recoveryAirUses < 1) {
+      inputs._sigConsumed = true;
+      fighter.state = 'attacking';
+      const upSig = fighter.char.signatures?.up;
+      const recoveryDuration = Math.min(upSig?.duration || 16, 28);
+      fighter.attackTimer = recoveryDuration;
+      fighter.attackData = {
+        ...(upSig || {}),
+        name: upSig?.name || 'Recovery',
+        type: 'recovery',
+        duration: recoveryDuration,
+        color: upSig?.color || fighter.char.color,
+        sigType: 'up',
+        hitApplied: false,
+        progress: 0,
+        isRecovery: true,
+        recoveryAnimationKey: 'us',
+      };
+      fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
+      fighter.vy = -14;
+      fighter.hitstun = 0;
+      fighter.recoveryCooldown = 40 * (fighter.statControlRecoveryMul || 1);
+      fighter.recoveryAirUses++;
+      fighter.moveStats.recovery++;
+    }
+
     // Gen I captures the attack and direction on the initial button-down before
     // jump/movement processing. This prevents Up+Signature from becoming a
     // jump first, and guarantees the held move cannot be changed mid-charge.
@@ -1510,38 +1541,8 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       }
       inputs._sigConsumed = true;
 
-      // Recovery attack: sig + up in air = launch up with damage + knockback (air-only, cooldown-gated AND limited to once per airtime so it can't be spammed to fly infinitely)
-      if (!fighter.grounded && inputs.up && fighter.recoveryCooldown <= 0 && fighter.recoveryAirUses < 1) {
-        fighter.state = 'attacking';
-
-        // Recovery intentionally uses the character's exact Up Signature move data.
-        // This keeps the recovery animation, timing, hitbox profile, damage/range
-        // metadata, and per-character Gen 1 animation identical to Up Signature.
-        // The only recovery-specific behavior is the upward launch/cooldown.
-        const upSig = fighter.char.signatures?.up;
-        const recoveryDuration = Math.min(upSig?.duration || 16, 28);
-        fighter.attackTimer = recoveryDuration;
-        fighter.attackData = {
-          ...(upSig || {}),
-          name: upSig?.name || 'Recovery',
-          type: 'recovery',
-          duration: recoveryDuration,
-          color: upSig?.color || fighter.char.color,
-          sigType: 'up',
-          hitApplied: false,
-          progress: 0,
-          isRecovery: true,
-          recoveryAnimationKey: 'us',
-        };
-        fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
-        fighter.vy = -14;
-        fighter.hitstun = 0;
-        fighter.recoveryCooldown = 40 * (fighter.statControlRecoveryMul || 1);
-        fighter.recoveryAirUses++;
-        fighter.moveStats.recovery++;
-      }
       // Aerial attack: sig in air without up
-      else if (!fighter.grounded) {
+      if (!fighter.grounded) {
         if (fighter.normalCooldown <= 0) {
           fighter.state = 'attacking';
           fighter.attackTimer = 18;
