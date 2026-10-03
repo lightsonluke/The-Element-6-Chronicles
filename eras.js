@@ -85,13 +85,13 @@ const G1_CHARS = [
     powerTitle: 'Flame', powerDescription: 'Cracks a line of flowing fire forward in the facing direction, damaging and stunning the opponent briefly.',
     weapon: 'Flame Fists', stats: { speed: 7, power: 8, defense: 6, utility: 6, control: 8 },
     lore: 'One of the five original heroes. An aggressive fighter who overwhelmed enemies with relentless flame.',
-    heavyAttack: { name: 'Flaming Gauntlet', desc: 'A flaming gauntlet follows the punch, with the strongest hit around the knuckles.', damage: 25, range: 125, duration: 12, color: '#FF4400', type: 'gen1SideHeavy', knockback: 1.0 },
+    heavyAttack: { name: 'Flaming Gauntlet', desc: 'Reference-sheet side heavy: pull the arm back, form a flaming gauntlet, drive it forward, then recover', damage: 25, range: 124, duration: 12, color: '#FF5A16', type: 'gen1SideHeavy', knockback: 1.25 },
     signatures: {
-      side: { name: 'Flaming Elbow', desc: 'A short flaming elbow strike in the facing direction.', duration: 12, damage: 16, range: 108, color: '#FF4400', type: 'gen1SideSignature' },
-      up: { name: 'Flaming Hook', desc: 'A small flaming hook curls upward around the fist.', duration: 12, damage: 17, range: 112, color: '#FF8800', type: 'gen1UpSignature' },
-      down: { name: 'Ember Stamp', desc: 'A glowing ember bursts into a four-point flame directly beneath the fighter.', duration: 12, damage: 16, range: 76, color: '#CC2200', type: 'gen1DownSignature' },
+      side: { name: 'Flaming Elbow', desc: 'Reference-sheet four-frame flaming elbow strike', duration: 12, damage: 16, range: 112, color: '#FF5A16', type: 'gen1SideSignature' },
+      up: { name: 'Flaming Hook', desc: 'Reference-sheet four-frame flaming hook', duration: 12, damage: 17, range: 100, color: '#FF5A16', type: 'gen1UpSignature' },
+      down: { name: 'Four-Point Ember Burst', desc: 'Reference-sheet four-frame ember burst', duration: 12, damage: 16, range: 64, color: '#FF5A16', type: 'gen1DownSignature' },
     },
-    superMove: { name: 'Fireball Detonation', desc: 'Forms a giant fireball, punches it forward, then detonates it in a concentrated explosion.', duration: 21, damage: 42, color: '#FF4400' },
+    superMove: { name: 'Fireball Detonation', desc: 'Reference-sheet seven-frame compressed fireball and concentrated explosion', duration: 21, damage: 42, color: '#FF5A16' },
   },
   {
     id: 'g1_water', name: 'Water Hero', title: 'The First Tide', era: 'g1', role: 'Hero',
