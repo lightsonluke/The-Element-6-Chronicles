@@ -83,7 +83,7 @@ const G1_CHARS = [
     color: '#FF4400', secondaryColor: '#FF8800', splitColor: true,
     appearance: { head: '#FF4400', torso: '#FF8800', armL: '#FF4400', armR: '#FF8800', legL: '#FF8800', legR: '#FF4400' },
     powerTitle: 'Flame', powerDescription: 'Controls precise flame attacks built around hand-held fire, radial eruptions, detached fireballs, and a compressed super fireball.',
-    weapon: 'Flame Fists', stats: { speed: 7, power: 8, defense: 6, utility: 6, control: 8 },
+    weapon: 'Flame Fists', stats: { speed: 7, power: 8, defense: 4, utility: 6, control: 10 },
     lore: 'One of the five original heroes. An aggressive fighter who overwhelmed enemies with relentless flame.',
     heavyAttack: { name: 'Hand Fireball Launch', desc: 'Extends a hand, grows a fireball around it, launches the fireball forward, then dissipates', damage: 25, range: 160, duration: 42, color: '#FF4400', type: 'fireHandBall', knockback: 1.4 },
     signatures: {
