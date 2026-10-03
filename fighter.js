@@ -1014,7 +1014,7 @@ function startGen1Hold(fighter, button, sigType, wasAirborne = false, wasGrounde
   fighter.attackData = {
     name: 'Charging', type: 'attackHold', sigType,
     color: fighter.char.color, progress: 0, holding: true,
-    holdProgress: 0, hitApplied: false, duration: 1,
+    holdProgress: 0, holdCharge: 0, hitApplied: false, duration: 1,
     isHeavy: button === 'heavy', isSuper: false,
   };
 }
@@ -1046,6 +1046,9 @@ function executeGen1HeldAttack(fighter, hold) {
     progress: 0,
     holding: false,
     holdProgress: 1,
+    // Preserve the real amount of time this attack was charged. 0 = instant release,
+    // 1 = the full 3-second charge. This is used by applyHit() for the damage bonus.
+    holdCharge: Math.min(1, hold.frames / hold.maxFrames),
     isHeavy,
   };
   if (!isHeavy && sigType === 'up' && hold.wasAirborne) {
@@ -1241,7 +1244,10 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     const released = !inputs[h.button];
     const forced = h.frames >= h.maxFrames;
     const hp = Math.min(1, h.frames / h.maxFrames);
-    if (fighter.attackData) fighter.attackData.holdProgress = hp;
+    if (fighter.attackData) {
+      fighter.attackData.holdProgress = hp;
+      fighter.attackData.holdCharge = hp;
+    }
     if (released || forced) {
       executeGen1HeldAttack(fighter, h);
       if (h.button === 'sig') inputs._sigConsumed = false;
@@ -2069,8 +2075,13 @@ export function applyHit(attacker, defender) {
   defender.slowTimer = 0; defender.speedMul = undefined; // getting hit frees you from slows / glue
   defender._controlBroken = true; // flag: expire control-effect projectiles (vines, ice, bubble, marionette, glue)
 
-  // Power stat scales damage up; defense stat + active shields reduce it
-  const rawDmg = (attacker.attackData.damage || 10) * (attacker.damageBoost || 1) * (attacker.statPowerMul || 1);
+  // Power stat scales damage up; defense stat + active shields reduce it.
+  // Charged Gen 1 attacks gain a small damage bonus based on how long they were
+  // held: instant release gets the normal damage, while a full 3-second charge
+  // gets +25%. The bonus scales smoothly in between.
+  const holdCharge = Math.max(0, Math.min(1, Number(attacker.attackData.holdCharge) || 0));
+  const holdDamageMul = 1 + holdCharge * 0.25;
+  const rawDmg = (attacker.attackData.damage || 10) * holdDamageMul * (attacker.damageBoost || 1) * (attacker.statPowerMul || 1);
   const totalReduction = (defender.shieldAmount || 0) + (defender.statDefenseReduction || 0);
   const dmg = rawDmg * Math.max(0.1, 1 - totalReduction);
   // Super-only mode: non-super attacks deal no damage
