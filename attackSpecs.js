@@ -38,13 +38,13 @@ const GEN1_MOVE_SPECS = {
     super:{name:'Fireball Detonation',shape:'explosion',range:160,knockback:'radialContact',duration:48,damage:42},
   },
   g1_water: {
-    us:{name:'Water Ring',shape:'waterRing',range:145,knockback:'waterRingTravel',duration:20,damage:16},
-    ds:{name:'Twin Splashes',shape:'twinSplashes',range:105,knockback:'waterSplashSide',duration:20,damage:17},
-    ss:{name:'Water Whip Tip',shape:'whipTip',range:135,knockback:'forwardContact',duration:20,damage:16},
-    upHeavy:{name:'Spiral Water Ribbon',shape:'waterRibbon',range:155,knockback:'upContact',duration:24,damage:25},
-    dh:{name:'Bouncing Water Sphere',shape:'waterBounce',range:125,knockback:'waterBounce',duration:24,damage:22},
-    sh:{name:'Water Crescent',shape:'crescent',range:145,knockback:'waterCrescent',duration:26,damage:25},
-    super:{name:'Collapse Ring',shape:'collapseRing',range:170,knockback:'radialUp',duration:42,damage:40},
+    us:{name:'Water Ring',shape:'waterRing',range:150,knockback:'velocity',duration:24,damage:16},
+    ds:{name:'Twin Splashes',shape:'twinSplashes',range:105,knockback:'splitSplash',duration:24,damage:17},
+    ss:{name:'Water Whip Tip',shape:'whipTip',range:130,knockback:'forwardContact',duration:24,damage:16},
+    upHeavy:{name:'Spiral Water Ribbon',shape:'waterRibbon',range:165,knockback:'upContact',duration:24,damage:25},
+    dh:{name:'Bouncing Water Sphere',shape:'waterBounce',range:125,knockback:'bounceTwoStage',duration:24,damage:22},
+    sh:{name:'Water Crescent',shape:'crescent',range:150,knockback:'crescentContact',duration:30,damage:25},
+    super:{name:'Collapse Ring',shape:'collapseRing',range:190,knockback:'waterSuper',duration:42,damage:40},
   },
   g1_grass: {
     us:{name:'Leaf Propeller',shape:'propellerLeaves',range:78,knockback:'up',duration:24,damage:16},
@@ -242,57 +242,46 @@ export function getActiveSpecHitboxes(attacker) {
     case 'gauntlet': { const ang=-.8+q*1.7, cx=28+Math.cos(ang)*42, cy=-42+Math.sin(ang)*42; K(8,-42,cx,cy,15); C(cx,cy,20); break; }
     case 'explosion': { if(q<.5) break; const e=(q-.5)/.5; C(78,-48,Math.min(88,34+e*54)); break; }
     case 'waterRing': {
-      if(q<.34 || q>.9) break;
-      const u=Math.max(0,Math.min(1,(q-.34)/.56));
-      const tx=26+u*112, ty=-54-u*66+Math.sin(u*Math.PI)*17;
-      const rx=26-2*u, ry=11-1*u;
-      for(let i=0;i<10;i++){const a=i/10*TAU; C(tx+Math.cos(a)*rx,ty+Math.sin(a)*ry,6);}
-      break;
+      if(q<.02 || q>.92) break;
+      const u=Math.max(0,Math.min(1,(q-.02)/.90));
+      const k=[[22,-43],[34,-76],[84,-116],[116,-122]];
+      const z=u*(k.length-1), i=Math.min(k.length-2,Math.floor(z)), t=z-i, e=t*t*(3-2*t);
+      const tx=k[i][0]+(k[i+1][0]-k[i][0])*e, ty=k[i][1]+(k[i+1][1]-k[i][1])*e;
+      C(tx,ty,14); break;
     }
     case 'twinSplashes': {
-      if(q<.22 || q>.9) break;
-      const u=Math.max(0,Math.min(1,(q-.22)/.68));
-      const h=18+38*Math.sin(Math.PI*u);
-      C(-28-24*u,-5-h,11); C(28+24*u,-5-h,11);
-      C(-20-18*u,-8-h*.55,8); C(20+18*u,-8-h*.55,8);
-      break;
+      if(q<.10) break;
+      const u=Math.max(0,Math.min(1,(q-.10)/.90)), r=10+44*(u*u*(3-2*u)), sy=-10-35*(u*u*(3-2*u));
+      C(-r,sy,12); C(r,sy,12); break;
     }
     case 'whipTip': {
-      if(q<.18 || q>.88) break;
-      const u=Math.max(0,Math.min(1,(q-.18)/.70));
-      C(18+112*u,-43-Math.sin(u*Math.PI)*18,10);
-      break;
+      if(q<.08 || q>.88) break;
+      const u=Math.max(0,Math.min(1,(q-.08)/.80)), e=u*u*(3-2*u);
+      C(28+92*e,-47-Math.sin(e*Math.PI)*45,11); break;
     }
     case 'waterRibbon': {
-      if(q<.08 || q>.9) break;
-      const u=Math.max(0,Math.min(1,(q-.08)/.82));
-      const twist=u*TAU*1.25;
-      for(let i=0;i<12;i++){const z=i/11,a=twist+z*TAU*1.15; C(Math.cos(a)*(30+z*42),-56+Math.sin(a)*(72-z*18),9);}
+      const u=q, r=52+22*Math.sin(Math.min(1,u)*Math.PI), cy=-70-24*u, rot=-1.0+u*2.1;
+      for(let i=0;i<12;i++){const a=-Math.PI*.98+i/11*Math.PI*1.96+rot*.35; C(Math.cos(a)*r,cy+Math.sin(a)*r*.72,9);}
+      if(q>.65) for(let i=0;i<5;i++) C(48+i*8,-108-i*6,8);
       break;
     }
     case 'waterBounce': {
-      if(q<.12 || q>.9) break;
-      const u=Math.max(0,Math.min(1,(q-.12)/.78));
-      const bx=58-34*u, by=-40+Math.sin(u*Math.PI)*28;
-      if(u<.42) C(bx,by,22);
-      else { const rise=Math.max(0,Math.min(1,(u-.42)/.58)); C(bx,by-rise*82,Math.max(14,22-4*rise)); for(let i=0;i<8;i++) C(bx+(i-3.5)*5,by-rise*82-(i%2)*12,6); }
+      if(q<.05) break;
+      if(q<.62){const u=Math.min(1,(q-.05)/.57), e=u*u*(3-2*u); C(54+9*e,-50+42*e,22);}
+      else {const u=Math.min(1,(q-.62)/.38), e=u*u*(3-2*u); C(62,-8,Math.max(7,22*(1-e))); for(let i=0;i<8;i++){const a=-Math.PI*.9+i/7*Math.PI*.8; C(62+Math.cos(a)*(18+45*e),-8+Math.sin(a)*(10+35*e),7);}}
       break;
     }
     case 'crescent': {
-      if(q<.08 || q>.92) break;
-      const u=Math.max(0,Math.min(1,(q-.08)/.84));
-      const a0=-1.15+u*.25, a1=1.15+u*TAU*.95, pts=[];
-      for(let i=0;i<=20;i++){const z=i/20,a=a0+(a1-a0)*z; pts.push([34+Math.cos(a)*70,-48+Math.sin(a)*60]);}
-      P(pts);
-      break;
+      if(q<.05 || q>.96) break;
+      const u=Math.max(0,Math.min(1,(q-.05)/.91)), e=u*u*(3-2*u);
+      const cx=32+20*e, cy=-50, r=58+34*Math.sin(e*Math.PI*.75), pts=[];
+      for(let i=0;i<=18;i++){const a=-1.15+e*.18+i/18*(2.0+e*1.55); pts.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r*.72]);}
+      P(pts); break;
     }
     case 'collapseRing': {
-      if(q<.2 || q>.96) break;
-      let r;
-      if(q<.55) r=20+55*Math.max(0,(q-.2)/.35);
-      else if(q<.68) r=75-(q-.55)/.13*57;
-      else r=18+(q-.68)/.28*92;
-      for(let i=0;i<18;i++){const a=i/18*TAU; C(Math.cos(a)*r,-55+Math.sin(a)*r*.66,7);}
+      if(q<.02) break;
+      if(q<.70){const u=q/.70, r=25+78*(u*u*(3-2*u)); for(let i=0;i<20;i++){const a=i/20*TAU; C(Math.cos(a)*r,-62+Math.sin(a)*r*.68,9);}}
+      else {const u=(q-.70)/.30, r=103-22*(u*u*(3-2*u)); for(let i=0;i<20;i++){const a=i/20*TAU; C(Math.cos(a)*r,-62+Math.sin(a)*r*.68,10);}}
       break;
     }
     case 'propellerLeaves': { if(q<.12 || q>.78) break; const u=Math.max(0,Math.min(1,(q-.12)/.66)), cy=-92+u*72, rot=u*TAU; for(let i=0;i<3;i++){const a=rot+i*TAU/3, cx=Math.cos(a)*34, sy=cy+Math.sin(a)*34*.38; P([[cx-7,sy-24],[cx+10,sy],[cx-7,sy+24]]);} break; }
@@ -345,25 +334,13 @@ export function specKnockbackVector(attacker, defender, profile){
   if(p==='up') return {x:f*.18,y:-1};
   if(p==='upcontact'){const dx=defender.x-attacker.x;return{x:Math.max(-.55,Math.min(.55,dx/90)),y:-1};}
   if(p==='radial'||p==='radialcontact') return radialVector(attacker,defender);
+  if(p==='splitsplash'){ const dx=defender.x-attacker.x; return {x:Math.sign(dx||f),y:-.42}; }
+  if(p==='bouncetwostage'){ const dy=defender.y-attacker.y; return dy>10 ? {x:f*.72,y:-.7} : {x:f*.18,y:-1}; }
+  if(p==='crescentcontact'){ const dx=defender.x-attacker.x, dy=(defender.y-attacker.y); return {x:f*Math.max(.65,Math.min(1.0,1+dx/180)),y:Math.max(-.55,Math.min(.18,dy/160))}; }
+  if(p==='watersuper'){ return radialVector(attacker,defender); }
   if(p==='inward'){const dx=attacker.x-defender.x,dy=attacker.y-defender.y,len=Math.hypot(dx,dy)||1;return{x:dx/len,y:dy/len};}
   if(p==='forwardcontact'){const dy=(defender.y-attacker.y)/90;return{x:f,y:Math.max(-.75,Math.min(.35,dy))};}
   if(p==='radialup'){const dx=defender.x-attacker.x;return{x:Math.max(-.8,Math.min(.8,dx/100)),y:-1};}
-  if(p==='waterringtravel'){
-    const q=Number(attacker.attackData?.progress)||0;
-    const u=Math.max(0,Math.min(1,(q-.34)/.56));
-    const dx=112; const dy=-66+Math.cos(u*Math.PI)*17*Math.PI;
-    const len=Math.hypot(dx,dy)||1; return {x:dx/len,y:dy/len};
-  }
-  if(p==='watersplashside'){
-    const side=defender.x>=attacker.x?1:-1; return {x:side*.95,y:-.25};
-  }
-  if(p==='waterbounce'){
-    const dx=defender.x-attacker.x; return {x:Math.max(-.55,Math.min(.55,dx/100)),y:-1};
-  }
-  if(p==='watercrescent'){
-    const dx=defender.x-attacker.x,dy=defender.y-attacker.y,len=Math.hypot(dx,dy)||1;
-    return {x:dx/len,y:Math.max(-.55,Math.min(.35,dy/len))};
-  }
   if(p==='velocity'){const vx=attacker.vx||f,vy=attacker.vy||0,len=Math.hypot(vx,vy)||1;return{x:vx/len,y:vy/len};}
   return {x:f,y:-.38};
 }

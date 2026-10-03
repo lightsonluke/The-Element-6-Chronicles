@@ -1217,14 +1217,6 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
   // ── Hitstun: smooth knockback with DI influence ──
   if (fighter.hitstun > 0) {
-    // A third-party hit immediately cancels any attack/charge state.
-    // This prevents a broken attack pose from leaking into running/idle.
-    if (fighter.attackData || fighter.attackHold) {
-      fighter.attackData = null;
-      fighter.attackHold = null;
-      fighter.attackTimer = 0;
-      fighter.state = 'hitstun';
-    }
     fighter.hitstun--;
     fighter.vx *= KNOCKBACK_DECAY;
     // Apply DI — slight steering during knockback (Brawlhalla-style)
@@ -2163,6 +2155,11 @@ export function applyHit(attacker, defender) {
   const baseStun = attacker.attackData.isHeavy ? 20 : attacker.attackData.isSuper ? 35 : isLight ? 16 : 18;
   const controlHitstunMul = attacker.statControlHitstunMul || 1;
   defender.hitstun = Math.min(Math.round((baseStun + Math.floor(dmg * 0.4)) * controlHitstunMul), 50);
+  // A third-party hit always hard-cancels the defender's current attack/charge.
+  // This prevents an interrupted Gen I attack from leaking into the running/idle pose.
+  defender.attackHold = null;
+  defender.attackData = null;
+  defender.attackTimer = 0;
   defender.state = 'hitstun';
   defender.grounded = false;
 
@@ -2187,6 +2184,7 @@ export function loseStock(fighter, stageWidth, stageHeight) {
       fighter.invincible = 120;
       fighter.hitstun = 0;
       fighter.state = 'idle';
+      fighter.attackHold = null;
       fighter.attackData = null;
       fighter.attackTimer = 0;
       fighter.gravityInverted = false;
@@ -2216,6 +2214,7 @@ export function loseStock(fighter, stageWidth, stageHeight) {
   fighter.invincible = 90;
   fighter.hitstun = 0;
   fighter.state = 'idle';
+  fighter.attackHold = null;
   fighter.attackData = null;
   fighter.attackTimer = 0;
   fighter.jumps = 2;
