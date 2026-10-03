@@ -642,9 +642,13 @@ function applyFireAttackPose(vars, attackData, facing=1){
     const a=beat([-1.15,-1.45,-1.75,-.55]);
     lead(a); vars.lean=facing*beat([.02,.08,.18,.10]); vars.legSwing=beat([0,.05,.18,.08]);
   } else if(move==='super'){
-    const r=beat([-.75,-1.05,-1.25,-1.65,-1.75,.25,-.10]);
-    const l=beat([-.55,-.85,-1.05,-1.55,-1.65,.15,-.05]);
-    vars.punchArmR=r; vars.punchArmL=l; vars.lean=facing*beat([.02,.06,.08,.18,.20,-.12,-.05]); vars.legSwing=beat([0,.02,.04,.16,.20,-.12,-.05]);
+    // Reverted to the exact discrete Super body-pose timing from the
+    // Fire Hero Exact Native Animation — 3.5x Slower package.
+    if(i===0){ vars.punchArmR = -0.85; vars.punchArmL = -0.65; vars.lean = facing*0.03; }
+    else if(i===1 || i===2){ vars.punchArmR = -1.15; vars.punchArmL = -0.95; vars.lean = facing*0.06; }
+    else if(i===3 || i===4){ vars.punchArmR = -1.7; vars.punchArmL = -1.55; vars.lean = facing*0.22; vars.legSwing = 0.2; }
+    else if(i===5){ vars.punchArmR = 0.2; vars.punchArmL = 0.1; vars.lean = -facing*0.12; }
+    else { vars.punchArmR = -0.1; vars.punchArmL = -0.05; vars.lean = -facing*0.05; }
   }
 }
 

@@ -455,17 +455,45 @@ function fireDownReference(ctx,x,y,p){
   fireLineBurst(ctx,ox,y-3,60+12*v,.72*(1-.3*v),u*6);
 }
 
+function fireWheelFast(ctx,cx,cy,rx,ry,c,a=1,rot=0,seed=0){
+  // Same irregular wheel silhouette, but render the whole glow once and use
+  // lightweight flame tips instead of ten independent shadow-blurred shapes.
+  const n=18, pts=[];
+  for(let i=0;i<=n;i++){
+    const t=i/n*REF_TAU;
+    const wob=1 + .09*Math.sin(i*2.71+seed) + .045*Math.sin(i*5.17-seed*.6);
+    pts.push([cx+Math.cos(t)*rx*wob, cy+Math.sin(t)*ry*wob]);
+  }
+  ctx.save();
+  ctx.globalAlpha=a;
+  ctx.strokeStyle=c; ctx.lineWidth=4.5; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.shadowColor=c; ctx.shadowBlur=9;
+  ctx.beginPath(); pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.stroke();
+  ctx.shadowBlur=0;
+  for(let i=0;i<8;i++){
+    const t=(i+.18*Math.sin(i*3.1+seed))/8*REF_TAU;
+    const rr=1+.08*Math.sin(i*2.3+seed);
+    const fx=cx+Math.cos(t)*rx*rr, fy=cy+Math.sin(t)*ry*rr;
+    const r=5.5+.7*Math.sin(i+seed);
+    ctx.save(); ctx.translate(fx,fy); ctx.rotate(t+Math.PI/2); ctx.globalAlpha=a*.82; ctx.fillStyle=i%2?'#FF9A22':'#FF6A18';
+    ctx.beginPath(); ctx.moveTo(0,-r); ctx.quadraticCurveTo(r*.75,-r*.15,r*.2,r); ctx.quadraticCurveTo(-r*.75,r*.5,0,-r); ctx.fill(); ctx.restore();
+  }
+  ctx.restore();
+}
+
 function fireUpHeavyReference(ctx,x,y,p){
   const c='#FF5A16',hot='#FF9A22';
-  if(p<0){ const q=holdCharge(p); fireRing(ctx,x,y-94,30+q*6,13+q*3,hot,.5+q*.3,0,q); return; }
+  if(p<0){ const q=holdCharge(p); fireWheelFast(ctx,x,y-94,30+q*6,13+q*3,hot,.5+q*.3,0,q); return; }
   const {frame,u}=fireRefPhase(p,4),v=smoothFire(u),cy=y-96;
   if(frame===1){ flameShape(ctx,x-5,y-104,7,hot,.5,-Math.PI/2); flameShape(ctx,x+5,y-104,7,hot,.5,-Math.PI/2); return; }
-  if(frame===2){ fireRing(ctx,x,cy,58,25,c,.98,0,u*2); return; }
-  if(frame===3){ fireRing(ctx,x,cy,58+3*v,25+2*v,c,.98,0,u*3); return; }
-  for(let i=0;i<11;i++){
-    const a=i/11*REF_TAU, rr=58+18*v;
+  if(frame===2){ fireWheelFast(ctx,x,cy,58,25,c,.98,0,u*2); return; }
+  if(frame===3){ fireWheelFast(ctx,x,cy,58+3*v,25+2*v,c,.98,0,u*3); return; }
+  for(let i=0;i<9;i++){
+    const a=i/9*REF_TAU, rr=58+18*v;
     const px=x+Math.cos(a)*rr,py=cy+Math.sin(a)*rr*.55;
-    fireBlob(ctx,px,py,4.5+2*v,hot,.75*(1-.2*v),i);
+    const r=4.5+2*v;
+    ctx.save(); ctx.translate(px,py); ctx.rotate(a+Math.PI/2); ctx.globalAlpha=.75*(1-.2*v); ctx.fillStyle=hot;
+    ctx.beginPath(); ctx.moveTo(0,-r); ctx.quadraticCurveTo(r*.75,-r*.15,r*.2,r); ctx.quadraticCurveTo(-r*.75,r*.5,0,-r); ctx.fill(); ctx.restore();
   }
 }
 
@@ -635,38 +663,49 @@ function iceUpReference(ctx,x,y,p){
 
 // ── Detailed non-up signatures/heavies ─────────────────────────────────────
 // Improved supers. They deliberately have no hold state.
+function fireFlameOrbitLegacy(ctx,cx,cy,rx,ry,start,end,color,alpha=1,count=7){
+  glowArc(ctx,cx,cy,rx,ry,start,end,color,5,alpha);
+  for(let i=0;i<count;i++){
+    const t=count===1 ? 0 : i/(count-1);
+    const a=start+(end-start)*t;
+    flameShape(ctx,cx+Math.cos(a)*rx,cy+Math.sin(a)*ry,5.5,color,alpha*.9,a+Math.PI/2);
+  }
+}
+function fireLineBurstLegacy(ctx,x,y,r,alpha=1){
+  for(let i=0;i<10;i++){
+    const a=i/10*REF_TAU;
+    const len=r*(.75+.18*Math.sin(i*2.7));
+    const x2=x+Math.cos(a)*len, y2=y+Math.sin(a)*len*.68;
+    flameShape(ctx,x2,y2,7,'#FF9A22',alpha*.85,a+Math.PI/2);
+  }
+}
+
 function fireSuper(ctx,x,y,p){
   const c='#FF5A16', hot='#FFB12B', white='#FFF3B0';
   const f=fireRefFrame(p,7);
   if(f===1){
-    // Both fists come in toward the center; no projectile yet.
     flameShape(ctx,x-18,y-56,7,hot,.5,-.2);
     flameShape(ctx,x+18,y-56,7,hot,.5,.2);
     return;
   }
   if(f===2 || f===3){
-    // Fireball forms between both hands and compresses/grows.
     const r=f===2?17:24;
     core(ctx,x+26,y-60,r,c,.95);
-    fireFlameOrbit(ctx,x+26,y-60,r+6,r+2,-2.8,.3,hot,.9,10);
+    fireFlameOrbitLegacy(ctx,x+26,y-60,r+6,r+2,-2.8,.3,hot,.9,10);
     return;
   }
   if(f===4 || f===5){
-    // Both hands drive the concentrated fireball forward. The fireball remains
-    // a detached mass, not a line/beam connected to the hands.
     const cx=x+62+(f-4)*18, cy=y-58, r=f===4?27:22;
     glowStroke(ctx,[[x+12,y-25],[x+27,y-47]],c,7,.55);
     core(ctx,cx,cy,r,c,1);
-    fireFlameOrbit(ctx,cx,cy,r+5,r*.7,-2.8,.35,hot,.95,10);
+    fireFlameOrbitLegacy(ctx,cx,cy,r+5,r*.7,-2.8,.35,hot,.95,10);
     for(let i=0;i<7;i++) spark(ctx,cx-28-i*4,cy+(i-3)*2,1.5,hot,.45);
     return;
   }
   if(f===6){
-    // Massive detonation where the fireball lands; radial flame fingers and a
-    // bright core, with no beam remaining.
     const cx=x+105, cy=y-48;
     core(ctx,cx,cy,34,c,1);
-    fireLineBurst(ctx,cx,cy,96,1);
+    fireLineBurstLegacy(ctx,cx,cy,96,1);
     for(let i=0;i<12;i++){
       const a=i/12*REF_TAU;
       flameShape(ctx,cx+Math.cos(a)*54,cy+Math.sin(a)*35,10,hot,.95,a+Math.PI/2);
@@ -674,14 +713,14 @@ function fireSuper(ctx,x,y,p){
     spark(ctx,cx,cy,18,white,.8);
     return;
   }
-  // 7: the explosion has dispersed and the hero is left in recovery.
   const cx=x+105, cy=y-48;
-  fireLineBurst(ctx,cx,cy,120,.35);
+  fireLineBurstLegacy(ctx,cx,cy,120,.35);
   for(let i=0;i<14;i++){
     const a=i/14*REF_TAU;
     spark(ctx,cx+Math.cos(a)*100,cy+Math.sin(a)*58,1.7,hot,.35);
   }
 }
+
 function waterSuper(ctx,x,y,p){const c='#24BFFF',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=35+easeOut(q)*110; waterRing(ctx,x,y-58,r,r*.55,c,a,.1); for(let i=0;i<16;i++){const ang=i/16*REF_TAU+q*2; glowStroke(ctx,[[x+Math.cos(ang)*(r-20),y-58+Math.sin(ang)*(r-20)*.55],[x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.55]],c,6,a*.65);}}
 function grassSuper(ctx,x,y,p){const c='#7CFF28',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*105; for(let i=0;i<14;i++){const ang=i/14*REF_TAU+q*1.8; leafBlade(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.62,13,34,ang,c,a*.85);} glowArc(ctx,x,y-58,r,r*.62,0,REF_TAU,c,6,a);}
 function iceSuper(ctx,x,y,p){const c='#79DFFF',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*120; for(let i=0;i<18;i++){const ang=i/18*REF_TAU;iceShard(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.68,10,28,ang,c,a);} glowArc(ctx,x,y-58,r,r*.68,0,REF_TAU,c,5,a*.8);}
