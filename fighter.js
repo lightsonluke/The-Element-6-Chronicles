@@ -27,6 +27,57 @@ const NORMAL_COOLDOWN = 8;
 const HEAVY_COOLDOWN = 42;  // 0.70 seconds at 60fps
 const KNOCKBACK_SCALE = 0.40; // global 60% knockback reduction for all attacks
 
+
+// Generation I attacks use a held wind-up stance. The attack does not begin
+// until the attack button is released. Frame numbers match the supplied
+// 12-frame animation sheets (the Super is intentionally excluded).
+const GEN1_HOLD_FRAMES = {
+  g1_thunder: { us: 2, ds: 2, ss: 2, upHeavy: 2, dh: 2, sh: 2 },
+  g1_fire:    { us: 2, ds: 2, ss: 2, upHeavy: 2, dh: 2, sh: 2 },
+  g1_water:   { us: 1, ds: 2, ss: 2, upHeavy: 2, dh: 2, sh: 2 },
+  g1_grass:   { us: 3, ds: 2, ss: 2, upHeavy: 2, dh: 2, sh: 2 },
+  g1_ice:     { us: 2, ds: 2, ss: 2, upHeavy: 2, dh: 2, sh: 2 },
+};
+const isGen1 = fighter => String(fighter?.char?.id || '').startsWith('g1_');
+const gen1HoldFrame = (fighter, move) => GEN1_HOLD_FRAMES[fighter?.char?.id]?.[move] || 2;
+const gen1HoldProgress = (fighter, move) => (gen1HoldFrame(fighter, move) - 1) / 11;
+
+function beginGen1HeldAttack(fighter, attackData, moveKey, kind) {
+  const holdFrame = gen1HoldFrame(fighter, moveKey);
+  fighter.state = 'attackHold';
+  fighter.attackData = {
+    ...attackData,
+    duration: Math.max(1, Number(attackData.duration) || 20),
+    sigType: moveKey === 'upHeavy' ? 'upHeavy' : moveKey === 'dh' ? 'downHeavy' : moveKey === 'sh' ? 'heavy' : moveKey === 'us' ? 'up' : moveKey === 'ds' ? 'down' : 'side',
+    hitApplied: false,
+    progress: gen1HoldProgress(fighter, moveKey),
+    holding: true,
+    holdKind: kind,
+    holdMoveKey: moveKey,
+    holdFrame,
+    holdTick: 0,
+  };
+  fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
+  fighter.attackTimer = Number.POSITIVE_INFINITY;
+  fighter.vx = 0;
+  fighter.vy = 0;
+}
+
+function releaseGen1HeldAttack(fighter) {
+  if (fighter.state !== 'attackHold' || !fighter.attackData?.holding) return false;
+  const data = fighter.attackData;
+  data.holding = false;
+  data.progress = 0;
+  data.hitApplied = false;
+  fighter.attackTimer = Math.max(1, Number(data.duration) || 20);
+  if (data.holdKind === 'sig') fighter.sigCooldown = Math.max(60, SIG_COOLDOWN * (fighter.statControlRecoveryMul || 1));
+  else fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
+  fighter.state = data.isSuper ? 'superAttack' : 'attacking';
+  fighter.vx = 0;
+  fighter.vy = 0;
+  return true;
+}
+
 // CPU difficulty configs
 // (CPU_DIFFICULTY moved to botAI.js)
 
@@ -93,6 +144,8 @@ export function createFighter(charData, startX, startY, facing) {
     // Variable jump height
     jumpHeld: false,
     jumpCutApplied: false,
+    downHeld: false,
+    dropThroughTimer: 0,
     // DI (directional influence) — slight knockback steering
     diX: 0,
     diY: 0,
@@ -1018,6 +1071,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
   if (fighter.groundPoundCooldown > 0) fighter.groundPoundCooldown--;
   if (fighter.dashCooldown > 0) fighter.dashCooldown--;
   if (fighter.dashTimer > 0) fighter.dashTimer--;
+  if (fighter.dropThroughTimer > 0) fighter.dropThroughTimer--;
   // A power cannot recharge while its animation/effect is still running.
   // This is shared by every mode that uses updateFighter (offline, LAN,
   // battle royale, campaign, sandbox, and the rollback fight simulation).
@@ -1106,6 +1160,26 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     fighter.coyoteTime--;
   }
 
+  // Gen I held-attack stance is handled before universal movement abilities so
+  // dash, air-dodge, jump and directional movement cannot sneak through the hold.
+  if (isGen1(fighter) && fighter.state === 'attackHold' && fighter.attackData?.holding) {
+    const release = fighter.attackData.holdKind === 'sig' ? !inputs.sig : !inputs.heavy;
+    fighter.vx = 0; fighter.vy = 0;
+    fighter.attackData.holdTick = (fighter.attackData.holdTick || 0) + 1;
+    fighter.attackData.progress = gen1HoldProgress(fighter, fighter.attackData.holdMoveKey);
+    fighter.downHeld = !!inputs.down;
+    if (release) {
+      releaseGen1HeldAttack(fighter);
+      if (fighter.attackData.holdKind === 'sig') fighter._gen1SigHolding = false;
+      else fighter._gen1HeavyHolding = false;
+    } else {
+      return fighter;
+    }
+    // Release starts the move; no movement or secondary input is consumed on
+    // the release frame.
+    return fighter;
+  }
+
   // Universal dash / air-dodge / wall-slide input processing.
   // Sports modes are explicitly excluded by movementAbilities.js.
   updateMovementAbilities(fighter, inputs, platforms, stageWidth, stageHeight);
@@ -1147,6 +1221,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
   const canAct = fighter.landingLag <= 0 &&
     fighter.state !== 'attacking' &&
     fighter.state !== 'superAttack' &&
+    fighter.state !== 'attackHold' &&
     !fighter.trapped;
 
   if (canAct) {
@@ -1269,6 +1344,24 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         fighter.state = 'jumping';
       }
     }
+    // ── Thin-platform drop-through ─────────────────────────────────────────
+    // Platforms at or below 16px are one-way. A fresh Down press while standing
+    // on one deliberately drops the fighter through it. Jumping from below is
+    // already allowed because one-way collision only resolves while falling.
+    const downPressed = !!inputs.down && !fighter.downHeld;
+    if (downPressed && fighter.grounded) {
+      const feet = fighter.y;
+      const thinBelow = platforms.some(p => !p?._freehandSlope && (p._deleted || 0) <= 0 && p.h <= 16 && fighter.x > p.x - 18 && fighter.x < p.x + p.w + 18 && Math.abs(feet - p.y) <= 3);
+      if (thinBelow) {
+        fighter.dropThroughTimer = 12;
+        fighter.grounded = false;
+        fighter.y += 4;
+        fighter.vy = Math.max(2.5, fighter.vy);
+        fighter.jumps = Math.max(0, fighter.jumps - 1);
+      }
+    }
+    fighter.downHeld = !!inputs.down;
+
     // Variable jump height — cut velocity when jump released (short hop)
     // fullJump flag (online mode): tapping jump always does a full jump — no short hop
     if (!fighter.fullJump && fighter.jumpHeld && !inputs.jump && !fighter.jumpCutApplied && fighter.vy < 0) {
@@ -1278,11 +1371,22 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     if (!inputs.jump) fighter.jumpHeld = false;
 
     // ── Heavy Attack ──
+    // Gen I heavy attacks enter a frozen wind-up stance until the button is released.
+    if (isGen1(fighter) && inputs.heavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
+      inputs._heavyConsumed = true;
+      const moveKey = inputs.up || inputs.jump ? 'upHeavy' : (inputs.down && fighter.grounded ? 'dh' : 'sh');
+      const source = moveKey === 'upHeavy' ? UP_HEAVIES[fighter.char.id] : moveKey === 'dh' ? DOWN_HEAVIES[fighter.char.id] : fighter.char.heavyAttack;
+      if (source) {
+        beginGen1HeldAttack(fighter, source, moveKey, 'heavy');
+        fighter._gen1HeavyHolding = true;
+      }
+    }
+
     // Up + heavy = character-specific Up Heavy. `up` is the same directional
     // input as jump in the fight controls, so test both fields explicitly and
     // consume the heavy before the jump logic can turn the input into a jump.
     const wantsUpHeavy = !!inputs.heavy && (!!inputs.up || !!inputs.jump);
-    if (wantsUpHeavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && UP_HEAVIES[fighter.char.id]) {
+    if (!isGen1(fighter) && wantsUpHeavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && UP_HEAVIES[fighter.char.id]) {
       inputs._heavyConsumed = true;
       const upHeavy = UP_HEAVIES[fighter.char.id];
       fighter.state = 'attacking';
@@ -1295,7 +1399,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       fighter.moveStats.heavy++;
     }
     // Air + down + heavy = Ground Pound (slam down with AoE)
-    if (inputs.heavy && inputs.down && !fighter.grounded && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && fighter.groundPoundCooldown <= 0) {
+    if (!isGen1(fighter) && inputs.heavy && inputs.down && !fighter.grounded && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && fighter.groundPoundCooldown <= 0) {
       inputs._heavyConsumed = true;
       fighter.state = 'attacking';
       fighter.attackTimer = 20;
@@ -1306,7 +1410,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       fighter.moveStats.groundPound++;
     }
     // Ground + down + heavy = Down Heavy (unique per character, different from side heavy)
-    else if (inputs.heavy && inputs.down && fighter.grounded && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
+    else if (!isGen1(fighter) && inputs.heavy && inputs.down && fighter.grounded && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
       inputs._heavyConsumed = true;
       const downHeavy = DOWN_HEAVIES[fighter.char.id];
       if (downHeavy) {
@@ -1321,7 +1425,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       }
     }
     // No down + heavy = Side Heavy (existing heavyAttack)
-    else if (inputs.heavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
+    else if (!isGen1(fighter) && inputs.heavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
       inputs._heavyConsumed = true;
       const heavy = fighter.char.heavyAttack;
       if (heavy) {
@@ -1336,14 +1440,28 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         fighter.moveStats.heavy++;
       }
     }
-    if (!inputs.heavy) inputs._heavyConsumed = false;
+    if (!inputs.heavy) { inputs._heavyConsumed = false; fighter._gen1HeavyHolding = false; }
 
     // ── Signature / Recovery ──
-    if (inputs.sig && !inputs._sigConsumed) {
+    if (fighter.state !== 'attackHold' && inputs.sig && !inputs._sigConsumed) {
       inputs._sigConsumed = true;
 
+      if (isGen1(fighter) && fighter.sigCooldown <= 0) {
+        let holdMove = fighter.grounded ? 'us' : (inputs.up ? 'us' : 'ss');
+        if (fighter.grounded) {
+          if (inputs.left || inputs.right) holdMove = 'ss';
+          else if (inputs.down) holdMove = 'ds';
+          else holdMove = 'us';
+        }
+        const sig = fighter.char.signatures?.[holdMove === 'us' ? 'up' : holdMove === 'ds' ? 'down' : 'side'];
+        if (sig) {
+          beginGen1HeldAttack(fighter, sig, holdMove, 'sig');
+          fighter._gen1SigHolding = true;
+        }
+      }
+
       // Recovery attack: sig + up in air = launch up with damage + knockback (air-only, cooldown-gated AND limited to once per airtime so it can't be spammed to fly infinitely)
-      if (!fighter.grounded && inputs.up && fighter.recoveryCooldown <= 0 && fighter.recoveryAirUses < 1) {
+      if (!isGen1(fighter) && !fighter.grounded && inputs.up && fighter.recoveryCooldown <= 0 && fighter.recoveryAirUses < 1) {
         fighter.state = 'attacking';
 
         // Recovery intentionally uses the character's exact Up Signature move data.
@@ -1373,7 +1491,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         fighter.moveStats.recovery++;
       }
       // Aerial attack: sig in air without up
-      else if (!fighter.grounded) {
+      else if (!isGen1(fighter) && !fighter.grounded) {
         if (fighter.normalCooldown <= 0) {
           fighter.state = 'attacking';
           fighter.attackTimer = 18;
@@ -1386,7 +1504,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
           fighter.normalCooldown = NORMAL_COOLDOWN * (fighter.statControlRecoveryMul || 1);
           fighter.moveStats.aerial++;
         }
-      } else if (fighter.sigCooldown <= 0) {
+      } else if (!isGen1(fighter) && fighter.sigCooldown <= 0) {
         let sigType = 'up';
         if (inputs.left || inputs.right) sigType = 'side';
         else if (inputs.down) sigType = 'down';
@@ -1406,7 +1524,14 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         }
       }
     }
-    if (!inputs.sig) inputs._sigConsumed = false;
+    if (!inputs.sig) { inputs._sigConsumed = false; fighter._gen1SigHolding = false; }
+
+    // A Gen I held attack freezes the fighter immediately on the first frame too.
+    if (isGen1(fighter) && fighter.state === 'attackHold') {
+      fighter.downHeld = !!inputs.down;
+      fighter.vx = 0; fighter.vy = 0;
+      return fighter;
+    }
 
     // ── Power Activation (replaces light attack) ──
     if (inputs.power && !inputs._powerConsumed && !fighter.powerActive && fighter.powerTimer <= 0 && fighter.powerCooldown <= 0 && fighter.powerDisabled <= 0) {
@@ -1624,7 +1749,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     const mat = p.material || 'normal';
     if (PASS_THROUGH.includes(mat)) continue;
     if (p._deleted > 0) continue;
-    const isSoft = p.h < 18; // thin platforms are soft (pass-through from below)
+    const isSoft = p.h <= 16; // only deliberately thin platforms are one-way/drop-through
 
     // One-way platform collision — only land when falling onto it from above
     if (fighter.vy >= 0) {
@@ -1636,13 +1761,10 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
       const isAtOrBelow = currBottom >= p.y;
 
       if (overlapX && wasAbove && isAtOrBelow) {
+        if (fighter.dropThroughTimer > 0 && isSoft) continue;
         // Soft platforms: skip if moving up or phasing
         if (isSoft && fighter.canPhase && !fighter.grounded) continue;
-        // Drop-through: if holding down and pressing jump on soft platform
-        if (isSoft && fighter.diY > 0 && fighter.jumpHeld === false && fighter.vy > 0 && Math.abs(fighter.vx) < 0.5) {
-          // Allow pass-through
-          continue;
-        }
+        // Drop-through is handled by the edge-triggered Down press above.
 
         fighter.platformMaterial = mat;
 
@@ -1864,7 +1986,18 @@ export function checkHit(attacker, defender) {
   // move that supplies a spec. This keeps collision locked to the actual visual.
   const specHitboxes = activeSpecHitboxes;
   if (specHitboxes.length) {
-    try { return specHitboxes.some(hb => hitboxIntersectsBody(hb, defender)); } catch (err) { return false; }
+    try {
+      const matched = specHitboxes.find(hb => hitboxIntersectsBody(hb, defender));
+      if (!matched) return false;
+      const center = hb => {
+        if (hb.shape === 'circle' || hb.shape === 'box') return { x: hb.x, y: hb.y };
+        if (hb.shape === 'capsule') return { x: (hb.x1 + hb.x2) / 2, y: (hb.y1 + hb.y2) / 2 };
+        if (hb.shape === 'polygon' && hb.points?.length) return { x: hb.points.reduce((a,p)=>a+p[0],0)/hb.points.length, y: hb.points.reduce((a,p)=>a+p[1],0)/hb.points.length };
+        return { x: attacker.x, y: attacker.y - 30 };
+      };
+      attacker.attackData._hitPoint = center(matched);
+      return true;
+    } catch (err) { return false; }
   }
 
   // ── Fallback AABB hitbox collision ──

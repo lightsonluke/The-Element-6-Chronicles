@@ -379,7 +379,9 @@ body.el6-volleyball-active {
   padding: 0 !important;
   overflow: hidden !important;
   transform: none !important;
-  display: block !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   box-sizing: border-box !important;
   z-index: 2147483000 !important;
 }

@@ -190,12 +190,100 @@ function thunderSuper(ctx, x, y, p) {
   }
 }
 
+
+// Exact 12-frame-style Gen I Up Signature renderers based on the supplied
+// animation sheets. `p` is normalized across the 12 logical frames.
+function frame12(p) { return 1 + clamp01(p) * 11; }
+
+function fireUpExact(ctx, x, y, p) {
+  const c = '#FF6600'; const f = frame12(p); const a = Math.max(.25, alpha(p));
+  const armX = x + 18;
+  if (f < 2) { flame(ctx, armX, y - 46, 5, c, .45); return; }
+  if (f < 3) {
+    strokePath(ctx, [[x + 8, y - 38], [armX, y - 86]], c, 10, a);
+    strokePath(ctx, [[armX, y - 86], [armX + 12, y - 98]], c, 5, a);
+    flame(ctx, armX + 13, y - 99, 7, c, a);
+    return;
+  }
+  const hookCx = armX, hookCy = y - 90;
+  const start = -2.2, end = -.15;
+  const t = f < 6 ? easeOut((f - 3) / 3) : 1;
+  ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = 10; ctx.lineCap = 'round'; glow(ctx,c,22);
+  ctx.beginPath(); ctx.arc(hookCx, hookCy, 36, start, start + (end-start)*t); ctx.stroke(); ctx.restore();
+  flame(ctx, hookCx + 31, hookCy - 12, 11, c, a);
+  strokePath(ctx, [[x + 8, y - 38], [armX, hookCy]], c, 9, a);
+  if (f >= 4.2 && f < 8.2) {
+    const launch = easeOut(Math.min(1, (f - 4.2) / 2.8));
+    particles(ctx, hookCx + 30, hookCy - 8, c, launch, 8, 26);
+  }
+  if (f >= 8 && f < 10.5) {
+    ctx.save(); ctx.globalAlpha = .35; ctx.strokeStyle = c; ctx.lineWidth = 5; glow(ctx,c,14);
+    ctx.beginPath(); ctx.arc(hookCx, hookCy, 39, start, end); ctx.stroke(); ctx.restore();
+  }
+  if (f >= 10.5) {
+    const q = clamp01((f - 10.5) / 1.5); ctx.globalAlpha = 1-q;
+    strokePath(ctx, [[armX, hookCy], [armX + 18, y - 74]], c, 8, 1-q);
+  }
+}
+
+function waterUpExact(ctx, x, y, p) {
+  const c = '#3399CC'; const f = frame12(p);
+  if (f < 2) {
+    ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = 8; glow(ctx,c,16); ctx.beginPath(); ctx.arc(x + 4, y - 34, 22, -.15, TAU - .15); ctx.stroke(); ctx.restore();
+    waterStroke(ctx, [[x - 12,y - 20],[x + 8,y - 38]], c, 5, .75);
+    return;
+  }
+  const startX = x + 14, startY = y - 46;
+  const t = clamp01((f - 2) / 5.2);
+  const ringX = startX + 54 * t + 8 * Math.sin(t * Math.PI);
+  const ringY = startY - 58 * t - 22 * Math.sin(t * Math.PI);
+  ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = 10; glow(ctx,c,18);
+  ctx.beginPath(); ctx.arc(ringX, ringY, 22, 0, TAU); ctx.stroke(); ctx.restore();
+  waterStroke(ctx, [[x + 8,y - 40],[ringX,ringY]], c, 5, .55);
+  for (let i=0;i<6;i++) dot(ctx, ringX + Math.cos(i)*18, ringY + Math.sin(i)*18, 2, '#DFFFFF', .55);
+  if (f >= 7 && f < 8) { ctx.save(); ctx.globalAlpha=.7; ctx.strokeStyle=c; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(ringX,ringY,24,0,TAU); ctx.stroke(); ctx.restore(); }
+  if (f >= 8) {
+    const fade = 1-clamp01((f-8)/4); particles(ctx, ringX, ringY, c, 1-fade, 8, 24); ctx.globalAlpha=fade;
+  }
+}
+
+function grassUpExact(ctx, x, y, p) {
+  const c = '#44AA44'; const f = frame12(p);
+  const cy = y - 112;
+  if (f < 2) { dot(ctx,x,cy,5,'#DDBB55',.8); return; }
+  const spin = ((f - 2) / 6) * TAU;
+  for (let i=0;i<3;i++) leaf(ctx,x,cy,13,34,i*TAU/3+spin,c, .9);
+  dot(ctx,x,cy,7,'#DDBB55',.9);
+  if (f >= 3 && f <= 7) {
+    ctx.save(); ctx.strokeStyle=c; ctx.lineWidth=2; ctx.globalAlpha=.35; glow(ctx,c,10);
+    ctx.beginPath(); ctx.arc(x,cy,40,0,TAU); ctx.stroke(); ctx.restore();
+  }
+  if (f >= 7.5 && f < 9) {
+    particles(ctx,x,cy,c,(f-7.5)/1.5,10,24);
+    ctx.save(); ctx.strokeStyle='#B9FF72'; ctx.lineWidth=4; ctx.globalAlpha=.55; ctx.beginPath(); ctx.moveTo(x,cy+12); ctx.lineTo(x, y-180); ctx.stroke(); ctx.restore();
+  }
+  if (f >= 9) { const q=1-clamp01((f-9)/3); ctx.globalAlpha=q; }
+}
+
+function iceUpExact(ctx, x, y, p) {
+  const c = '#AAEEFF'; const f = frame12(p);
+  let sx=x+18, sy=y-82;
+  if (f < 2) { shard(ctx,sx,y-92,10,24,0,c,.85); return; }
+  if (f < 3) {
+    shard(ctx,sx,sy,11,28,-.08,c,1);
+    strokePath(ctx,[[x+10,y-38],[sx,y-64]],c,7,.9);
+    return;
+  }
+  const t=clamp01((f-3)/6.5); sx=x+18+58*t; sy=y-82-112*t;
+  shard(ctx,sx,sy,12,30,t*TAU*1.25,c,1);
+  strokePath(ctx,[[x+10,y-42],[x+18+28*t,y-82-54*t]],c,4,.35);
+  if (f >= 7 && f < 10) { particles(ctx,sx,sy,c,(f-7)/3,7,20); }
+  if (f >= 10) { ctx.save(); ctx.globalAlpha=1-clamp01((f-10)/2); ctx.strokeStyle=c; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(sx,sy,24,0,TAU); ctx.stroke(); ctx.restore(); }
+}
+
 function fireAttack(ctx, x, y, p, move) {
   const c = '#FF6600'; const a = alpha(p); const q = easeOut(p);
-  if (move === 'us') {
-    const hookR = 52 + q * 14; const ang = -1.2 + q * 2.1;
-    ctx.save(); ctx.translate(x + 18, y - 48); ctx.rotate(ang); strokePath(ctx, [[0, hookR], [hookR * .5, 0], [hookR * .85, -hookR * .65]], c, 12, a); flame(ctx, hookR * .82, -hookR * .62, 14, c, a); ctx.restore();
-  } else if (move === 'ds') {
+  if (move === 'us') { fireUpExact(ctx, x, y, p); } else if (move === 'ds') {
     if (p < .35) { strokePath(ctx, [[x - 18, y - 8], [x - 26, y + 2]], c, 8, a); }
     for (let i = 0; i < 4; i++) flame(ctx, x + (i - 1.5) * 13, y - 9 - Math.abs(i - 1.5) * 4, 12 + q * 5, c, a * .8);
   } else if (move === 'ss') {
@@ -229,11 +317,7 @@ function fireSuper(ctx, x, y, p) {
 
 function waterAttack(ctx, x, y, p, move) {
   const c = '#3399CC'; const a = alpha(p); const q = easeOut(p);
-  if (move === 'us') {
-    const ang = -Math.PI / 2 + q * 1.25; const r = 48; const cx = x + 12 + Math.cos(ang) * r, cy = y - 54 + Math.sin(ang) * r;
-    ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = 11; glow(ctx, c, 16); ctx.beginPath(); ctx.arc(cx, cy, 22, 0, TAU); ctx.stroke(); ctx.restore();
-    waterStroke(ctx, [[x + 8, y - 42], [cx, cy], [x + 24, y - 112]], c, 6, a * .55);
-  } else if (move === 'ds') {
+  if (move === 'us') { waterUpExact(ctx, x, y, p); } else if (move === 'ds') {
     waterStroke(ctx, [[x - 16, y - 8], [x - 42, y - 34 * q], [x - 25, y - 70 * q]], c, 12, a);
     waterStroke(ctx, [[x + 16, y - 8], [x + 42, y - 34 * q], [x + 25, y - 70 * q]], c, 12, a);
   } else if (move === 'ss') {
@@ -262,9 +346,7 @@ function waterSuper(ctx, x, y, p) {
 
 function grassAttack(ctx, x, y, p, move) {
   const c = '#44AA44'; const wood = '#8B6B3F'; const a = alpha(p); const q = easeOut(p);
-  if (move === 'us') {
-    const cy = y - 112; for (let i = 0; i < 3; i++) leaf(ctx, x, cy, 13, 34, i * TAU / 3 + q * TAU, c, a); dot(ctx, x, cy, 7, '#DDBB55', a);
-  } else if (move === 'ds') {
+  if (move === 'us') { grassUpExact(ctx, x, y, p); } else if (move === 'ds') {
     for (const sx of [-1, 1]) { const ex = x + sx * (38 - q * 24); strokePath(ctx, [[x + sx * 14, y - 2], [x + sx * 44, y - 24], [ex, y - 42]], c, 7, a); for (let i = 0; i < 3; i++) leaf(ctx, ex + sx * i * 7, y - 42 - i * 5, 5, 11, sx * .7, c, a * .8); }
   } else if (move === 'ss') {
     ctx.save(); ctx.translate(x + 12, y - 44); ctx.rotate(-.05); ctx.fillStyle = wood; ctx.globalAlpha = a; glow(ctx, wood, 8); ctx.fillRect(0, -6, 70 * q, 12); for (let i = 0; i < 4; i++) leaf(ctx, 18 + i * 15, -2, 4, 9, i * .5, c, a * .6); ctx.restore();
@@ -288,9 +370,7 @@ function grassSuper(ctx, x, y, p) {
 
 function iceAttack(ctx, x, y, p, move) {
   const c = '#AAEEFF'; const a = alpha(p); const q = easeOut(p);
-  if (move === 'us') {
-    const sx = x + 22 * q, sy = y - 62 - 100 * q; shard(ctx, sx, sy, 12, 30, q * 6, c, a); strokePath(ctx, [[x + 8, y - 46], [sx, sy]], c, 5, a * .45);
-  } else if (move === 'ds') {
+  if (move === 'us') { iceUpExact(ctx, x, y, p); } else if (move === 'ds') {
     ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = 5; ctx.globalAlpha = a * .8; glow(ctx, c, 14); ctx.beginPath(); ctx.ellipse(x, y - 8, 48, 12, 0, 0, TAU); ctx.stroke(); ctx.restore();
     for (let i = 0; i < 7; i++) { const ang = Math.PI * 1.05 + i / 6 * Math.PI * .9; shard(ctx, x + Math.cos(ang) * 52 * q, y - 18 + Math.sin(ang) * 35 * q, 9, 22, ang, c, a); }
   } else if (move === 'ss') {
@@ -314,10 +394,38 @@ function iceSuper(ctx, x, y, p) {
   }
 }
 
-export function drawGen1Attack(ctx, x, y, color, p, facing, charId, move) {
+
+function drawGen1HoldPose(ctx, x, y, charId, move, holdFrame, holdTick = 0) {
+  // The four supplied Up Signature sheets are reproduced at their specified
+  // hold frames. Other Gen I moves get a short, move-specific pre-strike pose.
+  const hp = (holdFrame - 1) / 11;
+  if (charId === 'g1_thunder' && move === 'us') { thunderUp(ctx,x,y,hp); return; }
+  if (charId === 'g1_fire' && move === 'us') { fireUpExact(ctx,x,y,(2-1)/11); return; }
+  if (charId === 'g1_water' && move === 'us') { waterUpExact(ctx,x,y,(1-1)/11); return; }
+  if (charId === 'g1_grass' && move === 'us') {
+    const c = '#44AA44', cy = y - 112, spin = Math.PI / 3 + holdTick * .22;
+    for (let i=0;i<3;i++) leaf(ctx,x,cy,13,34,i*TAU/3+spin,c,.95);
+    dot(ctx,x,cy,7,'#DDBB55',.95);
+    return;
+  }
+  if (charId === 'g1_ice' && move === 'us') { iceUpExact(ctx,x,y,(2-1)/11); return; }
+
+  // For non-up moves, draw the beginning/wind-up of the authored move and keep
+  // it frozen. This is cosmetic only; collision remains disabled while held.
+  const holdP = Math.max(.04, Math.min(.18, hp));
+  if (charId === 'g1_thunder') {
+    if (move === 'ds') thunderDown(ctx,x,y,holdP); else if (move === 'ss') thunderSide(ctx,x,y,holdP,false); else if (move === 'sh') thunderSide(ctx,x,y,holdP,true); else if (move === 'upHeavy') thunderUpHeavy(ctx,x,y,holdP); else if (move === 'dh') thunderDownHeavy(ctx,x,y,holdP);
+  } else if (charId === 'g1_fire') fireAttack(ctx,x,y,holdP,move);
+  else if (charId === 'g1_water') waterAttack(ctx,x,y,holdP,move);
+  else if (charId === 'g1_grass') grassAttack(ctx,x,y,holdP,move);
+  else if (charId === 'g1_ice') iceAttack(ctx,x,y,holdP,move);
+}
+
+export function drawGen1Attack(ctx, x, y, color, p, facing, charId, move, attackData = null) {
   // Author everything in right-facing local space, then mirror it for left.
   ctx.save(); ctx.translate(x, y); ctx.scale(facing < 0 ? -1 : 1, 1);
   const localY = 0;
+  if (attackData?.holding) { drawGen1HoldPose(ctx, 0, localY, charId, move, attackData.holdFrame || 2, attackData.holdTick || 0); ctx.restore(); return; }
   if (charId === 'g1_thunder') {
     if (move === 'us') thunderUp(ctx, 0, localY, p);
     else if (move === 'ds') thunderDown(ctx, 0, localY, p);

@@ -33,7 +33,7 @@ const GEN1_MOVE_SPECS = {
     ds:{name:'Ember Stamp',shape:'stampFlames',range:52,knockback:'radialContact',duration:18,damage:15},
     ss:{name:'Flaming Elbow',shape:'elbow',range:62,knockback:'forwardContact',duration:14,damage:15},
     upHeavy:{name:'Spinning Fire Wheel',shape:'fireWheel',range:120,knockback:'upContact',duration:24,damage:24},
-    dh:{name:'Burning Cracks',shape:'cracks',range:120,knockback:'radialContact',duration:26,damage:21},
+    dh:{name:'Burning Cracks',shape:'cracks',range:120,knockback:'hitboxRadial',duration:26,damage:21},
     sh:{name:'Flaming Gauntlet',shape:'gauntlet',range:105,knockback:'forwardContact',duration:20,damage:24},
     super:{name:'Fireball Detonation',shape:'explosion',range:150,knockback:'radialContact',duration:42,damage:40},
   },
@@ -42,7 +42,7 @@ const GEN1_MOVE_SPECS = {
     ds:{name:'Twin Splashes',shape:'twinSplashes',range:70,knockback:'forwardContact',duration:18,damage:16},
     ss:{name:'Water Whip Tip',shape:'whipTip',range:90,knockback:'forwardContact',duration:15,damage:15},
     upHeavy:{name:'Spiral Water Ribbon',shape:'waterRibbon',range:145,knockback:'upContact',duration:25,damage:24},
-    dh:{name:'Bouncing Water Sphere',shape:'waterBounce',range:96,knockback:'radialContact',duration:24,damage:21},
+    dh:{name:'Bouncing Water Sphere',shape:'waterBounce',range:96,knockback:'hitboxRadial',duration:24,damage:21},
     sh:{name:'Water Crescent',shape:'crescent',range:118,knockback:'forwardContact',duration:22,damage:24},
     super:{name:'Collapse Ring',shape:'collapseRing',range:150,knockback:'radialContact',duration:42,damage:38},
   },
@@ -51,17 +51,17 @@ const GEN1_MOVE_SPECS = {
     ds:{name:'Thorn Snap',shape:'thornTips',range:72,knockback:'inward',duration:18,damage:14},
     ss:{name:'Wooden Branch Jab',shape:'branchEnd',range:86,knockback:'forwardContact',duration:14,damage:15},
     upHeavy:{name:'Petal Bloom',shape:'flowerPetals',range:120,knockback:'upContact',duration:26,damage:24},
-    dh:{name:'Returning Vine',shape:'vineTwoHits',range:118,knockback:'forwardContact',duration:25,damage:21},
+    dh:{name:'Returning Vine',shape:'vineTwoHits',range:118,knockback:'hitboxRadial',duration:25,damage:21},
     sh:{name:'Branch Spear Split',shape:'branchSplit',range:120,knockback:'forwardContact',duration:24,damage:24},
     super:{name:'Flower Snap',shape:'flowerSnap',range:145,knockback:'radialContact',duration:42,damage:39},
   },
   g1_ice: {
     us:{name:'Throwing Ice Shard',shape:'throwingShard',range:105,knockback:'velocity',duration:20,damage:16},
-    ds:{name:'Shattered Ice Plate',shape:'plateShards',range:88,knockback:'radialContact',duration:22,damage:17},
+    ds:{name:'Shattered Ice Plate',shape:'plateShards',range:88,knockback:'hitboxRadial',duration:22,damage:17},
     ss:{name:'Ice Forearm Blade',shape:'forearmBlade',range:72,knockback:'forwardContact',duration:16,damage:16},
     upHeavy:{name:'Tri-Shard Burst',shape:'shardBurst',range:130,knockback:'velocity',duration:24,damage:24},
-    dh:{name:'Sliding Ice Block',shape:'iceBlock',range:128,knockback:'forwardContact',duration:24,damage:22},
-    sh:{name:'Ice Hammer',shape:'hammerArc',range:112,knockback:'forwardContact',duration:24,damage:25},
+    dh:{name:'Sliding Ice Block',shape:'iceBlock',range:128,knockback:'hitboxRadial',duration:24,damage:22},
+    sh:{name:'Ice Hammer',shape:'hammerArc',range:112,knockback:'hitboxRadial',duration:24,damage:25},
     super:{name:'Crystal Explosion',shape:'crystalShards',range:155,knockback:'radialContact',duration:42,damage:40},
   },
 };
@@ -112,7 +112,21 @@ function activeProgress(fighter) { return clamp01((clamp01(fighter?.attackData?.
 
 export function getActiveSpecHitboxes(attacker) {
   const data = attacker?.attackData; if (!data) return [];
+  if (data.holding) return []; // held stance is purely visual; no hitbox exists until release
+  const rawP = clamp01(attacker?.attackData?.progress ?? 0);
   const t = activeProgress(attacker); if (t <= 0 || t >= 1) return [];
+  // Generation I hitboxes are deliberately active only during the authored
+  // strike portion of each animation, never during the held stance/wind-up.
+  const g1 = String(attacker?.char?.id || '');
+  const gm = attacker?.attackData;
+  const g1Move = gm?.isSuper ? 'sp' : gm?.isHeavy ? (gm.sigType === 'downHeavy' ? 'dh' : gm.sigType === 'upHeavy' ? 'upHeavy' : 'sh') : (gm.sigType === 'up' ? 'us' : gm.sigType === 'down' ? 'ds' : 'ss');
+  const G1_WINDOWS = {
+    g1_fire:{us:[.30,.64],ds:[.34,.78],ss:[.30,.72],upHeavy:[.28,.82],dh:[.34,.86],sh:[.34,.82],sp:[.48,.92]},
+    g1_water:{us:[.12,.66],ds:[.30,.76],ss:[.28,.72],upHeavy:[.30,.84],dh:[.22,.88],sh:[.34,.84],sp:[.44,.92]},
+    g1_grass:{us:[.18,.66],ds:[.30,.72],ss:[.30,.72],upHeavy:[.30,.82],dh:[.22,.86],sh:[.34,.84],sp:[.40,.92]},
+    g1_ice:{us:[.18,.84],ds:[.30,.82],ss:[.28,.76],upHeavy:[.30,.84],dh:[.22,.88],sh:[.34,.88],sp:[.38,.92]},
+  };
+  if (G1_WINDOWS[g1]?.[g1Move]) { const [lo,hi]=G1_WINDOWS[g1][g1Move]; if (rawP < lo || rawP > hi) return []; }
   if (String(attacker?.char?.id || '').startsWith('g2_')) {
     let mk = data.sigType || data.moveKey || '';
     if (data.isSuper) mk = 'sp';
@@ -259,8 +273,8 @@ export function getActiveSpecHitboxes(attacker) {
     case 'plateShards': { for(let i=0;i<7;i++){const a=Math.PI*1.05+i/6*Math.PI*.9; const sx=Math.cos(a)*52*q, sy=-18+Math.sin(a)*35*q; P([[sx,sy-14],[sx+10,sy+5],[sx-8,sy+8]]);} break; }
     case 'forearmBlade': { const a=-1.15+q*2.3; K(20,-45,20+Math.cos(a)*58,-45+Math.sin(a)*58,12); break; }
     case 'shardBurst': { for(let i=0;i<3;i++){const a=-Math.PI/2+i*TAU/3+q*.7; const sx=Math.cos(a)*76*q, sy=-70+Math.sin(a)*76*q; K(sx*.65,-70+sy*.35,sx,sy,9);} break; }
-    case 'iceBlock': { const bx=28+100*q; B(bx,-18,68,34); if(q>.7){B(bx+34,-48,24,26);B(bx-34,-6,24,26);} break; }
-    case 'hammerArc': { const a=-1+q*2; C(22+Math.cos(a)*72,-42+Math.sin(a)*72,20); break; }
+    case 'iceBlock': { const bx=28+100*q; B(bx,-18,68,34); if(q>.7){const e=(q-.7)/.3; B(bx+34+28*e,-48-20*e,24,26); B(bx-34-28*e,-6+18*e,24,26);} break; }
+    case 'hammerArc': { const a0=-1.15, a1=1.15; for(let i=0;i<7;i++){const a=a0+(a1-a0)*(i/6)*q; C(22+Math.cos(a)*76,-42+Math.sin(a)*76,14);} if(q>.82){for(let i=0;i<5;i++){const a=-.25+i*.12; C(96+Math.cos(a)*34,-42+Math.sin(a)*28,7);}} break; }
     case 'crystalShards': { if(q<.38) break; const e=(q-.38)/.62, cx=52, cy=-54, r=24+e*110; for(let i=0;i<16;i++){const a=i/16*TAU; const sx=cx+Math.cos(a)*r, sy=cy+Math.sin(a)*r*.72; const nx=Math.cos(a), ny=Math.sin(a)*.72; P([[sx-8*nx,sy-8*ny],[sx+12*nx,sy+12*ny],[sx-5*nx+ny*6,sy-5*ny-nx*6]]);} break; }
     default: {
       const reach=Math.min(160,Math.max(50,spec.range)); K(24,-42,reach*q,-42,12);
@@ -298,6 +312,7 @@ export function specKnockbackVector(attacker, defender, profile){
   if(p==='up') return {x:f*.18,y:-1};
   if(p==='upcontact'){const dx=defender.x-attacker.x;return{x:Math.max(-.55,Math.min(.55,dx/90)),y:-1};}
   if(p==='radial'||p==='radialcontact') return radialVector(attacker,defender);
+  if(p==='hitboxradial'){ const hp=attacker?.attackData?._hitPoint; if(hp){ const dx=defender.x-hp.x, dy=(defender.y-30)-hp.y, len=Math.hypot(dx,dy)||1; return {x:dx/len,y:dy/len}; } return radialVector(attacker,defender); }
   if(p==='inward'){const dx=attacker.x-defender.x,dy=attacker.y-defender.y,len=Math.hypot(dx,dy)||1;return{x:dx/len,y:dy/len};}
   if(p==='forwardcontact'){const dy=(defender.y-attacker.y)/90;return{x:f,y:Math.max(-.75,Math.min(.35,dy))};}
   if(p==='radialup'){const dx=defender.x-attacker.x;return{x:Math.max(-.8,Math.min(.8,dx/100)),y:-1};}

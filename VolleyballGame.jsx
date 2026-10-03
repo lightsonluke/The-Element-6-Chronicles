@@ -485,10 +485,12 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
       const canMove = (s.phase === 'rally' || s.phase === 'serve');
       const p1Main = s.t1[s.active1];
       const gp1 = gpRef.current[0] || {};
-      const gp2 = gpRef.current[1] || {};
-      const p1Left = keysRef.current['arrowleft'] || gp1.left || (p2IsCPU && (keysRef.current['a'] || gp2.left));
-      const p1Right = keysRef.current['arrowright'] || gp1.right || (p2IsCPU && (keysRef.current['d'] || gp2.right));
-      const p1Up = keysRef.current['arrowup'] || gp1.up || (p2IsCPU && (keysRef.current['w'] || gp2.up));
+      const gp2 = gpRef.current[1] || {}; // P2/CPU gamepad is never used for P1 movement.
+      const soloBinds = getSoloKeybinds(settings) || getKeybinds(settings).p1;
+      const keyDown = bind => !!keysRef.current[String(bind || '').toLowerCase()];
+      const p1Left = keyDown(soloBinds.left) || !!gp1.left;
+      const p1Right = keyDown(soloBinds.right) || !!gp1.right;
+      const p1Up = keyDown(soloBinds.jump) || !!gp1.up;
       const p1Frozen = s.phase === 'serve' && s.serverSide === 1 && !s.serveTossed && s.active1 === s.serverSlot1;
       if (p1Main.diving) updateDive(s, p1Main, 1, p1Chars, is1v1);
       else if (p1Frozen) moveFrozen(p1Main, p1Up);

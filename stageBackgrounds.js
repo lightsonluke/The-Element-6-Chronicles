@@ -977,3 +977,66 @@ function drawWeather(ctx, w, h, frame, weather, accentHex) {
     }
   }
 }
+
+// Small foreground dressing: intentionally kept below ~18px so it can sit in
+// front of the stage surface without obscuring fighters or items.
+export function drawStageForegroundDressing(ctx, platforms = [], frame = 0, mapId = 'splitcity') {
+  const pal = STAGE_THEMES[mapId] || STAGE_THEMES.splitcity;
+  const main = platforms.find(p => !p?._freehandSegment && p.h >= 30) || platforms[0];
+  if (!main) return;
+  const accent = pal.accent || '#88AAFF';
+  const motif = pal.motif || 'city';
+  const drawTuft = (x, y, scale = 1) => {
+    ctx.save();
+    ctx.strokeStyle = hexToRgba(accent, .85); ctx.lineWidth = 1.8 * scale; ctx.lineCap = 'round';
+    for (let i = -2; i <= 2; i++) {
+      const lean = i * 3 + Math.sin(frame * .035 + x * .03 + i) * 1.5;
+      ctx.beginPath(); ctx.moveTo(x + i * 2, y); ctx.lineTo(x + i * 4 + lean, y - (7 + (2 - Math.abs(i)) * 3) * scale); ctx.stroke();
+    }
+    ctx.restore();
+  };
+  const drawBush = (x, y, scale = 1) => {
+    ctx.save();
+    ctx.fillStyle = hexToRgba(mixHex(pal.sil, accent, .35), .92); ctx.shadowColor = accent; ctx.shadowBlur = 7;
+    for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.arc(x + i * 7 * scale, y - 4 * scale - Math.abs(i) * 2, 7 * scale, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  };
+  const drawVine = (x, y, dir = 1) => {
+    ctx.save(); ctx.strokeStyle = hexToRgba(accent, .75); ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + dir * 5, y - 7, x + dir * 2, y - 13); ctx.quadraticCurveTo(x + dir * 1, y - 17, x + dir * 5, y - 18); ctx.stroke();
+    ctx.fillStyle = hexToRgba(accent, .8); ctx.beginPath(); ctx.ellipse(x + dir * 5, y - 16, 3, 1.5, dir * .5, 0, TAU); ctx.fill();
+    ctx.restore();
+  };
+  const left = main.x + 12, right = main.x + main.w - 12, y = main.y + 1;
+  drawTuft(left + 4, y, .9); drawTuft(right - 4, y, .9);
+  drawBush(left, y, .72); drawBush(right, y, .72);
+  drawVine(left + 6, y + 1, 1); drawVine(right - 6, y + 1, -1);
+
+  // A second, tiny center accent is used on some themes. It never rises more
+  // than 10px above the platform top.
+  if (['forest','coastal','ice','mansion'].includes(motif)) {
+    const cx = main.x + main.w * .5 + Math.sin(frame * .02) * 4;
+    if (motif === 'ice') {
+      ctx.save(); ctx.fillStyle = hexToRgba('#E9FFFF', .8); ctx.beginPath();
+      ctx.moveTo(cx, y); ctx.lineTo(cx + 5, y - 9); ctx.lineTo(cx + 9, y); ctx.closePath(); ctx.fill(); ctx.restore();
+    } else if (motif === 'coastal') {
+      ctx.save(); ctx.strokeStyle = hexToRgba('#DDF8FF', .7); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(cx, y - 3, 7 + Math.sin(frame * .04) * 1.5, Math.PI, TAU); ctx.stroke(); ctx.restore();
+    } else {
+      drawTuft(cx, y, .6);
+    }
+  }
+
+  // Falling leaves/petals/embers stay in the scenery layer and move slowly.
+  if (['forest','mansion','mountains','lava','clouds'].includes(motif)) {
+    ctx.save();
+    for (let i = 0; i < 10; i++) {
+      const px = (srand(i * 17 + 4) * 1280 + frame * (0.15 + (i % 3) * .04)) % 1280;
+      const py = main.y - 30 - ((frame * (0.3 + (i % 4) * .05) + i * 37) % 130);
+      ctx.globalAlpha = .16 + (i % 3) * .05;
+      ctx.fillStyle = motif === 'lava' ? '#FF8844' : motif === 'mountains' ? '#FFD6A0' : '#E8F2FF';
+      ctx.beginPath(); ctx.ellipse(px, py, 2.2, 1.2, frame * .02 + i, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
+}

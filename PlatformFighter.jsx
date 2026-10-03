@@ -23,7 +23,7 @@ import { useClipRecorder } from './useClipRecorder.js';
 import { drawMaterialOverlay, drawMaterialStroke } from './materials.js';
 import { sanitizeFreehandStroke, buildFreehandCollisionPlatforms } from './freehandSafe.js';
 import { drawOffscreenIndicator } from './offscreenIndicator.js';
-import { drawStageBackground } from './stageBackgrounds.js';
+import { drawStageBackground, drawStageForegroundDressing } from './stageBackgrounds.js';
 import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor, getEquippedAccessories } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { getCrossoverColor, getCrossoverAttackColor, getCrossover, getCrossoverParts } from './crossovers.js';
@@ -45,491 +45,56 @@ import GameIcon from "./GameIcon.jsx";
 const W = 1280;
 const H = 720;
 
+// Stage layouts intentionally use varied platform counts and silhouettes (1–6 total platforms).
+
+const stageMain = (w = 1200, y = 620, h = 42, material = 'normal') => ({ x: (1280 - w) / 2, y, w, h, material });
+const stageFloat = (x, y, w, h = 14, material = 'normal') => ({ x, y, w, h, material });
+
 const MAP_PLATFORMS = {
-  splitcity: [
-    { x: 40,   y: 620, w: 1200, h: 48 },
-    { x: 120,  y: 440, w: 360,  h: 20 },
-    { x: 800,  y: 440, w: 360,  h: 20 },
-    { x: 460,  y: 270, w: 360,  h: 20 },
-  ],
-  // Basic — Split City backdrop with a single flat normal-material platform
-  basic: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-  ],
-  silvermansion: [
-    { x: 40,   y: 620, w: 1200, h: 48 },
-    { x: 100, y: 440, w: 300,  h: 20 },
-    { x: 880, y: 440, w: 300,  h: 20 },
-    { x: 480, y: 260, w: 320,  h: 20 },
-    { x: 570, y: 440, w: 140,  h: 20 },
-  ],
-  controllerforest: [
-    { x: 40,   y: 620, w: 1200, h: 48 },
-    { x: 120, y: 480, w: 300,  h: 20 },
-    { x: 860, y: 480, w: 300,  h: 20 },
-    { x: 500, y: 320, w: 280,  h: 20 },
-    { x: 340, y: 420, w: 200,  h: 20 },
-    { x: 740, y: 420, w: 200,  h: 20 },
-  ],
-  traininggrounds: [
-    { x: 40,   y: 620, w: 1200, h: 48 },
-    { x: 140, y: 460, w: 360,  h: 20 },
-    { x: 780, y: 460, w: 360,  h: 20 },
-    { x: 460, y: 280, w: 360,  h: 20 },
-  ],
-  voidplane: [
-    { x: 40,   y: 620, w: 1200, h: 48 },
-    { x: 80,  y: 420, w: 280,  h: 20 },
-    { x: 920, y: 420, w: 280,  h: 20 },
-    { x: 480, y: 260, w: 320,  h: 20 },
-    { x: 400, y: 480, w: 480,  h: 20 },
-  ],
-  // ── 30 NEW STAGE LAYOUTS ──
-  neonspire: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 100, y: 460, w: 280, h: 18 },
-    { x: 900, y: 460, w: 280, h: 18 },
-    { x: 500, y: 300, w: 280, h: 18 },
-    { x: 300, y: 400, w: 160, h: 18 },
-    { x: 820, y: 400, w: 160, h: 18 },
-  ],
-  sunsetridge: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 200, y: 480, w: 200, h: 20 },
-    { x: 880, y: 480, w: 200, h: 20 },
-    { x: 540, y: 350, w: 200, h: 20 },
-    { x: 100, y: 320, w: 160, h: 18 },
-    { x: 1020, y: 320, w: 160, h: 18 },
-  ],
-  frozenlake: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 150, y: 440, w: 320, h: 18 },
-    { x: 810, y: 440, w: 320, h: 18 },
-    { x: 480, y: 280, w: 320, h: 18 },
-  ],
-  lavafalls: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 100, y: 500, w: 200, h: 18 },
-    { x: 980, y: 500, w: 200, h: 18 },
-    { x: 400, y: 400, w: 200, h: 18 },
-    { x: 680, y: 400, w: 200, h: 18 },
-    { x: 540, y: 260, w: 200, h: 18 },
-  ],
-  crystalcavern: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 80, y: 460, w: 240, h: 18 },
-    { x: 960, y: 460, w: 240, h: 18 },
-    { x: 420, y: 380, w: 200, h: 18 },
-    { x: 660, y: 380, w: 200, h: 18 },
-    { x: 520, y: 240, w: 240, h: 18 },
-  ],
-  skysanctuary: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 200, y: 460, w: 360, h: 18 },
-    { x: 720, y: 460, w: 360, h: 18 },
-    { x: 480, y: 300, w: 320, h: 18 },
-  ],
-  underworld: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 120, y: 500, w: 240, h: 18 },
-    { x: 920, y: 500, w: 240, h: 18 },
-    { x: 400, y: 400, w: 160, h: 18 },
-    { x: 720, y: 400, w: 160, h: 18 },
-    { x: 520, y: 280, w: 240, h: 18 },
-  ],
-  auroraborealis: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 180, y: 440, w: 300, h: 18 },
-    { x: 800, y: 440, w: 300, h: 18 },
-    { x: 480, y: 300, w: 320, h: 18 },
-    { x: 300, y: 200, w: 200, h: 14 },
-    { x: 780, y: 200, w: 200, h: 14 },
-  ],
-  goldentemple: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 100, y: 480, w: 280, h: 20 },
-    { x: 900, y: 480, w: 280, h: 20 },
-    { x: 440, y: 360, w: 400, h: 20 },
-    { x: 540, y: 220, w: 200, h: 18 },
-  ],
-  stormpeak: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 200, y: 500, w: 200, h: 18 },
-    { x: 880, y: 500, w: 200, h: 18 },
-    { x: 420, y: 400, w: 200, h: 18 },
-    { x: 660, y: 400, w: 200, h: 18 },
-    { x: 540, y: 260, w: 200, h: 18 },
-  ],
-  toxicmarsh: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 150, y: 480, w: 320, h: 18 },
-    { x: 810, y: 480, w: 320, h: 18 },
-    { x: 480, y: 340, w: 320, h: 18 },
-  ],
-  cosmicvoid: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 100, y: 500, w: 200, h: 18 },
-    { x: 980, y: 500, w: 200, h: 18 },
-    { x: 380, y: 420, w: 200, h: 18 },
-    { x: 700, y: 420, w: 200, h: 18 },
-    { x: 520, y: 280, w: 240, h: 18 },
-  ],
-  emberforge: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 180, y: 460, w: 280, h: 18 },
-    { x: 820, y: 460, w: 280, h: 18 },
-    { x: 480, y: 320, w: 320, h: 18 },
-  ],
-  tidalreef: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 120, y: 440, w: 300, h: 18 },
-    { x: 860, y: 440, w: 300, h: 18 },
-    { x: 480, y: 280, w: 320, h: 18 },
-    { x: 300, y: 360, w: 160, h: 14 },
-    { x: 820, y: 360, w: 160, h: 14 },
-  ],
-  shadowrealm: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 80, y: 500, w: 240, h: 18 },
-    { x: 960, y: 500, w: 240, h: 18 },
-    { x: 400, y: 380, w: 200, h: 18 },
-    { x: 680, y: 380, w: 200, h: 18 },
-    { x: 540, y: 240, w: 200, h: 18 },
-  ],
-  dawnbreak: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 200, y: 480, w: 360, h: 18 },
-    { x: 720, y: 480, w: 360, h: 18 },
-    { x: 480, y: 320, w: 320, h: 18 },
-  ],
-  midnighttower: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 100, y: 520, w: 200, h: 18 },
-    { x: 980, y: 520, w: 200, h: 18 },
-    { x: 350, y: 420, w: 200, h: 18 },
-    { x: 730, y: 420, w: 200, h: 18 },
-    { x: 500, y: 300, w: 280, h: 18 },
-    { x: 540, y: 180, w: 200, h: 14 },
-  ],
-  junglecanopy: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 120, y: 460, w: 280, h: 18 },
-    { x: 880, y: 460, w: 280, h: 18 },
-    { x: 480, y: 300, w: 320, h: 18 },
-    { x: 300, y: 200, w: 200, h: 14 },
-    { x: 780, y: 200, w: 200, h: 14 },
-  ],
-  desertoasis: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 180, y: 460, w: 320, h: 18 },
-    { x: 780, y: 460, w: 320, h: 18 },
-    { x: 480, y: 300, w: 320, h: 18 },
-  ],
-  icepalace: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 100, y: 480, w: 260, h: 18 },
-    { x: 920, y: 480, w: 260, h: 18 },
-    { x: 420, y: 360, w: 200, h: 18 },
-    { x: 660, y: 360, w: 200, h: 18 },
-    { x: 540, y: 220, w: 200, h: 18 },
-  ],
-  volcanocrater: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 200, y: 500, w: 200, h: 18 },
-    { x: 880, y: 500, w: 200, h: 18 },
-    { x: 440, y: 380, w: 400, h: 18 },
-    { x: 540, y: 240, w: 200, h: 18 },
-  ],
-  starlightmeadow: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 150, y: 440, w: 300, h: 18 },
-    { x: 810, y: 440, w: 300, h: 18 },
-    { x: 480, y: 280, w: 320, h: 18 },
-    { x: 300, y: 340, w: 160, h: 14 },
-    { x: 820, y: 340, w: 160, h: 14 },
-  ],
-  thunderdome: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 100, y: 500, w: 220, h: 18 },
-    { x: 960, y: 500, w: 220, h: 18 },
-    { x: 380, y: 400, w: 200, h: 18 },
-    { x: 700, y: 400, w: 200, h: 18 },
-    { x: 520, y: 260, w: 240, h: 18 },
-  ],
-  rainbowbridge: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 200, y: 480, w: 320, h: 18 },
-    { x: 760, y: 480, w: 320, h: 18 },
-    { x: 480, y: 320, w: 320, h: 18 },
-    { x: 300, y: 200, w: 200, h: 14 },
-    { x: 780, y: 200, w: 200, h: 14 },
-  ],
-  coralreef: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 120, y: 460, w: 280, h: 18 },
-    { x: 880, y: 460, w: 280, h: 18 },
-    { x: 480, y: 300, w: 320, h: 18 },
-  ],
-  obsidianfield: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 80, y: 480, w: 240, h: 18 },
-    { x: 960, y: 480, w: 240, h: 18 },
-    { x: 400, y: 380, w: 200, h: 18 },
-    { x: 680, y: 380, w: 200, h: 18 },
-    { x: 540, y: 240, w: 200, h: 18 },
-  ],
-  solflare: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 180, y: 460, w: 300, h: 18 },
-    { x: 800, y: 460, w: 300, h: 18 },
-    { x: 480, y: 300, w: 320, h: 18 },
-  ],
-  mintgardens: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 150, y: 460, w: 320, h: 18 },
-    { x: 810, y: 460, w: 320, h: 18 },
-    { x: 480, y: 300, w: 320, h: 18 },
-    { x: 300, y: 380, w: 160, h: 14 },
-    { x: 820, y: 380, w: 160, h: 14 },
-  ],
-  cobaltmines: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 100, y: 500, w: 240, h: 18 },
-    { x: 940, y: 500, w: 240, h: 18 },
-    { x: 380, y: 400, w: 200, h: 18 },
-    { x: 700, y: 400, w: 200, h: 18 },
-    { x: 540, y: 260, w: 200, h: 18 },
-  ],
-  crimsonarena: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 200, y: 460, w: 360, h: 18 },
-    { x: 720, y: 460, w: 360, h: 18 },
-    { x: 480, y: 300, w: 320, h: 18 },
-  ],
-  phoenixroost: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 120, y: 480, w: 280, h: 18 },
-    { x: 880, y: 480, w: 280, h: 18 },
-    { x: 440, y: 360, w: 400, h: 18 },
-    { x: 540, y: 220, w: 200, h: 18 },
-  ],
-  nebulareach: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 180, y: 440, w: 300, h: 18 },
-    { x: 800, y: 440, w: 300, h: 18 },
-    { x: 480, y: 280, w: 320, h: 18 },
-    { x: 300, y: 360, w: 160, h: 14 },
-    { x: 820, y: 360, w: 160, h: 14 },
-  ],
-  emeraldcove: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 150, y: 460, w: 300, h: 18 },
-    { x: 810, y: 460, w: 300, h: 18 },
-    { x: 480, y: 300, w: 320, h: 18 },
-  ],
-  // ── 4 LARGE MAPS (wider platforms, built for 4+ players) ──
-  grandarena: [
-    { x: -50, y: 620, w: 1380, h: 48 },
-    { x: 50, y: 440, w: 380, h: 22 },
-    { x: 850, y: 440, w: 380, h: 22 },
-    { x: 430, y: 280, w: 420, h: 22 },
-    { x: -50, y: 440, w: 200, h: 18 },
-    { x: 1130, y: 440, w: 200, h: 18 },
-  ],
-  skycitadel: [
-    { x: -50, y: 620, w: 1380, h: 48 },
-    { x: 100, y: 480, w: 300, h: 20 },
-    { x: 500, y: 480, w: 280, h: 20 },
-    { x: 880, y: 480, w: 300, h: 20 },
-    { x: 250, y: 340, w: 280, h: 20 },
-    { x: 750, y: 340, w: 280, h: 20 },
-    { x: 490, y: 200, w: 300, h: 20 },
-  ],
-  colossalcoliseum: [
-    { x: -100, y: 620, w: 1480, h: 48 },
-    { x: 80, y: 460, w: 240, h: 20 },
-    { x: 400, y: 400, w: 200, h: 20 },
-    { x: 680, y: 400, w: 200, h: 20 },
-    { x: 960, y: 460, w: 240, h: 20 },
-    { x: 220, y: 280, w: 200, h: 18 },
-    { x: 860, y: 280, w: 200, h: 18 },
-    { x: 520, y: 220, w: 240, h: 18 },
-  ],
-  infiniteexpanse: [
-    { x: -100, y: 620, w: 1480, h: 48 },
-    { x: 50, y: 500, w: 200, h: 18 },
-    { x: 350, y: 420, w: 200, h: 18 },
-    { x: 700, y: 420, w: 200, h: 18 },
-    { x: 1030, y: 500, w: 200, h: 18 },
-    { x: 200, y: 300, w: 180, h: 16 },
-    { x: 550, y: 280, w: 180, h: 16 },
-    { x: 900, y: 300, w: 180, h: 16 },
-    { x: 380, y: 180, w: 200, h: 14 },
-    { x: 700, y: 180, w: 200, h: 14 },
-  ],
-  // ── Opal Cave (Power People crossover stage) ──
-  // A wide box of normal material with a smaller diamond box sitting exactly on
-  // top of it (touching), plus one floating metal platform that slowly rises and
-  // falls. Cave-style crystal backdrop.
-  opalcave: [
-    { x: 120, y: 520, w: 1040, h: 100 },                                       // normal box (wide main floor)
-    { x: 400, y: 440, w: 480, h: 80 },                                         // diamond box, smaller, touching normal box on top
-    { x: 540, y: 280, w: 200, h: 18, move: { type: 'vertical', distance: 160, speed: 0.25 } }, // floating metal platform — slow up/down
-  ],
-  // ── 20 NEW STAGES: Gen 1 heroes, Gen 5 heroes, lore locations ──
-  g1_thunder_peak: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 150, y: 460, w: 280, h: 18 },
-    { x: 850, y: 460, w: 280, h: 18 },
-    { x: 480, y: 300, w: 320, h: 18 },
-    { x: 300, y: 380, w: 160, h: 14 },
-    { x: 820, y: 380, w: 160, h: 14 },
-  ],
-  g1_inferno_realm: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 100, y: 500, w: 220, h: 18 },
-    { x: 960, y: 500, w: 220, h: 18 },
-    { x: 400, y: 400, w: 200, h: 18 },
-    { x: 680, y: 400, w: 200, h: 18 },
-    { x: 520, y: 260, w: 240, h: 18 },
-  ],
-  g1_ocean_depth: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 180, y: 440, w: 320, h: 18 },
-    { x: 780, y: 440, w: 320, h: 18 },
-    { x: 480, y: 280, w: 320, h: 18 },
-    { x: 300, y: 360, w: 160, h: 14 },
-    { x: 820, y: 360, w: 160, h: 14 },
-  ],
-  g1_verdant_grove: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 120, y: 480, w: 300, h: 18 },
-    { x: 860, y: 480, w: 300, h: 18 },
-    { x: 480, y: 320, w: 320, h: 18 },
-    { x: 300, y: 200, w: 200, h: 14 },
-    { x: 780, y: 200, w: 200, h: 14 },
-  ],
-  g1_glacier_realm: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 100, y: 480, w: 260, h: 18 },
-    { x: 920, y: 480, w: 260, h: 18 },
-    { x: 420, y: 360, w: 200, h: 18 },
-    { x: 660, y: 360, w: 200, h: 18 },
-    { x: 540, y: 220, w: 200, h: 18 },
-  ],
-  g5_golden_arena: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 200, y: 460, w: 360, h: 20 },
-    { x: 720, y: 460, w: 360, h: 20 },
-    { x: 480, y: 300, w: 320, h: 20 },
-    { x: 540, y: 180, w: 200, h: 16 },
-  ],
-  g5_tidal_sanctum: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 150, y: 460, w: 300, h: 18 },
-    { x: 830, y: 460, w: 300, h: 18 },
-    { x: 480, y: 300, w: 320, h: 18 },
-    { x: 300, y: 380, w: 160, h: 14 },
-    { x: 820, y: 380, w: 160, h: 14 },
-  ],
-  g5_shadow_dojo: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 80, y: 500, w: 240, h: 18 },
-    { x: 960, y: 500, w: 240, h: 18 },
-    { x: 400, y: 380, w: 200, h: 18 },
-    { x: 680, y: 380, w: 200, h: 18 },
-    { x: 540, y: 240, w: 200, h: 18 },
-  ],
-  g5_portal_nexus: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 200, y: 480, w: 320, h: 18 },
-    { x: 760, y: 480, w: 320, h: 18 },
-    { x: 480, y: 320, w: 320, h: 18 },
-    { x: 300, y: 200, w: 200, h: 14 },
-    { x: 780, y: 200, w: 200, h: 14 },
-  ],
-  g5_mountain_keep: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 100, y: 500, w: 240, h: 18 },
-    { x: 940, y: 500, w: 240, h: 18 },
-    { x: 380, y: 400, w: 200, h: 18 },
-    { x: 700, y: 400, w: 200, h: 18 },
-    { x: 540, y: 260, w: 200, h: 18 },
-  ],
-  g5_mind_palace: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 180, y: 440, w: 300, h: 18 },
-    { x: 800, y: 440, w: 300, h: 18 },
-    { x: 480, y: 280, w: 320, h: 18 },
-    { x: 300, y: 360, w: 160, h: 14 },
-    { x: 820, y: 360, w: 160, h: 14 },
-  ],
-  dawn_battleground: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 120, y: 460, w: 280, h: 18 },
-    { x: 880, y: 460, w: 280, h: 18 },
-    { x: 480, y: 300, w: 320, h: 18 },
-    { x: 540, y: 180, w: 200, h: 14 },
-  ],
-  shogun_castle: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 100, y: 480, w: 280, h: 20 },
-    { x: 900, y: 480, w: 280, h: 20 },
-    { x: 440, y: 360, w: 400, h: 20 },
-    { x: 540, y: 220, w: 200, h: 18 },
-  ],
-  iron_forge_town: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 150, y: 460, w: 320, h: 18 },
-    { x: 810, y: 460, w: 320, h: 18 },
-    { x: 480, y: 300, w: 320, h: 18 },
-    { x: 300, y: 380, w: 160, h: 14 },
-    { x: 820, y: 380, w: 160, h: 14 },
-  ],
-  rift_valley: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 80, y: 420, w: 280, h: 18 },
-    { x: 920, y: 420, w: 280, h: 18 },
-    { x: 480, y: 260, w: 320, h: 18 },
-    { x: 400, y: 480, w: 480, h: 18 },
-  ],
-  blood_arena: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 200, y: 460, w: 360, h: 20 },
-    { x: 720, y: 460, w: 360, h: 20 },
-    { x: 480, y: 300, w: 320, h: 20 },
-  ],
-  resonance_lab: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 100, y: 500, w: 220, h: 18 },
-    { x: 960, y: 500, w: 220, h: 18 },
-    { x: 380, y: 400, w: 200, h: 18 },
-    { x: 700, y: 400, w: 200, h: 18 },
-    { x: 520, y: 260, w: 240, h: 18 },
-  ],
-  harvest_stronghold: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 120, y: 480, w: 280, h: 18 },
-    { x: 880, y: 480, w: 280, h: 18 },
-    { x: 440, y: 360, w: 400, h: 18 },
-    { x: 540, y: 220, w: 200, h: 18 },
-  ],
-  crystal_library: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 180, y: 440, w: 300, h: 18 },
-    { x: 800, y: 440, w: 300, h: 18 },
-    { x: 480, y: 280, w: 320, h: 18 },
-    { x: 300, y: 360, w: 160, h: 14 },
-    { x: 820, y: 360, w: 160, h: 14 },
-  ],
-  element6_source: [
-    { x: 40, y: 620, w: 1200, h: 48 },
-    { x: 150, y: 460, w: 300, h: 18 },
-    { x: 810, y: 460, w: 300, h: 18 },
-    { x: 480, y: 300, w: 320, h: 18 },
-    { x: 300, y: 200, w: 200, h: 14 },
-    { x: 780, y: 200, w: 200, h: 14 },
-  ],
+  splitcity: [stageMain(1200)],
+  basic: [stageMain(1200), stageFloat(540, 440, 200, 16, 'normal')],
+  silvermansion: [stageMain(1120), stageFloat(420, 450, 360, 14, 'normal'), stageFloat(500, 270, 280, 14, 'normal')],
+  controllerforest: [stageMain(1200), stageFloat(100, 470, 300, 14, 'normal'), stageFloat(880, 470, 300, 14, 'normal'), stageFloat(500, 330, 280, 16, 'normal')],
+  traininggrounds: [stageMain(1040), stageFloat(160, 450, 320, 14, 'normal'), stageFloat(800, 450, 320, 14, 'normal')],
+  voidplane: [stageMain(1200), stageFloat(80, 500, 260, 14, 'normal'), stageFloat(940, 500, 260, 14, 'normal'), stageFloat(400, 370, 200, 14, 'normal'), stageFloat(680, 370, 200, 14, 'normal')],
+  neonspire: [stageMain(1160), stageFloat(80, 470, 240, 14, 'normal'), stageFloat(960, 470, 240, 14, 'normal'), stageFloat(420, 350, 220, 14, 'normal'), stageFloat(640, 350, 220, 14, 'normal'), stageFloat(520, 220, 240, 16, 'normal')],
+  sunsetridge: [stageMain(1000), stageFloat(250, 430, 700, 16, 'normal')],
+  frozenlake: [stageMain(1120), stageFloat(110, 470, 300, 14, 'ice'), stageFloat(870, 470, 300, 14, 'normal'), stageFloat(500, 320, 280, 16, 'normal')],
+  lavafalls: [stageMain(1200), stageFloat(90, 500, 220, 14, 'normal'), stageFloat(970, 500, 220, 14, 'normal'), stageFloat(390, 390, 180, 14, 'normal'), stageFloat(710, 390, 180, 14, 'normal')],
+  crystalcavern: [stageMain(1080), stageFloat(100, 470, 260, 14, 'normal'), stageFloat(920, 470, 260, 14, 'normal'), stageFloat(390, 350, 190, 14, 'normal'), stageFloat(700, 350, 190, 14, 'normal'), stageFloat(520, 230, 240, 16, 'normal')],
+  skysanctuary: [stageMain(1160), stageFloat(170, 450, 340, 14, 'normal'), stageFloat(770, 450, 340, 14, 'normal'), stageFloat(500, 300, 280, 16, 'normal')],
+  underworld: [stageMain(1200), stageFloat(120, 490, 260, 14, 'normal'), stageFloat(900, 490, 260, 14, 'normal'), stageFloat(430, 390, 180, 14, 'normal'), stageFloat(670, 390, 180, 14, 'normal'), stageFloat(520, 260, 240, 16, 'normal')],
+  auroraborealis: [stageMain(1040), stageFloat(170, 450, 280, 14, 'normal'), stageFloat(830, 450, 280, 14, 'normal'), stageFloat(500, 310, 280, 14, 'normal'), stageFloat(300, 220, 180, 14, 'normal'), stageFloat(800, 220, 180, 16, 'normal')],
+  goldentemple: [stageMain(980), stageFloat(220, 470, 840, 16, 'normal')],
+  stormpeak: [stageMain(1200), stageFloat(90, 500, 230, 14, 'normal'), stageFloat(960, 500, 230, 14, 'normal'), stageFloat(400, 370, 200, 14, 'normal'), stageFloat(680, 370, 200, 14, 'normal')],
+  toxicmarsh: [stageMain(1100), stageFloat(160, 450, 320, 14, 'normal'), stageFloat(800, 450, 320, 14, 'normal'), stageFloat(500, 300, 280, 16, 'normal')],
+  cosmicvoid: [stageMain(1200), stageFloat(80, 480, 250, 14, 'normal'), stageFloat(950, 480, 250, 14, 'normal'), stageFloat(360, 360, 200, 14, 'normal'), stageFloat(720, 360, 200, 14, 'normal'), stageFloat(520, 240, 240, 16, 'normal')],
+  emberforge: [stageMain(1040), stageFloat(180, 460, 360, 14, 'normal'), stageFloat(740, 460, 360, 14, 'normal'), stageFloat(500, 320, 280, 16, 'normal')],
+  tidalreef: [stageMain(1160), stageFloat(110, 480, 300, 14, 'normal'), stageFloat(870, 480, 300, 14, 'normal'), stageFloat(500, 330, 280, 14, 'normal'), stageFloat(290, 230, 180, 14, 'normal'), stageFloat(810, 230, 180, 16, 'normal')],
+  shadowrealm: [stageMain(1200), stageFloat(150, 500, 220, 14, 'normal'), stageFloat(910, 500, 220, 14, 'normal'), stageFloat(390, 390, 190, 14, 'normal'), stageFloat(700, 390, 190, 14, 'normal')],
+  dawnbreak: [stageMain(1000), stageFloat(250, 460, 700, 14, 'normal'), stageFloat(500, 300, 280, 14, 'normal')],
+  midnighttower: [stageMain(1120), stageFloat(100, 500, 260, 14, 'normal'), stageFloat(920, 500, 260, 14, 'normal'), stageFloat(500, 350, 280, 16, 'normal')],
+  junglecanopy: [stageMain(1160), stageFloat(180, 460, 300, 14, 'normal'), stageFloat(800, 460, 300, 14, 'normal'), stageFloat(500, 300, 280, 14, 'normal'), stageFloat(300, 200, 170, 14, 'normal'), stageFloat(810, 200, 170, 16, 'normal')],
+  desertoasis: [stageMain(980), stageFloat(300, 450, 680, 16, 'normal')],
+  icepalace: [stageMain(1200), stageFloat(120, 490, 260, 14, 'ice'), stageFloat(900, 490, 260, 14, 'normal'), stageFloat(420, 350, 180, 14, 'normal'), stageFloat(680, 350, 180, 14, 'normal'), stageFloat(520, 240, 240, 16, 'normal')],
+  volcanocrater: [stageMain(1080), stageFloat(180, 450, 320, 14, 'normal'), stageFloat(780, 450, 320, 14, 'normal'), stageFloat(500, 300, 280, 16, 'normal')],
+  starlightmeadow: [stageMain(1200), stageFloat(100, 500, 240, 14, 'normal'), stageFloat(940, 500, 240, 14, 'normal'), stageFloat(380, 390, 180, 14, 'normal'), stageFloat(720, 390, 180, 14, 'normal'), stageFloat(520, 270, 240, 16, 'normal')],
+  thunderdome: [stageMain(1040), stageFloat(250, 440, 700, 16, 'normal')],
+  rainbowbridge: [stageMain(1160), stageFloat(80, 490, 260, 14, 'normal'), stageFloat(940, 490, 260, 14, 'normal'), stageFloat(400, 360, 190, 14, 'normal'), stageFloat(690, 360, 190, 14, 'normal'), stageFloat(520, 220, 240, 16, 'normal')],
+  coralreef: [stageMain(1200), stageFloat(120, 470, 320, 14, 'normal'), stageFloat(840, 470, 320, 14, 'normal'), stageFloat(500, 310, 280, 16, 'normal')],
+  obsidianfield: [stageMain(1080), stageFloat(100, 500, 220, 14, 'normal'), stageFloat(960, 500, 220, 14, 'normal'), stageFloat(390, 390, 200, 14, 'normal'), stageFloat(690, 390, 200, 14, 'normal'), stageFloat(520, 260, 240, 16, 'normal')],
+  solflare: [stageMain(1200), stageFloat(170, 460, 320, 14, 'normal'), stageFloat(790, 460, 320, 14, 'normal'), stageFloat(500, 300, 280, 16, 'normal')],
+  mintgardens: [stageMain(1040), stageFloat(90, 490, 280, 14, 'normal'), stageFloat(910, 490, 280, 14, 'normal'), stageFloat(410, 350, 180, 14, 'normal'), stageFloat(690, 350, 180, 14, 'normal')],
+  cobaltmines: [stageMain(1160), stageFloat(210, 450, 820, 14, 'normal'), stageFloat(500, 290, 280, 14, 'normal')],
+  crimsonarena: [stageMain(1000), stageFloat(120, 500, 250, 14, 'normal'), stageFloat(910, 500, 250, 14, 'normal'), stageFloat(390, 380, 180, 14, 'normal'), stageFloat(710, 380, 180, 14, 'normal'), stageFloat(520, 250, 220, 16, 'normal')],
+  phoenixroost: [stageMain(1200), stageFloat(170, 460, 330, 14, 'normal'), stageFloat(780, 460, 330, 14, 'normal'), stageFloat(500, 300, 280, 14, 'normal'), stageFloat(300, 210, 170, 14, 'normal'), stageFloat(810, 210, 170, 16, 'normal')],
+  nebulareach: [stageMain(1080), stageFloat(100, 480, 260, 14, 'normal'), stageFloat(920, 480, 260, 14, 'normal'), stageFloat(420, 350, 190, 14, 'normal'), stageFloat(670, 350, 190, 14, 'normal')],
+  emeraldcove: [stageMain(1120), stageFloat(240, 460, 800, 16, 'normal')],
+  grandarena: [stageMain(1200), stageFloat(60, 470, 250, 14, 'normal'), stageFloat(970, 470, 250, 14, 'normal'), stageFloat(350, 350, 180, 14, 'normal'), stageFloat(750, 350, 180, 14, 'normal'), stageFloat(520, 220, 240, 16, 'normal')],
+  skycitadel: [stageMain(1160), stageFloat(100, 480, 300, 14, 'normal'), stageFloat(880, 480, 300, 14, 'normal'), stageFloat(500, 330, 280, 14, 'normal'), stageFloat(300, 220, 160, 14, 'normal'), stageFloat(820, 220, 160, 16, 'normal')],
+  colossalcoliseum: [stageMain(1080), stageFloat(80, 500, 220, 14, 'normal'), stageFloat(980, 500, 220, 14, 'normal'), stageFloat(400, 390, 180, 14, 'normal'), stageFloat(700, 390, 180, 14, 'normal'), stageFloat(520, 270, 220, 16, 'normal')],
+  infiniteexpanse: [stageMain(1200), stageFloat(180, 450, 360, 14, 'normal'), stageFloat(740, 450, 360, 14, 'normal'), stageFloat(500, 300, 280, 16, 'normal')],
+  opalcave: [stageMain(1040), stageFloat(260, 470, 680, 16, 'normal')],
 };
 
 const GAME_MODES = [
@@ -1720,7 +1285,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           // Crossover custom parts (e.g. The King of Fire's crown of fire)
           getCrossoverParts(f.char.id, equippedCrossovers).filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote));
         }
-        if (f.attackData && f.state === 'attacking') {
+        if (f.attackData && (f.state === 'attacking' || f.state === 'attackHold')) {
           // Per-move crossover colors: signatures vs heavy attacks
           const moveColor = f.attackData.isHeavy ? crossoverColors?.heavy : crossoverColors?.sig;
           const crossoverAttackColor = getCrossoverAttackColor(f.char.id, equippedCrossovers);
@@ -1748,6 +1313,8 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       };
 
       drawFighter(f1, 1); drawFighter(f2, 2);
+      // Tiny foreground dressing sits above fighters/items but stays under 18px tall.
+      if (!activeBackdrop) drawStageForegroundDressing(ctx, platforms, f1.frame, mapId);
       // Shapeshift switch flash effect
       [f1, f2].forEach(f => {
         if (f._shapeshiftFlash > 0) {
@@ -1792,7 +1359,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           // Hurtbox remains a body-shaped training box; attack hitboxes are the
           // exact authored circles/capsules/polygons used by collision.
           drawTrainingHitbox(ctx, f.x, f.y - 28, 44, 76, label);
-          if (f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
+          if (f.attackData && (f.state === 'attacking' || f.state === 'superAttack' || f.state === 'attackHold')) {
             drawExactAttackHitboxOverlay(ctx, f, label);
           }
         };

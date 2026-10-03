@@ -19,7 +19,9 @@ function getHost() {
     margin: '0', padding: '0',
     overflow: 'hidden',
     transform: 'none',
-    display: 'block',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     boxSizing: 'border-box',
     zIndex: '2147483000',
   });

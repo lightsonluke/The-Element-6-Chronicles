@@ -38,7 +38,7 @@ function getAttackKey(attack, attackKey) {
 // ── Main entry: draw sig/heavy attack with per-character config ──
 export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power) {
   if (String(charId || '').startsWith('g1_')) {
-    drawGen1Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
+    drawGen1Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey), attack);
     return;
   }
   if (String(charId || '').startsWith('g2_')) {
