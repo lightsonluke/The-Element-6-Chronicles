@@ -39,7 +39,7 @@ const GEN1_MOVE_SPECS = {
   },
   g1_water: {
     us:{name:'Water Ring',shape:'waterRing',range:84,knockback:'velocity',duration:20,damage:15},
-    ds:{name:'Twin Splashes',shape:'twinSplashes',range:70,knockback:'forwardContact',duration:18,damage:16},
+    ds:{name:'Twin Splashes',shape:'twinSplashes',range:70,knockback:'waterSplit',duration:18,damage:16},
     ss:{name:'Water Whip Tip',shape:'whipTip',range:90,knockback:'forwardContact',duration:15,damage:15},
     upHeavy:{name:'Spiral Water Ribbon',shape:'waterRibbon',range:145,knockback:'upContact',duration:25,damage:24},
     dh:{name:'Bouncing Water Sphere',shape:'waterBounce',range:96,knockback:'hitboxRadial',duration:24,damage:21},
@@ -109,24 +109,84 @@ export function getAttackSpecForData(charId, attackData) {
 }
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 function activeProgress(fighter) { return clamp01((clamp01(fighter?.attackData?.progress ?? 0) - .08) / .77); }
+function g1Frame(p) { return 1 + clamp01(p) * 11; }
+function g1PointRectBox(ox, oy, f, lx, ly, w, h) { return {shape:'box', x:ox + lx*f, y:oy + ly, w, h}; }
+function g1Circle(ox, oy, f, lx, ly, r) { return {shape:'circle', x:ox + lx*f, y:oy + ly, r}; }
+function g1Capsule(ox, oy, f, x1,y1,x2,y2,r) { return {shape:'capsule', x1:ox+x1*f,y1:oy+y1,x2:ox+x2*f,y2:oy+y2,r}; }
+function g1Poly(ox, oy, f, pts) { return {shape:'polygon', points:pts.map(([x,y])=>[ox+x*f,oy+y])}; }
+
+// Generation I collision is authored from the same 12 logical frames used by
+// gen1AttackAnims.js. This keeps hitboxes attached to the visible effects rather
+// than to a generic rectangle. Thunder is also kept here unchanged.
+function getGen1HeroHitboxes(attacker, move, p) {
+  const id=String(attacker?.char?.id||''), f=attacker?.facing||1, ox=Number(attacker?.x)||0, oy=Number(attacker?.y)||0;
+  const fr=g1Frame(p), out=[];
+  const C=(x,y,r)=>out.push(g1Circle(ox,oy,f,x,y,r));
+  const K=(x1,y1,x2,y2,r)=>out.push(g1Capsule(ox,oy,f,x1,y1,x2,y2,r));
+  const B=(x,y,w,h)=>out.push(g1PointRectBox(ox,oy,f,x,y,w,h));
+  const P=pts=>out.push(g1Poly(ox,oy,f,pts));
+  const q=Math.max(0,Math.min(1,(fr-2)/6));
+
+  if(id==='g1_thunder') {
+    if(move==='us' && fr>=3 && fr<=8.6){const a=-Math.PI/2+Math.max(0,Math.min(1,(fr-2)/6))*TAU;C(Math.cos(a)*86,-112+Math.sin(a)*34,9);}
+    else if(move==='ds' && fr>=4 && fr<=8){for(let i=0;i<9;i++){const a=Math.PI+i/8*Math.PI,r=18+Math.min(1,(fr-4)/4)*35;C(Math.cos(a)*r,-24+Math.sin(a)*r,9);}}
+    else if((move==='ss'||move==='sh') && fr>=4 && fr<=7.5){const len=move==='sh'?100:68,cur=len*Math.max(0,Math.min(1,(fr-3)/4));P([[24,-50],[24+cur*.23,-62],[24+cur*.14,-50],[24+cur*.52,-56],[24+cur*.42,-38],[24+cur*.82,-50],[24+cur*.62,-68],[24+cur,-56]]);}
+    else if((move==='upHeavy'||move==='uh') && fr>=4 && fr<=8){const top=-38-150*Math.max(0,Math.min(1,(fr-3)/5));for(const dx of [24,82,140])P([[dx-10,-38],[dx+10,-38],[dx+10,top],[dx-10,top]]);}
+    else if(move==='dh' && fr>=4 && fr<=8){const a=-Math.PI/2+Math.max(0,Math.min(1,(fr-3)/5))*TAU;C(20+Math.cos(a)*94,-72+Math.sin(a)*55,13);}
+    return out;
+  }
+
+  if(id==='g1_fire') {
+    if(move==='us' && fr>=4 && fr<=6.2){const t=Math.max(0,Math.min(1,(fr-3)/2.7)),a=-2.2+2.04*t,r=36,ex=18+Math.cos(a)*r,ey=-90+Math.sin(a)*r;K(18,-48,18+18*Math.cos(a*.55),-48+18*Math.sin(a*.55),8);K(18+18*Math.cos(a*.55),-48+18*Math.sin(a*.55),ex,ey,8);C(ex,ey,11);}
+    else if(move==='ds' && fr>=4 && fr<=7.2){const q=Math.max(0,Math.min(1,(fr-4)/3));for(let i=0;i<4;i++){const a=-Math.PI/2+(i-1.5)*.58,r=8+q*18;C(Math.cos(a)*r,-8+Math.sin(a)*r*.5,11);}}
+    else if(move==='ss' && fr>=3.5 && fr<=6.5){const q=Math.max(0,Math.min(1,(fr-3)/3));K(20,-43,20+48*q,-43,14);}
+    else if((move==='upHeavy'||move==='uh') && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6)),r=28+q*50;for(let i=0;i<14;i++){const a=i/14*TAU+q*TAU;C(Math.cos(a)*r,-92+Math.sin(a)*r*.72,11);}}
+    else if(move==='dh' && fr>=4.5 && fr<=8){const q=Math.max(0,Math.min(1,(fr-2)/5));for(let i=0;i<5;i++){const dx=(i-2)*24*q;C(dx,-32-(i%2)*8,13);}}
+    else if(move==='sh' && fr>=3.5 && fr<=8){const q=Math.max(0,Math.min(1,(fr-2)/5)),a=-1+q*1.9,cx=25+Math.cos(a)*48,cy=-45+Math.sin(a)*48;K(8,-45,cx,cy,15);C(cx,cy,20);}
+    else if(move==='sp' && fr>=7 && fr<=10.5)C(82,-50,18+Math.max(0,Math.min(1,(fr-7)/3.5))*60);
+    return out;
+  }
+
+  if(id==='g1_water') {
+    if(move==='us' && fr>=3 && fr<=7){const t=Math.max(0,Math.min(1,(fr-2)/5)),rx=15+56*t+8*Math.sin(t*Math.PI),ry=-45-62*t-20*Math.sin(t*Math.PI);C(rx,ry,22);}
+    else if(move==='ds' && fr>=4 && fr<=6.5){const q=Math.max(0,Math.min(1,(fr-3)/3));C(-18-30*q,-10-58*q,11);C(18+30*q,-10-58*q,11);}
+    else if(move==='ss' && fr>=3.5 && fr<=6.5){const q=Math.max(0,Math.min(1,(fr-2)/4));C(12+78*q,-44-Math.sin(Math.PI*q)*30*q,10);}
+    else if((move==='upHeavy'||move==='uh') && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6));for(let i=0;i<10;i++){const a=-1.25+i/9*2.5+q*1.9;C(Math.cos(a)*54,-64+Math.sin(a)*92,9);}}
+    else if(move==='dh' && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6)),bx=70-140*q,by=-46+Math.max(0,q-.45)*90;C(bx,by,22);if(q>.65)for(let i=0;i<8;i++)C(bx+(i-3.5)*12,by-70*(q-.65),8);}
+    else if(move==='sh' && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6));const pts=[];for(let i=0;i<=12;i++){const a=-.85+i/12*1.7;pts.push([20+Math.cos(a)*78,-48+Math.sin(a)*78]);}P(pts);}
+    else if(move==='sp' && fr>=6 && fr<=11){const q=Math.max(0,Math.min(1,(fr-6)/5)),r=8+q*112;for(let i=0;i<18;i++){const a=i/18*TAU;C(Math.cos(a)*r,-52+Math.sin(a)*r*.7,10);}}
+    return out;
+  }
+
+  if(id==='g1_grass') {
+    if(move==='us' && fr>=3 && fr<=7.3){const cy=-112,spin=Math.max(0,Math.min(1,(fr-2)/6))*TAU;for(let i=0;i<3;i++){const a=i/3*TAU+spin;P([[Math.cos(a)*5-7,cy+Math.sin(a)*5-25],[Math.cos(a)*30,cy+Math.sin(a)*30],[Math.cos(a)*5+7,cy+Math.sin(a)*5+25]]);}}
+    else if(move==='ds' && fr>=3.5 && fr<=7){const q=Math.max(0,Math.min(1,(fr-2)/4));C(-38+24*q,-42,9);C(38-24*q,-42,9);}
+    else if(move==='ss' && fr>=3.5 && fr<=6.5){const q=Math.max(0,Math.min(1,(fr-2)/4));B(12+70*q,-44,20,16);C(12+82*q,-44,11);}
+    else if((move==='upHeavy'||move==='uh') && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6)),r=22+q*70;for(let i=0;i<8;i++){const a=i/8*TAU;C(Math.cos(a)*r,-48+Math.sin(a)*r*.55,14);}}
+    else if(move==='dh' && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6));if(q<.55)K(-35,-105,85*q,-5,12);else{const u=(q-.55)/.45;K(85,-5,85-95*u,-35+u*12,12);}}
+    else if(move==='sh' && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6)),len=115*q;P([[18,-48],[18+len,-55],[18+len,-41]]);if(q>.58){const z=(q-.58)/.42;for(const a of[-.28,0,.28])P([[18+len,-48],[18+len+48*z,-48+Math.sin(a)*48*z],[18+len+48*z+8,-48+Math.sin(a)*48*z+6]]);}}
+    else if(move==='sp' && fr>=6 && fr<=10.5){const q=Math.max(0,Math.min(1,(fr-6)/4.5)),r=112-q*98;for(let i=0;i<12;i++){const a=i/12*TAU;P([[Math.cos(a)*r-10,-48+Math.sin(a)*r*.65-28],[Math.cos(a)*r+14,-48+Math.sin(a)*r*.65],[Math.cos(a)*r-10,-48+Math.sin(a)*r*.65+28]]);}}
+    return out;
+  }
+
+  if(id==='g1_ice') {
+    if(move==='us' && fr>=3 && fr<=8.5){const t=Math.max(0,Math.min(1,(fr-3)/6.5)),sx=18+58*t,sy=-82-112*t;C(sx,sy,13);}
+    else if(move==='ds' && fr>=5 && fr<=8){for(let i=0;i<7;i++){const a=Math.PI*1.05+i/6*Math.PI*.9,sx=Math.cos(a)*52*Math.max(0,Math.min(1,(fr-3)/4)),sy=-18+Math.sin(a)*35*Math.max(0,Math.min(1,(fr-3)/4));P([[sx,sy-14],[sx+10,sy+5],[sx-8,sy+8]]);}}
+    else if(move==='ss' && fr>=3.5 && fr<=7){const q=Math.max(0,Math.min(1,(fr-2)/5)),a=-1.15+q*2.3;K(20,-45,20+Math.cos(a)*58,-45+Math.sin(a)*58,12);}
+    else if((move==='upHeavy'||move==='uh') && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6));for(let i=0;i<3;i++){const a=-Math.PI/2+i*TAU/3+q*.7,sx=Math.cos(a)*76*q,sy=-70+Math.sin(a)*76*q;K(sx*.65,-70+sy*.35,sx,sy,9);}}
+    else if(move==='dh' && fr>=3.5 && fr<=9){const q=Math.max(0,Math.min(1,(fr-2)/6)),bx=28+104*q;B(bx,-18,68,34);if(q>.7){const e=(q-.7)/.3;B(bx+34+28*e,-48-20*e,24,26);B(bx-34-28*e,-6+18*e,24,26);}}
+    else if(move==='sh' && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6)),a=-1.15+q*2.3;for(let i=0;i<7;i++){const aa=-1.15+(2.3)*(i/6)*q;C(22+Math.cos(aa)*76,-42+Math.sin(aa)*76,14);}if(q>.82)for(let i=0;i<5;i++){const aa=-.25+i*.12;C(96+Math.cos(aa)*34,-42+Math.sin(aa)*28,7);}}
+    else if(move==='sp' && fr>=5 && fr<=11){const e=Math.max(0,Math.min(1,(fr-5)/6)),cx=52,cy=-54,r=24+e*110;for(let i=0;i<16;i++){const a=i/16*TAU;P([[cx+Math.cos(a)*r-8*Math.cos(a),cy+Math.sin(a)*r*.72-8*Math.sin(a)*.72],[cx+Math.cos(a)*r+12*Math.cos(a),cy+Math.sin(a)*r*.72+12*Math.sin(a)*.72],[cx+Math.cos(a)*r-5*Math.cos(a)+Math.sin(a)*6,cy+Math.sin(a)*r*.72-5*Math.sin(a)-Math.cos(a)*6]]);}}
+    return out;
+  }
+  return out;
+}
 
 export function getActiveSpecHitboxes(attacker) {
   const data = attacker?.attackData; if (!data) return [];
   if (data.holding) return []; // held stance is purely visual; no hitbox exists until release
   const rawP = clamp01(attacker?.attackData?.progress ?? 0);
   const t = activeProgress(attacker); if (t <= 0 || t >= 1) return [];
-  // Generation I hitboxes are deliberately active only during the authored
-  // strike portion of each animation, never during the held stance/wind-up.
-  const g1 = String(attacker?.char?.id || '');
-  const gm = attacker?.attackData;
-  const g1Move = gm?.isSuper ? 'sp' : gm?.isHeavy ? (gm.sigType === 'downHeavy' ? 'dh' : gm.sigType === 'upHeavy' ? 'upHeavy' : 'sh') : (gm.sigType === 'up' ? 'us' : gm.sigType === 'down' ? 'ds' : 'ss');
-  const G1_WINDOWS = {
-    g1_fire:{us:[.30,.64],ds:[.34,.78],ss:[.30,.72],upHeavy:[.28,.82],dh:[.34,.86],sh:[.34,.82],sp:[.48,.92]},
-    g1_water:{us:[.12,.66],ds:[.30,.76],ss:[.28,.72],upHeavy:[.30,.84],dh:[.22,.88],sh:[.34,.84],sp:[.44,.92]},
-    g1_grass:{us:[.18,.66],ds:[.30,.72],ss:[.30,.72],upHeavy:[.30,.82],dh:[.22,.86],sh:[.34,.84],sp:[.40,.92]},
-    g1_ice:{us:[.18,.84],ds:[.30,.82],ss:[.28,.76],upHeavy:[.30,.84],dh:[.22,.88],sh:[.34,.88],sp:[.38,.92]},
-  };
-  if (G1_WINDOWS[g1]?.[g1Move]) { const [lo,hi]=G1_WINDOWS[g1][g1Move]; if (rawP < lo || rawP > hi) return []; }
   if (String(attacker?.char?.id || '').startsWith('g2_')) {
     let mk = data.sigType || data.moveKey || '';
     if (data.isSuper) mk = 'sp';
@@ -314,6 +374,7 @@ export function specKnockbackVector(attacker, defender, profile){
   if(p==='radial'||p==='radialcontact') return radialVector(attacker,defender);
   if(p==='hitboxradial'){ const hp=attacker?.attackData?._hitPoint; if(hp){ const dx=defender.x-hp.x, dy=(defender.y-30)-hp.y, len=Math.hypot(dx,dy)||1; return {x:dx/len,y:dy/len}; } return radialVector(attacker,defender); }
   if(p==='inward'){const dx=attacker.x-defender.x,dy=attacker.y-defender.y,len=Math.hypot(dx,dy)||1;return{x:dx/len,y:dy/len};}
+  if(p==='watersplit'){ const side = defender.x >= attacker.x ? 1 : -1; return {x:side,y:-0.28}; }
   if(p==='forwardcontact'){const dy=(defender.y-attacker.y)/90;return{x:f,y:Math.max(-.75,Math.min(.35,dy))};}
   if(p==='radialup'){const dx=defender.x-attacker.x;return{x:Math.max(-.8,Math.min(.8,dx/100)),y:-1};}
   if(p==='velocity'){const vx=attacker.vx||f,vy=attacker.vy||0,len=Math.hypot(vx,vy)||1;return{x:vx/len,y:vy/len};}

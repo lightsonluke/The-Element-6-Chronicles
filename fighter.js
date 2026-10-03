@@ -67,9 +67,13 @@ function releaseGen1HeldAttack(fighter) {
   if (fighter.state !== 'attackHold' || !fighter.attackData?.holding) return false;
   const data = fighter.attackData;
   data.holding = false;
-  data.progress = 0;
+  // Release continues from the frozen stance frame instead of replaying the
+  // wind-up. This makes the hold frame a true pre-attack stance.
+  const holdProgress = gen1HoldProgress(fighter, data.holdMoveKey);
+  data.progress = holdProgress;
   data.hitApplied = false;
-  fighter.attackTimer = Math.max(1, Number(data.duration) || 20);
+  const fullDuration = Math.max(1, Number(data.duration) || 20);
+  fighter.attackTimer = Math.max(1, Math.round(fullDuration * (1 - holdProgress)));
   if (data.holdKind === 'sig') fighter.sigCooldown = Math.max(60, SIG_COOLDOWN * (fighter.statControlRecoveryMul || 1));
   else fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
   fighter.state = data.isSuper ? 'superAttack' : 'attacking';
@@ -1288,15 +1292,20 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
     // Flying (White)
     if (fighter.canFly) {
-      if (inputs.jump && !fighter.jumpHeld && !(inputs.heavy && UP_HEAVIES[fighter.char.id])) {
+      if (inputs.jump && !fighter.jumpHeld && !gen1AttackInputHeld && !(inputs.heavy && UP_HEAVIES[fighter.char.id])) {
         fighter.vy = JUMP_FORCE * 0.7;
         fighter.jumpHeld = true;
         fighter.isFlying = true;
       }
     }
 
-    // ── Jump with variable height (Brawlhalla-style) — edge-detected via fighter.jumpHeld ──
-    if (inputs.jump && !fighter.jumpHeld && !(inputs.heavy && UP_HEAVIES[fighter.char.id])) {
+    // Gen I attack buttons take priority over jump/drop inputs. Holding a Gen I
+  // attack must freeze the fighter immediately; directional inputs cannot turn the
+  // hold into a jump or platform drop before the stance is established.
+  const gen1AttackInputHeld = isGen1(fighter) && (!!inputs.sig || !!inputs.heavy);
+
+  // ── Jump with variable height (Brawlhalla-style) — edge-detected via fighter.jumpHeld ──
+    if (inputs.jump && !fighter.jumpHeld && !gen1AttackInputHeld && !(inputs.heavy && UP_HEAVIES[fighter.char.id])) {
       fighter.jumpHeld = true;
       fighter.jumpCutApplied = false;
       const useGroundJump = fighter.coyoteTime > 0 && fighter.jumps >= fighter.maxJumps;
@@ -1349,7 +1358,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     // on one deliberately drops the fighter through it. Jumping from below is
     // already allowed because one-way collision only resolves while falling.
     const downPressed = !!inputs.down && !fighter.downHeld;
-    if (downPressed && fighter.grounded) {
+    if (downPressed && fighter.grounded && !gen1AttackInputHeld) {
       const feet = fighter.y;
       const thinBelow = platforms.some(p => !p?._freehandSlope && (p._deleted || 0) <= 0 && p.h <= 16 && fighter.x > p.x - 18 && fighter.x < p.x + p.w + 18 && Math.abs(feet - p.y) <= 3);
       if (thinBelow) {
