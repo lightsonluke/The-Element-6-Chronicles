@@ -1002,11 +1002,15 @@ export { CPU_DIFFICULTY, updateAI, platformNavigate } from './botAI.js';
 function isGen1Fighter(f) { return String(f?.char?.id || '').startsWith('g1_'); }
 
 function startGen1Hold(fighter, button, sigType, wasAirborne = false, wasGrounded = false) {
+  const configured = button === 'heavy'
+    ? (sigType === 'upHeavy' ? UP_HEAVIES[fighter.char.id]?.holdFrames : sigType === 'downHeavy' ? DOWN_HEAVIES[fighter.char.id]?.holdFrames : fighter.char.heavyAttack?.holdFrames)
+    : fighter.char.signatures?.[sigType]?.holdFrames;
+  const maxFrames = Math.max(1, Number(configured) || 180);
   fighter.attackHold = {
     button,
     sigType,
     frames: 0,
-    maxFrames: 180,
+    maxFrames,
     wasAirborne,
     wasGrounded,
   };
@@ -1037,20 +1041,15 @@ function executeGen1HeldAttack(fighter, hold) {
   // Capture the original directional choice. The current direction keys are
   // deliberately ignored here, so changing direction during the hold cannot
   // turn one attack into another.
-  const dur = id === 'g1_fire' ? Math.max(1, Math.round(Number(data.duration) || 1)) : Math.min(data.duration || (isHeavy ? 24 : 20), isHeavy ? 32 : 30);
-  const releaseProgress = Math.max(0, Math.min(0.96, hold.frames / hold.maxFrames));
+  const dur = Math.min(data.duration || (isHeavy ? 24 : 20), isHeavy ? 32 : 30);
   fighter.attackData = {
     ...data,
     duration: dur,
     sigType,
     hitApplied: false,
-    // Continue the released animation from the exact normalized point represented
-    // by the hold visual instead of restarting at frame 1. This makes release feel
-    // like a continuation of the held pose.
-    progress: releaseProgress,
-    releaseStartProgress: releaseProgress,
+    progress: 0,
     holding: false,
-    holdProgress: Math.min(1, hold.frames / hold.maxFrames),
+    holdProgress: 1,
     // Preserve the real amount of time this attack was charged. 0 = instant release,
     // 1 = the full 3-second charge. This is used by applyHit() for the damage bonus.
     holdCharge: Math.min(1, hold.frames / hold.maxFrames),
@@ -1222,6 +1221,13 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
   // ── Hitstun: smooth knockback with DI influence ──
   if (fighter.hitstun > 0) {
+    // Any third-party hit cleanly cancels the current attack/charge so the
+    // character can never resume an interrupted attack pose after hitstun.
+    if (fighter.state !== 'hitstun') {
+      fighter.attackData = null;
+      fighter.attackHold = null;
+    }
+    fighter.state = 'hitstun';
     fighter.hitstun--;
     fighter.vx *= KNOCKBACK_DECAY;
     // Apply DI — slight steering during knockback (Brawlhalla-style)
@@ -1237,6 +1243,15 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     onMovementAbilityLanded(fighter, inputs);
     if (fighter.attackData) updateAttackProgress(fighter);
     return fighter;
+  }
+
+  // Hitstun just ended: force a clean neutral state. This is the universal
+  // animation reset path for attacks interrupted by another fighter, hazard,
+  // power, projectile, or any other third-party effect.
+  if (fighter.state === 'hitstun' && fighter.hitstun <= 0) {
+    fighter.attackData = null;
+    fighter.attackHold = null;
+    fighter.state = fighter.grounded ? 'idle' : 'jumping';
   }
 
   // ── Generation I attack hold system ──────────────────────────────────────
@@ -1269,8 +1284,9 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     // Reduced friction during attacks so you slide a bit (Brawlhalla momentum)
     fighter.vx *= fighter.grounded ? 0.88 : 0.96;
     if (fighter.attackTimer <= 0) {
-      fighter.state = fighter.grounded ? 'idle' : 'jumping';
       fighter.attackData = null;
+      fighter.attackHold = null;
+      fighter.state = fighter.grounded ? 'idle' : 'jumping';
     }
   }
 
@@ -1483,7 +1499,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       inputs._heavyConsumed = true;
       const upHeavy = UP_HEAVIES[fighter.char.id];
       fighter.state = 'attacking';
-      const dur = fighter.char.id === 'g1_fire' ? Math.max(1, Math.round(Number(upHeavy.duration) || 1)) : Math.min(upHeavy.duration || 24, 30);
+      const dur = Math.min(upHeavy.duration || 24, 30);
       fighter.attackTimer = dur;
       fighter.attackData = { ...upHeavy, duration: dur, sigType: 'upHeavy', hitApplied: false, progress: 0, isHeavy: true };
       fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
@@ -1508,7 +1524,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       const downHeavy = DOWN_HEAVIES[fighter.char.id];
       if (downHeavy) {
         fighter.state = 'attacking';
-        const dur = fighter.char.id === 'g1_fire' ? Math.max(1, Math.round(Number(downHeavy.duration) || 1)) : Math.min(downHeavy.duration, 28);
+        const dur = Math.min(downHeavy.duration, 28);
         fighter.attackTimer = dur;
         fighter.attackData = { ...downHeavy, duration: dur, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true };
         fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
@@ -1523,7 +1539,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       const heavy = fighter.char.heavyAttack;
       if (heavy) {
         fighter.state = 'attacking';
-        const dur = fighter.char.id === 'g1_fire' ? Math.max(1, Math.round(Number(heavy.duration) || 1)) : Math.min(heavy.duration, 30);
+        const dur = Math.min(heavy.duration, 30);
         fighter.attackTimer = dur;
         fighter.attackData = { ...heavy, duration: dur, sigType: 'heavy', hitApplied: false, progress: 0, isHeavy: true };
         fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
@@ -1568,7 +1584,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         const sig = fighter.char.signatures?.[sigType];
         if (sig) {
           fighter.state = 'attacking';
-          const dur = fighter.char.id === 'g1_fire' ? Math.max(1, Math.round(Number(sig.duration) || 1)) : Math.min(sig.duration, 28);
+          const dur = Math.min(sig.duration, 28);
           fighter.attackTimer = dur;
           fighter.attackData = { ...sig, duration: dur, sigType, hitApplied: false, progress: 0 };
           fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
@@ -1596,7 +1612,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       fighter.superMeter = 0;
       const sm = fighter.char?.superMove || { name: 'Super', duration: 42, damage: 30, color: fighter.char?.color || '#FFFFFF' };
       fighter.state = 'superAttack';
-      const dur = fighter.char.id === 'g1_fire' ? Math.max(1, Math.round(Number(sm?.duration) || 1)) : Math.min(sm?.duration || 50, 55);
+      const dur = Math.min(sm?.duration || 50, 55);
       fighter.attackTimer = dur;
       fighter.attackData = { ...(sm || {}), duration: dur, sigType: 'super', hitApplied: false, progress: 0, isSuper: true };
       fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
@@ -2006,12 +2022,8 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
 }
 
 function updateAttackProgress(fighter) {
-  const elapsed = Math.max(0, fighter.attackData.duration - fighter.attackTimer);
-  const start = Math.max(0, Math.min(0.96, Number(fighter.attackData.releaseStartProgress) || 0));
-  // If a Gen I move was released from a hold, continue from that exact visual
-  // position instead of resetting the animation to frame 1. Legacy attacks keep
-  // the normal 0 -> 1 progression because releaseStartProgress is absent.
-  fighter.attackData.progress = start + (1 - start) * Math.min(elapsed / fighter.attackData.duration, 1);
+  const elapsed = fighter.attackData.duration - fighter.attackTimer;
+  fighter.attackData.progress = Math.min(elapsed / fighter.attackData.duration, 1);
 }
 
 export function checkHit(attacker, defender) {

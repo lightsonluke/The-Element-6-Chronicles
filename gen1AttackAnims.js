@@ -591,26 +591,95 @@ function fireAttack(ctx,x,y,p,move){
 }
 
 function waterUpReference(ctx,x,y,p){
+  // Native recreation of the supplied 12-frame Water Hero Up Signature guide.
+  // The guide is a blueprint only: all water is drawn procedurally in-game.
   const c='#24BFFF', white='#DDFBFF';
   if(p<0){
-    // User-specified hold frame: frame 1 — ring begins around the lower arm.
-    const q=holdCharge(p), rr=17+q*9;
-    waterRing(ctx,x+4,y-34,rr+8,rr*.45,c,.75+q*.2,-.15);
-    glowStroke(ctx,[[x+5,y-25],[x+12,y-42]],c,5,.8);
+    // Hold/charge: frame 1 silhouette — a small spinning ring wraps the lower arm.
+    const q=holdCharge(p);
+    const spin=q*REF_TAU*1.35;
+    const rr=18+q*6;
+    waterRing(ctx,x+4,y-34,rr+7,10+q*2,c,.72+q*.22,-.15+spin*.18);
+    glowStroke(ctx,[[x+5,y-25],[x+12,y-42]],c,5,.75+q*.12);
+    for(let i=0;i<4;i++){
+      const a=spin+i*REF_TAU/4;
+      spark(ctx,x+4+Math.cos(a)*(rr+6),y-34+Math.sin(a)*10,1.5,c,.45+q*.3);
+    }
     return;
   }
+
   const f=refFrame(p);
-  if(f<1.8){ waterRing(ctx,x+4,y-34,22,10,c,.75,-.15); return; }
-  const travel=Math.min(1,Math.max(0,(f-2)/5.2));
-  const tx=x+30+travel*130, ty=y-55-travel*70+Math.sin(travel*Math.PI)*20;
-  const prevX=x+18+(travel-.12)*130, prevY=y-48-(travel-.12)*70+Math.sin(Math.max(0,travel-.12)*Math.PI)*20;
-  glowStroke(ctx,[[x+10,y-34],[x+25,y-52],[tx,ty]],c,6,.55);
-  for(let i=0;i<6;i++) spark(ctx,tx-Math.cos(.5)*i*7,ty+i*4,1.7,c,.65);
-  if(f<3.1){ waterRing(ctx,x+18,y-48,25,12,c,.95,-.1); }
-  if(f>=3){ waterRing(ctx,tx,ty,27,11,c,.98,.2+travel*.3); }
-  if(f>=6 && f<8){
-    const vanish=(f-6)/2; glowArc(ctx,tx,ty,25*(1-vanish),10*(1-vanish),0,REF_TAU,c,5,1-vanish,.25);
+
+  // Reference frame 1: small ring around the lower arm/waist area.
+  if(f<1.65){
+    waterRing(ctx,x+4,y-34,22,10,c,.78,-.15);
+    return;
   }
+
+  // Reference frame 2: the ring swings upward around the raised hand.
+  if(f<2.55){
+    const t=ease((f-1.65)/.9);
+    const rx=22+3*t, ry=10+2*t;
+    const cx=x+4+14*t, cy=y-34-16*t;
+    waterRing(ctx,cx,cy,rx,ry,c,.84+.1*t,-.15-.08*t);
+    glowStroke(ctx,[[x+8,y-26],[x+15,y-40],[x+4+18*t,y-50]],c,5.5,.78);
+    return;
+  }
+
+  // Frames 3-7: the ring separates and follows a short curved upward path.
+  // These staged points are taken directly from the visual guide's motion:
+  // separate -> high/right -> near peak -> break apart.
+  const points=[
+    {f:3,x:76,y:-74,rx:27,ry:11,a:1},
+    {f:4,x:142,y:-105,rx:27,ry:11,a:1},
+    {f:5,x:151,y:-108,rx:25,ry:10,a:.98},
+    {f:6,x:140,y:-128,rx:22,ry:9,a:.92},
+    {f:7,x:129,y:-119,rx:12,ry:6,a:.55}
+  ];
+  if(f>=2.55 && f<7.85){
+    const idx=Math.max(0,Math.min(points.length-2,Math.floor((f-3))));
+    const a=points[idx], b=points[Math.min(points.length-1,idx+1)];
+    const t=ease(clamp01((f-a.f)/Math.max(.001,b.f-a.f)));
+    const px=a.x+(b.x-a.x)*t;
+    const py=a.y+(b.y-a.y)*t;
+    const rx=a.rx+(b.rx-a.rx)*t;
+    const ry=a.ry+(b.ry-a.ry)*t;
+    const op=a.a+(b.a-a.a)*t;
+
+    // Curved water trail behind the ring; the ring itself remains the hitbox.
+    const trail=[];
+    const trailSteps=7;
+    for(let i=trailSteps;i>=1;i--){
+      const u=clamp01((f-3-i*.16)/4);
+      const ti=ease(u);
+      const tx=76+(151-76)*ti;
+      const ty=-74+(-108+74)*ti;
+      trail.push([x+tx,y+ty]);
+    }
+    trail.push([x+px,y+py]);
+    glowStroke(ctx,trail,c,5.5,.42);
+    for(let i=0;i<8;i++){
+      const k=i/8;
+      const sx=x+px-(px-76)*(0.15+k*.55);
+      const sy=y+py-(py+74)*(0.15+k*.55)+Math.sin(i*1.7)*2;
+      spark(ctx,sx,sy,1.5+(i%2),c,(.22+.08*(i%3))*(1-k));
+    }
+    waterRing(ctx,x+px,y+py,rx,ry,c,op,.2+(f-3)*.16);
+    return;
+  }
+
+  // Frame 8: only a few fading water fragments remain.
+  if(f<8.8){
+    const t=ease((f-7.85)/.95);
+    const px=129+7*t, py=-119-5*t;
+    for(let i=0;i<5;i++){
+      const dx=(i-2)*7, dy=(i%2)*3;
+      spark(ctx,x+px+dx,y+py+dy,1.8-(t*.7),c,(.45*(1-t)));
+    }
+    return;
+  }
+
+  // Frames 9-12: clean return to neutral / idle. No attack effect remains.
 }
 
 function grassUpReference(ctx,x,y,p){
