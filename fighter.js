@@ -59,8 +59,8 @@ function beginGen1HeldAttack(fighter, attackData, moveKey, kind) {
   };
   fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
   fighter.attackTimer = Number.POSITIVE_INFINITY;
-  fighter.vx = 0;
-  fighter.vy = 0;
+  fighter.attackData.holdInputKey = kind;
+  fighter.attackData.holdMaxFrames = 180;
 }
 
 function releaseGen1HeldAttack(fighter) {
@@ -77,8 +77,6 @@ function releaseGen1HeldAttack(fighter) {
   if (data.holdKind === 'sig') fighter.sigCooldown = Math.max(60, SIG_COOLDOWN * (fighter.statControlRecoveryMul || 1));
   else fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
   fighter.state = data.isSuper ? 'superAttack' : 'attacking';
-  fighter.vx = 0;
-  fighter.vy = 0;
   return true;
 }
 
@@ -1167,20 +1165,47 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
   // Gen I held-attack stance is handled before universal movement abilities so
   // dash, air-dodge, jump and directional movement cannot sneak through the hold.
   if (isGen1(fighter) && fighter.state === 'attackHold' && fighter.attackData?.holding) {
-    const release = fighter.attackData.holdKind === 'sig' ? !inputs.sig : !inputs.heavy;
-    fighter.vx = 0; fighter.vy = 0;
+    // The original attack button is latched. Changing to another button/input
+    // cannot change the selected move while the attack is charging.
+    const holdKind = fighter.attackData.holdInputKey || fighter.attackData.holdKind;
+    const released = holdKind === 'sig' ? !inputs.sig : !inputs.heavy;
     fighter.attackData.holdTick = (fighter.attackData.holdTick || 0) + 1;
     fighter.attackData.progress = gen1HoldProgress(fighter, fighter.attackData.holdMoveKey);
     fighter.downHeld = !!inputs.down;
-    if (release) {
-      releaseGen1HeldAttack(fighter);
-      if (fighter.attackData.holdKind === 'sig') fighter._gen1SigHolding = false;
-      else fighter._gen1HeavyHolding = false;
+
+    // Holding locks player-controlled movement, but it does NOT freeze physics.
+    // Existing dash/air-dodge velocity, knockback velocity and gravity continue.
+    // A new dash cannot be started because movement abilities are intentionally
+    // skipped while the hold state owns the fighter.
+    if (fighter.dashTimer > 0) {
+      fighter.vx = fighter.dashDirection.x * 9.5;
+      fighter.vy = fighter.dashDirection.y * 9.5;
+      if (fighter.dashDirection.x) fighter.facing = fighter.dashDirection.x;
     } else {
+      const gravMulHold = fighter.lowGravity ? 0.45 : 1;
+      if (!fighter.grounded || fighter.canFly) {
+        const gravHold = (fighter.gravityInverted ? -GRAVITY : GRAVITY) * gravMulHold;
+        fighter.vy += gravHold;
+        const maxHoldFall = (fighter.gravityInverted ? -MAX_FALL_SPEED : MAX_FALL_SPEED) * (fighter.lowGravity ? 0.6 : 1);
+        if (!fighter.gravityInverted && fighter.vy > maxHoldFall) fighter.vy = maxHoldFall;
+        if (fighter.gravityInverted && fighter.vy < maxHoldFall) fighter.vy = maxHoldFall;
+      }
+      if (fighter.grounded) fighter.vx *= GROUND_FRICTION;
+      else fighter.vx *= AIR_FRICTION;
+    }
+    fighter.x += fighter.vx;
+    fighter.y += fighter.vy;
+    resolveCollisions(fighter, platforms, stageWidth, stageHeight);
+    onMovementAbilityLanded(fighter, inputs);
+
+    const maxHold = fighter.attackData.holdMaxFrames || 180;
+    if (released || fighter.attackData.holdTick >= maxHold) {
+      releaseGen1HeldAttack(fighter);
+      if (holdKind === 'sig') fighter._gen1SigHolding = false;
+      else fighter._gen1HeavyHolding = false;
+      // Release/auto-release starts the attack on the next simulation step.
       return fighter;
     }
-    // Release starts the move; no movement or secondary input is consumed on
-    // the release frame.
     return fighter;
   }
 

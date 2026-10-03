@@ -444,7 +444,7 @@ function iceSideHeavy(ctx,x,y,p){
 function iceSuper(ctx,x,y,p){
   const c='#AAEEFF',f=moveFrame(p),cx=x+52,cy=y-54;
   if(f<7){ctx.save();ctx.fillStyle=c;glow(ctx,c,24);ctx.globalAlpha=.9;ctx.beginPath();ctx.moveTo(cx,cy-100);ctx.lineTo(cx+42,cy-22);ctx.lineTo(cx+30,cy+70);ctx.lineTo(cx-18,cy+45);ctx.lineTo(cx-44,cy-24);ctx.closePath();ctx.fill();ctx.restore();}
-  if(f>=5){const e=stageFade(f,5,11),r=24+e*110;for(let i=0;i<16;i++){const a=i/16*TAU;sx=cx+Math.cos(a)*r;sy=cy+Math.sin(a)*r*.72;shard(ctx,sx,sy,10,28,a,c,.95);}}
+  if(f>=5){const e=stageFade(f,5,11),r=24+e*110;for(let i=0;i<16;i++){const a=i/16*TAU;const sx=cx+Math.cos(a)*r,sy=cy+Math.sin(a)*r*.72;shard(ctx,sx,sy,10,28,a,c,.95);}}
 }
 
 function fireAttack(ctx,x,y,p,move){
@@ -471,18 +471,48 @@ function waterSuperFrame(ctx,x,y,p){const c='#3399CC',f=moveFrame(p),r=30+stageF
 function grassSuperFrame(ctx,x,y,p){const c='#44AA44',f=moveFrame(p),q=stageFade(f,2,9),r=28+q*92;for(let i=0;i<12;i++){const a=i/12*TAU;leaf(ctx,x+Math.cos(a)*r,y-48+Math.sin(a)*r*.65,16,38,a,c,.85);}if(f>=6){const rr=r*(1-stageFade(f,6,10));for(let i=0;i<12;i++){const a=i/12*TAU;streak(ctx,x+Math.cos(a)*r,y-48+Math.sin(a)*r*.65,x+Math.cos(a)*rr,y-48+Math.sin(a)*rr*.65,c,8,.7);}}}
 function iceSuperFrame(ctx,x,y,p){const c='#AAEEFF',f=moveFrame(p),cx=x+52,cy=y-54;if(f<7){ctx.save();ctx.fillStyle=c;glow(ctx,c,24);ctx.globalAlpha=.9;ctx.beginPath();ctx.moveTo(cx,cy-100);ctx.lineTo(cx+42,cy-22);ctx.lineTo(cx+30,cy+70);ctx.lineTo(cx-18,cy+45);ctx.lineTo(cx-44,cy-24);ctx.closePath();ctx.fill();ctx.restore();}if(f>=5){const e=stageFade(f,5,11),r=24+e*110;for(let i=0;i<16;i++){const a=i/16*TAU;const sx=cx+Math.cos(a)*r,sy=cy+Math.sin(a)*r*.72;shard(ctx,sx,sy,10,28,a,c,.95);}}}
 
+function drawGen1ChargeLayer(ctx, x, y, charId, move, holdTick = 0) {
+  // Visual-only charging: no collision geometry is created here. The attack's
+  // actual hitbox remains disabled until the held button is released.
+  if (charId === 'g1_thunder') return; // Thunder animation remains unchanged.
+  const q = clamp01((holdTick || 0) / 180);
+  const pulse = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin((holdTick || 0) * 0.22));
+  if (charId === 'g1_fire') {
+    const r = 9 + q * 18;
+    flame(ctx, x + 20, y - 48, r, '#FF6600', 0.22 + q * 0.38 * pulse, -0.35);
+    for (let i = 0; i < 7; i++) {
+      const a = -2.5 + i * 0.42 + holdTick * 0.025;
+      const rr = 22 + q * 30 + (i % 3) * 7;
+      dot(ctx, x + 18 + Math.cos(a) * rr, y - 48 + Math.sin(a) * rr, 1.5 + q * 2, '#FFD36A', (0.2 + q * 0.5) * pulse);
+    }
+  } else if (charId === 'g1_water') {
+    const r = 10 + q * 24;
+    ctx.save(); ctx.globalAlpha = 0.25 + q * 0.4; ctx.strokeStyle = '#66DDFF'; ctx.lineWidth = 4 + q * 3; glow(ctx, '#3399CC', 12 + q * 12);
+    ctx.beginPath(); ctx.arc(x + 18, y - 48, r, -1.9, 0.8); ctx.stroke(); ctx.restore();
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + holdTick * .035; dot(ctx, x + 18 + Math.cos(a) * (24 + q * 25), y - 48 + Math.sin(a) * (16 + q * 18), 1.5 + q, '#B9F7FF', .2 + q * .35); }
+  } else if (charId === 'g1_grass') {
+    const r = 8 + q * 18;
+    for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + holdTick * .08; leaf(ctx, x + Math.cos(a) * r, y - 112 + Math.sin(a) * r * .35, 5 + q * 4, 13 + q * 9, a, '#7CFF35', .25 + q * .45); }
+    dot(ctx, x, y - 112, 4 + q * 4, '#DFFF72', .2 + q * .4);
+  } else if (charId === 'g1_ice') {
+    const r = 8 + q * 20;
+    shard(ctx, x + 18, y - 82, 8 + q * 4, 18 + q * 8, -0.15, '#AAEEFF', .25 + q * .45);
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + holdTick * .02; dot(ctx, x + 18 + Math.cos(a) * r, y - 82 + Math.sin(a) * r, 1.5 + q * 1.5, '#DDFBFF', .2 + q * .35); }
+  }
+}
+
 function drawGen1HoldPose(ctx, x, y, charId, move, holdFrame, holdTick = 0) {
-  // The held state is a literal frozen animation frame. The four supplied Up
-  // Signature sheets use frames 2/1/3/2 for Fire/Water/Grass/Ice respectively;
-  // Thunder uses frame 2. Other attacks use frame 2 as their authored wind-up.
+  // The supplied Up Signature sheets define the exact initial hold frames:
+  // Fire=2, Thunder=2, Water=1, Grass=3, Ice=2. Other Gen I attacks use
+  // their authored frame-2 wind-up. The base frame stays fixed while the
+  // four non-Thunder heroes visibly charge the attack around that stance.
   const p = clamp01((Math.max(1, holdFrame) - 1) / 11);
   if (charId === 'g1_thunder' && move === 'us') { thunderUp(ctx,x,y,p); return; }
-  if (charId === 'g1_fire' && move === 'us') { fireUpExact(ctx,x,y,(2-1)/11); return; }
-  if (charId === 'g1_water' && move === 'us') { waterUpExact(ctx,x,y,(1-1)/11); return; }
-  if (charId === 'g1_grass' && move === 'us') { grassUpExact(ctx,x,y,(3-1)/11); return; }
-  if (charId === 'g1_ice' && move === 'us') { iceUpExact(ctx,x,y,(2-1)/11); return; }
-
-  if (charId === 'g1_thunder') {
+  if (charId === 'g1_fire' && move === 'us') fireUpExact(ctx,x,y,(2-1)/11);
+  else if (charId === 'g1_water' && move === 'us') waterUpExact(ctx,x,y,(1-1)/11);
+  else if (charId === 'g1_grass' && move === 'us') grassUpExact(ctx,x,y,(3-1)/11);
+  else if (charId === 'g1_ice' && move === 'us') iceUpExact(ctx,x,y,(2-1)/11);
+  else if (charId === 'g1_thunder') {
     if (move === 'ds') thunderDown(ctx,x,y,p);
     else if (move === 'ss') thunderSide(ctx,x,y,p,false);
     else if (move === 'sh') thunderSide(ctx,x,y,p,true);
@@ -492,6 +522,7 @@ function drawGen1HoldPose(ctx, x, y, charId, move, holdFrame, holdTick = 0) {
   else if (charId === 'g1_water') waterAttack(ctx,x,y,p,move);
   else if (charId === 'g1_grass') grassAttack(ctx,x,y,p,move);
   else if (charId === 'g1_ice') iceAttack(ctx,x,y,p,move);
+  drawGen1ChargeLayer(ctx, x, y, charId, move, holdTick);
 }
 
 export function drawGen1Attack(ctx, x, y, color, p, facing, charId, move, attackData = null) {
