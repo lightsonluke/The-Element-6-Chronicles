@@ -1037,7 +1037,7 @@ function executeGen1HeldAttack(fighter, hold) {
   // Capture the original directional choice. The current direction keys are
   // deliberately ignored here, so changing direction during the hold cannot
   // turn one attack into another.
-  const dur = Math.min(data.duration || (isHeavy ? 24 : 20), isHeavy ? 32 : 30);
+  const dur = id === 'g1_fire' ? Math.max(1, Math.round(Number(data.duration) || 1)) : Math.min(data.duration || (isHeavy ? 24 : 20), isHeavy ? 32 : 30);
   fighter.attackData = {
     ...data,
     duration: dur,
@@ -1478,7 +1478,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       inputs._heavyConsumed = true;
       const upHeavy = UP_HEAVIES[fighter.char.id];
       fighter.state = 'attacking';
-      const dur = Math.min(upHeavy.duration || 24, 30);
+      const dur = fighter.char.id === 'g1_fire' ? Math.max(1, Math.round(Number(upHeavy.duration) || 1)) : Math.min(upHeavy.duration || 24, 30);
       fighter.attackTimer = dur;
       fighter.attackData = { ...upHeavy, duration: dur, sigType: 'upHeavy', hitApplied: false, progress: 0, isHeavy: true };
       fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
@@ -1503,7 +1503,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       const downHeavy = DOWN_HEAVIES[fighter.char.id];
       if (downHeavy) {
         fighter.state = 'attacking';
-        const dur = Math.min(downHeavy.duration, 28);
+        const dur = fighter.char.id === 'g1_fire' ? Math.max(1, Math.round(Number(downHeavy.duration) || 1)) : Math.min(downHeavy.duration, 28);
         fighter.attackTimer = dur;
         fighter.attackData = { ...downHeavy, duration: dur, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true };
         fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
@@ -1518,7 +1518,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       const heavy = fighter.char.heavyAttack;
       if (heavy) {
         fighter.state = 'attacking';
-        const dur = Math.min(heavy.duration, 30);
+        const dur = fighter.char.id === 'g1_fire' ? Math.max(1, Math.round(Number(heavy.duration) || 1)) : Math.min(heavy.duration, 30);
         fighter.attackTimer = dur;
         fighter.attackData = { ...heavy, duration: dur, sigType: 'heavy', hitApplied: false, progress: 0, isHeavy: true };
         fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
@@ -1563,7 +1563,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         const sig = fighter.char.signatures?.[sigType];
         if (sig) {
           fighter.state = 'attacking';
-          const dur = Math.min(sig.duration, 28);
+          const dur = fighter.char.id === 'g1_fire' ? Math.max(1, Math.round(Number(sig.duration) || 1)) : Math.min(sig.duration, 28);
           fighter.attackTimer = dur;
           fighter.attackData = { ...sig, duration: dur, sigType, hitApplied: false, progress: 0 };
           fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
@@ -1591,7 +1591,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       fighter.superMeter = 0;
       const sm = fighter.char?.superMove || { name: 'Super', duration: 42, damage: 30, color: fighter.char?.color || '#FFFFFF' };
       fighter.state = 'superAttack';
-      const dur = Math.min(sm?.duration || 50, 55);
+      const dur = fighter.char.id === 'g1_fire' ? Math.max(1, Math.round(Number(sm?.duration) || 1)) : Math.min(sm?.duration || 50, 55);
       fighter.attackTimer = dur;
       fighter.attackData = { ...(sm || {}), duration: dur, sigType: 'super', hitApplied: false, progress: 0, isSuper: true };
       fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);

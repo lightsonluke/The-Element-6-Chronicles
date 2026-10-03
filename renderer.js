@@ -530,6 +530,12 @@ export function getLimbPose(frame, state = 'idle', facing = 1, scale = 1, powerA
     punchArmL = facing > 0 ? -1.4 : 0.2;
     punchArmR = facing > 0 ? 0.2 : 1.4;
     legSwing = 0.25;
+  } else if (state === 'superAttack') {
+    const t = frame * 0.22;
+    lean = Math.sin(t) * 0.3;
+    punchArmL = Math.sin(t) * 1.5;
+    punchArmR = Math.cos(t) * 1.5;
+    legSwing = Math.cos(t) * 0.6;
   } else if (state === 'hitstun') { bob = 3; lean = -facing * 0.3; armSwingL = 0.6; armSwingR = -0.4; legSwing = -0.3; }
 
   const headR = s * 0.34;
@@ -592,6 +598,48 @@ export function getLimbPose(frame, state = 'idle', facing = 1, scale = 1, powerA
   };
 }
 
+function applyFireAttackPose(vars, attackData, facing=1){
+  if(!attackData || attackData.charId !== 'g1_fire') return;
+  const move = attackData.isSuper ? 'super' : attackData.isHeavy ? (attackData.sigType === 'downHeavy' ? 'dh' : attackData.sigType === 'upHeavy' ? 'uh' : 'sh') : (attackData.sigType === 'up' ? 'us' : attackData.sigType === 'down' ? 'ds' : 'ss');
+  const p = attackData.holding ? Math.max(0, Math.min(1, Number(attackData.holdProgress)||0)) : Math.max(0, Math.min(1, Number(attackData.progress)||0));
+  const count = move==='dh' ? 6 : move==='super' ? 7 : 4;
+  const f = Math.min(count, Math.floor(p*count)+1);
+  // These are pose beats copied from the reference sheet, not a generic punch animation.
+  if(move==='us'){
+    if(f===1){ vars.punchArmR = -1.55; vars.punchArmL = -0.25; vars.lean = facing*0.02; }
+    if(f>=2){ vars.punchArmR = -2.15; vars.punchArmL = -0.35; vars.lean = facing*0.03; }
+    if(f===4){ vars.punchArmR = -2.38; vars.lean = facing*0.08; }
+  } else if(move==='ss'){
+    if(f===1){ vars.punchArmR = -0.2; }
+    else if(f===2){ vars.punchArmR = -1.05; vars.lean = facing*0.08; }
+    else if(f===3){ vars.punchArmR = -1.55; vars.lean = facing*0.18; vars.legSwing = 0.18; }
+    else { vars.punchArmR = -1.9; vars.lean = facing*0.28; vars.legSwing = 0.28; }
+  } else if(move==='ds'){
+    if(f===1){ vars.punchArmR = 0; vars.punchArmL = 0; vars.lean = 0; vars.legSwing = 0; }
+    else if(f===2){ vars.lean = facing*0.12; vars.bob = 7; vars.punchArmR = 0.4; vars.legSwing = 0.05; }
+    else if(f===3){ vars.lean = facing*0.05; vars.bob = 9; vars.punchArmR = 0.25; }
+    else { vars.lean = -facing*0.12; vars.bob = 2; vars.legSwing = -0.18; }
+  } else if(move==='uh'){
+    vars.punchArmR = -2.55; vars.punchArmL = -2.85; vars.lean = 0;
+    if(f===4){ vars.punchArmR = -2.2; vars.punchArmL = -2.45; vars.lean = facing*0.05; }
+  } else if(move==='dh'){
+    if(f<=2){ vars.lean = facing*0.02; }
+    if(f===2 || f===3){ vars.bob = 10; vars.lean = facing*0.18; vars.punchArmR = 0.75; vars.punchArmL = 0.5; vars.legLOver = -0.65; vars.legROver = 0.25; }
+    if(f===4 || f===5){ vars.bob = 4; vars.lean = facing*0.04; vars.punchArmR = 0.45; vars.punchArmL = 0.2; }
+    if(f===6){ vars.bob = 0; vars.lean = -facing*0.05; vars.punchArmR = 0.15; vars.punchArmL = 0; }
+  } else if(move==='sh'){
+    if(f<=2){ vars.punchArmR = -1.65; vars.lean = facing*0.1; }
+    else if(f===3){ vars.punchArmR = -1.9; vars.lean = facing*0.22; vars.legSwing = 0.2; }
+    else { vars.punchArmR = -2.0; vars.lean = facing*0.26; }
+  } else if(move==='super'){
+    if(f===1){ vars.punchArmR = -0.85; vars.punchArmL = -0.65; vars.lean = facing*0.03; }
+    else if(f===2 || f===3){ vars.punchArmR = -1.15; vars.punchArmL = -0.95; vars.lean = facing*0.06; }
+    else if(f===4 || f===5){ vars.punchArmR = -1.7; vars.punchArmL = -1.55; vars.lean = facing*0.22; vars.legSwing = 0.2; }
+    else if(f===6){ vars.punchArmR = 0.2; vars.punchArmL = 0.1; vars.lean = -facing*0.12; }
+    else { vars.punchArmR = -0.1; vars.punchArmL = -0.05; vars.lean = -facing*0.05; }
+  }
+}
+
 function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActive, noWeapon = false, emote = null, attackData = null) {
   // Yellow turns white when enhanced (power active)
   if (powerActive && charData?.id === 'yellow' && powerActive === 'stat_boost') {
@@ -635,65 +683,10 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
     armSwingR = 0.7;
   } else if (state === 'attacking') {
     lean = facing * 0.22;
+    // Punch pose — one arm swings forward hard
     punchArmL = facing > 0 ? -1.4 : 0.2;
     punchArmR = facing > 0 ? 0.2 : 1.4;
     legSwing = 0.25;
-
-    // Fire Hero reference-sheet poses. These are discrete poses, not a generic
-    // punch animation: each reference frame is held for 3 real game frames.
-    if (charData?.id === 'g1_fire' && attackData) {
-      const move = attackData.isSuper ? 'super' : (attackData.sigType || 'side');
-      const n = move === 'super' ? 7 : (attackData.isHeavy && (move === 'downHeavy' || move === 'down') ? 6 : 4);
-      const af = Math.min(n, Math.floor(Math.max(0, Math.min(0.9999, attackData.progress || 0)) * n) + 1);
-      bob = 0; legSwing = 0; armSwingL = 0; armSwingR = 0; punchArmL = 0; punchArmR = 0; lean = 0;
-      if (move === 'us') {
-        if (af === 1) { lean = 0.02; legSwing = 0.08; }
-        else if (af === 2) { lean = facing * 0.10; punchArmR = facing > 0 ? -0.95 : 0.95; legSwing = 0.08; }
-        else if (af === 3) { lean = facing * 0.13; punchArmR = facing > 0 ? -1.25 : 1.25; legSwing = 0.12; }
-        else { lean = facing * 0.18; punchArmR = facing > 0 ? -1.55 : 1.55; legSwing = 0.18; }
-      } else if (move === 'ds') {
-        if (af === 1) { }
-        else if (af === 2) { lean = facing * 0.08; legLOver = -0.65; legROver = 0.25; }
-        else if (af === 3) { lean = facing * -0.08; legLOver = 0.25; legROver = -0.65; }
-        else { lean = facing * 0.05; legLOver = 0.05; legROver = -0.25; }
-      } else if (move === 'ss') {
-        if (af === 1) { }
-        else if (af === 2) { lean = facing * -0.20; punchArmR = facing > 0 ? 0.55 : -0.55; legSwing = -0.12; }
-        else if (af === 3) { lean = facing * 0.10; punchArmR = facing > 0 ? -0.15 : 0.15; legSwing = 0.18; }
-        else { lean = facing * 0.26; punchArmR = facing > 0 ? -0.85 : 0.85; legSwing = 0.30; }
-      } else if (move === 'upHeavy' || move === 'upheavy' || move === 'uh') {
-        if (af === 1) { punchArmL = -1.0; punchArmR = 1.0; }
-        else if (af === 2) { punchArmL = -1.25; punchArmR = 1.25; lean = facing * 0.02; }
-        else if (af === 3) { punchArmL = -1.35; punchArmR = 1.35; lean = facing * -0.05; }
-        else { punchArmL = -0.65; punchArmR = 0.65; lean = facing * 0.12; legSwing = 0.25; }
-      } else if (move === 'downHeavy' || move === 'downheavy' || move === 'dh') {
-        if (af === 1) { }
-        else if (af === 2 || af === 3) { bob = 9; lean = facing * 0.12; punchArmR = facing > 0 ? 1.05 : -1.05; legSwing = 0.05; }
-        else if (af === 4 || af === 5) { bob = -2; lean = facing * -0.08; punchArmL = -0.35; punchArmR = 0.35; legLOver = -0.25; legROver = 0.28; }
-        else { lean = facing * 0.05; legLOver = 0.1; legROver = -0.1; }
-      } else {
-        // Side heavy: arm pulled back, then driven through the flaming gauntlet.
-        if (af === 1) { punchArmR = facing > 0 ? 0.85 : -0.85; lean = facing * -0.12; }
-        else if (af === 2) { punchArmR = facing > 0 ? 0.15 : -0.15; lean = facing * 0.04; }
-        else if (af === 3) { punchArmR = facing > 0 ? -0.55 : 0.55; lean = facing * 0.18; legSwing = 0.18; }
-        else { punchArmR = facing > 0 ? -1.0 : 1.0; lean = facing * 0.22; legSwing = 0.25; }
-      }
-    }
-  } else if (state === 'superAttack') {
-    if (charData?.id === 'g1_fire' && attackData) {
-      const af = Math.min(7, Math.floor(Math.max(0, Math.min(0.9999, attackData.progress || 0)) * 7) + 1);
-      bob = 0; legSwing = 0; armSwingL = 0; armSwingR = 0; punchArmL = 0; punchArmR = 0; lean = 0;
-      if (af <= 3) { punchArmL = -0.72; punchArmR = 0.72; }
-      else if (af <= 5) { lean = facing * 0.22; punchArmR = facing > 0 ? -0.65 : 0.65; punchArmL = facing > 0 ? -0.25 : 0.25; }
-      else if (af === 6) { lean = facing * 0.08; punchArmL = -0.35; punchArmR = 0.35; }
-      else { punchArmL = -0.15; punchArmR = 0.15; legSwing = 0.12; }
-    } else {
-      const t = frame * 0.22;
-      lean = Math.sin(t) * 0.3;
-      punchArmL = Math.sin(t) * 1.5;
-      punchArmR = Math.cos(t) * 1.5;
-      legSwing = Math.cos(t) * 0.6;
-    }
   } else if (state === 'superAttack') {
     const t = frame * 0.22;
     lean = Math.sin(t) * 0.3;
@@ -715,6 +708,8 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
     armSwingR = -0.3;
     lean = 0;
   }
+
+  { const firePose = { bob, legSwing, armSwingL, armSwingR, lean, punchArmL, punchArmR, legLOver, legROver }; applyFireAttackPose(firePose, attackData, facing); bob=firePose.bob; legSwing=firePose.legSwing; armSwingL=firePose.armSwingL; armSwingR=firePose.armSwingR; lean=firePose.lean; punchArmL=firePose.punchArmL; punchArmR=firePose.punchArmR; legLOver=firePose.legLOver; legROver=firePose.legROver; }
 
   ctx.save();
   ctx.rotate(lean);

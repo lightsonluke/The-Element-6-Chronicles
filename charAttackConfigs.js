@@ -52,11 +52,11 @@ export const CHAR_ATTACKS = {
   },
   // Fire — Flame
   'g1_fire': {
-    ss: ['jab', 'flame', '#FF6600', 0.9, 'elbow-hook'],
-    us: ['arcAround', 'flame', '#FF6600', 1.0, 'flaming-hook'],
-    ds: ['ground', 'flame', '#FF6600', 0.72, 'ember-stamp'],
-    sh: ['slash', 'flame', '#FF6600', 1.45, 'flaming-gauntlet-hook'],
-    dh: ['ground', 'flame', '#FF6600', 1.3, 'five-cracks'],
+    ss: ['jab', 'flame', '#FF6600', 0.9, 'fire-elbow'],
+    us: ['arcAround', 'flame', '#FF6600', 1.0, 'fire-hand-launch'],
+    ds: ['ground', 'flame', '#FF6600', 0.72, 'falling-ember-burst'],
+    sh: ['slash', 'flame', '#FF6600', 1.45, 'hand-fireball-launch'],
+    dh: ['ground', 'flame', '#FF6600', 1.3, 'ground-fire-line-burst'],
     sp: ['unique', '#FF6600', 'flame'],
     pb: ['jab', 'flame', '#FF6600', 0.8, 'ember']
   },

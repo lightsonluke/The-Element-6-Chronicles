@@ -29,13 +29,13 @@ const GEN1_MOVE_SPECS = {
     super:{name:'Thunder Strike',shape:'bottomBolt',range:90,knockback:'radialUp',duration:42,damage:38},
   },
   g1_fire: {
-    us:{name:'Flaming Hook',shape:'hook',range:100,knockback:'upContact',duration:12,damage:17},
-    ds:{name:'Four-Point Ember Burst',shape:'stampFlames',range:64,knockback:'radialContact',duration:12,damage:16},
-    ss:{name:'Flaming Elbow',shape:'elbow',range:112,knockback:'forwardContact',duration:12,damage:16},
-    upHeavy:{name:'Spinning Fire Wheel',shape:'fireWheel',range:138,knockback:'upContact',duration:12,damage:25},
-    dh:{name:'Burning Cracks',shape:'cracks',range:132,knockback:'radialContact',duration:18,damage:22},
-    sh:{name:'Flaming Gauntlet',shape:'gauntlet',range:124,knockback:'forwardContact',duration:12,damage:25},
-    super:{name:'Fireball Detonation',shape:'explosion',range:170,knockback:'radialContact',duration:21,damage:42},
+    us:{name:'Flame Hand Launch',shape:'fireUpHand',range:108,knockback:'upContact',duration:42,damage:17},
+    ds:{name:'Falling Ember Burst',shape:'fireDownBurst',range:76,knockback:'radialContact',duration:42,damage:16},
+    ss:{name:'Flaming Elbow',shape:'fireElbow',range:92,knockback:'forwardContact',duration:42,damage:16},
+    upHeavy:{name:'Spinning Fire Wheel',shape:'fireWheelEdge',range:132,knockback:'upContact',duration:42,damage:25},
+    dh:{name:'Ground Fire Line Burst',shape:'fireGroundBurst',range:126,knockback:'radialContact',duration:63,damage:22},
+    sh:{name:'Hand Fireball Launch',shape:'fireHandBall',range:160,knockback:'forwardContact',duration:42,damage:25},
+    super:{name:'Compressed Fireball Detonation',shape:'fireSuperBurst',range:210,knockback:'radialContact',duration:74,damage:42},
   },
   g1_water: {
     us:{name:'Water Ring',shape:'waterRing',range:106,knockback:'velocity',duration:24,damage:16},
@@ -112,7 +112,9 @@ function activeProgress(fighter) { return clamp01((clamp01(fighter?.attackData?.
 
 export function getActiveSpecHitboxes(attacker) {
   const data = attacker?.attackData; if (!data) return [];
-  const t = activeProgress(attacker); if (t <= 0 || t >= 1) return [];
+  const isFireHero = String(attacker?.char?.id || '') === 'g1_fire';
+  const t = isFireHero ? clamp01(attacker?.attackData?.progress ?? 0) : activeProgress(attacker);
+  if (t >= 1) return [];
   if (String(attacker?.char?.id || '').startsWith('g2_')) {
     let mk = data.sigType || data.moveKey || '';
     if (data.isSuper) mk = 'sp';
@@ -234,13 +236,56 @@ export function getActiveSpecHitboxes(attacker) {
     case 'threeBolts': { const top = -38 - 150*q; for(const dx of [24,82,140]) P([[dx-10,-38],[dx+10,-38],[dx+10,top],[dx-10,top]]); break; }
     case 'orbitBall': { const a=-Math.PI/2+q*TAU; C(20+Math.cos(a)*94,-72+Math.sin(a)*55,13); break; }
     case 'bottomBolt': { if(q < .35) break; P([[-15,-95],[15,-95],[9,-42],[14,-10],[-14,-10],[-9,-42]]); break; }
-    case 'hook': { const f=Math.min(4,Math.floor(q*4)+1); if(f<3) break; if(f===3){ K(18,-48,42,-62,9); C(42,-62,11); } else { K(18,-48,48,-72,9); C(50,-84,11); } break; }
-    case 'stampFlames': { const f=Math.min(4,Math.floor(q*4)+1); if(f<3) break; const r=f===3?18:23; for(let i=0;i<4;i++){const a=-Math.PI/2+i*Math.PI/2; C(Math.cos(a)*r, -5+Math.sin(a)*r*.85, f===3?10:9);} break; }
-    case 'elbow': { const f=Math.min(4,Math.floor(q*4)+1); if(f<3) break; const ex=f===3?58:76; K(20,-42,ex,-45,12); C(ex,-45,13); break; }
-    case 'fireWheel': { const f=Math.min(4,Math.floor(q*4)+1); if(f<2 || f>3) break; const r=48; for(let i=0;i<16;i++){const a=i/16*TAU; C(Math.cos(a)*r,-88+Math.sin(a)*r*.58,9);} break; }
-    case 'cracks': { const f=Math.min(6,Math.floor(q*6)+1); if(f<3) break; const scale=f<=3?0.55:f===4?0.9:1.0; for(let i=0;i<5;i++){const dx=(i-2)*30*scale; C(dx,-18-(i%2)*7, f>=4?12:10);} break; }
-    case 'gauntlet': { const f=Math.min(4,Math.floor(q*4)+1); if(f<2) break; const cx=f===2?60:f===3?74:84, cy=-44; K(8,-42,cx,cy,13); C(cx,cy,f===3?22:18); break; }
-    case 'explosion': { const f=Math.min(7,Math.floor(q*7)+1); if(f!==6) break; C(72,-50,50); break; }
+    case 'fireUpHand': {
+      const f=Math.min(4,Math.floor(q*4)+1);
+      if(f===2){ C(28,-92,20); }
+      else if(f===3){ C(28,-92,22); C(40,-118,14); }
+      else if(f===4){ C(90,-150,16); }
+      break;
+    }
+    case 'fireDownBurst': {
+      const f=Math.min(4,Math.floor(q*4)+1);
+      if(f===1){ C(24,-44,9); }
+      else if(f===2){ C(24,-7,11); }
+      else if(f===3){ for(let i=0;i<8;i++){const a=i/8*TAU; C(24+Math.cos(a)*38,-4+Math.sin(a)*24,8);} }
+      else if(f===4){ for(let i=0;i<10;i++){const a=i/10*TAU; C(24+Math.cos(a)*58,-4+Math.sin(a)*36,7);} }
+      break;
+    }
+    case 'fireElbow': {
+      const f=Math.min(4,Math.floor(q*4)+1);
+      if(f===2) C(38,-37,14);
+      else if(f===3){ K(20,-42,48,-40,13); C(55,-43,12); }
+      break;
+    }
+    case 'fireWheelEdge': {
+      const f=Math.min(4,Math.floor(q*4)+1);
+      if(f===2||f===3){
+        const r=58; for(let i=0;i<12;i++){const a=i/12*TAU; C(Math.cos(a)*r,-96+Math.sin(a)*r*.42,9);}
+      } else if(f===4){
+        const r=76; for(let i=0;i<10;i++){const a=i/10*TAU; C(Math.cos(a)*r,-96+Math.sin(a)*r*.5,8);}
+      }
+      break;
+    }
+    case 'fireGroundBurst': {
+      const f=Math.min(6,Math.floor(q*6)+1);
+      if(f>=3){ const r=f===3?34:f===4||f===5?58:72; for(let i=0;i<10;i++){const a=i/10*TAU; C(24+Math.cos(a)*r,-2+Math.sin(a)*r*.62,8); } }
+      break;
+    }
+    case 'fireHandBall': {
+      const f=Math.min(4,Math.floor(q*4)+1);
+      if(f===2) C(47,-45,18);
+      else if(f===3) C(90,-48,25);
+      else if(f===4) C(142,-48,13);
+      break;
+    }
+    case 'fireSuperBurst': {
+      const f=Math.min(7,Math.floor(q*7)+1);
+      if(f===2||f===3) C(26,-60,f===2?20:27);
+      else if(f===4||f===5) C(f===4?62:80,-58,f===4?28:23);
+      else if(f===6) C(105,-48,92);
+      else if(f===7) C(105,-48,72);
+      break;
+    }
     case 'waterRing': { if(q<.16 || q>.72) break; const u=Math.max(0,Math.min(1,(q-.16)/.56)); const tx=30+u*110, ty=-55-u*70+Math.sin(u*Math.PI)*20; C(tx,ty,14); break; }
     case 'twinSplashes': { const sy=-8-62*q; C(-42,sy,11); C(42,sy,11); break; }
     case 'whipTip': { C(16+72*q,-42-Math.sin(q*Math.PI)*26,10); break; }

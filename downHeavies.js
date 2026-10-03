@@ -76,7 +76,7 @@ Object.assign(DOWN_HEAVIES, {
 // universal ground-pound so grounded Down + Heavy selects the character move.
 Object.assign(DOWN_HEAVIES, {
   g1_thunder: { name:'Orbiting Lightning Ball', type:'gen1DownHeavy', range:100, damage:22, color:'#FFFF44', duration:24 },
-  g1_fire: { name:'Burning Cracks', type:'gen1DownHeavy', range:132, damage:22, color:'#FF5A16', duration:18 },
+  g1_fire: { name:'Ground Fire Line Burst', type:'gen1DownHeavy', range:126, damage:22, color:'#FF6600', duration:63 },
   g1_water: { name:'Bouncing Water Sphere', type:'gen1DownHeavy', range:96, damage:21, color:'#3399CC', duration:24 },
   g1_grass: { name:'Vine Collapse', type:'gen1DownHeavy', range:120, damage:21, color:'#44AA44', duration:26 },
   g1_ice: { name:'Sliding Ice Block', type:'gen1DownHeavy', range:128, damage:22, color:'#AAEEFF', duration:24 },
