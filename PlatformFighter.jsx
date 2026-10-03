@@ -1684,6 +1684,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         const flashing = f.invincible > 0 && Math.floor(f.frame / 4) % 2 === 0;
         const crossoverColors = getCrossoverColor(f.char.id, equippedCrossovers);
         const renderColor = crossoverColors ? crossoverColors.primary : (getCharRenderColor(effId, equippedSkins) || f.char.color);
+        const exactFireAttackSprite = effId === 'g1_fire' && (f.state === 'attacking' || f.state === 'attackHold' || f.state === 'superAttack') && !!f.attackData;
         if (!flashing) {
           ctx.save(); ctx.globalAlpha = 0.2 + Math.sin(f.frame * 0.07) * 0.05;
           ctx.fillStyle = renderColor; ctx.beginPath();
@@ -1699,7 +1700,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           drawOfflineNameTag(ctx, f._clone.x, f._clone.y - 72 * fScale, f.char);
           ctx.restore();
         }
-        if (!flashing) {
+        if (!flashing && !exactFireAttackSprite) {
           const skinParts = getSkinParts(effId, equippedSkins);
           const accs = getEquippedAccessories(botAccessoriesRef.current, effId);
           const skinColor = getCharRenderColor(effId, equippedSkins);
@@ -1709,8 +1710,8 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         }
         // Shikigami — purely cosmetic floating companion (behind + above the fighter)
         drawShikigamiFollower(ctx, f, botShikigamiRef.current?.[effId], f.frame, fScale);
-        if (!flashing) drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote);
-        if (!flashing) {
+        if (!flashing && !exactFireAttackSprite) drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote);
+        if (!flashing && !exactFireAttackSprite) {
           const skinParts = getSkinParts(effId, equippedSkins);
           const accs = getEquippedAccessories(botAccessoriesRef.current, effId);
           const skinColor = getCharRenderColor(effId, equippedSkins);
