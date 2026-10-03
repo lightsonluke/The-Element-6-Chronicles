@@ -29,20 +29,15 @@ const GEN1_MOVE_SPECS = {
     super:{name:'Thunder Strike',shape:'bottomBolt',range:90,knockback:'radialUp',duration:42,damage:38},
   },
   g1_fire: {
-    // Up Signature — only the hook is active on the snap/connection frame.
-    us:{name:'Flaming Hook',shape:'hook',range:94,knockback:'upContact',duration:24,damage:17,description:'Frame 2 forms the hook; frame 3 is the connection/launch; no body-sized hitbox.'},
-    // Down Signature — only the four-point ember burst is active.
-    ds:{name:'Ember Stamp',shape:'stampFlames',range:60,knockback:'radialContact',duration:22,damage:16,description:'The ember is cosmetic until the four flames pop out beneath the fighter.'},
-    // Side Signature — elbow-only contact, directed along the strike.
-    ss:{name:'Flaming Elbow',shape:'elbow',range:104,knockback:'forwardContact',duration:20,damage:16,description:'The hitbox stays on the flaming elbow during the strike and follow-through.'},
-    // Up Heavy — collision follows the outer circumference of the rising wheel.
-    upHeavy:{name:'Spinning Fire Wheel',shape:'fireWheel',range:132,knockback:'upContact',duration:28,damage:25,description:'Outer wheel edge only; bottom contacts launch upward, side contacts launch diagonally.'},
-    // Down Heavy — only the erupting ends of the five cracks are active.
-    dh:{name:'Burning Cracks',shape:'cracks',range:126,knockback:'radialContact',duration:28,damage:22,description:'Five cracks travel first; hitboxes appear only when their ends erupt upward.'},
-    // Side Heavy — gauntlet follows the hook, with the knuckles as the strongest contact area.
-    sh:{name:'Flaming Gauntlet',shape:'gauntlet',range:118,knockback:'forwardContact',duration:26,damage:25,description:'The gauntlet sweeps with the punch; the forward knuckles are the primary contact.'},
-    // Super — projectile is cosmetic until it reaches the short-distance detonation point.
-    super:{name:'Fireball Detonation',shape:'explosion',range:160,knockback:'radialContact',duration:48,damage:42,description:'The fireball forms and compresses, then detonates a short distance ahead in a concentrated circular blast.'},
+    // The reference sheet has 4 / 4 / 4 / 4 / 6 / 4 / 7 source frames.
+    // The in-game animation holds every source frame for 3 game frames.
+    us:{name:'Flaming Hook',shape:'hook',range:94,knockback:'fireHook',duration:12,damage:17},
+    ds:{name:'Ember Stamp',shape:'stampFlames',range:60,knockback:'fireStamp',duration:12,damage:16},
+    ss:{name:'Flaming Elbow',shape:'elbow',range:104,knockback:'forwardContact',duration:12,damage:16},
+    upHeavy:{name:'Spinning Fire Wheel',shape:'fireWheel',range:132,knockback:'fireWheel',duration:12,damage:25},
+    dh:{name:'Burning Cracks',shape:'cracks',range:126,knockback:'fireCrack',duration:18,damage:22},
+    sh:{name:'Flaming Gauntlet',shape:'gauntlet',range:118,knockback:'fireGauntlet',duration:12,damage:25},
+    super:{name:'Fireball Detonation',shape:'explosion',range:160,knockback:'fireSuperRadial',duration:21,damage:42},
   },
   g1_water: {
     us:{name:'Water Ring',shape:'waterRing',range:106,knockback:'velocity',duration:24,damage:16},
@@ -230,6 +225,9 @@ export function getActiveSpecHitboxes(attacker) {
   const K = (x1,y1,x2,y2,r) => out.push({shape:'capsule', x1:x + x1*f, y1:y + y1, x2:x + x2*f, y2:y + y2, r});
   const P = pts => out.push({shape:'polygon', points:pts.map(([px,py]) => [x + px*f, y + py])});
   const q = t;
+  const rawP = clamp01(attacker?.attackData?.progress ?? 0);
+  const fireFrameCount = spec.charId === 'g1_fire' ? ({us:12,ds:12,ss:12,upHeavy:12,dh:18,sh:12,super:21}[spec.moveKey] || 12) : 0;
+  const fireFrame = fireFrameCount ? Math.min(fireFrameCount, Math.floor(rawP * fireFrameCount) + 1) : 0;
   switch (spec.shape) {
     // Thunder — Up Signature: ONLY the moving dot at the start of the circular line.
     case 'orbitPoint': { const a = -Math.PI/2 + (q < .92 ? q * TAU : TAU); C(Math.cos(a)*86, -112 + Math.sin(a)*34, 9); break; }
@@ -241,13 +239,63 @@ export function getActiveSpecHitboxes(attacker) {
     case 'threeBolts': { const top = -38 - 150*q; for(const dx of [24,82,140]) P([[dx-10,-38],[dx+10,-38],[dx+10,top],[dx-10,top]]); break; }
     case 'orbitBall': { const a=-Math.PI/2+q*TAU; C(20+Math.cos(a)*94,-72+Math.sin(a)*55,13); break; }
     case 'bottomBolt': { if(q < .35) break; P([[-15,-95],[15,-95],[9,-42],[14,-10],[-14,-10],[-9,-42]]); break; }
-    case 'hook': { if(q<.42 || q>.72) break; const u=Math.max(0,Math.min(1,(q-.42)/.30)); const a=-2.45+u*2.15, r=32+u*13; const ex=18+Math.cos(a)*r, ey=-40+Math.sin(a)*r; K(18,-40,18+r*.45*Math.cos(a*.55),-40+r*.45*Math.sin(a*.55),7); K(18+r*.45*Math.cos(a*.55),-40+r*.45*Math.sin(a*.55),ex,ey,8); C(ex,ey,10); break; }
-    case 'stampFlames': { if(q<.48 || q>.68) break; const r=8+Math.min(1,(q-.48)/.20)*12; for(let i=0;i<4;i++){ const a=i*Math.PI/2; C(12+Math.cos(a)*r,-2+Math.sin(a)*r,8); } break; }
-    case 'elbow': { if(q<.34 || q>.68) break; const u=(q-.34)/.34; const ex=20+u*58, ey=-44-Math.sin(u*Math.PI)*10; K(18,-42,ex,ey,11); C(ex,ey,13); break; }
-    case 'fireWheel': { if(q<.24 || q>.76) break; const u=(q-.24)/.52, cy=-70-u*72, r=52; const rot=u*TAU*.9; for(let i=0;i<18;i++){const a=i/18*TAU+rot; C(Math.cos(a)*r,cy+Math.sin(a)*r*.58,9); } break; }
-    case 'cracks': { if(q<.50 || q>.86) break; const u=(q-.50)/.36; const dirs=[-2.65,-2.05,-1.57,-1.09,-.49]; for(let i=0;i<5;i++){const d=dirs[i], len=58*u; const ex=Math.cos(d)*len, ey=4+Math.sin(d)*len*.45; const erupt=Math.max(0,Math.min(1,(u-(i*.025))/.55)); if(erupt>.05) C(ex,ey-18*erupt,11+4*erupt); } break; }
-    case 'gauntlet': { if(q<.28 || q>.80) break; const u=(q-.28)/.52, ang=-2.15+u*2.05, r=40+20*Math.min(1,u+.15), cx=24+Math.cos(ang)*r, cy=-45+Math.sin(ang)*r; K(8,-42,cx,cy,12); C(cx,cy,16); if(u>.55) C(cx+10,cy-4,20); break; }
-    case 'explosion': { if(q<.50 || q>.88) break; const e=(q-.50)/.38; C(78,-48,Math.min(78,30+e*48)); break; }
+    case 'hook': {
+      if(spec.charId==='g1_fire'){
+        // Only the hook itself is active, never the trailing flame streak.
+        if(fireFrame===3){ K(22,-68,45,-75,11); C(46,-76,12); }
+        break;
+      }
+      if(q<.16 || q>.82) break; const u=Math.max(0,Math.min(1,(q-.16)/.66)); const a=-2.45+u*2.0, r=42+u*8; const ex=18+Math.cos(a)*r, ey=-48+Math.sin(a)*r; K(18,-48,18+r*.50*Math.cos(a*.55),-48+r*.50*Math.sin(a*.55),9); K(18+r*.50*Math.cos(a*.55),-48+r*.50*Math.sin(a*.55),ex,ey,9); C(ex,ey,12); break; }
+    case 'stampFlames': {
+      if(spec.charId==='g1_fire'){
+        if(fireFrame===3) for(let i=0;i<4;i++){const a=-Math.PI/2+i*Math.PI/2; C(13+Math.cos(a)*16,-8+Math.sin(a)*10,11);}
+        break;
+      }
+      for(let i=0;i<4;i++) C((i-1.5)*13,-9-Math.abs(i-1.5)*4,11); break; }
+    case 'elbow': {
+      if(spec.charId==='g1_fire'){
+        if(fireFrame===3) K(38,-46,57,-48,15);
+        break;
+      }
+      K(20,-42,20+q*48,-42,14); break; }
+    case 'fireWheel': {
+      if(spec.charId==='g1_fire'){
+        if(fireFrame===2 || fireFrame===3){
+          const r=63, cy=-91, rot=fireFrame===2?0:.3;
+          for(let i=0;i<14;i++){const a=i/14*TAU+rot; C(Math.cos(a)*r,cy+Math.sin(a)*r*.52,10);}
+        } else if(fireFrame===4){
+          const r=63, cy=-91;
+          for(let i=0;i<8;i++){const a=i/8*TAU; C(Math.cos(a)*r,cy+Math.sin(a)*r*.52,9);}
+        }
+        break;
+      }
+      const r=70; for(let i=0;i<14;i++){const a=i/14*TAU+q*TAU; C(Math.cos(a)*r,-92+Math.sin(a)*r,11);} break; }
+    case 'cracks': {
+      if(spec.charId==='g1_fire'){
+        if(fireFrame>=3 && fireFrame<=5){
+          const ends=[[-58,-35],[-31,-38],[0,-42],[32,-37],[60,-34]];
+          const scale=fireFrame===3?.72:fireFrame===4?1:1.08;
+          for(const [ex,ey] of ends) C(ex*scale,ey*scale-3,12);
+        }
+        break;
+      }
+      if(q<.2) break; for(let i=0;i<5;i++){const dx=(i-2)*30*q; C(dx,-34-(i%2)*4,13);} break; }
+    case 'gauntlet': {
+      if(spec.charId==='g1_fire'){
+        if(fireFrame===1 || fireFrame===2){ K(26,-46,48,-47,14); C(48,-47,17); }
+        else if(fireFrame===3){ K(32,-47,78,-49,18); C(80,-50,23); }
+        else if(fireFrame===4){ K(52,-49,101,-51,12); C(103,-51,16); }
+        break;
+      }
+      const ang=-.8+q*1.7, cx=28+Math.cos(ang)*42, cy=-42+Math.sin(ang)*42; K(8,-42,cx,cy,15); C(cx,cy,20); break; }
+    case 'explosion': {
+      if(spec.charId==='g1_fire'){
+        if(fireFrame>=2 && fireFrame<=5){
+          const bx=[0,18,36,66][fireFrame-2] ?? 66; C(bx,-57,fireFrame===3?28:fireFrame===4?31:27);
+        } else if(fireFrame===6){ C(82,-53,52); }
+        break;
+      }
+      if(q<.5) break; const e=(q-.5)/.5; C(78,-48,Math.min(88,34+e*54)); break; }
     case 'waterRing': { if(q<.16 || q>.72) break; const u=Math.max(0,Math.min(1,(q-.16)/.56)); const tx=30+u*110, ty=-55-u*70+Math.sin(u*Math.PI)*20; C(tx,ty,14); break; }
     case 'twinSplashes': { const sy=-8-62*q; C(-42,sy,11); C(42,sy,11); break; }
     case 'whipTip': { C(16+72*q,-42-Math.sin(q*Math.PI)*26,10); break; }
@@ -302,6 +350,33 @@ export function hitboxIntersectsBody(hb, defender){
 function radialVector(attacker, defender){const dx=defender.x-attacker.x,dy=defender.y-attacker.y-0;const len=Math.hypot(dx,dy)||1;return{x:dx/len,y:dy/len};}
 export function specKnockbackVector(attacker, defender, profile){
   const p=String(profile||'forward').toLowerCase(),f=attacker.facing||1;
+  if(p==='firehook') {
+    const dx=(defender.x-attacker.x)/90;
+    return {x:Math.max(-.55,Math.min(.55,dx)) + f*.10,y:-1};
+  }
+  if(p==='firestamp') {
+    const dx=defender.x-(attacker.x+13*f), dy=defender.y-(attacker.y-8);
+    const len=Math.hypot(dx,dy)||1;
+    return {x:dx/len,y:dy/len};
+  }
+  if(p==='firewheel') {
+    const dx=defender.x-attacker.x, dy=defender.y-(attacker.y-91);
+    const len=Math.hypot(dx,dy)||1;
+    return {x:Math.max(-.9,Math.min(.9,dx/len)),y:Math.min(-.25,dy/len)};
+  }
+  if(p==='firecrack') {
+    const dx=defender.x-attacker.x, dy=defender.y-(attacker.y-38);
+    const len=Math.hypot(dx,dy)||1;
+    return {x:dx/len,y:dy/len};
+  }
+  if(p==='firegauntlet') {
+    const dx=defender.x-attacker.x, dy=(defender.y-attacker.y+8)/90;
+    return {x:f,y:Math.max(-.55,Math.min(.22,dy))};
+  }
+  if(p==='firesuperradial') {
+    const dx=defender.x-(attacker.x+82*f), dy=defender.y-(attacker.y-53), len=Math.hypot(dx,dy)||1;
+    return {x:dx/len,y:dy/len};
+  }
   if(p==='up') return {x:f*.18,y:-1};
   if(p==='upcontact'){const dx=defender.x-attacker.x;return{x:Math.max(-.55,Math.min(.55,dx/90)),y:-1};}
   if(p==='radial'||p==='radialcontact') return radialVector(attacker,defender);

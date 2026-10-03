@@ -289,40 +289,65 @@ function iceShard(ctx,x,y,w,h,rot,c,a=1){
 }
 
 // ── Exact reference-style UP SIGNATURES ─────────────────────────────────────
-function fireUpReference(ctx,x,y,p){
-  const c='#FF5A16', hot='#FF9A22', white='#FFF2B0';
-  if(p<0){
-    const q=holdCharge(p);
-    // User-specified hold stance: frame 2 silhouette, with a growing flame hook.
-    const lift=.05*q, r=15+22*q;
-    glowStroke(ctx,[[x+8,y-30],[x+20,y-48],[x+25,y-70-lift*8]],c,8+q*2,.8);
-    glowArc(ctx,x+28,y-76,10+r*.45,8+r*.3,-2.25,-.45,c,5+q*5,.85);
-    flameShape(ctx,x+30,y-78,r*.42,hot,.9,.2);
-    spark(ctx,x+30,y-78,3+q*2,white,.7);
-    return;
-  }
-  const f=refFrame(p);
-  // Frames 1-2: idle -> upward swing. Frame 3 forms the hook.
-  if(f<2.0){ return; }
-  const swing=Math.min(1,(f-2)/1.25);
-  const armX=x+18+swing*8, armY=y-42-swing*34;
-  glowStroke(ctx,[[x+10,y-24],[x+18,y-38],[armX,armY]],c,8,.9);
-  if(f>=2.6){
-    const hookT=Math.min(1,(f-2.6)/1.7), ang=-2.45+hookT*2.0;
-    const hx=armX+Math.cos(ang)*38, hy=armY+Math.sin(ang)*38;
-    glowArc(ctx,armX,armY,42+hookT*8,30+hookT*7,-2.55,ang,c,9,.95,-.05);
-    flameShape(ctx,hx,hy,11,hot,1,ang+.4); spark(ctx,hx,hy,3,white,.9);
-    for(let i=0;i<7;i++){const a=ang-.8+i*.22; spark(ctx,armX+Math.cos(a)*48,armY+Math.sin(a)*36,1.5,c,.6);}
-    if(f>=4 && f<6.5){
-      const launch=(f-4)/2.5;
-      glowStroke(ctx,[[hx,hy],[hx+18*launch,hy-22*launch]],hot,3,.55);
+function fireHold(ctx,x,y,move,q){
+  const c='#FF5A16', hot='#FF9A22', white='#FFF1A8';
+  const charge=Math.max(0,Math.min(1,q));
+  const pulse=1+Math.sin(charge*Math.PI*6)*0.035;
+  if(move==='us'){
+    const cx=x+27, cy=y-66, r=13+charge*17;
+    glowArc(ctx,cx,cy,r,r*.72,-2.65,-.45,c,5+charge*3,.72,.05);
+    flameShape(ctx,cx+3,cy-4,r*.42,hot,.9,.25);
+    spark(ctx,cx,cy,2.5+charge*2,white,.75);
+  } else if(move==='ds'){
+    const bx=x+13, by=y-7;
+    spark(ctx,bx,by,4+charge*5,hot,.8);
+    for(let i=0;i<4;i++){
+      const a=-Math.PI/2+i*Math.PI/2;
+      spark(ctx,bx+Math.cos(a)*(8+charge*8),by+Math.sin(a)*(5+charge*7),1.5+charge, c,.65);
     }
+  } else if(move==='ss'){
+    const ex=x+27, ey=y-46;
+    glowArc(ctx,ex,ey,13+charge*14,10+charge*8,-2.5,.15,c,5+charge*3,.78,-.25);
+    flameShape(ctx,ex+8+charge*8,ey,8+charge*5,hot,.8,.15);
+  } else if(move==='uh'||move==='upHeavy'){
+    const cy=y-72, r=18+charge*30;
+    glowArc(ctx,x,cy,r,r*.38,0,REF_TAU,c,4+charge*4,.7*charge+.2,charge*.8);
+    flameShape(ctx,x+r*.55,cy,7+charge*4,hot,.8,.8);
+  } else if(move==='dh'||move==='downHeavy'){
+    const cy=y-8, span=18+charge*55;
+    glowStroke(ctx,[[x-span*.25,cy],[x,cy-4],[x+span*.28,cy]],c,3+charge*3,.55+.3*charge);
+    glowStroke(ctx,[[x,cy],[x+span*.42,cy-10-charge*8]],hot,2+charge*2,.5+.3*charge);
+    spark(ctx,x,cy,2+charge*2,white,.6);
+  } else if(move==='sh'){
+    const ex=x+26, ey=y-45, r=14+charge*22;
+    glowArc(ctx,ex,ey,r,r*.7,-2.2,.2,c,6+charge*4,.75,.0);
+    flameShape(ctx,ex+r*.55,ey,8+charge*7,hot,.85,.25);
   }
-  if(f>=7){
-    // Reference hold visual can remain readable after the hit; actual game hold is pre-attack.
-    const a=Math.max(.2,1-(f-7)/5);
-    glowArc(ctx,armX,armY,48,35,-2.55,.25,c,8,a,-.05);
-    flameShape(ctx,armX+32,armY-28,12,hot,a,.2);
+  void pulse;
+}
+
+function fireUpReference(ctx,x,y,p){
+  const c='#FF5A16', hot='#FF9A22', white='#FFF1A8';
+  if(p<0){ fireHold(ctx,x,y,'us',holdCharge(p)); return; }
+  const f=Math.min(12,Math.floor(attackP(p)*12)+1);
+  // 1: neutral. 2: hook forms. 3: hook completes. 4: flame snaps upward.
+  if(f===1) return;
+  if(f===2){
+    const cx=x+28,cy=y-67;
+    glowArc(ctx,cx,cy,19,14,-2.45,-.55,c,7,.95,.05);
+    flameShape(ctx,cx+7,cy-2,9,hot,.95,.3);
+    spark(ctx,cx,cy,3,white,.8);
+  } else if(f===3){
+    const cx=x+30,cy=y-72;
+    glowArc(ctx,cx,cy,31,23,-2.55,.05,c,10,1,.05);
+    flameShape(ctx,cx+17,cy-17,14,hot,1,.35);
+    glowStroke(ctx,[[x+25,y-45],[cx+4,cy-22]],hot,4,.85);
+    for(let i=0;i<6;i++) spark(ctx,cx+Math.cos(-1.2+i*.38)*30,cy+Math.sin(-1.2+i*.38)*21,1.5,c,.7);
+  } else if(f>=4){
+    glowStroke(ctx,[[x+28,y-60],[x+52,y-88],[x+76,y-124]],c,8,.9);
+    flameShape(ctx,x+56,y-96,16,hot,.95,.65);
+    glowStroke(ctx,[[x+38,y-66],[x+70,y-110]],hot,3.5,.8);
+    for(let i=0;i<8;i++) spark(ctx,x+46+i*5,y-76-i*6,1.5+(i%2),hot,.7);
   }
 }
 
@@ -405,186 +430,109 @@ function iceUpReference(ctx,x,y,p){
 }
 
 // ── Detailed non-up signatures/heavies ─────────────────────────────────────
-function fireHold(ctx,x,y,move,q){
-  const c='#FF5A16', hot='#FFB12B', white='#FFF2B0';
-  const charge=Math.max(0,Math.min(1,q));
-  const pulse=1+Math.sin(charge*Math.PI*6)*.045;
-  const a=.28+.42*charge;
-  ctx.save();
-  ctx.globalAlpha=a;
-
-  // The hold visuals are intentionally different for every Fire move.
-  // They are previews only; fighter.js does not arm the hitbox until release.
-  if(move==='us'){
-    // Small hook curls around the raised fist and grows while held.
-    glowStroke(ctx,[[8,-28],[18,-43],[24,-61-charge*8]],c,6+charge*2,.8);
-    const r=(18+charge*16)*pulse;
-    glowArc(ctx,30,-72,r*.72,r*.48,-2.35,-.35,c,4+charge*2,.9,-.05);
-    flameShape(ctx,38,-73,8+charge*5,hot,.9,.2);
-    spark(ctx,38,-73,2.5+charge*2,white,.8);
-  } else if(move==='ds'){
-    // Ember is pulled back under the foot before the stamp.
-    const ex=8+charge*12, ey=-2;
-    spark(ctx,ex,ey,4+charge*4,hot,.9);
-    glowArc(ctx,ex,ey,10+charge*12,5+charge*4,0,REF_TAU,c,3,.75);
-    glowStroke(ctx,[[10,-8],[ex,ey]],c,4,.65);
-  } else if(move==='ss'){
-    // Flame wraps the elbow while the arm is cocked.
-    glowStroke(ctx,[[8,-30],[26,-45],[42,-47]],c,6,.7);
-    glowArc(ctx,43,-48,13+charge*7,11+charge*4,-2.7,.55,c,4+charge*2,.9,.1);
-    flameShape(ctx,48,-50,8+charge*4,hot,.85,.35);
-  } else if(move==='sh'){
-    // Large gauntlet forms behind the fist before the swing.
-    const gx=38+charge*12, gy=-47;
-    glowArc(ctx,gx,gy,24+charge*12,18+charge*8,-2.5,.6,c,7+charge*3,.8,.1);
-    flameShape(ctx,gx+14,gy-2,12+charge*7,hot,.9,.25);
-    spark(ctx,gx+14,gy-2,3+charge*2,white,.8);
-  } else if(move==='uh'){
-    // A fire wheel is assembled above both hands.
-    const cy=-76-charge*12, r=(34+charge*22)*pulse;
-    glowArc(ctx,0,cy,r,r*.48,0,REF_TAU,c,4+charge*2,.75);
-    for(let i=0;i<8;i++){
-      const ang=i/8*REF_TAU+charge*1.8;
-      flameShape(ctx,Math.cos(ang)*r,cy+Math.sin(ang)*r*.48,7+charge*3,hot,.8,ang);
-    }
-  } else if(move==='dh'){
-    // Five separate cracks form and charge under the fighter.
-    const dirs=[-2.65,-2.05,-1.57,-1.09,-.49];
-    for(let i=0;i<5;i++){
-      const d=dirs[i], len=18+charge*48;
-      glowStroke(ctx,[[0,2],[Math.cos(d)*len,4+Math.sin(d)*len*.45]],c,3,.75);
-      if(charge>.55){
-        const ex=Math.cos(d)*len, ey=4+Math.sin(d)*len*.45;
-        spark(ctx,ex,ey,2+charge*3,hot,.8);
-      }
-    }
-  }
-  ctx.restore();
-}
-
 function fireAttack(ctx,x,y,p,move){
-  const c='#FF5A16', hot='#FFB12B', white='#FFF2B0';
   if(p<0){ fireHold(ctx,x,y,move,holdCharge(p)); return; }
-
-  const f=1+attackP(p)*((move==='dh'||move==='downHeavy')?5:move==='super'?6:3);
-  const q=attackP(p);
-
-  if(move==='us'){
-    // 4 authored frames: 1 startup, 2 swing, 3 hook hit/launch, 4 recovery.
-    if(f<2){ spark(ctx,9,-42,2.5,c,.28); return; }
-    const s=Math.min(1,(f-2)/1.0);
-    const ax=18+s*12, ay=-40-s*27;
-    glowStroke(ctx,[[8,-24],[16,-35],[ax,ay]],c,7,.9);
-    if(f>=2.35 && f<3.55){
-      const t=Math.min(1,(f-2.35)/.8), ang=-2.45+t*2.15;
-      const r=32+t*13, hx=ax+Math.cos(ang)*r, hy=ay+Math.sin(ang)*r;
-      glowArc(ctx,ax,ay,r,r*.72,-2.55,ang,c,8,.95,-.05);
-      flameShape(ctx,hx,hy,10,hot,1,ang+.35); spark(ctx,hx,hy,3,white,.9);
-      if(f>=2.8) glowStroke(ctx,[[hx,hy],[hx+10*t,hy-24*t]],hot,3,.75);
-    }
-    if(f>=3){
-      const a=Math.max(.15,1-(f-3));
-      glowStroke(ctx,[[ax,ay],[ax+8,ay-36]],hot,3,a);
-      for(let i=0;i<5;i++) spark(ctx,ax-8+i*4,ay-26-i*12,1.8,c,a*.65);
-    }
-    return;
-  }
-
+  const f4=Math.min(12,Math.floor(attackP(p)*12)+1);
+  const f6=Math.min(18,Math.floor(attackP(p)*18)+1);
+  const c='#FF5A16', hot='#FF9A22', white='#FFF1A8';
+  if(move==='us'){ fireUpReference(ctx,x,y,p); return; }
   if(move==='ds'){
-    // 4 authored frames: pull foot back, plant ember, four-point burst, recovery.
-    if(f<2){ glowStroke(ctx,[[10,-5],[18,-10]],c,4,.45); return; }
-    if(f<2.75){ spark(ctx,12,-2,4+(f-2)*3,hot,.9); glowArc(ctx,12,-2,9,5,0,REF_TAU,c,3,.8); return; }
-    if(f<3.55){
-      const t=Math.min(1,(f-2.75)/.8), r=6+t*16;
-      for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5]){
-        const ex=12+Math.cos(a)*r, ey=-2+Math.sin(a)*r;
-        flameShape(ctx,ex,ey,8,hot,.95,a);
-        glowStroke(ctx,[[12,-2],[ex,ey]],c,2.5,.65);
+    // 1 neutral, 2 ember under rear foot, 3 four-point burst, 4 launch trail.
+    if(f4===1) return;
+    const bx=x+13, by=y-8;
+    if(f4===2){ spark(ctx,bx,by,7,hot,.95); spark(ctx,bx,by,3,white,.9); }
+    if(f4===3){
+      spark(ctx,bx,by,5,white,1);
+      for(let i=0;i<4;i++){
+        const a=-Math.PI/2+i*Math.PI/2;
+        const px=bx+Math.cos(a)*16, py=by+Math.sin(a)*10;
+        flameShape(ctx,px,py,13,hot,1,a+.3);
+      }
+      glowArc(ctx,bx,by,19,12,0,REF_TAU,c,5,.9);
+    }
+    if(f4>=4){
+      for(let i=0;i<4;i++){
+        const a=-Math.PI/2+i*Math.PI/2;
+        flameShape(ctx,bx+Math.cos(a)*19,by+Math.sin(a)*12,9,hot,.55,a+.3);
+        spark(ctx,bx+Math.cos(a)*31,by+Math.sin(a)*20,1.7,c,.65);
       }
     }
-    if(f>=3.2){ for(let i=0;i<5;i++) spark(ctx,12+(i-2)*7,-2-i*4,1.7,c,Math.max(.15,1-(f-3.2))); }
     return;
   }
-
   if(move==='ss'){
-    // 4 authored frames: twist/cock, flame wraps elbow, elbow strike, follow-through.
-    const t=Math.min(1,Math.max(0,(f-1)/2.2));
-    const ex=18+t*58, ey=-44-Math.sin(t*Math.PI)*10;
-    glowStroke(ctx,[[8,-25],[18,-42],[ex,ey]],c,8,.9);
-    if(f>=2.0){
-      const r=15+(f-2)*7;
-      glowArc(ctx,ex,ey,r,r*.8,-2.7,.6,c,5,.95,.05);
-      flameShape(ctx,ex+5,ey-2,11,hot,.95,.3);
-    }
-    if(f>=3){
-      const k=(f-3)/1.0;
-      glowStroke(ctx,[[ex,ey],[ex+26*k,ey-8*k]],hot,5,.8);
-      for(let i=0;i<6;i++) spark(ctx,ex+6+i*7*k,ey-3-i*2,1.7,c,.7);
+    if(f4===1) return;
+    const ex=x+29,ey=y-45;
+    if(f4===2){
+      glowArc(ctx,ex,ey,17,13,-2.4,.2,c,7,.95,-.2);
+      flameShape(ctx,ex+8,ey,10,hot,.95,.15);
+    } else if(f4===3){
+      glowArc(ctx,ex+14,ey,29,20,-2.55,.25,c,10,1,-.2);
+      flameShape(ctx,ex+28,ey-2,16,hot,1,.2);
+      glowStroke(ctx,[[x+10,y-27],[ex,ey]],hot,4,.9);
+    } else {
+      flameShape(ctx,x+63,y-51,10,hot,.5,.15);
+      glowStroke(ctx,[[x+37,y-46],[x+78,y-52]],c,4,.45);
+      for(let i=0;i<7;i++) spark(ctx,x+56+i*5,y-48-i*3,1.4+(i%2),hot,.65);
     }
     return;
   }
-
   if(move==='uh'){
-    // 4 authored frames: hands up, wheel forms, wheel rises/rotates, breaks apart.
-    const cy=-70-Math.max(0,Math.min(1,(f-1)/2.6))*72;
-    const r=52;
-    if(f<1.65){ glowStroke(ctx,[[-18,-28],[-8,-48],[0,-56]],c,6,.75); glowStroke(ctx,[[18,-28],[8,-48],[0,-56]],c,6,.75); return; }
-    glowArc(ctx,0,cy,r,r*.58,0,REF_TAU,c,8,.95);
-    const rot=Math.max(0,(f-2))*REF_TAU*.75;
-    for(let i=0;i<10;i++){
-      const ang=i/10*REF_TAU+rot;
-      flameShape(ctx,Math.cos(ang)*r,cy+Math.sin(ang)*r*.58,9,hot,.9,ang);
-    }
-    if(f>=3.35){
-      const b=Math.min(1,(f-3.35)/.65);
-      for(let i=0;i<12;i++){
-        const ang=i/12*REF_TAU;
-        const rr=r*(1+b*.55);
-        spark(ctx,Math.cos(ang)*rr,cy+Math.sin(ang)*rr*.58,2.2,c,.8*(1-b));
-        flameShape(ctx,Math.cos(ang)*rr,cy+Math.sin(ang)*rr*.58,6,hot,.65*(1-b),ang);
+    const cy=y-91, r=63;
+    if(f4===1){ flameShape(ctx,x,y-67,10,hot,.95,0); spark(ctx,x,y-67,3,white,.8); }
+    else if(f4===2||f4===3){
+      glowArc(ctx,x,cy,r,r*.52,0,REF_TAU,c,10,1, f4===2 ? 0 : .28);
+      for(let i=0;i<8;i++){
+        const a=i/8*REF_TAU+(f4===3?.35:0);
+        flameShape(ctx,x+Math.cos(a)*r,cy+Math.sin(a)*r*.52,10,hot,.9,a);
+      }
+    } else {
+      for(let i=0;i<10;i++){
+        const a=i/10*REF_TAU;
+        const px=x+Math.cos(a)*r,py=cy+Math.sin(a)*r*.52;
+        flameShape(ctx,px,py,7,hot,.7,a);
+        glowStroke(ctx,[[x+Math.cos(a)*46,cy+Math.sin(a)*r*.36],[px,py]],c,3,.35);
       }
     }
     return;
   }
-
   if(move==='dh'){
-    // 6 authored frames: ground punch, crack spread, travel, first eruptions,
-    // full eruption, lingering fire.
-    const dirs=[-2.65,-2.05,-1.57,-1.09,-.49];
-    if(f<2){ glowStroke(ctx,[[-8,-22],[0,2],[8,-22]],c,6,.9); return; }
-    const travel=Math.min(1,Math.max(0,(f-2)/1.7));
-    for(let i=0;i<5;i++){
-      const d=dirs[i], len=58*travel, ex=Math.cos(d)*len, ey=4+Math.sin(d)*len*.45;
-      glowStroke(ctx,[[0,2],[ex,ey]],c,4,.8);
-      if(f>=3.15){
-        const erupt=Math.min(1,Math.max(0,(f-(3.15+i*.07))/.75));
-        if(erupt>0){
-          flameShape(ctx,ex,ey-18*erupt,12+6*erupt,hot,.95,0);
-          glowStroke(ctx,[[ex,ey],[ex,ey-24*erupt]],c,4,.85);
-          for(let k=0;k<3;k++) spark(ctx,ex+(k-1)*5,ey-18*erupt-k*7,1.8,c,.65);
-        }
+    const cracks=[[-58,-35,-10],[-31,-38,8],[0,-42,-4],[32,-37,7],[60,-34,-8]];
+    if(f6===1) return;
+    if(f6===2){ glowStroke(ctx,[[x,y-7],[x,y-25]],c,4,.9); return; }
+    for(let i=0;i<cracks.length;i++){
+      const [ex,ey,dy]=cracks[i];
+      const len=(f6===3?0.72:f6===4?1:f6>=5?1.08:.35);
+      glowStroke(ctx,[[x,y-7],[x+ex*len,y+ey*len]],c,4.5,.9);
+      if(f6>=4){
+        flameShape(ctx,x+ex*len,y+ey*len-3,10+(f6===5?4:0),hot,.95,.2*(i-2));
       }
+    }
+    if(f6>=5){
+      for(let i=0;i<7;i++) spark(ctx,x-65+i*22,y-48-(i%2)*10,1.5+(i%3),hot,.65);
     }
     return;
   }
-
   if(move==='sh'){
-    // 4 authored frames: arm back, gauntlet forms, huge hook swing, follow-through.
-    const t=Math.min(1,Math.max(0,(f-1)/2.2));
-    const ang=-2.15+t*2.05, r=40+20*Math.min(1,t+.15);
-    const gx=24+Math.cos(ang)*r, gy=-45+Math.sin(ang)*r;
-    if(f<1.7){ glowStroke(ctx,[[8,-30],[28,-46],[45,-54]],c,7,.8); return; }
-    glowArc(ctx,28,-46,52,40,-2.25,ang,c,11,.95,-.08);
-    flameShape(ctx,gx,gy,22,hot,.95,ang+.25); spark(ctx,gx,gy,4,white,.8);
-    if(f>=2.7){
-      const k=Math.min(1,(f-2.7)/1.0);
-      glowStroke(ctx,[[gx,gy],[gx+30*k,gy-12*k]],hot,5,.8);
-      for(let i=0;i<8;i++) spark(ctx,gx+8*i*k,gy-3*i*k,2,c,.7);
+    const ex=x+28,ey=y-46;
+    if(f4===1){
+      glowArc(ctx,ex,ey,16,11,-2.3,.05,c,7,.95);
+      flameShape(ctx,ex+8,ey,10,hot,.9,.15);
+    } else if(f4===2){
+      glowStroke(ctx,[[x+12,y-35],[x+33,y-46]],c,10,.95);
+      glowArc(ctx,ex+12,ey,28,20,-2.45,.35,c,8,1,-.05);
+      flameShape(ctx,ex+29,ey-1,15,hot,1,.2);
+    } else if(f4===3){
+      glowArc(ctx,x+43,y-48,58,42,-2.35,.55,c,13,1,-.15);
+      flameShape(ctx,x+78,y-50,25,hot,1,.15);
+      glowStroke(ctx,[[x+16,y-39],[x+55,y-48]],hot,5,.8);
+    } else {
+      flameShape(ctx,x+93,y-50,18,hot,.9,.1);
+      glowStroke(ctx,[[x+52,y-48],[x+102,y-51]],c,5,.55);
+      for(let i=0;i<9;i++) spark(ctx,x+76+i*4,y-49+(i%3-1)*5,1.5+(i%2),hot,.7);
     }
     return;
   }
 }
-
 function waterAttack(ctx,x,y,p,move){
   const c='#24BFFF', white='#DDFBFF', q=attackP(p), a=.3+.7*Math.sin(q*Math.PI);
   if(move==='us'){waterUpReference(ctx,x,y,p);return;}
@@ -646,53 +594,42 @@ function iceAttack(ctx,x,y,p,move){
 
 // Improved supers. They deliberately have no hold state.
 function fireSuper(ctx,x,y,p){
-  const c='#FF5A16', hot='#FFB12B', white='#FFF2B0';
-  const q=attackP(p), f=1+q*6;
-  const ballX=x+18, ballY=y-58;
-
-  // 7 authored frames: raise, form, compress, flash, punch/release,
-  // short-distance detonation, then dissipation.
-  if(f<2){
-    glowStroke(ctx,[[-18,-25],[-12,-48],[-2,-60]],c,7,.85);
-    glowStroke(ctx,[[18,-25],[12,-48],[2,-60]],c,7,.85);
-    return;
-  }
-  if(f<4){
-    const r=16+(f-2)*9;
-    core(ctx,ballX,ballY,r,c,.95);
-    for(let i=0;i<8;i++){
-      const a=i/8*REF_TAU+f*.4;
-      spark(ctx,ballX+Math.cos(a)*r,ballY+Math.sin(a)*r,2,hot,.8);
+  const f=Math.min(21,Math.floor(attackP(p)*21)+1);
+  const c='#FF5A16', hot='#FF9A22', white='#FFF1A8';
+  const cx=x+72, cy=y-55;
+  if(f===1) return;
+  if(f===2){
+    core(ctx,x+18,y-57,17,c,1);
+    flameShape(ctx,x+4,y-58,13,hot,.9,-.5);
+    flameShape(ctx,x+32,y-58,13,hot,.9,.5);
+  } else if(f===3){
+    core(ctx,x+20,y-58,25,c,1);
+    glowArc(ctx,x+20,y-58,29,25,0,REF_TAU,c,5,.9);
+    for(let i=0;i<8;i++){const a=i/8*REF_TAU; spark(ctx,x+20+Math.cos(a)*28,y-58+Math.sin(a)*24,1.6,hot,.8);}
+  } else if(f===4){
+    core(ctx,x+36,y-57,29,c,1);
+    glowStroke(ctx,[[x+12,y-54],[x+48,y-57]],hot,5,.9);
+    flameShape(ctx,x+53,y-57,13,hot,.9,.2);
+  } else if(f===5){
+    const bx=x+66;
+    core(ctx,bx,y-56,27,c,1);
+    glowStroke(ctx,[[x+30,y-57],[bx,y-56]],hot,6,.85);
+    for(let i=0;i<7;i++) spark(ctx,x+40+i*7,y-56+(i%2?4:-4),1.5,hot,.7);
+  } else if(f===6){
+    const ex=x+82,ey=y-53;
+    core(ctx,ex,ey,42,c,1);
+    glowArc(ctx,ex,ey,49,43,0,REF_TAU,c,9,.95);
+    for(let i=0;i<18;i++){
+      const a=i/18*REF_TAU;
+      flameShape(ctx,ex+Math.cos(a)*47,ey+Math.sin(a)*40,9,hot,.9,a);
     }
-    return;
-  }
-  if(f<4.8){
-    const r=36+(f-4)*14;
-    core(ctx,ballX,ballY,r,c,1);
-    ctx.save();ctx.globalAlpha=.85;ctx.strokeStyle=white;ctx.lineWidth=3;ctx.shadowColor=hot;ctx.shadowBlur=24;ctx.beginPath();ctx.arc(ballX,ballY,r*.58,0,REF_TAU);ctx.stroke();ctx.restore();
-    return;
-  }
-  if(f<5.8){
-    const t=Math.min(1,(f-4.8)/1.0), bx=ballX+75*t;
-    glowStroke(ctx,[[18,-54],[42,-58],[bx,ballY]],hot,8,.95);
-    core(ctx,bx,ballY,24*(1-.35*t),c,.95);
-    return;
-  }
-  if(f<6.65){
-    const e=Math.min(1,(f-5.8)/.85), cx=x+92, cy=y-58, r=18+e*58;
-    core(ctx,cx,cy,20+e*12,c,1);
-    glowArc(ctx,cx,cy,r,r*.78,0,REF_TAU,c,10,.95);
-    for(let i=0;i<16;i++){
-      const a=i/16*REF_TAU;
-      flameShape(ctx,cx+Math.cos(a)*r,cy+Math.sin(a)*r*.78,8,hot,.85, a);
+  } else if(f>=7){
+    for(let i=0;i<12;i++){
+      const a=i/12*REF_TAU;
+      const rr=34+((i*17)%9)*5;
+      spark(ctx,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr*.7,1.7+(i%3),hot,.65);
     }
-    return;
-  }
-  const fade=Math.max(0,1-(f-6.65)/.35);
-  glowArc(ctx,x+92,y-58,74,56,0,REF_TAU,c,5,fade);
-  for(let i=0;i<12;i++){
-    const a=i/12*REF_TAU;
-    spark(ctx,x+92+Math.cos(a)*84,y-58+Math.sin(a)*64,2,c,fade);
+    flameShape(ctx,x+105,y-70,8,hot,.55,.4);
   }
 }
 function waterSuper(ctx,x,y,p){const c='#24BFFF',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=35+easeOut(q)*110; waterRing(ctx,x,y-58,r,r*.55,c,a,.1); for(let i=0;i<16;i++){const ang=i/16*REF_TAU+q*2; glowStroke(ctx,[[x+Math.cos(ang)*(r-20),y-58+Math.sin(ang)*(r-20)*.55],[x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.55]],c,6,a*.65);}}
