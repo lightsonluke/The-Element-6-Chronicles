@@ -1560,13 +1560,6 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     }
     if (!inputs.sig) { inputs._sigConsumed = false; fighter._gen1SigHolding = false; }
 
-    // A Gen I held attack freezes the fighter immediately on the first frame too.
-    if (isGen1(fighter) && fighter.state === 'attackHold') {
-      fighter.downHeld = !!inputs.down;
-      fighter.vx = 0; fighter.vy = 0;
-      return fighter;
-    }
-
     // ── Power Activation (replaces light attack) ──
     if (inputs.power && !inputs._powerConsumed && !fighter.powerActive && fighter.powerTimer <= 0 && fighter.powerCooldown <= 0 && fighter.powerDisabled <= 0) {
       inputs._powerConsumed = true;

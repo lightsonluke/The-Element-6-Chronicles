@@ -20,48 +20,48 @@ const CHAR_MAP = new Map([
 
 const GEN1_MOVE_SPECS = {
   g1_thunder: {
-    us:{name:'Lightning Circle',shape:'orbitPoint',range:92,knockback:'upContact',duration:28,damage:16,description:'Only the moving dot at the beginning of the lightning circle is active.'},
-    ds:{name:'Lightning Dome',shape:'smallDome',range:58,knockback:'radialContact',duration:22,damage:17},
-    ss:{name:'Lightning Bolt',shape:'forwardBolt',range:82,knockback:'forwardContact',duration:14,damage:15},
+    us:{name:'Lightning Circle',shape:'orbitPoint',range:96,knockback:'upContact',duration:28,damage:16},
+    ds:{name:'Lightning Dome',shape:'smallDome',range:62,knockback:'radialContact',duration:22,damage:17},
+    ss:{name:'Lightning Bolt',shape:'forwardBolt',range:84,knockback:'forwardContact',duration:14,damage:15},
     upHeavy:{name:'Rising Lightning Trio',shape:'threeBolts',range:190,knockback:'upContact',duration:24,damage:23},
     dh:{name:'Orbiting Lightning Ball',shape:'orbitBall',range:100,knockback:'forwardContact',duration:24,damage:22},
-    sh:{name:'Large Lightning Bolt',shape:'forwardBoltHeavy',range:105,knockback:'forwardContact',duration:18,damage:23},
+    sh:{name:'Large Lightning Bolt',shape:'forwardBoltHeavy',range:108,knockback:'forwardContact',duration:18,damage:23},
     super:{name:'Thunder Strike',shape:'bottomBolt',range:90,knockback:'radialUp',duration:42,damage:38},
   },
   g1_fire: {
-    us:{name:'Flaming Hook',shape:'hook',range:88,knockback:'upContact',duration:20,damage:16},
-    ds:{name:'Ember Stamp',shape:'stampFlames',range:52,knockback:'radialContact',duration:18,damage:15},
-    ss:{name:'Flaming Elbow',shape:'elbow',range:62,knockback:'forwardContact',duration:14,damage:15},
-    upHeavy:{name:'Spinning Fire Wheel',shape:'fireWheel',range:120,knockback:'upContact',duration:24,damage:24},
-    dh:{name:'Burning Cracks',shape:'cracks',range:120,knockback:'hitboxRadial',duration:26,damage:21},
-    sh:{name:'Flaming Gauntlet',shape:'gauntlet',range:105,knockback:'forwardContact',duration:20,damage:24},
+    us:{name:'Flaming Hook',shape:'hook',range:92,knockback:'upContact',duration:20,damage:16},
+    ds:{name:'Ember Stamp',shape:'stampFlames',range:58,knockback:'radialContact',duration:18,damage:15},
+    ss:{name:'Flaming Elbow',shape:'elbow',range:78,knockback:'forwardContact',duration:14,damage:15},
+    upHeavy:{name:'Spinning Fire Wheel',shape:'fireWheel',range:128,knockback:'upContact',duration:24,damage:24},
+    dh:{name:'Burning Cracks',shape:'cracks',range:124,knockback:'hitboxRadial',duration:26,damage:21},
+    sh:{name:'Flaming Gauntlet',shape:'gauntlet',range:112,knockback:'forwardContact',duration:20,damage:24},
     super:{name:'Fireball Detonation',shape:'explosion',range:150,knockback:'radialContact',duration:42,damage:40},
   },
   g1_water: {
-    us:{name:'Water Ring',shape:'waterRing',range:84,knockback:'velocity',duration:20,damage:15},
-    ds:{name:'Twin Splashes',shape:'twinSplashes',range:70,knockback:'waterSplit',duration:18,damage:16},
-    ss:{name:'Water Whip Tip',shape:'whipTip',range:90,knockback:'forwardContact',duration:15,damage:15},
-    upHeavy:{name:'Spiral Water Ribbon',shape:'waterRibbon',range:145,knockback:'upContact',duration:25,damage:24},
-    dh:{name:'Bouncing Water Sphere',shape:'waterBounce',range:96,knockback:'hitboxRadial',duration:24,damage:21},
-    sh:{name:'Water Crescent',shape:'crescent',range:118,knockback:'forwardContact',duration:22,damage:24},
+    us:{name:'Water Ring',shape:'waterRing',range:88,knockback:'upContact',duration:20,damage:15},
+    ds:{name:'Twin Splashes',shape:'twinSplashes',range:74,knockback:'watersplit',duration:18,damage:16},
+    ss:{name:'Water Whip Tip',shape:'whipTip',range:94,knockback:'forwardContact',duration:15,damage:15},
+    upHeavy:{name:'Spiral Water Ribbon',shape:'waterRibbon',range:150,knockback:'upContact',duration:25,damage:24},
+    dh:{name:'Bouncing Water Sphere',shape:'waterBounce',range:100,knockback:'hitboxRadial',duration:24,damage:21},
+    sh:{name:'Water Crescent',shape:'crescent',range:122,knockback:'forwardContact',duration:22,damage:24},
     super:{name:'Collapse Ring',shape:'collapseRing',range:150,knockback:'radialContact',duration:42,damage:38},
   },
   g1_grass: {
-    us:{name:'Leaf Propeller',shape:'propellerLeaves',range:64,knockback:'up',duration:18,damage:15},
-    ds:{name:'Thorn Snap',shape:'thornTips',range:72,knockback:'inward',duration:18,damage:14},
-    ss:{name:'Wooden Branch Jab',shape:'branchEnd',range:86,knockback:'forwardContact',duration:14,damage:15},
-    upHeavy:{name:'Petal Bloom',shape:'flowerPetals',range:120,knockback:'upContact',duration:26,damage:24},
-    dh:{name:'Returning Vine',shape:'vineTwoHits',range:118,knockback:'hitboxRadial',duration:25,damage:21},
-    sh:{name:'Branch Spear Split',shape:'branchSplit',range:120,knockback:'forwardContact',duration:24,damage:24},
+    us:{name:'Leaf Propeller',shape:'propellerLeaves',range:70,knockback:'up',duration:18,damage:15},
+    ds:{name:'Thorn Snap',shape:'thornTips',range:78,knockback:'inward',duration:18,damage:14},
+    ss:{name:'Wooden Branch Jab',shape:'branchEnd',range:92,knockback:'forwardContact',duration:14,damage:15},
+    upHeavy:{name:'Petal Bloom',shape:'flowerPetals',range:126,knockback:'upContact',duration:26,damage:24},
+    dh:{name:'Returning Vine',shape:'vineTwoHits',range:122,knockback:'hitboxRadial',duration:25,damage:21},
+    sh:{name:'Branch Spear Split',shape:'branchSplit',range:126,knockback:'forwardContact',duration:24,damage:24},
     super:{name:'Flower Snap',shape:'flowerSnap',range:145,knockback:'radialContact',duration:42,damage:39},
   },
   g1_ice: {
-    us:{name:'Throwing Ice Shard',shape:'throwingShard',range:105,knockback:'velocity',duration:20,damage:16},
-    ds:{name:'Shattered Ice Plate',shape:'plateShards',range:88,knockback:'hitboxRadial',duration:22,damage:17},
-    ss:{name:'Ice Forearm Blade',shape:'forearmBlade',range:72,knockback:'forwardContact',duration:16,damage:16},
-    upHeavy:{name:'Tri-Shard Burst',shape:'shardBurst',range:130,knockback:'velocity',duration:24,damage:24},
-    dh:{name:'Sliding Ice Block',shape:'iceBlock',range:128,knockback:'hitboxRadial',duration:24,damage:22},
-    sh:{name:'Ice Hammer',shape:'hammerArc',range:112,knockback:'hitboxRadial',duration:24,damage:25},
+    us:{name:'Throwing Ice Shard',shape:'throwingShard',range:112,knockback:'shardTravel',duration:20,damage:16},
+    ds:{name:'Shattered Ice Plate',shape:'plateShards',range:92,knockback:'hitboxRadial',duration:22,damage:17},
+    ss:{name:'Ice Forearm Blade',shape:'forearmBlade',range:80,knockback:'forwardContact',duration:16,damage:16},
+    upHeavy:{name:'Tri-Shard Burst',shape:'shardBurst',range:136,knockback:'upContact',duration:24,damage:24},
+    dh:{name:'Sliding Ice Block',shape:'iceBlock',range:132,knockback:'hitboxRadial',duration:24,damage:22},
+    sh:{name:'Ice Hammer',shape:'hammerArc',range:116,knockback:'hitboxRadial',duration:24,damage:25},
     super:{name:'Crystal Explosion',shape:'crystalShards',range:155,knockback:'radialContact',duration:42,damage:40},
   },
 };
@@ -121,62 +121,59 @@ function g1Poly(ox, oy, f, pts) { return {shape:'polygon', points:pts.map(([x,y]
 function getGen1HeroHitboxes(attacker, move, p) {
   const id=String(attacker?.char?.id||''), f=attacker?.facing||1, ox=Number(attacker?.x)||0, oy=Number(attacker?.y)||0;
   const fr=g1Frame(p), out=[];
-  const C=(x,y,r)=>out.push(g1Circle(ox,oy,f,x,y,r));
-  const K=(x1,y1,x2,y2,r)=>out.push(g1Capsule(ox,oy,f,x1,y1,x2,y2,r));
-  const B=(x,y,w,h)=>out.push(g1PointRectBox(ox,oy,f,x,y,w,h));
-  const P=pts=>out.push(g1Poly(ox,oy,f,pts));
+  const C=(x,y,r)=>out.push({shape:'circle',x:ox+x*f,y:oy+y,r});
+  const K=(x1,y1,x2,y2,r)=>out.push({shape:'capsule',x1:ox+x1*f,y1:oy+y1,x2:ox+x2*f,y2:oy+y2,r});
+  const B=(x,y,w,h)=>out.push({shape:'box',x:ox+x*f,y:oy+y,w,h});
+  const P=pts=>out.push({shape:'polygon',points:pts.map(([x,y])=>[ox+x*f,oy+y])});
   const q=Math.max(0,Math.min(1,(fr-2)/6));
 
+  // Thunder collision remains on its original authored geometry.
   if(id==='g1_thunder') {
     if(move==='us' && fr>=3 && fr<=8.6){const a=-Math.PI/2+Math.max(0,Math.min(1,(fr-2)/6))*TAU;C(Math.cos(a)*86,-112+Math.sin(a)*34,9);}
-    else if(move==='ds' && fr>=4 && fr<=8){for(let i=0;i<9;i++){const a=Math.PI+i/8*Math.PI,r=18+Math.min(1,(fr-4)/4)*35;C(Math.cos(a)*r,-24+Math.sin(a)*r,9);}}
-    else if((move==='ss'||move==='sh') && fr>=4 && fr<=7.5){const len=move==='sh'?100:68,cur=len*Math.max(0,Math.min(1,(fr-3)/4));P([[24,-50],[24+cur*.23,-62],[24+cur*.14,-50],[24+cur*.52,-56],[24+cur*.42,-38],[24+cur*.82,-50],[24+cur*.62,-68],[24+cur,-56]]);}
-    else if((move==='upHeavy'||move==='uh') && fr>=4 && fr<=8){const top=-38-150*Math.max(0,Math.min(1,(fr-3)/5));for(const dx of [24,82,140])P([[dx-10,-38],[dx+10,-38],[dx+10,top],[dx-10,top]]);}
-    else if(move==='dh' && fr>=4 && fr<=8){const a=-Math.PI/2+Math.max(0,Math.min(1,(fr-3)/5))*TAU;C(20+Math.cos(a)*94,-72+Math.sin(a)*55,13);}
+    else if(move==='ds' && fr>=4 && fr<=8){for(let i=0;i<9;i++){const a=Math.PI+i/8*Math.PI;C(Math.cos(a)*35,-24+Math.sin(a)*35,9);}}
+    else if((move==='ss'||move==='sh') && fr>=3 && fr<=7){const len=move==='sh'?104:72;P([[24,-54],[24+len*.25,-64],[24+len*.5,-58],[24+len*.75,-66],[24+len,-58],[24+len*.78,-48],[24+len*.45,-52],[24,-44]]);}
+    else if(move==='upHeavy' && fr>=3 && fr<=9){const top=-38-150*q;for(const dx of[24,82,140])B(dx,top,18,70);}
+    else if(move==='dh' && fr>=3 && fr<=9){const a=-Math.PI/2+q*TAU;C(20+Math.cos(a)*94,-72+Math.sin(a)*55,13);}
     return out;
   }
 
   if(id==='g1_fire') {
-    if(move==='us' && fr>=4 && fr<=6.2){const t=Math.max(0,Math.min(1,(fr-3)/2.7)),a=-2.2+2.04*t,r=36,ex=18+Math.cos(a)*r,ey=-90+Math.sin(a)*r;K(18,-48,18+18*Math.cos(a*.55),-48+18*Math.sin(a*.55),8);K(18+18*Math.cos(a*.55),-48+18*Math.sin(a*.55),ex,ey,8);C(ex,ey,11);}
-    else if(move==='ds' && fr>=4 && fr<=7.2){const q=Math.max(0,Math.min(1,(fr-4)/3));for(let i=0;i<4;i++){const a=-Math.PI/2+(i-1.5)*.58,r=8+q*18;C(Math.cos(a)*r,-8+Math.sin(a)*r*.5,11);}}
-    else if(move==='ss' && fr>=3.5 && fr<=6.5){const q=Math.max(0,Math.min(1,(fr-3)/3));K(20,-43,20+48*q,-43,14);}
-    else if((move==='upHeavy'||move==='uh') && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6)),r=28+q*50;for(let i=0;i<14;i++){const a=i/14*TAU+q*TAU;C(Math.cos(a)*r,-92+Math.sin(a)*r*.72,11);}}
-    else if(move==='dh' && fr>=4.5 && fr<=8){const q=Math.max(0,Math.min(1,(fr-2)/5));for(let i=0;i<5;i++){const dx=(i-2)*24*q;C(dx,-32-(i%2)*8,13);}}
-    else if(move==='sh' && fr>=3.5 && fr<=8){const q=Math.max(0,Math.min(1,(fr-2)/5)),a=-1+q*1.9,cx=25+Math.cos(a)*48,cy=-45+Math.sin(a)*48;K(8,-45,cx,cy,15);C(cx,cy,20);}
-    else if(move==='sp' && fr>=7 && fr<=10.5)C(82,-50,18+Math.max(0,Math.min(1,(fr-7)/3.5))*60);
+    if(move==='us' && fr>=4 && fr<=6){const cx=18,cy=-88;const a0=-2.35,a1=-.2;for(let i=0;i<5;i++){const a=a0+(a1-a0)*i/4;C(cx+Math.cos(a)*36,cy+Math.sin(a)*36,10);}}
+    else if(move==='ds' && fr>=4 && fr<=7){for(let i=-2;i<=2;i++)C(i*(10+10*q),-8,11+q*4);}
+    else if(move==='ss' && fr>=4 && fr<=7){const t=Math.min(1,(fr-3)/3),ex=24+70*t,ey=-44-Math.sin(t*Math.PI)*20;K(8,-40,ex,ey,12);C(ex,ey,17);}
+    else if((move==='upHeavy'||move==='uh') && fr>=3 && fr<=9){const r=25+55*q;for(let i=0;i<10;i++){const a=i/10*TAU+q*TAU;C(Math.cos(a)*r,-92+Math.sin(a)*r*.7,11);}}
+    else if(move==='dh' && fr>=4 && fr<=9){for(let i=-2;i<=2;i++)K(0,-6,i*28*q,i*2-(i%2)*30,9);}
+    else if(move==='sh' && fr>=4 && fr<=9){const a=-1.05+q*1.9,cx=28+Math.cos(a)*50,cy=-45+Math.sin(a)*50;K(8,-45,cx,cy,15);C(cx,cy,20);}
     return out;
   }
 
   if(id==='g1_water') {
-    if(move==='us' && fr>=3 && fr<=7){const t=Math.max(0,Math.min(1,(fr-2)/5)),rx=15+56*t+8*Math.sin(t*Math.PI),ry=-45-62*t-20*Math.sin(t*Math.PI);C(rx,ry,22);}
-    else if(move==='ds' && fr>=4 && fr<=6.5){const q=Math.max(0,Math.min(1,(fr-3)/3));C(-18-30*q,-10-58*q,11);C(18+30*q,-10-58*q,11);}
-    else if(move==='ss' && fr>=3.5 && fr<=6.5){const q=Math.max(0,Math.min(1,(fr-2)/4));C(12+78*q,-44-Math.sin(Math.PI*q)*30*q,10);}
-    else if((move==='upHeavy'||move==='uh') && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6));for(let i=0;i<10;i++){const a=-1.25+i/9*2.5+q*1.9;C(Math.cos(a)*54,-64+Math.sin(a)*92,9);}}
-    else if(move==='dh' && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6)),bx=70-140*q,by=-46+Math.max(0,q-.45)*90;C(bx,by,22);if(q>.65)for(let i=0;i<8;i++)C(bx+(i-3.5)*12,by-70*(q-.65),8);}
-    else if(move==='sh' && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6));const pts=[];for(let i=0;i<=12;i++){const a=-.85+i/12*1.7;pts.push([20+Math.cos(a)*78,-48+Math.sin(a)*78]);}P(pts);}
-    else if(move==='sp' && fr>=6 && fr<=11){const q=Math.max(0,Math.min(1,(fr-6)/5)),r=8+q*112;for(let i=0;i<18;i++){const a=i/18*TAU;C(Math.cos(a)*r,-52+Math.sin(a)*r*.7,10);}}
+    if(move==='us' && fr>=3 && fr<=6){const positions=[[28,-74],[43,-92],[57,-111],[64,-119]];const [px,py]=positions[Math.min(fr-3,3)];C(px,py,23);}
+    else if(move==='ds' && fr>=3 && fr<=7){const t=Math.min(1,(fr-2)/5);for(const s of[-1,1])C(s*(18+30*t),-10-58*t,12);}
+    else if(move==='ss' && fr>=4 && fr<=8){const t=Math.min(1,(fr-3)/5),tx=10+88*t,ty=-44-Math.sin(t*Math.PI)*32;K(10,-44,tx,ty,11);C(tx,ty,12);}
+    else if((move==='upHeavy'||move==='uh') && fr>=3 && fr<=9){const r=50+15*q;for(let i=0;i<12;i++){const a=i/12*TAU+q*TAU;C(Math.cos(a)*r,-64+Math.sin(a)*92,10);}}
+    else if(move==='dh' && fr>=3 && fr<=9){const bx=72-144*q,by=-48+Math.max(0,q-.45)*95;C(bx,by,23);}
+    else if(move==='sh' && fr>=4 && fr<=9){const a0=-.85,a1=.85;for(let i=0;i<8;i++){const a=a0+(a1-a0)*i/7*q;C(25+Math.cos(a)*78,-48+Math.sin(a)*78,11);}}
     return out;
   }
 
   if(id==='g1_grass') {
-    if(move==='us' && fr>=3 && fr<=7.3){const cy=-112,spin=Math.max(0,Math.min(1,(fr-2)/6))*TAU;for(let i=0;i<3;i++){const a=i/3*TAU+spin;P([[Math.cos(a)*5-7,cy+Math.sin(a)*5-25],[Math.cos(a)*30,cy+Math.sin(a)*30],[Math.cos(a)*5+7,cy+Math.sin(a)*5+25]]);}}
-    else if(move==='ds' && fr>=3.5 && fr<=7){const q=Math.max(0,Math.min(1,(fr-2)/4));C(-38+24*q,-42,9);C(38-24*q,-42,9);}
-    else if(move==='ss' && fr>=3.5 && fr<=6.5){const q=Math.max(0,Math.min(1,(fr-2)/4));B(12+70*q,-44,20,16);C(12+82*q,-44,11);}
-    else if((move==='upHeavy'||move==='uh') && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6)),r=22+q*70;for(let i=0;i<8;i++){const a=i/8*TAU;C(Math.cos(a)*r,-48+Math.sin(a)*r*.55,14);}}
-    else if(move==='dh' && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6));if(q<.55)K(-35,-105,85*q,-5,12);else{const u=(q-.55)/.45;K(85,-5,85-95*u,-35+u*12,12);}}
-    else if(move==='sh' && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6)),len=115*q;P([[18,-48],[18+len,-55],[18+len,-41]]);if(q>.58){const z=(q-.58)/.42;for(const a of[-.28,0,.28])P([[18+len,-48],[18+len+48*z,-48+Math.sin(a)*48*z],[18+len+48*z+8,-48+Math.sin(a)*48*z+6]]);}}
-    else if(move==='sp' && fr>=6 && fr<=10.5){const q=Math.max(0,Math.min(1,(fr-6)/4.5)),r=112-q*98;for(let i=0;i<12;i++){const a=i/12*TAU;P([[Math.cos(a)*r-10,-48+Math.sin(a)*r*.65-28],[Math.cos(a)*r+14,-48+Math.sin(a)*r*.65],[Math.cos(a)*r-10,-48+Math.sin(a)*r*.65+28]]);}}
+    if(move==='us' && fr>=3 && fr<=7){const cy=-112,spin=(fr-2)*.9;for(let i=0;i<3;i++){const a=i*TAU/3+spin;K(Math.cos(a)*5,cy+Math.sin(a)*5,Math.cos(a)*28,cy+Math.sin(a)*28,8);}}
+    else if(move==='ds' && fr>=4 && fr<=7){for(const s of[-1,1])K(s*12,-8,s*(18+30*q),-50,9);}
+    else if(move==='ss' && fr>=4 && fr<=8){const ex=18+82*q;K(10,-44,ex,-44,10);C(ex,-44,12);}
+    else if((move==='upHeavy'||move==='uh') && fr>=3 && fr<=9){const r=30+70*q;for(let i=0;i<9;i++){const a=i/9*TAU;K(Math.cos(a)*r,-52+Math.sin(a)*r*.55,Math.cos(a)*(r+20),-52+Math.sin(a)*(r+20)*.55,8);}}
+    else if(move==='dh' && fr>=3 && fr<=9){if(fr<=6)K(-30,-105,80*q,-8,12);else K(80,-8,80-100*q,-35+q*12,12);}
+    else if(move==='sh' && fr>=4 && fr<=9){const ex=18+112*q;K(18,-48,ex,-48,12);if(q>.55)for(const a of[-.28,0,.28])K(ex,-48,ex+45*(q-.55)/.45,-48+Math.sin(a)*45*(q-.55)/.45,8);}
     return out;
   }
 
   if(id==='g1_ice') {
-    if(move==='us' && fr>=3 && fr<=8.5){const t=Math.max(0,Math.min(1,(fr-3)/6.5)),sx=18+58*t,sy=-82-112*t;C(sx,sy,13);}
-    else if(move==='ds' && fr>=5 && fr<=8){for(let i=0;i<7;i++){const a=Math.PI*1.05+i/6*Math.PI*.9,sx=Math.cos(a)*52*Math.max(0,Math.min(1,(fr-3)/4)),sy=-18+Math.sin(a)*35*Math.max(0,Math.min(1,(fr-3)/4));P([[sx,sy-14],[sx+10,sy+5],[sx-8,sy+8]]);}}
-    else if(move==='ss' && fr>=3.5 && fr<=7){const q=Math.max(0,Math.min(1,(fr-2)/5)),a=-1.15+q*2.3;K(20,-45,20+Math.cos(a)*58,-45+Math.sin(a)*58,12);}
-    else if((move==='upHeavy'||move==='uh') && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6));for(let i=0;i<3;i++){const a=-Math.PI/2+i*TAU/3+q*.7,sx=Math.cos(a)*76*q,sy=-70+Math.sin(a)*76*q;K(sx*.65,-70+sy*.35,sx,sy,9);}}
-    else if(move==='dh' && fr>=3.5 && fr<=9){const q=Math.max(0,Math.min(1,(fr-2)/6)),bx=28+104*q;B(bx,-18,68,34);if(q>.7){const e=(q-.7)/.3;B(bx+34+28*e,-48-20*e,24,26);B(bx-34-28*e,-6+18*e,24,26);}}
-    else if(move==='sh' && fr>=3.5 && fr<=8.5){const q=Math.max(0,Math.min(1,(fr-2)/6)),a=-1.15+q*2.3;for(let i=0;i<7;i++){const aa=-1.15+(2.3)*(i/6)*q;C(22+Math.cos(aa)*76,-42+Math.sin(aa)*76,14);}if(q>.82)for(let i=0;i<5;i++){const aa=-.25+i*.12;C(96+Math.cos(aa)*34,-42+Math.sin(aa)*28,7);}}
-    else if(move==='sp' && fr>=5 && fr<=11){const e=Math.max(0,Math.min(1,(fr-5)/6)),cx=52,cy=-54,r=24+e*110;for(let i=0;i<16;i++){const a=i/16*TAU;P([[cx+Math.cos(a)*r-8*Math.cos(a),cy+Math.sin(a)*r*.72-8*Math.sin(a)*.72],[cx+Math.cos(a)*r+12*Math.cos(a),cy+Math.sin(a)*r*.72+12*Math.sin(a)*.72],[cx+Math.cos(a)*r-5*Math.cos(a)+Math.sin(a)*6,cy+Math.sin(a)*r*.72-5*Math.sin(a)-Math.cos(a)*6]]);}}
+    if(move==='us' && fr>=4 && fr<=10){const t=Math.min(1,(fr-3)/7),sx=18+58*t,sy=-82-112*t;C(sx,sy,15);}
+    else if(move==='ds' && fr>=5 && fr<=9){const t=Math.min(1,(fr-3)/6);for(let i=0;i<8;i++){const a=Math.PI*1.05+i/7*Math.PI*.9;C(Math.cos(a)*52*t,-18+Math.sin(a)*35*t,9);}}
+    else if(move==='ss' && fr>=4 && fr<=8){const t=Math.min(1,(fr-2)/6),a=-1.15+t*2.3;K(20,-45,20+Math.cos(a)*64,-45+Math.sin(a)*64,13);}
+    else if((move==='upHeavy'||move==='uh') && fr>=3 && fr<=9){const t=Math.min(1,(fr-2)/7);for(let i=0;i<3;i++){const a=-Math.PI/2+i*TAU/3+t*.7;K(Math.cos(a)*35*t,-70+Math.sin(a)*35*t,Math.cos(a)*76*t,-70+Math.sin(a)*76*t,9);}}
+    else if(move==='dh' && fr>=4 && fr<=9){const bx=28+104*q;B(bx,-18,68,34);}
+    else if(move==='sh' && fr>=4 && fr<=9){const a=-1.15+q*2.3;for(let i=0;i<8;i++){const aa=-1.15+2.3*i/7*q;C(22+Math.cos(aa)*76,-42+Math.sin(aa)*76,14);}}
     return out;
   }
   return out;
@@ -187,6 +184,13 @@ export function getActiveSpecHitboxes(attacker) {
   if (data.holding) return []; // held stance is purely visual; no hitbox exists until release
   const rawP = clamp01(attacker?.attackData?.progress ?? 0);
   const t = activeProgress(attacker); if (t <= 0 || t >= 1) return [];
+  if (String(attacker?.char?.id || '').startsWith('g1_')) {
+    let mk = data.sigType || data.moveKey || '';
+    if (data.isSuper) return []; // Gen I supers keep their legacy exact-super handling.
+    if (data.isHeavy) mk = mk === 'downHeavy' ? 'dh' : mk === 'upHeavy' ? 'upHeavy' : 'sh';
+    else mk = mk === 'up' ? 'us' : (mk === 'down' || mk === 'downNormal' ? 'ds' : 'ss');
+    return getGen1HeroHitboxes(attacker, mk, rawP);
+  }
   if (String(attacker?.char?.id || '').startsWith('g2_')) {
     let mk = data.sigType || data.moveKey || '';
     if (data.isSuper) mk = 'sp';
@@ -378,6 +382,7 @@ export function specKnockbackVector(attacker, defender, profile){
   if(p==='forwardcontact'){const dy=(defender.y-attacker.y)/90;return{x:f,y:Math.max(-.75,Math.min(.35,dy))};}
   if(p==='radialup'){const dx=defender.x-attacker.x;return{x:Math.max(-.8,Math.min(.8,dx/100)),y:-1};}
   if(p==='velocity'){const vx=attacker.vx||f,vy=attacker.vy||0,len=Math.hypot(vx,vy)||1;return{x:vx/len,y:vy/len};}
+  if(p==='shardtravel'){const hp=attacker?.attackData?._hitPoint;if(hp){const dx=defender.x-hp.x,dy=defender.y-hp.y,len=Math.hypot(dx,dy)||1;return{x:Math.max(-.55,Math.min(.55,dx/len)),y:-.96};}return{x:f*.22,y:-.98};}
   return {x:f,y:-.38};
 }
 export function describeAttackSpec(spec){return spec?.description||'';}

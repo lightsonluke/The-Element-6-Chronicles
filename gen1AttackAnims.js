@@ -5,6 +5,21 @@
 
 const TAU = Math.PI * 2;
 const clamp01 = v => Math.max(0, Math.min(1, v));
+const frame12 = p => Math.min(12, Math.max(1, 1 + Math.floor(clamp01(p) * 12)));
+const moveFrame = p => 1 + clamp01(p) * 11;
+const stageFade = (f,a,b) => Math.max(0,Math.min(1,(f-a)/Math.max(.001,b-a)));
+function ring(ctx,x,y,rx,ry,color,a=.8,width=6,rotation=0){ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';glow(ctx,color,width*2.4);ctx.beginPath();ctx.ellipse(x,y,rx,ry,rotation,0,TAU);ctx.stroke();ctx.restore();}
+function streak(ctx,x1,y1,x2,y2,color,width=4,a=.7){strokePath(ctx,[[x1,y1],[x2,y2]],color,width,a);}
+function g1Glow(ctx,color,blur=18){ctx.shadowColor=color;ctx.shadowBlur=blur;}
+function g1Dot(ctx,x,y,r,color,a=1){ctx.save();ctx.globalAlpha=a;ctx.fillStyle=color;g1Glow(ctx,color,Math.max(4,r*2));ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();ctx.restore();}
+function g1Line(ctx,pts,color,width=6,a=1){ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.lineJoin='round';g1Glow(ctx,color,width*2);ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();ctx.restore();}
+function g1Ring(ctx,x,y,rx,ry,color,a=.9,w=6,rot=0){ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=color;ctx.lineWidth=w;ctx.lineCap='round';g1Glow(ctx,color,w*2.5);ctx.beginPath();ctx.ellipse(x,y,rx,ry,rot,0,TAU);ctx.stroke();ctx.restore();}
+function g1Flame(ctx,x,y,r,color,a=1,ang=0){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.globalAlpha=a;g1Glow(ctx,color,r*2.2);ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(0,-r*1.45);ctx.bezierCurveTo(r*.95,-r*.45,r*.8,r*.65,0,r);ctx.bezierCurveTo(-r*.75,r*.45,-r*.55,-r*.4,0,-r*1.45);ctx.fill();ctx.fillStyle='#FFD66B';ctx.globalAlpha*=.75;ctx.beginPath();ctx.moveTo(0,-r*.85);ctx.bezierCurveTo(r*.4,-r*.2,r*.3,r*.45,0,r*.65);ctx.bezierCurveTo(-r*.3,r*.3,-r*.25,-r*.25,0,-r*.85);ctx.fill();ctx.restore();}
+function g1Water(ctx,pts,color='#48D9FF',w=9,a=1){g1Line(ctx,pts,color,w,a);}
+function g1Leaf(ctx,x,y,rx,ry,ang,color='#63E63C',a=1){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.globalAlpha=a;ctx.fillStyle=color;g1Glow(ctx,color,10);ctx.beginPath();ctx.moveTo(0,-ry);ctx.bezierCurveTo(rx,-ry*.35,rx,ry*.5,0,ry);ctx.bezierCurveTo(-rx,ry*.5,-rx,-ry*.35,0,-ry);ctx.fill();ctx.restore();}
+function g1Shard(ctx,x,y,w,h,ang,color='#BDEFFF',a=1){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.globalAlpha=a;ctx.fillStyle=color;g1Glow(ctx,color,14);ctx.beginPath();ctx.moveTo(0,-h);ctx.lineTo(w*.65,-h*.2);ctx.lineTo(w*.42,h);ctx.lineTo(-w*.45,h*.45);ctx.closePath();ctx.fill();ctx.restore();}
+function g1Particles(ctx,x,y,color,t,count=10,r=28){for(let i=0;i<count;i++){const a=i/count*TAU+t*2.5,rr=r*(.35+.65*((i*7)%13)/13);g1Dot(ctx,x+Math.cos(a)*rr,y+Math.sin(a)*rr,1.4+(i%3)*.6,color,.35+.3*Math.sin(t*4+i));}}
+function g1Trail(ctx,x,y,color,dx,dy,n=6){for(let i=1;i<=n;i++){const q=i/n;g1Dot(ctx,x-dx*q,y-dy*q,2.5*(1-q),color,.45*(1-q));}}
 const ease = v => { v = clamp01(v); return v * v * (3 - 2 * v); };
 const easeOut = v => 1 - Math.pow(1 - clamp01(v), 3);
 const alpha = p => Math.sin(clamp01(p) * Math.PI);
@@ -191,98 +206,86 @@ function thunderSuper(ctx, x, y, p) {
 }
 
 
-// Exact 12-frame-style Gen I Up Signature renderers based on the supplied
-// animation sheets. `p` is normalized across the 12 logical frames.
-function frame12(p) { return 1 + clamp01(p) * 11; }
+// ── Exact supplied Up Signature sequences ────────────────────────────────────
+function fireUp(ctx,x,y,p){
+  const f=frame12(p),c='#FF5A12',cx=x+18,cy=y-88;
+  if(f===1)return;
+  if(f===2){g1Line(ctx,[[x+8,y-38],[cx,cy]],c,10,.95);g1Flame(ctx,cx+4,cy-4,7,c,.9,-.3);return;}
+  g1Line(ctx,[[x+8,y-38],[cx,cy]],c,9,.95);
+  if(f===3){ctx.save();ctx.strokeStyle=c;ctx.lineWidth=10;ctx.lineCap='round';g1Glow(ctx,c,24);ctx.beginPath();ctx.arc(cx,cy,36,-2.35,-.2);ctx.stroke();ctx.restore();g1Flame(ctx,cx+30,cy-13,10,c,.95,-.3);return;}
+  ctx.save();ctx.strokeStyle=c;ctx.lineWidth=10;ctx.lineCap='round';g1Glow(ctx,c,24);ctx.beginPath();ctx.arc(cx,cy,36,-2.35,-.2);ctx.stroke();ctx.restore();g1Flame(ctx,cx+30,cy-13,11,c,.95,-.3);
+  if(f===4){g1Particles(ctx,cx+36,cy-22,c,.2,7,18);return;}
+  if(f===5){g1Trail(ctx,cx+38,cy-20,c,18,-12,7);return;}
+  if(f===6){for(let i=0;i<8;i++)g1Flame(ctx,cx+28+i*4,cy-14-i*3,7,c,.7,-.3);return;}
+  if(f===7)return;
+  if(f===8){g1Ring(ctx,cx,cy,39,32,c,.45,4);return;}
+  if(f===9){g1Ring(ctx,cx,cy,39,32,c,.32,4);return;}
+  if(f===10){ctx.save();ctx.globalAlpha=.45;ctx.strokeStyle=c;ctx.lineWidth=8;ctx.beginPath();ctx.arc(cx,cy,36,-2.35,-.2);ctx.stroke();ctx.restore();return;}
+  if(f===11||f===12){g1Particles(ctx,cx,cy,c,.65,8,26);}
+}
+function waterUp(ctx,x,y,p){
+  const f=frame12(p),c='#27BFFF';
+  if(f===1){g1Ring(ctx,x+4,y-33,23,16,c,.95,8,-.1);g1Water(ctx,[[x-10,y-20],[x+7,y-39]],c,5,.8);return;}
+  if(f===2){g1Ring(ctx,x+12,y-52,22,15,c,.95,8,-.1);g1Water(ctx,[[x+7,y-40],[x+16,y-55]],c,5,.7);return;}
+  const pos=[null,[28,-74],[43,-92],[57,-111],[64,-119],[64,-119],[64,-119],[64,-119],[64,-119],[64,-119],[64,-119]];
+  const k=Math.min(10,f); const [px,py]=pos[k]||[64,-119];
+  if(f>=3&&f<=6){const prev=f===3?[x+12,y-52]:[x+28+(f-3)*9,y-74-(f-3)*9];g1Water(ctx,[prev,[x+px,y+py]],c,4,.35);}
+  g1Ring(ctx,x+px,y+py,22,14,c,f<=6?.98:.35,8,-.15);
+  for(let i=0;i<5;i++)g1Dot(ctx,x+px+Math.cos(i*1.7)*18,y+py+Math.sin(i*1.7)*9,1.7,'#D9FBFF',.55);
+  if(f===7)return;
+  if(f>=8&&f<=12)g1Particles(ctx,x+px,y+py,c,.2+f*.03,7,20);
+}
+function grassUp(ctx,x,y,p){
+  const f=frame12(p),c='#62E63A',cy=y-112;
+  if(f===1){g1Dot(ctx,x,cy,5,'#E5C84A',1);return;}
+  const spinFrames={2:0,3:.8,4:1.65,5:2.55,6:3.45,7:4.35};
+  const spin=spinFrames[f]??4.35;
+  for(let i=0;i<3;i++)g1Leaf(ctx,x,cy,13,34,i*TAU/3+spin,c,.98);
+  g1Dot(ctx,x,cy,6,'#DDE85A',.9);
+  if(f>=3&&f<=7)g1Ring(ctx,x,cy,40,17,c,.28,2);
+  if(f===8){g1Particles(ctx,x,cy,c,.4,12,30);for(let i=0;i<6;i++)g1Line(ctx,[[x-12+i*5,cy+8],[x-8+i*5,cy-70-i*8]],c,2,.55);}
+  if(f>=9&&f<=11)g1Particles(ctx,x,cy,c,.8,10,24);
+}
+function iceUp(ctx,x,y,p){
+  const f=frame12(p),c='#BDEFFF';
+  if(f===1){g1Shard(ctx,x+18,y-92,10,24,0,c,1);return;}
+  if(f===2){g1Shard(ctx,x+18,y-82,11,28,-.08,c,1);g1Line(ctx,[[x+9,y-38],[x+18,y-62]],c,7,.9);return;}
+  const t=Math.min(1,Math.max(0,(f-3)/6)),sx=x+18+58*t,sy=y-82-112*t-.0*Math.sin(t*Math.PI);
+  const ang=(f-3)*.95;
+  g1Shard(ctx,sx,sy,12,30,ang,c,1);
+  if(f>=4&&f<=8)g1Trail(ctx,sx,sy,c,34,24,8);
+  if(f===4||f===5){g1Ring(ctx,sx,sy,22,13,c,.3,3,ang);}
+  if(f===6||f===7){g1Dot(ctx,sx,sy,15,c,.22);}
+  if(f===8||f===9){g1Trail(ctx,sx,sy,c,45,28,9);g1Particles(ctx,sx,sy,c,.5,7,18);}
+  if(f===10){g1Particles(ctx,sx,sy,c,.8,10,25);}
+  if(f>=11)g1Particles(ctx,sx,sy,c,1,8,30);
+}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FIRE / WATER / GRASS / ICE — full 12-frame authored Gen I animations.
-// Every move is staged like the supplied Up Signature sheets: startup, wind-up,
-// active creation/travel, impact/launch, recovery and idle.  The renderer is
-// deliberately deterministic so the collision geometry can mirror these poses.
-// ─────────────────────────────────────────────────────────────────────────────
-function moveFrame(p) { return 1 + clamp01(p) * 11; }
-function stageFade(f, a, b) { return Math.max(0, Math.min(1, (f - a) / Math.max(.001, b - a))); }
-function streak(ctx, x1, y1, x2, y2, color, width=4, a=.7) {
-  strokePath(ctx, [[x1,y1],[x2,y2]], color, width, a);
-}
-function ring(ctx, x, y, rx, ry, color, a=.8, width=6, rotation=0) {
-  ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle=color; ctx.lineWidth=width; ctx.lineCap='round';
-  glow(ctx,color,width*2.4); ctx.beginPath(); ctx.ellipse(x,y,rx,ry,rotation,0,TAU); ctx.stroke(); ctx.restore();
-}
+// ── Authored 12-frame non-Up moves ───────────────────────────────────────────
+function fireDown(ctx,x,y,p){const f=frame12(p),c='#FF5A12';if(f<=2){g1Flame(ctx,x-8,y-20,8,c,.65,-.2);return;}if(f===3){for(let i=-1;i<=1;i++)g1Flame(ctx,x+i*12,y-12,9,c,.8,-Math.PI/2);return;}const q=Math.min(1,(f-3)/4);for(let i=-2;i<=2;i++){const xx=x+i*(10+12*q);g1Flame(ctx,xx,y-8,10+q*5,c,.9,-Math.PI/2);}if(f>=8)g1Particles(ctx,x,y-22,c,.5,12,45);}
+function fireSide(ctx,x,y,p){const f=frame12(p),c='#FF5A12';if(f<=2){g1Line(ctx,[[x+6,y-40],[x+25,y-52]],c,9,.7);g1Flame(ctx,x+26,y-52,9,c,.7);return;}const q=Math.min(1,(f-2)/4),ex=x+24+70*q,ey=y-44-Math.sin(q*Math.PI)*20;g1Line(ctx,[[x+8,y-40],[ex,ey]],c,12,.9);g1Flame(ctx,ex,ey,18+q*5,c,1,-.25);if(f>=7)g1Trail(ctx,ex,ey,c,45,-8,7);if(f>=10)g1Particles(ctx,ex,ey,c,.8,9,24);}
+function fireUpHeavy(ctx,x,y,p){const f=frame12(p),c='#FF5A12',q=Math.min(1,Math.max(0,(f-2)/6)),r=25+55*q;for(let i=0;i<10;i++){const a=i/10*TAU+q*TAU;g1Flame(ctx,x+Math.cos(a)*r,y-92+Math.sin(a)*r*.7,10,c,.85,a+.4);}g1Ring(ctx,x,y-92,r,r*.7,c,.55,8);if(f>=9)g1Particles(ctx,x,y-92,c,.7,12,r*.7);}
+function fireDownHeavy(ctx,x,y,p){const f=frame12(p),c='#FF5A12',q=Math.min(1,Math.max(0,(f-2)/6));for(let i=0;i<5;i++){const xx=x+(i-2)*28*q;g1Line(ctx,[[x,y-8],[xx,y+2],[xx+(i-2)*8,y-32]],c,6,.8);g1Flame(ctx,xx+(i-2)*8,y-34,11,c,.9,-Math.PI/2);}if(f>=9)g1Particles(ctx,x,y-28,c,.5,14,80);}
+function fireSideHeavy(ctx,x,y,p){const f=frame12(p),c='#FF5A12',q=Math.min(1,Math.max(0,(f-2)/6)),ang=-1.05+q*1.9,cx=x+28+Math.cos(ang)*50,cy=y-45+Math.sin(ang)*50;g1Line(ctx,[[x+7,y-45],[cx,cy]],c,15,.9);g1Flame(ctx,cx,cy,22,c,1,ang);if(f>=8)for(let i=0;i<7;i++)g1Flame(ctx,cx+Math.cos(i)*24,cy+Math.sin(i)*18,7,c,.6,i*.7);}
 
-function fireUpExact(ctx, x, y, p) {
-  const c='#FF6600', f=moveFrame(p), armX=x+18, hookY=y-90;
-  // Supplied sheet: frame 1 idle, frame 2 hold/wind-up, frame 3 hook forms,
-  // frames 4-6 active/catch, frame 7 neutral, frame 8-9 frozen/launch follow,
-  // frame 10 hook release, frames 11-12 recovery.
-  if (f < 2) return;
-  if (f < 3) {
-    strokePath(ctx,[[x+8,y-38],[armX,y-86]],c,10,.95);
-    flame(ctx,armX+13,y-99,7,c,.95);
-    return;
-  }
-  strokePath(ctx,[[x+8,y-38],[armX,hookY]],c,9,.95);
-  const hookT=clamp01((f-3)/2.7), end=-.16;
-  ctx.save(); ctx.strokeStyle=c; ctx.lineWidth=10; ctx.lineCap='round'; glow(ctx,c,24);
-  ctx.beginPath(); ctx.arc(armX,hookY,36,-2.2,-2.2+(end+2.2)*hookT); ctx.stroke(); ctx.restore();
-  flame(ctx,armX+31,hookY-12,11,c,.95);
-  if (f>=4 && f<=6) {
-    const q=stageFade(f,4,6);
-    for(let i=0;i<5;i++) streak(ctx,armX+28+i*4,hookY-8-i*3,armX+52+i*7,hookY-30-i*7,c,2.5,.7*(1-q*.35));
-  }
-  if (f>=7 && f<8) ring(ctx,armX,hookY,39,32,c,.42,4);
-  if (f>=10) {
-    const q=1-stageFade(f,10,12); ctx.save(); ctx.globalAlpha=q; ctx.strokeStyle=c; ctx.lineWidth=8; glow(ctx,c,18);
-    ctx.beginPath(); ctx.arc(armX,hookY,38,-2.2,-.16); ctx.stroke(); ctx.restore();
-  }
-}
+function waterDown(ctx,x,y,p){const f=frame12(p),c='#27BFFF',q=Math.min(1,Math.max(0,(f-2)/5));for(const s of[-1,1]){const ex=x+s*(18+30*q),ey=y-10-58*q;g1Water(ctx,[[x+s*10,y-10],[ex,ey+24],[ex+s*8,ey]],c,11,.9);for(let i=0;i<4;i++)g1Dot(ctx,ex+s*i*5,ey-i*6,2.5,'#D9FBFF',.7);}if(f>=8)g1Ring(ctx,x,y-20,38,22,c,.45,3);}
+function waterSide(ctx,x,y,p){const f=frame12(p),c='#27BFFF',q=Math.min(1,Math.max(0,(f-2)/5));const pts=[];for(let i=0;i<=18;i++){const t=i/18;pts.push([x+10+88*q*t,y-44-Math.sin(t*Math.PI)*32*q]);}g1Water(ctx,pts,c,10,.95);const e=pts.at(-1);g1Ring(ctx,e[0],e[1],11,7,c,.9,5,.2);if(f>=8)g1Trail(ctx,e[0],e[1],c,55,-10,8);}
+function waterUpHeavy(ctx,x,y,p){const f=frame12(p),c='#27BFFF',q=Math.min(1,Math.max(0,(f-2)/6)),spin=q*TAU*1.1;const pts=[];for(let i=0;i<42;i++){const t=i/41,a=t*TAU+spin;pts.push([x+Math.cos(a)*(45+18*q),y-64+Math.sin(a)*(78+18*q)]);}g1Water(ctx,pts,c,13,.9);if(f>=7)for(let i=0;i<10;i++){const a=i/10*TAU+spin;g1Dot(ctx,x+Math.cos(a)*58,y-64+Math.sin(a)*92,3,'#D9FBFF',.7);}}
+function waterDownHeavy(ctx,x,y,p){const f=frame12(p),c='#27BFFF',q=Math.min(1,Math.max(0,(f-2)/7)),bx=x+72-144*q,by=y-48+Math.max(0,q-.45)*95;g1Ring(ctx,bx,by,28,22,c,.8,8);g1Dot(ctx,bx,by,18,c,.65);if(f>=7)for(let i=0;i<9;i++)g1Water(ctx,[[bx,by],[bx+(i-4)*12,by-55*(q-.55)]],c,4,.6);}
+function waterSideHeavy(ctx,x,y,p){const f=frame12(p),c='#27BFFF',q=Math.min(1,Math.max(0,(f-2)/7)),ang=-.95+q*1.9;ctx.save();ctx.translate(x+25,y-48);ctx.rotate(ang);ctx.strokeStyle=c;ctx.lineWidth=18;g1Glow(ctx,c,24);ctx.beginPath();ctx.arc(0,0,78,-.85,.85);ctx.stroke();ctx.restore();if(f>=8)g1Particles(ctx,x+95*q,y-48,c,.7,10,20);}
 
-function fireDown(ctx,x,y,p){
-  const c='#FF6600', f=moveFrame(p);
-  if(f<2.5){ strokePath(ctx,[[x+10,y-5],[x-8,y+1]],c,8,.75); return; }
-  if(f<4){ flame(ctx,x-2,y-8,9,c,.8); return; }
-  const burst=stageFade(f,4,7);
-  for(let i=0;i<4;i++){
-    const ang=-Math.PI/2 + (i-1.5)*.58;
-    const rr=8+burst*18;
-    flame(ctx,x+Math.cos(ang)*rr,y-8+Math.sin(ang)*rr*.5,10+burst*5,c,.95,ang);
-  }
-  if(f>=7){ for(let i=0;i<5;i++) streak(ctx,x+(i-2)*8,y-8,x+(i-2)*13,y-25,c,2,.45*(12-f)); }
-}
-function fireSide(ctx,x,y,p){
-  const c='#FF6600', f=moveFrame(p);
-  const wind=stageFade(f,1,3), strike=stageFade(f,3,6), recover=stageFade(f,7,11);
-  if(f<3){ strokePath(ctx,[[x+8,y-42],[x-8*wind,y-50]],c,10,.65+wind*.25); flame(ctx,x+2,y-46,14,c,.55); return; }
-  ctx.save(); ctx.translate(x+20,y-43); ctx.rotate(-.45+strike*.95); flame(ctx,8+strike*24,0,21,c,.95); streak(ctx,-6,2,38+strike*25,2,c,9,.85); ctx.restore();
-  if(f>=6&&f<9){ for(let i=0;i<4;i++) streak(ctx,x+42+i*6,y-48-i*4,x+64+i*8,y-52-i*5,c,2.4,.55); }
-  if(f>=9){ ctx.save();ctx.globalAlpha=1-recover;ctx.strokeStyle=c;ctx.lineWidth=6;glow(ctx,c,14);ctx.beginPath();ctx.arc(x+28,y-43,24,-1.0,.55);ctx.stroke();ctx.restore(); }
-}
-function fireUpHeavy(ctx,x,y,p){
-  const c='#FF6600',f=moveFrame(p), q=stageFade(f,2,8), r=28+q*50;
-  if(f<3){ flame(ctx,x-18,y-42,12,c,.6); flame(ctx,x+18,y-42,12,c,.6); return; }
-  ctx.save();ctx.translate(x,y-92-q*12);ctx.rotate(q*TAU*.9);ring(ctx,0,0,r,r*.72,c,.9,14);ctx.restore();
-  for(let i=0;i<8;i++){const a=i/8*TAU+q*TAU;flame(ctx,x+Math.cos(a)*r,y-92-q*12+Math.sin(a)*r*.72,10,c,.75,a);}
-  if(f>=8&&f<10) particles(ctx,x,y-92,c,stageFade(f,8,10),12,r*.6);
-}
-function fireDownHeavy(ctx,x,y,p){
-  const c='#FF6600',f=moveFrame(p), q=stageFade(f,2,7);
-  if(f<3){strokePath(ctx,[[x,y-8],[x,y+2]],c,8,.65);return;}
-  for(let i=0;i<5;i++){
-    const spread=(i-2)*24*q, mid=x+spread*.55, end=x+spread;
-    strokePath(ctx,[[x,y-5],[mid,y+2],[end,y-30-(i%2)*8]],c,6,.7);
-    if(f>=5) flame(ctx,end,y-32-(i%2)*8,13,c,stageFade(f,5,8));
-  }
-  if(f>=8) particles(ctx,x,y-24,c,stageFade(f,8,10),12,90);
-}
-function fireSideHeavy(ctx,x,y,p){
-  const c='#FF6600',f=moveFrame(p),q=stageFade(f,2,7),ang=-1.0+q*1.9;
-  if(f<3){strokePath(ctx,[[x+8,y-46],[x-16,y-58]],c,12,.8);return;}
-  const gx=x+25+Math.cos(ang)*48, gy=y-45+Math.sin(ang)*48;
-  ctx.save();ctx.translate(gx,gy);ctx.rotate(ang+.35);ctx.fillStyle=c;glow(ctx,c,26);ctx.globalAlpha=.95;ctx.beginPath();ctx.roundRect(-22,-28,58,56,18);ctx.fill();ctx.restore();
-  streak(ctx,x+8,y-45,gx,gy,c,15,.8);
-  if(f>=7){for(let i=0;i<7;i++)flame(ctx,gx+Math.cos(i)*26,gy+Math.sin(i)*20,8,c,.65,i*.7);}
-}
+function grassDown(ctx,x,y,p){const f=frame12(p),c='#62E63A',q=Math.min(1,Math.max(0,(f-2)/5));for(const s of[-1,1]){const ex=x+s*(18+30*q),ey=y-18;g1Line(ctx,[[x+s*12,y-4],[x+s*34,y-24],[ex,ey-32]],c,7,.9);for(let i=0;i<3;i++)g1Leaf(ctx,ex+s*i*6,ey-32-i*4,5,11,s*.7,c,.85);}if(f>=8)g1Particles(ctx,x,y-30,c,.7,10,35);}
+function grassSide(ctx,x,y,p){const f=frame12(p),c='#62E63A',wood='#8C6B3D',q=Math.min(1,Math.max(0,(f-2)/5));g1Line(ctx,[[x+8,y-44],[x+18+80*q,y-44]],wood,13,.95);for(let i=0;i<5;i++)g1Leaf(ctx,x+25+i*15*q,y-42,4,10,i*.6,c,.7);if(f>=8)g1Trail(ctx,x+18+80*q,y-44,c,50,0,7);}
+function grassUpHeavy(ctx,x,y,p){const f=frame12(p),c='#62E63A',q=Math.min(1,Math.max(0,(f-2)/7)),r=22+68*q;for(let i=0;i<9;i++){const a=i/9*TAU;g1Leaf(ctx,x+Math.cos(a)*r,y-52+Math.sin(a)*r*.55,12,28,a,c,.9);}g1Ring(ctx,x,y-52,r,r*.55,c,.55,5);if(f>=8)g1Particles(ctx,x,y-52,c,.7,12,r*.5);}
+function grassDownHeavy(ctx,x,y,p){const f=frame12(p),c='#62E63A',q=Math.min(1,Math.max(0,(f-2)/7));g1Line(ctx,[[x-35,y-105],[x+25*q,y-30],[x+12*q,y+4]],c,11,.9);g1Line(ctx,[[x+12*q,y+4],[x-24*q,y-26],[x-10*q,y-66]],c,10,.9);for(let i=0;i<7;i++)g1Leaf(ctx,x-25+i*7*q,y-30+i*2,5,12,i*.8,c,.65);if(f>=9)g1Particles(ctx,x+10,y-24,c,.7,10,60);}
+function grassSideHeavy(ctx,x,y,p){const f=frame12(p),c='#62E63A',wood='#8C6B3D',q=Math.min(1,Math.max(0,(f-2)/7));g1Line(ctx,[[x+8,y-46],[x+30+110*q,y-48]],wood,16,.9);for(let i=0;i<8;i++)g1Leaf(ctx,x+45+i*12*q,y-48+(i-4)*3,5,12,i*.5,c,.7);if(f>=9)g1Particles(ctx,x+130*q,y-48,c,.6,8,28);}
+
+function iceDown(ctx,x,y,p){const f=frame12(p),c='#BDEFFF',q=Math.min(1,Math.max(0,(f-2)/6));g1Ring(ctx,x,y-10,45,12,c,.65,5);if(f>=5)for(let i=0;i<8;i++){const a=Math.PI*1.05+i/7*Math.PI*.9,sx=x+Math.cos(a)*52*q,sy=y-18+Math.sin(a)*35*q;g1Shard(ctx,sx,sy,9,22,a,c,.9);}if(f>=9)g1Particles(ctx,x,y-20,c,.8,10,55);}
+function iceSide(ctx,x,y,p){const f=frame12(p),c='#BDEFFF',q=Math.min(1,Math.max(0,(f-2)/6)),a=-1.15+q*2.3;g1Line(ctx,[[x+8,y-44],[x+20+Math.cos(a)*64,y-44+Math.sin(a)*64]],c,15,.9);g1Shard(ctx,x+20+Math.cos(a)*64,y-44+Math.sin(a)*64,12,30,a,c,1);if(f>=8)g1Trail(ctx,x+80*q,y-45,c,55,-5,8);}
+function iceUpHeavy(ctx,x,y,p){const f=frame12(p),c='#BDEFFF',q=Math.min(1,Math.max(0,(f-2)/6));for(let i=0;i<3;i++){const a=-Math.PI/2+i*TAU/3+q*.7,sx=x+Math.cos(a)*76*q,sy=y-70+Math.sin(a)*76*q;g1Shard(ctx,sx,sy,16,42,a,c,.95);}if(f>=8)g1Particles(ctx,x,y-70,c,.7,12,70);}
+function iceDownHeavy(ctx,x,y,p){const f=frame12(p),c='#BDEFFF',q=Math.min(1,Math.max(0,(f-2)/7)),bx=x+28+104*q;ctx.save();ctx.fillStyle=c;g1Glow(ctx,c,20);ctx.globalAlpha=.9;ctx.fillRect(bx-34,y-18,68,34);ctx.restore();if(f>=8){g1Shard(ctx,bx+42,y-32,14,28,-.6,c,.95);g1Shard(ctx,bx-42,y-5,14,28,.6,c,.95);}}
+function iceSideHeavy(ctx,x,y,p){const f=frame12(p),c='#BDEFFF',q=Math.min(1,Math.max(0,(f-2)/7)),a=-1.15+q*2.3;g1Line(ctx,[[x+8,y-44],[x+25,y-42]],c,17,.9);g1Shard(ctx,x+25+Math.cos(a)*68,y-42+Math.sin(a)*68,17,50,a,c,1);if(f>=8)for(let i=0;i<7;i++)g1Shard(ctx,x+85+i*9,y-42+Math.sin(i)*8,6,16,i*.6,c,.8);}
+
 function fireSuper(ctx,x,y,p){
   const c='#FF6600',f=moveFrame(p);
   if(f<4){flame(ctx,x-22,y-56,22,c,.7,-.25);flame(ctx,x+22,y-56,22,c,.7,.25);return;}
@@ -292,52 +295,6 @@ function fireSuper(ctx,x,y,p){
   if(f>=10){ctx.save();ctx.globalAlpha=1-stageFade(f,10,12);ctx.strokeStyle=c;ctx.lineWidth=8;glow(ctx,c,26);ctx.beginPath();ctx.arc(x+82,y-50,68,0,TAU);ctx.stroke();ctx.restore();}
 }
 
-function waterUpExact(ctx,x,y,p){
-  const c='#3399CC',f=moveFrame(p);
-  // Exact sequence from the supplied sheet: frame 1 ring around arm, 2 forms,
-  // 3 separates, 4-6 travels on a short upward curve, 7 disappears, 8-9 idle.
-  if(f<2){ring(ctx,x+5,y-34,22,16,c,.9,8,-.1);waterStroke(ctx,[[x-12,y-20],[x+8,y-38]],c,5,.8);return;}
-  const t=clamp01((f-2)/5.0);const rx=x+15+56*t+8*Math.sin(t*Math.PI),ry=y-45-62*t-20*Math.sin(t*Math.PI);
-  ring(ctx,rx,ry,22,14,c,f<7?.95:.45,9,-.15);
-  waterStroke(ctx,[[x+8,y-40],[rx,ry]],c,4,.35*(1-t));
-  for(let i=0;i<6;i++)dot(ctx,rx+Math.cos(i)*18,ry+Math.sin(i)*10,2,'#DFFFFF',.55);
-  if(f>=5&&f<7) for(let i=0;i<5;i++) streak(ctx,rx-24-i*4,ry+6+i*2,rx-42-i*9,ry+10+i*5,c,2,.55);
-  if(f>=7){const a=1-stageFade(f,7,9);ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=c;ctx.lineWidth=5;ctx.beginPath();ctx.arc(rx,ry,24,0,TAU);ctx.stroke();ctx.restore();}
-}
-function waterDown(ctx,x,y,p){
-  const c='#3399CC',f=moveFrame(p);
-  if(f<3){waterStroke(ctx,[[x-10,y-12],[x-28,y-28]],c,8,.6);return;}
-  const q=stageFade(f,3,6);
-  for(const s of [-1,1]){const ex=x+s*(18+30*q),ey=y-10-58*q;waterStroke(ctx,[[x+s*10,y-10],[ex,ey+24],[ex+s*7,ey]],c,11,.9);for(let i=0;i<4;i++)dot(ctx,ex+s*i*5,ey-i*6,2.5,'#DFFFFF',.7);}
-  if(f>=6) ring(ctx,x,y-20,38,22,c,.45,3);
-}
-function waterSide(ctx,x,y,p){
-  const c='#3399CC',f=moveFrame(p),q=stageFade(f,2,6);
-  if(f<3){waterStroke(ctx,[[x+5,y-42],[x+24,y-54]],c,8,.7);return;}
-  const pts=[];for(let i=0;i<=16;i++){const t=i/16;pts.push([x+12+78*q*t,y-44-Math.sin(t*Math.PI)*30*q]);}waterStroke(ctx,pts,c,10,.95);
-  const tip=pts[pts.length-1];ring(ctx,tip[0],tip[1],10,7,c,.9,5,.2);
-  if(f>=7) for(let i=0;i<6;i++)streak(ctx,tip[0],tip[1],tip[0]+22+i*8,tip[1]-6-i*5,c,2,.5);
-}
-function waterUpHeavy(ctx,x,y,p){
-  const c='#3399CC',f=moveFrame(p),q=stageFade(f,2,8),spin=q*TAU*1.1;
-  if(f<3){ring(ctx,x,y-32,25,18,c,.55,6);return;}
-  const pts=[];for(let i=0;i<36;i++){const t=i/35,a=t*TAU+spin;pts.push([x+Math.cos(a)*54,y-64+Math.sin(a)*92]);}waterStroke(ctx,pts,c,13,.9);
-  if(f>=6)for(let i=0;i<8;i++){const a=i/8*TAU+spin;dot(ctx,x+Math.cos(a)*54,y-64+Math.sin(a)*92,3,'#DFFFFF',.7);}
-  if(f>=8)for(let i=0;i<8;i++){const a=-1.2+i*.34;streak(ctx,x+Math.cos(a)*52,y-64+Math.sin(a)*86,x+Math.cos(a)*86,y-64+Math.sin(a)*110,c,3,.55);}
-}
-function waterDownHeavy(ctx,x,y,p){
-  const c='#3399CC',f=moveFrame(p),q=stageFade(f,2,8),bx=x+70-140*q,by=y-46+Math.max(0,q-.45)*90;
-  if(f<3){ring(ctx,x+58,y-52,20,15,c,.55,6);return;}
-  ctx.save();ctx.fillStyle=c;ctx.globalAlpha=.9;glow(ctx,c,20);ctx.beginPath();ctx.arc(bx,by,28,0,TAU);ctx.fill();ctx.restore();
-  if(f>=6){for(let i=0;i<10;i++){const dx=(i-4.5)*10;waterStroke(ctx,[[bx,by],[bx+dx,by-65*(q-.55)]],c,4,.65);}}
-  if(f>=8)ring(ctx,bx,by,34,18,c,.4,3);
-}
-function waterSideHeavy(ctx,x,y,p){
-  const c='#3399CC',f=moveFrame(p),q=stageFade(f,2,8),ang=-.9+q*1.8;
-  if(f<3){ring(ctx,x+18,y-46,28,18,c,.55,7,.2);return;}
-  ctx.save();ctx.translate(x+28,y-48);ctx.rotate(ang);ctx.strokeStyle=c;ctx.lineWidth=18;glow(ctx,c,24);ctx.beginPath();ctx.arc(0,0,78,-.85,.85);ctx.stroke();ctx.restore();
-  if(f>=7){const tx=x+105*q,ty=y-48;ring(ctx,tx,ty,12,7,c,.65,4);for(let i=0;i<6;i++)streak(ctx,tx,ty,tx+20+i*8,ty+(i-2)*7,c,2,.45);}
-}
 function waterSuper(ctx,x,y,p){
   const c='#3399CC',f=moveFrame(p);
   const r=30+stageFade(f,2,6)*68;
@@ -346,210 +303,62 @@ function waterSuper(ctx,x,y,p){
   if(f>=9){const e=stageFade(f,9,11),rr=8+e*112;ring(ctx,x,y-52,rr,rr*.68,c,1-e*.15,9);}
 }
 
-function grassUpExact(ctx,x,y,p){
-  const c='#44AA44',f=moveFrame(p),cy=y-112;
-  // Supplied sheet: seed frame 1; three leaves from frame 2; spin frames 3-7;
-  // completed rotation frame 7; burst/launch frames 8-11; idle frame 12.
-  if(f<2){dot(ctx,x,cy,5,'#DDBB55',.95);return;}
-  const spin=((f-2)/6)*TAU;
-  for(let i=0;i<3;i++)leaf(ctx,x,cy,13,34,i*TAU/3+spin,c,.95);
-  dot(ctx,x,cy,7,'#DDBB55',.95);
-  if(f>=3&&f<=7)ring(ctx,x,cy,40,17,c,.3,2);
-  if(f>=8&&f<9){particles(ctx,x,cy,c,stageFade(f,8,9),12,28);for(let i=0;i<5;i++)streak(ctx,x-14+i*7,cy+8,x-10+i*5,cy-78-i*8,c,2.5,.55);}
-}
-function grassDown(ctx,x,y,p){
-  const c='#44AA44',f=moveFrame(p),q=stageFade(f,2,6);
-  if(f<3){strokePath(ctx,[[x-12,y-4],[x-22,y-20]],c,8,.6);strokePath(ctx,[[x+12,y-4],[x+22,y-20]],c,8,.6);return;}
-  for(const s of [-1,1]){const ex=x+s*(18+28*q),ey=y-18;strokePath(ctx,[[x+s*12,y-4],[x+s*35,y-22],[ex,ey-32]],c,7,.9);for(let i=0;i<3;i++)leaf(ctx,ex+s*i*6,ey-32-i*4,5,11,s*.7,c,.8);}
-  if(f>=7)for(let i=0;i<5;i++)dot(ctx,x+(i-2)*12,y-28,3,c,.5);
-}
-function grassSide(ctx,x,y,p){
-  const c='#44AA44',wood='#8B6B3F',f=moveFrame(p),q=stageFade(f,2,6);
-  if(f<3){strokePath(ctx,[[x+6,y-44],[x+26,y-46]],wood,8,.7);return;}
-  ctx.save();ctx.translate(x+10,y-44);ctx.rotate(-.06);ctx.fillStyle=wood;ctx.globalAlpha=.95;glow(ctx,wood,10);ctx.fillRect(0,-7,78*q,14);ctx.strokeStyle=c;ctx.lineWidth=2;ctx.strokeRect(0,-7,78*q,14);ctx.restore();
-  for(let i=0;i<4;i++)leaf(ctx,x+22+i*15*q,y-42,4,9,i*.5,c,.65);
-  if(f>=7)streak(ctx,x+78*q,y-44,x+104*q,y-47,c,2,.5);
-}
-function grassUpHeavy(ctx,x,y,p){
-  const c='#44AA44',f=moveFrame(p),q=stageFade(f,2,8),r=22+q*70;
-  if(f<3){ring(ctx,x,y-20,28,18,c,.45,5);return;}
-  for(let i=0;i<8;i++){const a=i/8*TAU;leaf(ctx,x+Math.cos(a)*r,y-48+Math.sin(a)*r*.55,12,28,a,c,.9);}
-  ring(ctx,x,y-48,r,r*.55,c,.55,5);
-  if(f>=7)for(let i=0;i<8;i++){const a=i/8*TAU;streak(ctx,x+Math.cos(a)*r,y-48+Math.sin(a)*r*.55,x+Math.cos(a)*(r+18),y-48+Math.sin(a)*(r+10),c,2,.45);}
-}
-function grassDownHeavy(ctx,x,y,p){
-  const c='#44AA44',f=moveFrame(p),q=stageFade(f,2,8);
-  if(f<3){strokePath(ctx,[[x-25,y-104],[x-4,y-45]],c,9,.7);return;}
-  const pts1=[[x-35,y-105],[x+25,y-30],[x+12,y+4]],pts2=[[x+12,y+4],[x-24,y-26],[x-10,y-66]];
-  strokePath(ctx,pts1,c,11,.9);strokePath(ctx,pts2,c,10,.9);
-  for(let i=0;i<7;i++)leaf(ctx,x-25+i*7*q,y-30+i*2,5,12,i*.8,c,.65);
-  if(f>=8)particles(ctx,x+10,y-24,c,stageFade(f,8,10),10,60);
-}
-function grassSideHeavy(ctx,x,y,p){
-  const c='#44AA44',wood='#8B6B3F',f=moveFrame(p),q=stageFade(f,2,8);
-  if(f<3){strokePath(ctx,[[x+8,y-46],[x-10,y-60]],wood,11,.8);return;}
-  ctx.save();ctx.translate(x+24,y-48);ctx.rotate(-.12+q*.55);ctx.fillStyle=wood;ctx.globalAlpha=.95;glow(ctx,wood,12);ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(112*q,0);ctx.lineTo(0,10);ctx.closePath();ctx.fill();ctx.strokeStyle=c;ctx.lineWidth=2;ctx.stroke();ctx.restore();
-  if(f>=6){const bx=x+76*q,by=y-48;for(let i=0;i<3;i++){const a=-.22+i*.22;strokePath(ctx,[[bx,by],[bx+Math.cos(a)*48,by+Math.sin(a)*48]],wood,8,.9);}}
-  if(f>=8)for(let i=0;i<6;i++)leaf(ctx,x+112*q+i*8,y-48+(i-2.5)*5,4,10,i*.6,c,.6);
-}
 function grassSuper(ctx,x,y,p){
   const c='#44AA44',f=moveFrame(p),q=stageFade(f,2,9),r=28+q*92;
   for(let i=0;i<12;i++){const a=i/12*TAU;leaf(ctx,x+Math.cos(a)*r,y-48+Math.sin(a)*r*.65,16,38,a,c,.85);}
   if(f>=6){const rr=r*(1-stageFade(f,6,10));for(let i=0;i<12;i++){const a=i/12*TAU;streak(ctx,x+Math.cos(a)*r,y-48+Math.sin(a)*r*.65,x+Math.cos(a)*rr,y-48+Math.sin(a)*rr*.65,c,8,.7);}}
 }
 
-function iceUpExact(ctx,x,y,p){
-  const c='#AAEEFF',f=moveFrame(p);
-  // Supplied sheet: frame 1 shard appears, 2 grab, 3 throw, 4-7 curved flight,
-  // 8-10 launch continuation, 11 peak, 12 fall/recovery.
-  let sx=x+18,sy=y-82;
-  if(f<2){shard(ctx,sx,y-92,10,24,0,c,.95);return;}
-  if(f<3){shard(ctx,sx,sy,11,28,-.08,c,1);strokePath(ctx,[[x+10,y-38],[sx,y-64]],c,7,.9);return;}
-  const t=clamp01((f-3)/6.5);sx=x+18+58*t;sy=y-82-112*t;shard(ctx,sx,sy,12,30,t*TAU*1.25,c,1);strokePath(ctx,[[x+10,y-42],[x+18+28*t,y-82-54*t]],c,4,.32);
-  if(f>=4&&f<=8)for(let i=0;i<6;i++)streak(ctx,sx-i*7,sy+i*4,sx-22-i*10,sy+10+i*5,c,2,.45);
-  if(f>=8&&f<10)particles(ctx,sx,sy,c,stageFade(f,8,10),8,20);
-  if(f>=10){ctx.save();ctx.globalAlpha=1-stageFade(f,10,12);ctx.strokeStyle=c;ctx.lineWidth=4;ctx.beginPath();ctx.arc(sx,sy,24,0,TAU);ctx.stroke();ctx.restore();}
-}
-function iceDown(ctx,x,y,p){
-  const c='#AAEEFF',f=moveFrame(p),q=stageFade(f,2,7);
-  if(f<3){ring(ctx,x,y-8,46,11,c,.55,5);return;}
-  ctx.save();ctx.strokeStyle=c;ctx.lineWidth=6;glow(ctx,c,14);ctx.globalAlpha=.9;ctx.beginPath();ctx.ellipse(x,y-8,48,12,0,0,TAU);ctx.stroke();ctx.restore();
-  if(f>=5){for(let i=0;i<7;i++){const a=Math.PI*1.05+i/6*Math.PI*.9,sx=x+Math.cos(a)*52*q,sy=y-18+Math.sin(a)*35*q;shard(ctx,sx,sy,9,22,a,c,.9);}}
-  if(f>=8)particles(ctx,x,y-20,c,stageFade(f,8,10),10,60);
-}
-function iceSide(ctx,x,y,p){
-  const c='#AAEEFF',f=moveFrame(p),q=stageFade(f,2,7),a=-1.15+q*2.3;
-  if(f<3){shard(ctx,x+18,y-45,9,25,-.4,c,.7);return;}
-  ctx.save();ctx.translate(x+20,y-45);ctx.rotate(a);ctx.strokeStyle=c;ctx.lineWidth=15;glow(ctx,c,20);ctx.beginPath();ctx.arc(0,0,38,-1.15,1.15);ctx.stroke();ctx.restore();
-  if(f>=7){for(let i=0;i<7;i++)shard(ctx,x+60+i*8,y-45+Math.sin(i)*8,5,15,i*.7,c,.7);}
-}
-function iceUpHeavy(ctx,x,y,p){
-  const c='#AAEEFF',f=moveFrame(p),q=stageFade(f,2,8);
-  if(f<3){for(let i=0;i<3;i++)shard(ctx,x+(i-1)*20,y-88,11,28,i*.7,c,.7);return;}
-  for(let i=0;i<3;i++){const a=-Math.PI/2+i*TAU/3+q*.7,sx=x+Math.cos(a)*76*q,sy=y-70+Math.sin(a)*76*q;shard(ctx,sx,sy,16,42,a,c,.95);}
-  if(f>=7)for(let i=0;i<3;i++){const a=-Math.PI/2+i*TAU/3+q*.7;streak(ctx,x+Math.cos(a)*50,y-70+Math.sin(a)*50,x+Math.cos(a)*104,y-70+Math.sin(a)*104,c,3,.5);}
-}
-function iceDownHeavy(ctx,x,y,p){
-  const c='#AAEEFF',f=moveFrame(p),q=stageFade(f,2,8),bx=x+28+104*q;
-  if(f<3){ctx.save();ctx.fillStyle=c;ctx.globalAlpha=.7;ctx.fillRect(x-30,y-18,60,30);ctx.restore();return;}
-  ctx.save();ctx.fillStyle=c;ctx.globalAlpha=.9;glow(ctx,c,18);ctx.fillRect(bx-34,y-18,68,34);ctx.restore();
-  if(f>=7){const e=stageFade(f,7,9);shard(ctx,bx+38+28*e,y-30-20*e,14,28,-.6,c,.95);shard(ctx,bx-38-28*e,y-6+18*e,14,28,.6,c,.95);}
-}
-function iceSideHeavy(ctx,x,y,p){
-  const c='#AAEEFF',f=moveFrame(p),q=stageFade(f,2,8),a=-1.15+q*2.3;
-  if(f<3){shard(ctx,x+20,y-46,12,34,-.4,c,.7);return;}
-  ctx.save();ctx.translate(x+22,y-42);ctx.rotate(a);ctx.fillStyle=c;glow(ctx,c,22);ctx.fillRect(-14,-58,28,108);ctx.restore();
-  if(f>=7){for(let i=0;i<8;i++)shard(ctx,x+78+i*9,y-42+Math.sin(i)*8,6,16,i*.6,c,.8);}
-}
 function iceSuper(ctx,x,y,p){
   const c='#AAEEFF',f=moveFrame(p),cx=x+52,cy=y-54;
   if(f<7){ctx.save();ctx.fillStyle=c;glow(ctx,c,24);ctx.globalAlpha=.9;ctx.beginPath();ctx.moveTo(cx,cy-100);ctx.lineTo(cx+42,cy-22);ctx.lineTo(cx+30,cy+70);ctx.lineTo(cx-18,cy+45);ctx.lineTo(cx-44,cy-24);ctx.closePath();ctx.fill();ctx.restore();}
   if(f>=5){const e=stageFade(f,5,11),r=24+e*110;for(let i=0;i<16;i++){const a=i/16*TAU;const sx=cx+Math.cos(a)*r,sy=cy+Math.sin(a)*r*.72;shard(ctx,sx,sy,10,28,a,c,.95);}}
 }
 
-function fireAttack(ctx,x,y,p,move){
-  if(move==='us')fireUpExact(ctx,x,y,p);else if(move==='ds')fireDown(ctx,x,y,p);else if(move==='ss')fireSide(ctx,x,y,p);else if(move==='upHeavy'||move==='uh')fireUpHeavy(ctx,x,y,p);else if(move==='dh')fireDownHeavy(ctx,x,y,p);else if(move==='sh')fireSideHeavy(ctx,x,y,p);
-}
-function waterAttack(ctx,x,y,p,move){
-  if(move==='us')waterUpExact(ctx,x,y,p);else if(move==='ds')waterDown(ctx,x,y,p);else if(move==='ss')waterSide(ctx,x,y,p);else if(move==='upHeavy'||move==='uh')waterUpHeavy(ctx,x,y,p);else if(move==='dh')waterDownHeavy(ctx,x,y,p);else if(move==='sh')waterSideHeavy(ctx,x,y,p);
-}
-function grassAttack(ctx,x,y,p,move){
-  if(move==='us')grassUpExact(ctx,x,y,p);else if(move==='ds')grassDown(ctx,x,y,p);else if(move==='ss')grassSide(ctx,x,y,p);else if(move==='upHeavy'||move==='uh')grassUpHeavy(ctx,x,y,p);else if(move==='dh')grassDownHeavy(ctx,x,y,p);else if(move==='sh')grassSideHeavy(ctx,x,y,p);
-}
-function iceAttack(ctx,x,y,p,move){
-  if(move==='us')iceUpExact(ctx,x,y,p);else if(move==='ds')iceDown(ctx,x,y,p);else if(move==='ss')iceSide(ctx,x,y,p);else if(move==='upHeavy'||move==='uh')iceUpHeavy(ctx,x,y,p);else if(move==='dh')iceDownHeavy(ctx,x,y,p);else if(move==='sh')iceSideHeavy(ctx,x,y,p);
-}
-
-// The frame-based supers above are intentionally kept separate from the normal
-// move functions so a Super never inherits a hold pose.
-function fireSuperFrame(ctx,x,y,p){
-  const c='#FF6600',f=moveFrame(p); if(f<4){flame(ctx,x-22,y-56,22,c,.7,-.25);flame(ctx,x+22,y-56,22,c,.7,.25);}
-  const q=stageFade(f,4,7),r=18+q*22;ctx.save();ctx.fillStyle='#FFF2A8';glow(ctx,c,30);ctx.globalAlpha=.95;ctx.beginPath();ctx.arc(x+14,y-58,r,0,TAU);ctx.fill();ctx.restore();
-  if(f>=7){const e=stageFade(f,7,10),cx=x+82,cy=y-50,rr=10+e*62;ctx.save();ctx.fillStyle=c;glow(ctx,c,30);ctx.globalAlpha=1-e*.25;ctx.beginPath();ctx.arc(cx,cy,rr,0,TAU);ctx.fill();ctx.restore();for(let i=0;i<16;i++){const a=i/16*TAU;streak(ctx,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,cx+Math.cos(a)*(rr+26*e),cy+Math.sin(a)*(rr+26*e),c,4,.65);}}
-}
-function waterSuperFrame(ctx,x,y,p){const c='#3399CC',f=moveFrame(p),r=30+stageFade(f,2,6)*68;if(f<7)ring(ctx,x,y-52,r,r*.68,c,.85,14);if(f>=6){const e=stageFade(f,6,10),rr=r*(1-e);for(let i=0;i<20;i++){const a=i/20*TAU;streak(ctx,x+Math.cos(a)*r,y-52+Math.sin(a)*r*.68,x+Math.cos(a)*rr,y-52+Math.sin(a)*rr*.68,c,5,.6);}}if(f>=9){const e=stageFade(f,9,11);ring(ctx,x,y-52,8+e*112,(8+e*112)*.68,c,1-e*.15,9);}}
-function grassSuperFrame(ctx,x,y,p){const c='#44AA44',f=moveFrame(p),q=stageFade(f,2,9),r=28+q*92;for(let i=0;i<12;i++){const a=i/12*TAU;leaf(ctx,x+Math.cos(a)*r,y-48+Math.sin(a)*r*.65,16,38,a,c,.85);}if(f>=6){const rr=r*(1-stageFade(f,6,10));for(let i=0;i<12;i++){const a=i/12*TAU;streak(ctx,x+Math.cos(a)*r,y-48+Math.sin(a)*r*.65,x+Math.cos(a)*rr,y-48+Math.sin(a)*rr*.65,c,8,.7);}}}
-function iceSuperFrame(ctx,x,y,p){const c='#AAEEFF',f=moveFrame(p),cx=x+52,cy=y-54;if(f<7){ctx.save();ctx.fillStyle=c;glow(ctx,c,24);ctx.globalAlpha=.9;ctx.beginPath();ctx.moveTo(cx,cy-100);ctx.lineTo(cx+42,cy-22);ctx.lineTo(cx+30,cy+70);ctx.lineTo(cx-18,cy+45);ctx.lineTo(cx-44,cy-24);ctx.closePath();ctx.fill();ctx.restore();}if(f>=5){const e=stageFade(f,5,11),r=24+e*110;for(let i=0;i<16;i++){const a=i/16*TAU;const sx=cx+Math.cos(a)*r,sy=cy+Math.sin(a)*r*.72;shard(ctx,sx,sy,10,28,a,c,.95);}}}
-
-function drawGen1ChargeLayer(ctx, x, y, charId, move, holdTick = 0) {
-  // Visual-only charging: no collision geometry is created here. The attack's
-  // actual hitbox remains disabled until the held button is released.
-  if (charId === 'g1_thunder') return; // Thunder animation remains unchanged.
-  const q = clamp01((holdTick || 0) / 180);
-  const pulse = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin((holdTick || 0) * 0.22));
-  if (charId === 'g1_fire') {
-    const r = 9 + q * 18;
-    flame(ctx, x + 20, y - 48, r, '#FF6600', 0.22 + q * 0.38 * pulse, -0.35);
-    for (let i = 0; i < 7; i++) {
-      const a = -2.5 + i * 0.42 + holdTick * 0.025;
-      const rr = 22 + q * 30 + (i % 3) * 7;
-      dot(ctx, x + 18 + Math.cos(a) * rr, y - 48 + Math.sin(a) * rr, 1.5 + q * 2, '#FFD36A', (0.2 + q * 0.5) * pulse);
-    }
-  } else if (charId === 'g1_water') {
-    const r = 10 + q * 24;
-    ctx.save(); ctx.globalAlpha = 0.25 + q * 0.4; ctx.strokeStyle = '#66DDFF'; ctx.lineWidth = 4 + q * 3; glow(ctx, '#3399CC', 12 + q * 12);
-    ctx.beginPath(); ctx.arc(x + 18, y - 48, r, -1.9, 0.8); ctx.stroke(); ctx.restore();
-    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + holdTick * .035; dot(ctx, x + 18 + Math.cos(a) * (24 + q * 25), y - 48 + Math.sin(a) * (16 + q * 18), 1.5 + q, '#B9F7FF', .2 + q * .35); }
-  } else if (charId === 'g1_grass') {
-    const r = 8 + q * 18;
-    for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + holdTick * .08; leaf(ctx, x + Math.cos(a) * r, y - 112 + Math.sin(a) * r * .35, 5 + q * 4, 13 + q * 9, a, '#7CFF35', .25 + q * .45); }
-    dot(ctx, x, y - 112, 4 + q * 4, '#DFFF72', .2 + q * .4);
-  } else if (charId === 'g1_ice') {
-    const r = 8 + q * 20;
-    shard(ctx, x + 18, y - 82, 8 + q * 4, 18 + q * 8, -0.15, '#AAEEFF', .25 + q * .45);
-    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + holdTick * .02; dot(ctx, x + 18 + Math.cos(a) * r, y - 82 + Math.sin(a) * r, 1.5 + q * 1.5, '#DDFBFF', .2 + q * .35); }
+function drawGen1AttackVisual(ctx,x,y,p,charId,move){
+  if(charId==='g1_thunder'){
+    if(move==='us') thunderUp(ctx,x,y,p);
+    else if(move==='ds') thunderDown(ctx,x,y,p);
+    else if(move==='ss') thunderSide(ctx,x,y,p,false);
+    else if(move==='sh') thunderSide(ctx,x,y,p,true);
+    else if(move==='upHeavy'||move==='uh') thunderUpHeavy(ctx,x,y,p);
+    else if(move==='dh') thunderDownHeavy(ctx,x,y,p);
+    return;
   }
+  if(charId==='g1_fire'){if(move==='us')fireUp(ctx,x,y,p);else if(move==='ds')fireDown(ctx,x,y,p);else if(move==='ss')fireSide(ctx,x,y,p);else if(move==='upHeavy'||move==='uh')fireUpHeavy(ctx,x,y,p);else if(move==='dh')fireDownHeavy(ctx,x,y,p);else fireSideHeavy(ctx,x,y,p);return;}
+  if(charId==='g1_water'){if(move==='us')waterUp(ctx,x,y,p);else if(move==='ds')waterDown(ctx,x,y,p);else if(move==='ss')waterSide(ctx,x,y,p);else if(move==='upHeavy'||move==='uh')waterUpHeavy(ctx,x,y,p);else if(move==='dh')waterDownHeavy(ctx,x,y,p);else waterSideHeavy(ctx,x,y,p);return;}
+  if(charId==='g1_grass'){if(move==='us')grassUp(ctx,x,y,p);else if(move==='ds')grassDown(ctx,x,y,p);else if(move==='ss')grassSide(ctx,x,y,p);else if(move==='upHeavy'||move==='uh')grassUpHeavy(ctx,x,y,p);else if(move==='dh')grassDownHeavy(ctx,x,y,p);else grassSideHeavy(ctx,x,y,p);return;}
+  if(charId==='g1_ice'){if(move==='us')iceUp(ctx,x,y,p);else if(move==='ds')iceDown(ctx,x,y,p);else if(move==='ss')iceSide(ctx,x,y,p);else if(move==='upHeavy'||move==='uh')iceUpHeavy(ctx,x,y,p);else if(move==='dh')iceDownHeavy(ctx,x,y,p);else iceSideHeavy(ctx,x,y,p);}
 }
 
-function drawGen1HoldPose(ctx, x, y, charId, move, holdFrame, holdTick = 0) {
-  // The supplied Up Signature sheets define the exact initial hold frames:
-  // Fire=2, Thunder=2, Water=1, Grass=3, Ice=2. Other Gen I attacks use
-  // their authored frame-2 wind-up. The base frame stays fixed while the
-  // four non-Thunder heroes visibly charge the attack around that stance.
-  const p = clamp01((Math.max(1, holdFrame) - 1) / 11);
-  if (charId === 'g1_thunder' && move === 'us') { thunderUp(ctx,x,y,p); return; }
-  if (charId === 'g1_fire' && move === 'us') fireUpExact(ctx,x,y,(2-1)/11);
-  else if (charId === 'g1_water' && move === 'us') waterUpExact(ctx,x,y,(1-1)/11);
-  else if (charId === 'g1_grass' && move === 'us') grassUpExact(ctx,x,y,(3-1)/11);
-  else if (charId === 'g1_ice' && move === 'us') iceUpExact(ctx,x,y,(2-1)/11);
-  else if (charId === 'g1_thunder') {
-    if (move === 'ds') thunderDown(ctx,x,y,p);
-    else if (move === 'ss') thunderSide(ctx,x,y,p,false);
-    else if (move === 'sh') thunderSide(ctx,x,y,p,true);
-    else if (move === 'upHeavy') thunderUpHeavy(ctx,x,y,p);
-    else if (move === 'dh') thunderDownHeavy(ctx,x,y,p);
-  } else if (charId === 'g1_fire') fireAttack(ctx,x,y,p,move);
-  else if (charId === 'g1_water') waterAttack(ctx,x,y,p,move);
-  else if (charId === 'g1_grass') grassAttack(ctx,x,y,p,move);
-  else if (charId === 'g1_ice') iceAttack(ctx,x,y,p,move);
-  drawGen1ChargeLayer(ctx, x, y, charId, move, holdTick);
+function holdFrameFor(charId,move){
+  if(charId==='g1_water'&&move==='us')return 1;
+  if(charId==='g1_grass'&&move==='us')return 3;
+  if((charId==='g1_fire'||charId==='g1_ice'||charId==='g1_thunder')&&move==='us')return 2;
+  return 2;
+}
+function drawGen1ChargeLayer(ctx,x,y,charId,move,tick){
+  if(charId==='g1_thunder')return;
+  const q=Math.max(0,Math.min(1,(tick||0)/180)),pulse=.55+.45*Math.sin((tick||0)*.18);
+  if(charId==='g1_fire'){const r=8+q*28;g1Flame(ctx,x+18,y-48,r,'#FF5A12',.18+.45*q*pulse,-.35);g1Ring(ctx,x+18,y-48,r+8,r*.7,'#FFD66B',.18+.25*q,3);}
+  else if(charId==='g1_water'){const r=12+q*32;g1Ring(ctx,x+18,y-48,r,r*.62,'#27BFFF',.25+.5*q*pulse,4);for(let i=0;i<8;i++)g1Dot(ctx,x+18+Math.cos(i*TAU/8+tick*.04)*(r+5),y-48+Math.sin(i*TAU/8+tick*.04)*r*.62,1.8,'#D9FBFF',.25+.3*q);}
+  else if(charId==='g1_grass'){const r=10+q*25;for(let i=0;i<3;i++)g1Leaf(ctx,x+Math.cos(i*TAU/3+tick*.08)*r,y-112+Math.sin(i*TAU/3+tick*.08)*r*.35,6+q*5,14+q*9,i*TAU/3+tick*.08,'#8BFF48',.25+.5*q);}
+  else if(charId==='g1_ice'){const r=8+q*24;g1Shard(ctx,x+18,y-82,9+q*5,20+q*10,-.15,'#BDEFFF',.25+.5*q);for(let i=0;i<8;i++)g1Dot(ctx,x+18+Math.cos(i*TAU/8+tick*.02)*r,y-82+Math.sin(i*TAU/8+tick*.02)*r,1.5+q,'#E7FCFF',.25+.35*q);}
+}
+function drawGen1HoldPose(ctx,x,y,charId,move,holdTick){const hf=holdFrameFor(charId,move),hp=(hf-1)/11;drawGen1AttackVisual(ctx,x,y,hp,charId,move);drawGen1ChargeLayer(ctx,x,y,charId,move,holdTick);}
+
+export function drawGen1Attack(ctx,x,y,color,p,facing,charId,move,attackData=null){
+  ctx.save();ctx.translate(x,y);ctx.scale(facing<0?-1:1,1);
+  if(attackData?.holding){drawGen1HoldPose(ctx,0,0,charId,move,attackData.holdTick||0);ctx.restore();return;}
+  drawGen1AttackVisual(ctx,0,0,p,charId,move);ctx.restore();
 }
 
-export function drawGen1Attack(ctx, x, y, color, p, facing, charId, move, attackData = null) {
-  // Author everything in right-facing local space, then mirror it for left.
-  ctx.save(); ctx.translate(x, y); ctx.scale(facing < 0 ? -1 : 1, 1);
-  const localY = 0;
-  if (attackData?.holding) { drawGen1HoldPose(ctx, 0, localY, charId, move, attackData.holdFrame || 2, attackData.holdTick || 0); ctx.restore(); return; }
-  if (charId === 'g1_thunder') {
-    if (move === 'us') thunderUp(ctx, 0, localY, p);
-    else if (move === 'ds') thunderDown(ctx, 0, localY, p);
-    else if (move === 'ss') thunderSide(ctx, 0, localY, p, false);
-    else if (move === 'sh') thunderSide(ctx, 0, localY, p, true);
-    else if (move === 'upHeavy' || move === 'uh') thunderUpHeavy(ctx, 0, localY, p);
-    else if (move === 'dh') thunderDownHeavy(ctx, 0, localY, p);
-  } else if (charId === 'g1_fire') fireAttack(ctx, 0, localY, p, move);
-  else if (charId === 'g1_water') waterAttack(ctx, 0, localY, p, move);
-  else if (charId === 'g1_grass') grassAttack(ctx, 0, localY, p, move);
-  else if (charId === 'g1_ice') iceAttack(ctx, 0, localY, p, move);
-  ctx.restore();
-}
-
-export function drawGen1Super(ctx, x, y, p, facing, charId) {
-  ctx.save(); ctx.translate(x, y); ctx.scale(facing < 0 ? -1 : 1, 1);
-  if (charId === 'g1_thunder') thunderSuper(ctx, 0, 0, p);
-  else if (charId === 'g1_fire') fireSuper(ctx, 0, 0, p);
-  else if (charId === 'g1_water') waterSuper(ctx, 0, 0, p);
-  else if (charId === 'g1_grass') grassSuper(ctx, 0, 0, p);
-  else if (charId === 'g1_ice') iceSuper(ctx, 0, 0, p);
+export function drawGen1Super(ctx,x,y,p,facing,charId){
+  ctx.save();ctx.translate(x,y);ctx.scale(facing<0?-1:1,1);
+  if(charId==='g1_thunder') thunderSuper(ctx,0,0,p);
+  else if(charId==='g1_fire') fireSuper(ctx,0,0,p);
+  else if(charId==='g1_water') waterSuper(ctx,0,0,p);
+  else if(charId==='g1_grass') grassSuper(ctx,0,0,p);
+  else if(charId==='g1_ice') iceSuper(ctx,0,0,p);
   ctx.restore();
 }
