@@ -393,26 +393,47 @@ function fireUpReference(ctx,x,y,p){
 function fireSideReference(ctx,x,y,p){
   const c='#FF5A16', hot='#FF9A22';
   if(p<0){
-    const q=holdCharge(p),[hx,hy]=handPosePoint(x,y,1,'ss');
+    const q=holdCharge(p), [hx,hy]=handPosePoint(x,y,1,'ss');
+    // Hold stays attached to the lead hand; facing is handled by drawGen1Attack.
     fireRing(ctx,hx,hy,12+q*5,9+q*4,hot,.58+q*.3,-.3,q);
     return;
   }
-  const {frame,u}=fireRefPhase(p,4),v=smoothFire(u), hx=x+47,hy=y-45;
-  if(frame===1) return;
-  if(frame===2){
-    fireRing(ctx,hx,hy,14+4*v,10+3*v,hot,.95,-.25,u);
-    return;
-  }
-  if(frame===3){
-    fireRing(ctx,hx+8*v,hy-3*v,18+4*v,12+3*v,hot,1,-.2,u);
-    for(let i=0;i<5;i++) fireRay(ctx,hx+10*v,hy-3*v,-2.25+i*.12,8+i*2,.5);
-    return;
-  }
-  for(let i=0;i<8;i++){
-    const a=-.8+i*.18; fireRay(ctx,hx+20,hy,a,8+i*3,.52*(1-v));
+  const z=attackP(p)*4;
+  const i=Math.min(3,Math.floor(z));
+  const u=smoothFire(z-Math.floor(z));
+  const lerp=(a,b)=>a+(b-a)*u;
+  const hx=x+47, hy=y-45;
+
+  // Continuous side-signature motion: hand/fire travel through the four
+  // reference poses instead of snapping at the frame boundaries.
+  if(i===0){
+    const k=lerp(0,1);
+    fireRing(ctx,hx,hy,12+2*k,8+2*k,hot,.78+.17*k,-.28+k*.03,z*.4);
+  } else if(i===1){
+    const k=lerp(0,1);
+    const cx=hx+7*k, cy=hy-2*k;
+    const r=14+6*k;
+    fireRing(ctx,cx,cy,r,r*.66,hot,.95,-.24,z*.35);
+    fireBlob(ctx,cx,cy,r*.82,hot,.72,z*.8);
+  } else if(i===2){
+    // The flame remains connected to the hand at the beginning of launch,
+    // then separates smoothly as the projectile gains speed.
+    const k=lerp(0,1);
+    const separation=4+18*k;
+    const cx=hx+separation, cy=hy-2*k;
+    const r=19+4*k;
+    fireRing(ctx,cx,cy,r,r*.62,hot,.98,-.16,z*.5);
+    fireBlob(ctx,cx,cy,r*.86,hot,.9,z);
+    for(let n=0;n<5;n++) fireRay(ctx,hx+separation*.45,cy,-.20+n*.09,8+n*2,.32);
+  } else {
+    const k=lerp(0,1);
+    const separation=22+48*k;
+    const cx=hx+separation, cy=hy-2-2*k;
+    const r=18*(1-k)+6;
+    fireBlob(ctx,cx,cy,r,hot,.92*(1-.35*k),z*1.1);
+    for(let n=0;n<7;n++) fireRay(ctx,cx,cy,-.24+n*.08,10+n*2,.45*(1-k));
   }
 }
-
 function fireDownReference(ctx,x,y,p){
   const hot='#FF9A22',dark='#160604';
   if(p<0){
@@ -448,25 +469,59 @@ function fireUpHeavyReference(ctx,x,y,p){
   }
 }
 
-function fireDownHeavyReference(ctx,x,y,p){
-  const hot='#FF9A22';
-  if(p<0){ const q=holdCharge(p); if(q>.45) fireLineBurst(ctx,x+24,y,20*q,.22+q*.2,q*4); return; }
-  const {frame,u}=fireRefPhase(p,6),v=smoothFire(u),ox=x+24,oy=y-1;
-  if(frame===1){ return; }
-  if(frame===2){
-    // Contact is a short, visible ground spark before the full eruption.
-    fireRay(ctx,ox,oy,Math.PI*.98,16,.55); fireRay(ctx,ox,oy,.02,16,.55); fireRay(ctx,ox,oy,-Math.PI/2,10,.4); return;
+function fireRayLite(ctx,x,y,angle,len,a=1,hot='#FF9A22'){
+  const ux=Math.cos(angle), uy=Math.sin(angle);
+  ctx.save();
+  ctx.globalAlpha=a;
+  ctx.strokeStyle=hot;
+  ctx.lineWidth=2.8;
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+  ctx.beginPath();
+  ctx.moveTo(x+ux*3,y+uy*3);
+  ctx.lineTo(x+ux*len*.24-uy*2,y+uy*len*.24+ux*2);
+  ctx.lineTo(x+ux*len*.58+uy*1,y+uy*len*.58-ux*1);
+  ctx.lineTo(x+ux*len,y+uy*len);
+  ctx.stroke();
+  ctx.restore();
+}
+function fireLineBurstLite(ctx,x,y,r,a=1,phase=0){
+  const count=10;
+  for(let i=0;i<count;i++){
+    const ang=i/count*REF_TAU+phase*.08;
+    const len=r*(.68+.22*Math.sin(i*2.1+phase));
+    fireRayLite(ctx,x,y,ang,len,a*(.86+.12*Math.sin(i+phase)));
   }
-  if(frame===3){ fireLineBurst(ctx,ox,oy,28+34*v,1,u*5); return; }
-  if(frame===4){ fireLineBurst(ctx,ox,oy,62+10*v,1,u*5); return; }
-  if(frame===5){
-    fireLineBurst(ctx,ox,oy,72,.86,u*7);
-    for(let i=0;i<8;i++){const a=i/8*REF_TAU;fireBlob(ctx,ox+Math.cos(a)*42,oy+Math.sin(a)*26,6,hot,.78,i);}
-    return;
-  }
-  fireLineBurst(ctx,ox,oy,76,.35*(1-v),u*8);
 }
 
+function fireDownHeavyReference(ctx,x,y,p){
+  const hot='#FF9A22', core='#FF5A16';
+  if(p<0){
+    const q=holdCharge(p);
+    if(q>.45) fireLineBurstLite(ctx,x+24,y,16*q,.18+q*.16,q*4);
+    return;
+  }
+  const {frame,u}=fireRefPhase(p,6),v=smoothFire(u),ox=x+24,oy=y-1;
+  if(frame===1) return;
+  if(frame===2){
+    fireRayLite(ctx,ox,oy,Math.PI*.98,16,.55,hot);
+    fireRayLite(ctx,ox,oy,.02,16,.55,hot);
+    return;
+  }
+  if(frame===3){ fireLineBurstLite(ctx,ox,oy,28+34*v,1,u*5); return; }
+  if(frame===4){ fireLineBurstLite(ctx,ox,oy,62+10*v,1,u*5); return; }
+  if(frame===5){
+    fireLineBurstLite(ctx,ox,oy,72,.86,u*7);
+    // Only a few secondary embers; avoid dozens of expensive shadow/blur calls.
+    for(let i=0;i<6;i++){
+      const a=i/6*REF_TAU;
+      flameShape(ctx,ox+Math.cos(a)*42,oy+Math.sin(a)*26,5.5,hot,.62,i);
+    }
+    return;
+  }
+  fireLineBurstLite(ctx,ox,oy,76,.30*(1-v),u*8);
+  flameShape(ctx,ox,oy,7,core,.35*(1-v),0);
+}
 function fireSideHeavyReference(ctx,x,y,p){
   const hot='#FF9A22';
   if(p<0){ const q=holdCharge(p),hx=x+48,hy=y-45; fireBlob(ctx,hx,hy,9+q*12,hot,.68+q*.25,q); fireRing(ctx,hx,hy,10+q*10,7+q*6,hot,.65+q*.2,-.2,q); return; }

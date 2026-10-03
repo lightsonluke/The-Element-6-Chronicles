@@ -1584,23 +1584,56 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       }
       }
 
-      // Dynamic camera — ZOOM IN for 1v1 (closer than before)
+      // Dynamic camera — ZOOM IN for 1v1 (closer than before).
+      // Super-specific safeguard: a super can create a large knockback/update
+      // spike for one or both fighters. Never let that transient value feed the
+      // camera fit calculation and collapse the entire canvas. During a super,
+      // preserve the last stable zoom and only resume normal fitting afterward.
       const g = gameRef.current;
-      const fdx = Math.abs(f2.x - f1.x), fdy = Math.abs(f2.y - f1.y);
+      const finiteF1X = Number.isFinite(f1.x) ? f1.x : (Number.isFinite(g._lastSafeF1X) ? g._lastSafeF1X : W * 0.35);
+      const finiteF1Y = Number.isFinite(f1.y) ? f1.y : (Number.isFinite(g._lastSafeF1Y) ? g._lastSafeF1Y : H * 0.65);
+      const finiteF2X = Number.isFinite(f2.x) ? f2.x : (Number.isFinite(g._lastSafeF2X) ? g._lastSafeF2X : W * 0.65);
+      const finiteF2Y = Number.isFinite(f2.y) ? f2.y : (Number.isFinite(g._lastSafeF2Y) ? g._lastSafeF2Y : H * 0.65);
+      if (Number.isFinite(f1.x)) g._lastSafeF1X = f1.x;
+      if (Number.isFinite(f1.y)) g._lastSafeF1Y = f1.y;
+      if (Number.isFinite(f2.x)) g._lastSafeF2X = f2.x;
+      if (Number.isFinite(f2.y)) g._lastSafeF2Y = f2.y;
+
+      const f1SuperActive = f1.state === 'superAttack' && f1.attackData?.isSuper;
+      const f2SuperActive = f2.state === 'superAttack' && f2.attackData?.isSuper;
+      const superCameraLock = f1SuperActive || f2SuperActive;
+      if (superCameraLock && !Number.isFinite(g._superStableZoom)) {
+        g._superStableZoom = Number.isFinite(g.camZoom) ? Math.max(0.72, Math.min(1.05, g.camZoom)) : 0.85;
+      }
+      if (!superCameraLock) g._superStableZoom = null;
+
+      const fdx = Math.abs(finiteF2X - finiteF1X), fdy = Math.abs(finiteF2Y - finiteF1Y);
       const zoomMul = settings.cameraZoom === 'close' ? 1.15 : settings.cameraZoom === 'far' ? 0.85 : 1.0;
       const stageZoom = activeStageCamera?.zoom != null ? Number(activeStageCamera.zoom) : (settings.stageZoom != null ? settings.stageZoom : 1.0);
-      let targetZoom = Math.max(0.60, Math.min(0.95, 0.95 - fdx / 1200 - fdy / 1000));
-      const spreadX = fdx + 280;
-      const spreadY = fdy + 280;
-      const fitZoomX = W / Math.max(spreadX, 200);
-      const fitZoomY = H / Math.max(spreadY, 200);
-      const fitZoom = Math.min(fitZoomX, fitZoomY);
-      targetZoom = Math.min(targetZoom, Math.max(0.50, fitZoom));
-      targetZoom *= zoomMul * stageZoom;
-      g.camZoom += (targetZoom - g.camZoom) * 0.05;
-      if (hitstop > 0) g.camZoom += 0.015;
-      const midX = (f1.x + f2.x) / 2;
-      const midY = ((f1.y + f2.y) / 2) - 70;
+      let targetZoom;
+      if (superCameraLock) {
+        // Keep the camera completely stable through the super so its large
+        // visual/hitbox footprint cannot make the screen shrink or disappear.
+        targetZoom = g._superStableZoom;
+      } else {
+        // Prevent a transient signature/attack separation from collapsing the game view.
+        targetZoom = Math.max(0.78, Math.min(0.95, 0.95 - fdx / 1200 - fdy / 1000));
+        const spreadX = fdx + 280;
+        const spreadY = fdy + 280;
+        const fitZoomX = W / Math.max(spreadX, 200);
+        const fitZoomY = H / Math.max(spreadY, 200);
+        const fitZoom = Math.min(fitZoomX, fitZoomY);
+        targetZoom = Math.min(targetZoom, Math.max(0.78, fitZoom));
+        targetZoom *= zoomMul * stageZoom;
+        targetZoom = Math.max(0.72, Math.min(1.05, targetZoom));
+      }
+      if (!Number.isFinite(targetZoom)) targetZoom = 0.85;
+      g.camZoom += (targetZoom - g.camZoom) * (superCameraLock ? 0.18 : 0.05);
+      if (!Number.isFinite(g.camZoom)) g.camZoom = 0.85;
+      g.camZoom = Math.max(0.72, Math.min(1.05, g.camZoom));
+      if (hitstop > 0 && !superCameraLock) g.camZoom = Math.min(1.05, g.camZoom + 0.015);
+      const midX = (finiteF1X + finiteF2X) / 2;
+      const midY = ((finiteF1Y + finiteF2Y) / 2) - 70;
       const targetCamX = (midX - W / 2) * (1 - g.camZoom) * 0.35;
       const targetCamY = (midY - H / 2) * (1 - g.camZoom) * 0.35;
       const stageCamMotion = stageMotionOffset(activeStageCamera?.motion, (now - g.stageStartTime) / 1000);

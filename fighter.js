@@ -1038,14 +1038,19 @@ function executeGen1HeldAttack(fighter, hold) {
   // deliberately ignored here, so changing direction during the hold cannot
   // turn one attack into another.
   const dur = id === 'g1_fire' ? Math.max(1, Math.round(Number(data.duration) || 1)) : Math.min(data.duration || (isHeavy ? 24 : 20), isHeavy ? 32 : 30);
+  const releaseProgress = Math.max(0, Math.min(0.96, hold.frames / hold.maxFrames));
   fighter.attackData = {
     ...data,
     duration: dur,
     sigType,
     hitApplied: false,
-    progress: 0,
+    // Continue the released animation from the exact normalized point represented
+    // by the hold visual instead of restarting at frame 1. This makes release feel
+    // like a continuation of the held pose.
+    progress: releaseProgress,
+    releaseStartProgress: releaseProgress,
     holding: false,
-    holdProgress: 1,
+    holdProgress: Math.min(1, hold.frames / hold.maxFrames),
     // Preserve the real amount of time this attack was charged. 0 = instant release,
     // 1 = the full 3-second charge. This is used by applyHit() for the damage bonus.
     holdCharge: Math.min(1, hold.frames / hold.maxFrames),
@@ -2001,8 +2006,12 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
 }
 
 function updateAttackProgress(fighter) {
-  const elapsed = fighter.attackData.duration - fighter.attackTimer;
-  fighter.attackData.progress = Math.min(elapsed / fighter.attackData.duration, 1);
+  const elapsed = Math.max(0, fighter.attackData.duration - fighter.attackTimer);
+  const start = Math.max(0, Math.min(0.96, Number(fighter.attackData.releaseStartProgress) || 0));
+  // If a Gen I move was released from a hold, continue from that exact visual
+  // position instead of resetting the animation to frame 1. Legacy attacks keep
+  // the normal 0 -> 1 progression because releaseStartProgress is absent.
+  fighter.attackData.progress = start + (1 - start) * Math.min(elapsed / fighter.attackData.duration, 1);
 }
 
 export function checkHit(attacker, defender) {
