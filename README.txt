@@ -1,26 +1,21 @@
-Water Hero + Universal Animation Reset Update
+Water Hero — clean restart patch
 
-This patch keeps the completed Fire Hero implementation intact and adds:
+This patch starts from the uploaded game plus the completed Fire Hero animation file.
 
-1. Universal attack/idle reset fix for all characters.
-   - A normal attack now always clears its attack data when it completes.
-   - Any third-party hit/hitstun immediately cancels the attack or charge.
-   - When hitstun ends, the fighter cleanly returns to idle/jumping instead of carrying a broken attack/run pose.
+What changed:
+- Restored the missing Water Hero attack dispatcher so every Water attack has a valid renderer.
+- Rebuilt Water Hero Up Signature from the supplied 12-frame blueprint: ring forms on the arm, separates at frame 3, travels upward on a short curved path, fades at frame 7, then returns to neutral.
+- Water Up Signature hitbox is the moving ring only and is active on reference frames 3–7.
+- Water Up Signature knockback follows the ring's current travel direction.
+- Water Up Signature hold/charge window is 12 frames.
+- Added a universal attack/charge reset when an attack is interrupted by hitstun, and a clean idle/jumping reset when any attack ends.
+- No camera, zoom, or renderer changes are included in this patch.
+- Fire Hero animation code is taken from the latest completed Fire Hero package.
 
-2. Water Hero Up Signature rebuilt from the supplied 12-frame reference guide.
-   - Native procedural water ring; the reference image is NOT used as a sprite.
-   - 12-frame visual timing mapped into a 24-frame in-game attack.
-   - Frame 1: ring forms around the lower arm.
-   - Frame 2: ring swings up around the raised arm.
-   - Frames 3-7: ring separates and travels upward along the curved path.
-   - Frame 8: fading fragments. Frames 9-12: clean return to neutral.
-   - Hitbox follows the ring itself only after separation (frames 3-7).
-   - Knockback follows the ring's current movement direction, not the fighter's velocity.
-   - Water Up Signature hold/charge window is 12 frames, matching the supplied reference length.
+Replace these four files:
+  gen1AttackAnims.js
+  attackSpecs.js
+  eras.js
+  fighter.js
 
-Files to replace:
-- gen1AttackAnims.js
-- attackSpecs.js
-- fighter.js
-- eras.js
-- renderer.js (included to preserve the completed Fire Hero performance/smooth-super changes)
+The other Water attacks are left at their existing designs because the supplied reference only specifies the Up Signature.

@@ -1002,15 +1002,11 @@ export { CPU_DIFFICULTY, updateAI, platformNavigate } from './botAI.js';
 function isGen1Fighter(f) { return String(f?.char?.id || '').startsWith('g1_'); }
 
 function startGen1Hold(fighter, button, sigType, wasAirborne = false, wasGrounded = false) {
-  const configured = button === 'heavy'
-    ? (sigType === 'upHeavy' ? UP_HEAVIES[fighter.char.id]?.holdFrames : sigType === 'downHeavy' ? DOWN_HEAVIES[fighter.char.id]?.holdFrames : fighter.char.heavyAttack?.holdFrames)
-    : fighter.char.signatures?.[sigType]?.holdFrames;
-  const maxFrames = Math.max(1, Number(configured) || 180);
   fighter.attackHold = {
     button,
     sigType,
     frames: 0,
-    maxFrames,
+    maxFrames: 180,
     wasAirborne,
     wasGrounded,
   };
@@ -1221,12 +1217,10 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
   // ── Hitstun: smooth knockback with DI influence ──
   if (fighter.hitstun > 0) {
-    // Any third-party hit cleanly cancels the current attack/charge so the
-    // character can never resume an interrupted attack pose after hitstun.
-    if (fighter.state !== 'hitstun') {
-      fighter.attackData = null;
-      fighter.attackHold = null;
-    }
+    // A third-party hit always cancels an attack/charge immediately. This
+    // prevents a broken attack/run pose from surviving into or after hitstun.
+    fighter.attackData = null;
+    fighter.attackHold = null;
     fighter.state = 'hitstun';
     fighter.hitstun--;
     fighter.vx *= KNOCKBACK_DECAY;
@@ -1241,16 +1235,16 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     fighter.y += fighter.vy;
     resolveCollisions(fighter, platforms, stageWidth, stageHeight);
     onMovementAbilityLanded(fighter, inputs);
-    if (fighter.attackData) updateAttackProgress(fighter);
     return fighter;
   }
 
-  // Hitstun just ended: force a clean neutral state. This is the universal
-  // animation reset path for attacks interrupted by another fighter, hazard,
-  // power, projectile, or any other third-party effect.
+  // If hitstun ended on the previous update, force a clean neutral state.
+  // This is intentionally universal: it applies to every character and every
+  // attack type, not just Generation I.
   if (fighter.state === 'hitstun' && fighter.hitstun <= 0) {
     fighter.attackData = null;
     fighter.attackHold = null;
+    fighter.attackTimer = 0;
     fighter.state = fighter.grounded ? 'idle' : 'jumping';
   }
 
@@ -1286,6 +1280,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     if (fighter.attackTimer <= 0) {
       fighter.attackData = null;
       fighter.attackHold = null;
+      fighter.attackTimer = 0;
       fighter.state = fighter.grounded ? 'idle' : 'jumping';
     }
   }

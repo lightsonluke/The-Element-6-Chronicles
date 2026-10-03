@@ -242,21 +242,22 @@ export function getActiveSpecHitboxes(attacker) {
     case 'gauntlet': { const ang=-.8+q*1.7, cx=28+Math.cos(ang)*42, cy=-42+Math.sin(ang)*42; K(8,-42,cx,cy,15); C(cx,cy,20); break; }
     case 'explosion': { if(q<.5) break; const e=(q-.5)/.5; C(78,-48,Math.min(88,34+e*54)); break; }
     case 'waterRing': {
-      // Active collision begins when the ring separates (frame 3) and follows
-      // the ring's current position through frame 7.
-      const frame = 1 + q * 11;
-      if(frame < 3 || frame > 7) break;
-      const pts = [
-        {f:3,x:76,y:-74,r:14},
-        {f:4,x:142,y:-105,r:14},
-        {f:5,x:151,y:-108,r:13},
-        {f:6,x:140,y:-128,r:12},
-        {f:7,x:129,y:-119,r:9}
+      // Active only during the reference's separated/traveling frames 3-7.
+      const frame=1+q*11;
+      if(frame<3 || frame>7) break;
+      const pts=[
+        {f:3,x:34,y:-56,r:14},
+        {f:4,x:72,y:-82,r:14},
+        {f:5,x:112,y:-103,r:13},
+        {f:6,x:126,y:-111,r:11},
+        {f:7,x:118,y:-106,r:8}
       ];
-      const idx=Math.max(0,Math.min(pts.length-2,Math.floor(frame-3)));
-      const a=pts[idx], b=pts[Math.min(pts.length-1,idx+1)];
-      const t=Math.max(0,Math.min(1,(frame-a.f)/Math.max(.001,b.f-a.f)));
-      const tx=a.x+(b.x-a.x)*t, ty=a.y+(b.y-a.y)*t, r=a.r+(b.r-a.r)*t;
+      const u=Math.max(0,Math.min(1,(frame-3)/4));
+      const seg=Math.min(3,Math.floor(u*4));
+      const lt=u*4-seg;
+      const a=pts[seg],b=pts[seg+1];
+      const tx=a.x+(b.x-a.x)*lt, ty=a.y+(b.y-a.y)*lt;
+      const r=a.r+(b.r-a.r)*lt;
       C(tx,ty,r); break; }
     case 'twinSplashes': { const sy=-8-62*q; C(-42,sy,11); C(42,sy,11); break; }
     case 'whipTip': { C(16+72*q,-42-Math.sin(q*Math.PI)*26,10); break; }
@@ -319,12 +320,13 @@ export function specKnockbackVector(attacker, defender, profile){
   if(p==='radialup'){const dx=defender.x-attacker.x;return{x:Math.max(-.8,Math.min(.8,dx/100)),y:-1};}
   if(p==='velocity'){const vx=attacker.vx||f,vy=attacker.vy||0,len=Math.hypot(vx,vy)||1;return{x:vx/len,y:vy/len};}
   if(p==='waterringvelocity'){
-    // Knockback follows the ring's current travel direction, not the fighter's velocity.
+    // Knockback follows the ring's current path, not the fighter's velocity.
     const q=clamp01(attacker.attackData?.progress || 0);
     const frame=1+q*11;
     const u=clamp01((frame-3)/4);
-    const dx=75;
-    const dy=-31 + 8*Math.cos(u*Math.PI);
+    // Path derivative of the authored ring travel.
+    const dx=(u<.75 ? 39 : -8);
+    const dy=(u<.75 ? -24 : 5);
     const len=Math.hypot(dx,dy)||1;
     return{x:(dx/len)*f,y:dy/len};
   }

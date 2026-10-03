@@ -591,95 +591,91 @@ function fireAttack(ctx,x,y,p,move){
 }
 
 function waterUpReference(ctx,x,y,p){
-  // Native recreation of the supplied 12-frame Water Hero Up Signature guide.
-  // The guide is a blueprint only: all water is drawn procedurally in-game.
   const c='#24BFFF', white='#DDFBFF';
+  // The supplied 12-frame blueprint is used as the released animation.
+  // While held, the ring remains attached to the raised/lead arm and has no hitbox.
   if(p<0){
-    // Hold/charge: frame 1 silhouette — a small spinning ring wraps the lower arm.
     const q=holdCharge(p);
-    const spin=q*REF_TAU*1.35;
-    const rr=18+q*6;
-    waterRing(ctx,x+4,y-34,rr+7,10+q*2,c,.72+q*.22,-.15+spin*.18);
-    glowStroke(ctx,[[x+5,y-25],[x+12,y-42]],c,5,.75+q*.12);
-    for(let i=0;i<4;i++){
-      const a=spin+i*REF_TAU/4;
-      spark(ctx,x+4+Math.cos(a)*(rr+6),y-34+Math.sin(a)*10,1.5,c,.45+q*.3);
-    }
+    const pulse=1+Math.sin(q*Math.PI*4)*.04;
+    const rx=17+q*4, ry=9+q*3;
+    waterRing(ctx,x+5,y-34,rx*pulse,ry*pulse,c,.78+q*.16,-.18+q*.08);
+    glowStroke(ctx,[[x+4,y-26],[x+12,y-42]],c,4.5,.72+q*.12);
     return;
   }
 
-  const f=refFrame(p);
+  const frame=1+clamp01(p)*11;
+  const easeT=t=>t*t*(3-2*t);
+  const point=(a,b,t)=>a+(b-a)*easeT(t);
 
-  // Reference frame 1: small ring around the lower arm/waist area.
-  if(f<1.65){
-    waterRing(ctx,x+4,y-34,22,10,c,.78,-.15);
-    return;
-  }
-
-  // Reference frame 2: the ring swings upward around the raised hand.
-  if(f<2.55){
-    const t=ease((f-1.65)/.9);
-    const rx=22+3*t, ry=10+2*t;
-    const cx=x+4+14*t, cy=y-34-16*t;
-    waterRing(ctx,cx,cy,rx,ry,c,.84+.1*t,-.15-.08*t);
-    glowStroke(ctx,[[x+8,y-26],[x+15,y-40],[x+4+18*t,y-50]],c,5.5,.78);
-    return;
-  }
-
-  // Frames 3-7: the ring separates and follows a short curved upward path.
-  // These staged points are taken directly from the visual guide's motion:
-  // separate -> high/right -> near peak -> break apart.
-  const points=[
-    {f:3,x:76,y:-74,rx:27,ry:11,a:1},
-    {f:4,x:142,y:-105,rx:27,ry:11,a:1},
-    {f:5,x:151,y:-108,rx:25,ry:10,a:.98},
-    {f:6,x:140,y:-128,rx:22,ry:9,a:.92},
-    {f:7,x:129,y:-119,rx:12,ry:6,a:.55}
+  // Reference positions: frame 3 is the separation point, frames 4-6 travel
+  // upward on a short curved path, and frame 7 is the disappearance point.
+  const pts=[
+    {x:x+6,   y:y-34,  rx:22, ry:10},
+    {x:x+28,  y:y-56,  rx:24, ry:11},
+    {x:x+72,  y:y-82,  rx:24, ry:11},
+    {x:x+112, y:y-103, rx:22, ry:10},
+    {x:x+126, y:y-111, rx:19, ry:9},
+    {x:x+118, y:y-106, rx:13, ry:7},
   ];
-  if(f>=2.55 && f<7.85){
-    const idx=Math.max(0,Math.min(points.length-2,Math.floor((f-3))));
-    const a=points[idx], b=points[Math.min(points.length-1,idx+1)];
-    const t=ease(clamp01((f-a.f)/Math.max(.001,b.f-a.f)));
-    const px=a.x+(b.x-a.x)*t;
-    const py=a.y+(b.y-a.y)*t;
-    const rx=a.rx+(b.rx-a.rx)*t;
-    const ry=a.ry+(b.ry-a.ry)*t;
-    const op=a.a+(b.a-a.a)*t;
 
-    // Curved water trail behind the ring; the ring itself remains the hitbox.
-    const trail=[];
-    const trailSteps=7;
-    for(let i=trailSteps;i>=1;i--){
-      const u=clamp01((f-3-i*.16)/4);
-      const ti=ease(u);
-      const tx=76+(151-76)*ti;
-      const ty=-74+(-108+74)*ti;
-      trail.push([x+tx,y+ty]);
-    }
-    trail.push([x+px,y+py]);
-    glowStroke(ctx,trail,c,5.5,.42);
-    for(let i=0;i<8;i++){
-      const k=i/8;
-      const sx=x+px-(px-76)*(0.15+k*.55);
-      const sy=y+py-(py+74)*(0.15+k*.55)+Math.sin(i*1.7)*2;
-      spark(ctx,sx,sy,1.5+(i%2),c,(.22+.08*(i%3))*(1-k));
-    }
-    waterRing(ctx,x+px,y+py,rx,ry,c,op,.2+(f-3)*.16);
+  // Frame 1 — ring begins around the lower arm.
+  if(frame < 1.65){
+    waterRing(ctx,pts[0].x,pts[0].y,pts[0].rx,pts[0].ry,c,.8,-.18);
+    glowStroke(ctx,[[x+5,y-25],[x+12,y-42]],c,5,.72);
     return;
   }
 
-  // Frame 8: only a few fading water fragments remain.
-  if(f<8.8){
-    const t=ease((f-7.85)/.95);
-    const px=129+7*t, py=-119-5*t;
+  // Frame 2 — swing upward and form the complete ring around the hand.
+  if(frame < 2.7){
+    const t=(frame-1.65)/1.05;
+    const cx=point(pts[0].x,pts[1].x,t), cy=point(pts[0].y,pts[1].y,t);
+    const rx=point(pts[0].rx,pts[1].rx,t), ry=point(pts[0].ry,pts[1].ry,t);
+    waterRing(ctx,cx,cy,rx,ry,c,.95,-.18+t*.18);
+    glowStroke(ctx,[[x+7,y-29],[x+20,y-48],[cx,cy]],c,5.5,.72);
+    return;
+  }
+
+  // Frames 3-7 — the ring separates from the arm and travels along the
+  // reference path. The trail stays behind the ring and fades toward the end.
+  const t=clamp01((frame-3)/4);
+  const seg=Math.min(4,Math.floor(t*4));
+  const local=t*4-seg;
+  const a=pts[seg+1], b=pts[Math.min(5,seg+2)];
+  const cx=point(a.x,b.x,local), cy=point(a.y,b.y,local);
+  const rx=point(a.rx,b.rx,local), ry=point(a.ry,b.ry,local);
+  const fade=frame>=6.25 ? Math.max(0,1-(frame-6.25)/.9) : 1;
+
+  if(frame < 7.05){
+    // Short broken trail, never a giant continuous beam.
+    const trailCount=frame<4 ? 3 : 5;
+    for(let i=trailCount;i>=1;i--){
+      const tt=Math.max(0,t-i*.075);
+      const sg=Math.min(4,Math.floor(tt*4));
+      const lu=tt*4-sg;
+      const aa=pts[sg+1], bb=pts[Math.min(5,sg+2)];
+      const tx=point(aa.x,bb.x,lu), ty=point(aa.y,bb.y,lu);
+      glowStroke(ctx,[[tx-7,ty+3],[tx+2,ty-2]],c,2.2,.18*(1-i/(trailCount+1))*fade);
+    }
+    waterRing(ctx,cx,cy,rx,ry,c,.98*fade,.18+t*.35);
     for(let i=0;i<5;i++){
-      const dx=(i-2)*7, dy=(i%2)*3;
-      spark(ctx,x+px+dx,y+py+dy,1.8-(t*.7),c,(.45*(1-t)));
+      const ang=-2.55+i*.16;
+      spark(ctx,cx+Math.cos(ang)*rx*.9,cy+Math.sin(ang)*ry*.9,1.5,c,.45*fade);
     }
-    return;
   }
 
-  // Frames 9-12: clean return to neutral / idle. No attack effect remains.
+  // Frame 7 — final bright flicker, then the ring is gone.
+  if(frame>=6.55 && frame<7.15){
+    const k=Math.max(0,1-(frame-6.55)/.6);
+    waterRing(ctx,cx,cy,rx*k,ry*k,c,.85*k,.18);
+    spark(ctx,cx,cy,3.5,white,.65*k);
+  }
+
+  // Frame 8 — only a couple of fading droplets remain.
+  if(frame>=7.15 && frame<8.25){
+    const k=1-(frame-7.15)/1.1;
+    spark(ctx,x+118,y-106,2.2,c,.45*k);
+    spark(ctx,x+108,y-101,1.5,white,.35*k);
+  }
 }
 
 function grassUpReference(ctx,x,y,p){
@@ -755,6 +751,66 @@ function fireLineBurstLegacy(ctx,x,y,r,alpha=1){
     flameShape(ctx,x2,y2,7,'#FF9A22',alpha*.85,a+Math.PI/2);
   }
 }
+
+function waterAttack(ctx,x,y,p,move){
+  const c='#24BFFF', white='#DDFBFF', q=attackP(p), a=.3+.7*Math.sin(q*Math.PI);
+  if(move==='us'){waterUpReference(ctx,x,y,p);return;}
+  if(move==='ss'){
+    const t=easeOut(q), ex=x+18+t*105, ey=y-44-Math.sin(t*Math.PI)*24;
+    glowStroke(ctx,[[x+5,y-30],[x+32,y-48],[ex,ey]],c,7,a); waterRing(ctx,ex,ey,14,7,c,.9,.3+t*2); return;
+  }
+  if(move==='ds'){
+    const spread=28+q*30; glowArc(ctx,x,y-24,spread,18,Math.PI,REF_TAU,c,8,a,.0); for(let s of [-1,1]){waterRing(ctx,x+s*spread,y-38,14,6,c,.9,s*.4);} return;
+  }
+  if(move==='sh'){
+    const t=easeOut(q), ang=-.9+t*1.8; glowArc(ctx,x+26,y-48,78,48,-.9,ang,c,13,a,-.08); waterRing(ctx,x+26+Math.cos(ang)*70,y-48+Math.sin(ang)*42,18,8,c,.9,ang); return;
+  }
+  if(move==='uh'){
+    const r=62; const t=easeOut(q); glowArc(ctx,x,y-76,r,r*1.15,-1.0+t*REF_TAU,-1.0+t*REF_TAU+2.8,c,9,a,.0); for(let i=0;i<10;i++){const ang=i/10*REF_TAU+t*1.5; spark(ctx,x+Math.cos(ang)*r,y-76+Math.sin(ang)*r*1.15,3,c,.6);} return;
+  }
+  if(move==='dh'){
+    const bx=x+80-160*easeOut(q), by=y-45+Math.max(0,q-.45)*70; waterRing(ctx,bx,by,22,16,c,a,.3); return;
+  }
+}
+function grassAttack(ctx,x,y,p,move){
+  const c='#7CFF28', pale='#D9FF7A', wood='#9B6A3B', q=attackP(p), a=.3+.7*Math.sin(q*Math.PI);
+  if(move==='us'){grassUpReference(ctx,x,y,p);return;}
+  if(move==='ss'){
+    const t=easeOut(q), ex=x+18+t*100, ey=y-45-Math.sin(t*Math.PI)*10; glowStroke(ctx,[[x+8,y-25],[x+25,y-45],[ex,ey]],wood,10,a); glowStroke(ctx,[[x+18,y-42],[ex,ey]],c,3,a); for(let i=0;i<4;i++)leafBlade(ctx,x+35+t*50+i*8,ey+(i%2?6:-6),4,10,i*.8,c,a*.7); return;
+  }
+  if(move==='ds'){
+    const t=easeOut(q); for(const s of [-1,1]){const bx=x+s*(22+32*t); glowStroke(ctx,[[x+s*10,y-4],[bx,y-34]],c,7,a); for(let i=0;i<3;i++)leafBlade(ctx,bx+s*i*9,y-34-i*6,4,10,s*.7+i*.2,c,a*.8);} return;
+  }
+  if(move==='sh'){
+    const t=easeOut(q), ex=x+25+t*100; glowStroke(ctx,[[x+8,y-42],[ex,y-42]],wood,15,a); for(let i=0;i<5;i++)leafBlade(ctx,x+48+t*55+i*7,y-42+(i%2?8:-8),5,12,-.4+i*.25,c,a*.8); return;
+  }
+  if(move==='uh'){
+    const r=68; glowArc(ctx,x,y-82,r,r*.55,0,REF_TAU,c,8,a); for(let i=0;i<9;i++){const ang=i/9*REF_TAU+q*4;leafBlade(ctx,x+Math.cos(ang)*r,y-82+Math.sin(ang)*r*.55,8,20,ang,c,a*.85);} return;
+  }
+  if(move==='dh'){
+    glowStroke(ctx,[[x-40,y-100],[x+30,y-25],[x+5,y+2]],c,10,a); glowStroke(ctx,[[x+5,y+2],[x-30,y-35],[x-15,y-75]],c,8,a*.8); for(let i=0;i<8;i++)leafBlade(ctx,x-20+i*8,y-35+i*2,4,10,i*.6,c,a*.65); return;
+  }
+}
+function iceAttack(ctx,x,y,p,move){
+  const c='#79DFFF', white='#EFFFFF', q=attackP(p), a=.3+.7*Math.sin(q*Math.PI);
+  if(move==='us'){iceUpReference(ctx,x,y,p);return;}
+  if(move==='ss'){
+    const t=easeOut(q), ang=-1+t*2; const ex=x+22+Math.cos(ang)*58, ey=y-45+Math.sin(ang)*58; glowStroke(ctx,[[x+8,y-30],[x+24,y-44],[ex,ey]],c,12,a); iceShard(ctx,ex,ey,13,32,ang,c,a); return;
+  }
+  if(move==='ds'){
+    glowArc(ctx,x,y-10,55,15,0,REF_TAU,c,5,a); for(let i=0;i<7;i++){const ang=Math.PI*1.05+i/6*Math.PI*.9; iceShard(ctx,x+Math.cos(ang)*52*q,y-15+Math.sin(ang)*28*q,8,22,ang,c,a);} return;
+  }
+  if(move==='sh'){
+    const t=easeOut(q), ang=-1+t*2; glowStroke(ctx,[[x+12,y-45],[x+28+Math.cos(ang)*50,y-45+Math.sin(ang)*50]],c,16,a); iceShard(ctx,x+28+Math.cos(ang)*60,y-45+Math.sin(ang)*60,16,42,ang,c,a); glowArc(ctx,x+28,y-45,62,52,-1,ang,c,4,a*.7); return;
+  }
+  if(move==='uh'){
+    for(let i=0;i<3;i++){const ang=-Math.PI/2+i*REF_TAU/3+q*.8; const sx=x+Math.cos(ang)*72*q, sy=y-76+Math.sin(ang)*72*q; iceShard(ctx,sx,sy,13,34,ang,c,a);} return;
+  }
+  if(move==='dh'){
+    const bx=x+25+q*110; ctx.save();ctx.globalAlpha=a;ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=18;ctx.beginPath();ctx.roundRect(bx-34,y-25,68,38,8);ctx.fill();ctx.restore(); for(let i=0;i<5;i++)iceShard(ctx,bx-30+i*15,y-28-(i%2)*10,6,15,i*.8,c,a*.7); return;
+  }
+}
+
 
 function fireSuper(ctx,x,y,p){
   const prev=FIRE_PERF_MODE; FIRE_PERF_MODE=true;
