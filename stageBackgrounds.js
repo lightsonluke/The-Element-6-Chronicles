@@ -1,4 +1,7 @@
 // Stage backgrounds — fully procedural, drawn with canvas primitives.
+// Shared angle constant used by the animated stage dressing layer.
+const TAU = Math.PI * 2;
+
 // V2: significantly denser detail pass across every motif — more layers,
 // more texture strokes, richer atmosphere — while staying 100% code-drawn.
 // No text, no character/person silhouettes anywhere in the scenery.
