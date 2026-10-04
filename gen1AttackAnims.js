@@ -4,13 +4,15 @@
 // the same move instead of two different animations.
 
 const TAU = Math.PI * 2;
+let FIRE_PERF_MODE = false;
+let WATER_PERF_MODE = false;
 const clamp01 = v => Math.max(0, Math.min(1, v));
 const ease = v => { v = clamp01(v); return v * v * (3 - 2 * v); };
 const easeOut = v => 1 - Math.pow(1 - clamp01(v), 3);
 const lerp = (a, b, t) => a + (b - a) * t;
 const alpha = p => Math.sin(clamp01(p) * Math.PI);
 
-function glow(ctx, color, blur = 18) { ctx.shadowColor = color; ctx.shadowBlur = blur; }
+function glow(ctx, color, blur = 18) { if (FIRE_PERF_MODE || WATER_PERF_MODE) { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; } else { ctx.shadowColor = color; ctx.shadowBlur = blur; } }
 function strokePath(ctx, pts, color, width, a = 1, dash = null) {
   ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   if (dash) ctx.setLineDash(dash);
@@ -290,42 +292,304 @@ function iceShard(ctx,x,y,w,h,rot,c,a=1){
 }
 
 // ── Exact reference-style UP SIGNATURES ─────────────────────────────────────
-function fireUpReference(ctx,x,y,p){
-  const c='#FF5A16', hot='#FF9A22', white='#FFF2B0';
-  if(p<0){
-    const q=holdCharge(p);
-    // User-specified hold stance: frame 2 silhouette, with a growing flame hook.
-    const lift=.05*q, r=15+22*q;
-    glowStroke(ctx,[[x+8,y-30],[x+20,y-48],[x+25,y-70-lift*8]],c,8+q*2,.8);
-    glowArc(ctx,x+28,y-76,10+r*.45,8+r*.3,-2.25,-.45,c,5+q*5,.85);
-    flameShape(ctx,x+30,y-78,r*.42,hot,.9,.2);
-    spark(ctx,x+30,y-78,3+q*2,white,.7);
-    return;
+
+function fireRefFrame(p, count){
+  return Math.min(count, Math.floor(attackP(p) * count) + 1);
+}
+function fireRefPhase(p, count){
+  const z=attackP(p)*count;
+  const frame=Math.min(count, Math.floor(z)+1);
+  const u=Math.max(0,Math.min(1,z-Math.floor(z)));
+  return {frame,u,z};
+}
+function smoothFire(u){ return u*u*(3-2*u); }
+function fireRing(ctx,cx,cy,rx,ry,c,a=1,rot=0,seed=0){
+  // Irregular, broken fire wheel/ring: deliberately NOT a smooth ellipse.
+  const n=18, pts=[];
+  for(let i=0;i<=n;i++){
+    const t=i/n*REF_TAU;
+    const wob=1 + .09*Math.sin(i*2.71+seed) + .045*Math.sin(i*5.17-seed*.6);
+    pts.push([cx+Math.cos(t)*rx*wob, cy+Math.sin(t)*ry*wob]);
   }
-  const f=refFrame(p);
-  // Frames 1-2: idle -> upward swing. Frame 3 forms the hook.
-  if(f<2.0){ return; }
-  const swing=Math.min(1,(f-2)/1.25);
-  const armX=x+18+swing*8, armY=y-42-swing*34;
-  glowStroke(ctx,[[x+10,y-24],[x+18,y-38],[armX,armY]],c,8,.9);
-  if(f>=2.6){
-    const hookT=Math.min(1,(f-2.6)/1.7), ang=-2.45+hookT*2.0;
-    const hx=armX+Math.cos(ang)*38, hy=armY+Math.sin(ang)*38;
-    glowArc(ctx,armX,armY,42+hookT*8,30+hookT*7,-2.55,ang,c,9,.95,-.05);
-    flameShape(ctx,hx,hy,11,hot,1,ang+.4); spark(ctx,hx,hy,3,white,.9);
-    for(let i=0;i<7;i++){const a=ang-.8+i*.22; spark(ctx,armX+Math.cos(a)*48,armY+Math.sin(a)*36,1.5,c,.6);}
-    if(f>=4 && f<6.5){
-      const launch=(f-4)/2.5;
-      glowStroke(ctx,[[hx,hy],[hx+18*launch,hy-22*launch]],hot,3,.55);
-    }
-  }
-  if(f>=7){
-    // Reference hold visual can remain readable after the hit; actual game hold is pre-attack.
-    const a=Math.max(.2,1-(f-7)/5);
-    glowArc(ctx,armX,armY,48,35,-2.55,.25,c,8,a,-.05);
-    flameShape(ctx,armX+32,armY-28,12,hot,a,.2);
+  glowStroke(ctx,pts,c,4.5,a);
+  for(let i=0;i<10;i++){
+    const t=(i+.18*Math.sin(i*3.1+seed))/10*REF_TAU;
+    const rr=1+.08*Math.sin(i*2.3+seed);
+    const fx=cx+Math.cos(t)*rx*rr, fy=cy+Math.sin(t)*ry*rr;
+    flameShape(ctx,fx,fy,5.5+.8*Math.sin(i+seed),i%2?'#FF9A22':'#FF6A18',a*.9,t+Math.PI/2);
   }
 }
+function fireBlob(ctx,cx,cy,r,c='#FF5A16',a=1,seed=0){
+  // Lopsided fireball with flame lobes, matching the reference rather than a circle.
+  const n=14, pts=[];
+  for(let i=0;i<n;i++){
+    const t=i/n*REF_TAU;
+    const wob=1+.14*Math.sin(i*2.13+seed)+.07*Math.sin(i*4.7-seed);
+    pts.push([cx+Math.cos(t)*r*wob,cy+Math.sin(t)*r*.82*wob]);
+  }
+  ctx.save();ctx.globalAlpha=a;ctx.fillStyle=c;if(!FIRE_PERF_MODE){ctx.shadowColor=c;ctx.shadowBlur=24;}else ctx.shadowBlur=0;ctx.beginPath();
+  pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.fill();ctx.restore();
+  const inner=Math.max(4,r*.45);
+  ctx.save();ctx.globalAlpha=a*.72;ctx.fillStyle='#FFF0A0';if(!FIRE_PERF_MODE){ctx.shadowColor='#FFB12B';ctx.shadowBlur=18;}else ctx.shadowBlur=0;ctx.beginPath();ctx.arc(cx-r*.08,cy-r*.08,inner,0,REF_TAU);ctx.fill();ctx.restore();
+  for(let i=0;i<7;i++){
+    const t=-2.7+i*.22;
+    flameShape(ctx,cx+Math.cos(t)*r*.8,cy+Math.sin(t)*r*.62,r*(.18+.03*(i%3)), '#FF9A22',a*.8,t+Math.PI/2);
+  }
+}
+function fireRay(ctx,x,y,angle,len,a=1,hot='#FF9A22'){
+  const ux=Math.cos(angle), uy=Math.sin(angle), px=-uy, py=ux;
+  const s=.12*len, m=.52*len;
+  const pts=[[x+ux*4,y+uy*4],[x+ux*s+px*3,y+uy*s+py*3],[x+ux*m-px*2,y+uy*m-py*2],[x+ux*len,y+uy*len]];
+  glowStroke(ctx,pts,hot,3.4,a);
+  flameShape(ctx,x+ux*len,y+uy*len,5.5,hot,a*.9,angle+Math.PI/2);
+  if(len>35) glowStroke(ctx,[[x+ux*18+px*2,y+uy*18+py*2],[x+ux*(len*.68)-px*1,y+uy*(len*.68)-py*1]],'#FF5A16',1.7,a*.75);
+}
+function fireLineBurst(ctx,x,y,r,alpha=1,phase=0){
+  // Short jagged flame rays radiating from the impact point.
+  const count=10;
+  for(let i=0;i<count;i++){
+    const a=i/count*REF_TAU + phase*.08;
+    const len=r*(.68+.22*Math.sin(i*2.1+phase));
+    fireRay(ctx,x,y,a,len,alpha*(.86+.12*Math.sin(i+phase)));
+  }
+  fireBlob(ctx,x,y,Math.max(6,r*.18),'#FF6A18',alpha*.9,phase);
+}
+function handPosePoint(x,y,facing,move){
+  // Effects are authored in forward-local coordinates. The renderer mirrors them.
+  if(move==='us') return [28,-91];
+  if(move==='sh') return [48,-45];
+  return [38,-42];
+}
+
+function fireUpReference(ctx,x,y,p){
+  const c='#FF5A16', hot='#FF9A22';
+  if(p<0){
+    const q=holdCharge(p), [hx,hy]=handPosePoint(x,y,1,'us');
+    fireRing(ctx,hx,hy,18+q*5,11+q*3,hot,.58+q*.3,0,q*2);
+    return;
+  }
+  const {frame,u}=fireRefPhase(p,4), v=smoothFire(u);
+  const [hx,hy]=handPosePoint(x,y,1,'us');
+  if(frame===1){ return; }
+  if(frame===2){
+    const pulse=1+.06*Math.sin(u*REF_TAU);
+    fireRing(ctx,hx,hy,20*pulse,13*pulse,hot,.98,0,u*2);
+    return;
+  }
+  if(frame===3){
+    // It leaves the hand quickly, but begins at the hand and remains close for the start of the launch.
+    const launch=v;
+    fireRing(ctx,hx,hy,19-4*launch,12-3*launch,c,.85*(1-launch),0,u);
+    const fx=hx+7+32*launch, fy=hy-4-35*launch;
+    fireBlob(ctx,fx,fy,11+3*(1-launch),hot,.95,u*3);
+    for(let i=0;i<5;i++) fireRay(ctx,fx,fy,-2.55+i*.16,10+i*3,.55);
+    return;
+  }
+  const launch=smoothFire(u);
+  const fx=hx+39+34*launch, fy=hy-40-26*launch;
+  fireBlob(ctx,fx,fy,12*(1-launch)+5,hot,.9*(1-.45*launch),u*4);
+  for(let i=0;i<8;i++){
+    const a=-2.55+i*.18;
+    fireRay(ctx,fx,fy,a,10+i*2,.55*(1-launch));
+  }
+}
+
+function fireSideReference(ctx,x,y,p){
+  const c='#FF5A16', hot='#FF9A22';
+  if(p<0){
+    const q=holdCharge(p), [hx,hy]=handPosePoint(x,y,1,'ss');
+    // Hold stays attached to the lead hand; facing is handled by drawGen1Attack.
+    fireRing(ctx,hx,hy,12+q*5,9+q*4,hot,.58+q*.3,-.3,q);
+    return;
+  }
+  const z=attackP(p)*4;
+  const i=Math.min(3,Math.floor(z));
+  const u=smoothFire(z-Math.floor(z));
+  const lerp=(a,b)=>a+(b-a)*u;
+  const hx=x+47, hy=y-45;
+
+  // Continuous side-signature motion: hand/fire travel through the four
+  // reference poses instead of snapping at the frame boundaries.
+  if(i===0){
+    const k=lerp(0,1);
+    fireRing(ctx,hx,hy,12+2*k,8+2*k,hot,.78+.17*k,-.28+k*.03,z*.4);
+  } else if(i===1){
+    const k=lerp(0,1);
+    const cx=hx+7*k, cy=hy-2*k;
+    const r=14+6*k;
+    fireRing(ctx,cx,cy,r,r*.66,hot,.95,-.24,z*.35);
+    fireBlob(ctx,cx,cy,r*.82,hot,.72,z*.8);
+  } else if(i===2){
+    // The flame remains connected to the hand at the beginning of launch,
+    // then separates smoothly as the projectile gains speed.
+    const k=lerp(0,1);
+    const separation=4+18*k;
+    const cx=hx+separation, cy=hy-2*k;
+    const r=19+4*k;
+    fireRing(ctx,cx,cy,r,r*.62,hot,.98,-.16,z*.5);
+    fireBlob(ctx,cx,cy,r*.86,hot,.9,z);
+    for(let n=0;n<5;n++) fireRay(ctx,hx+separation*.45,cy,-.20+n*.09,8+n*2,.32);
+  } else {
+    const k=lerp(0,1);
+    const separation=22+48*k;
+    const cx=hx+separation, cy=hy-2-2*k;
+    const r=18*(1-k)+6;
+    fireBlob(ctx,cx,cy,r,hot,.92*(1-.35*k),z*1.1);
+    for(let n=0;n<7;n++) fireRay(ctx,cx,cy,-.24+n*.08,10+n*2,.45*(1-k));
+  }
+}
+function fireDownReference(ctx,x,y,p){
+  const hot='#FF9A22',dark='#160604';
+  if(p<0){
+    const q=holdCharge(p),ox=x+24,oy=y-44+q*35;
+    fireBlob(ctx,ox,oy,6+q*3,dark,.7+q*.15,q);
+    return;
+  }
+  const {frame,u}=fireRefPhase(p,4),v=smoothFire(u),ox=x+24;
+  if(frame===1){ fireBlob(ctx,ox,y-44,7,'#180504',.9,u); return; }
+  if(frame===2){
+    const oy=y-44+40*v;
+    fireBlob(ctx,ox,oy,8+3*v,'#180504',1,u);
+    return;
+  }
+  if(frame===3){
+    fireLineBurst(ctx,ox,y-3,18+46*v,1,u*5);
+    return;
+  }
+  fireLineBurst(ctx,ox,y-3,60+12*v,.72*(1-.3*v),u*6);
+}
+
+function fireWheelFast(ctx,cx,cy,rx,ry,c,a=1,rot=0,seed=0){
+  // Same irregular wheel silhouette, but render the whole glow once and use
+  // lightweight flame tips instead of ten independent shadow-blurred shapes.
+  const n=18, pts=[];
+  for(let i=0;i<=n;i++){
+    const t=i/n*REF_TAU;
+    const wob=1 + .09*Math.sin(i*2.71+seed) + .045*Math.sin(i*5.17-seed*.6);
+    pts.push([cx+Math.cos(t)*rx*wob, cy+Math.sin(t)*ry*wob]);
+  }
+  ctx.save();
+  ctx.globalAlpha=a;
+  ctx.strokeStyle=c; ctx.lineWidth=4.5; ctx.lineCap='round'; ctx.lineJoin='round';
+  if(!FIRE_PERF_MODE){ctx.shadowColor=c;ctx.shadowBlur=9;}else ctx.shadowBlur=0;
+  ctx.beginPath(); pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.stroke();
+  ctx.shadowBlur=0;
+  for(let i=0;i<8;i++){
+    const t=(i+.18*Math.sin(i*3.1+seed))/8*REF_TAU;
+    const rr=1+.08*Math.sin(i*2.3+seed);
+    const fx=cx+Math.cos(t)*rx*rr, fy=cy+Math.sin(t)*ry*rr;
+    const r=5.5+.7*Math.sin(i+seed);
+    ctx.save(); ctx.translate(fx,fy); ctx.rotate(t+Math.PI/2); ctx.globalAlpha=a*.82; ctx.fillStyle=i%2?'#FF9A22':'#FF6A18';
+    ctx.beginPath(); ctx.moveTo(0,-r); ctx.quadraticCurveTo(r*.75,-r*.15,r*.2,r); ctx.quadraticCurveTo(-r*.75,r*.5,0,-r); ctx.fill(); ctx.restore();
+  }
+  ctx.restore();
+}
+
+function fireUpHeavyReference(ctx,x,y,p){
+  const c='#FF5A16',hot='#FF9A22';
+  if(p<0){ const q=holdCharge(p); fireWheelFast(ctx,x,y-94,30+q*6,13+q*3,hot,.5+q*.3,0,q); return; }
+  const {frame,u}=fireRefPhase(p,4),v=smoothFire(u),cy=y-96;
+  if(frame===1){ flameShape(ctx,x-5,y-104,7,hot,.5,-Math.PI/2); flameShape(ctx,x+5,y-104,7,hot,.5,-Math.PI/2); return; }
+  if(frame===2){ fireWheelFast(ctx,x,cy,58,25,c,.98,0,u*2); return; }
+  if(frame===3){ fireWheelFast(ctx,x,cy,58+3*v,25+2*v,c,.98,0,u*3); return; }
+  for(let i=0;i<9;i++){
+    const a=i/9*REF_TAU, rr=58+18*v;
+    const px=x+Math.cos(a)*rr,py=cy+Math.sin(a)*rr*.55;
+    const r=4.5+2*v;
+    ctx.save(); ctx.translate(px,py); ctx.rotate(a+Math.PI/2); ctx.globalAlpha=.75*(1-.2*v); ctx.fillStyle=hot;
+    ctx.beginPath(); ctx.moveTo(0,-r); ctx.quadraticCurveTo(r*.75,-r*.15,r*.2,r); ctx.quadraticCurveTo(-r*.75,r*.5,0,-r); ctx.fill(); ctx.restore();
+  }
+}
+
+function fireRayLite(ctx,x,y,angle,len,a=1,hot='#FF9A22'){
+  const ux=Math.cos(angle), uy=Math.sin(angle);
+  ctx.save();
+  ctx.globalAlpha=a;
+  ctx.strokeStyle=hot;
+  ctx.lineWidth=2.8;
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+  ctx.beginPath();
+  ctx.moveTo(x+ux*3,y+uy*3);
+  ctx.lineTo(x+ux*len*.24-uy*2,y+uy*len*.24+ux*2);
+  ctx.lineTo(x+ux*len*.58+uy*1,y+uy*len*.58-ux*1);
+  ctx.lineTo(x+ux*len,y+uy*len);
+  ctx.stroke();
+  ctx.restore();
+}
+function fireLineBurstLite(ctx,x,y,r,a=1,phase=0){
+  const count=10;
+  for(let i=0;i<count;i++){
+    const ang=i/count*REF_TAU+phase*.08;
+    const len=r*(.68+.22*Math.sin(i*2.1+phase));
+    fireRayLite(ctx,x,y,ang,len,a*(.86+.12*Math.sin(i+phase)));
+  }
+}
+
+function fireDownHeavyReference(ctx,x,y,p){
+  const hot='#FF9A22', core='#FF5A16';
+  if(p<0){
+    const q=holdCharge(p);
+    if(q>.45) fireLineBurstLite(ctx,x+24,y,16*q,.18+q*.16,q*4);
+    return;
+  }
+  const {frame,u}=fireRefPhase(p,6),v=smoothFire(u),ox=x+24,oy=y-1;
+  if(frame===1) return;
+  if(frame===2){
+    fireRayLite(ctx,ox,oy,Math.PI*.98,16,.55,hot);
+    fireRayLite(ctx,ox,oy,.02,16,.55,hot);
+    return;
+  }
+  if(frame===3){ fireLineBurstLite(ctx,ox,oy,28+34*v,1,u*5); return; }
+  if(frame===4){ fireLineBurstLite(ctx,ox,oy,62+10*v,1,u*5); return; }
+  if(frame===5){
+    fireLineBurstLite(ctx,ox,oy,72,.86,u*7);
+    // Only a few secondary embers; avoid dozens of expensive shadow/blur calls.
+    for(let i=0;i<6;i++){
+      const a=i/6*REF_TAU;
+      flameShape(ctx,ox+Math.cos(a)*42,oy+Math.sin(a)*26,5.5,hot,.62,i);
+    }
+    return;
+  }
+  fireLineBurstLite(ctx,ox,oy,76,.30*(1-v),u*8);
+  flameShape(ctx,ox,oy,7,core,.35*(1-v),0);
+}
+function fireSideHeavyReference(ctx,x,y,p){
+  const hot='#FF9A22';
+  if(p<0){ const q=holdCharge(p),hx=x+48,hy=y-45; fireBlob(ctx,hx,hy,9+q*12,hot,.68+q*.25,q); fireRing(ctx,hx,hy,10+q*10,7+q*6,hot,.65+q*.2,-.2,q); return; }
+  const {frame,u}=fireRefPhase(p,4),v=smoothFire(u),hx=x+48,hy=y-45;
+  if(frame===1){
+    // Hand extends; the fire remains glued to the hand.
+    fireBlob(ctx,hx,hy,7+3*v,hot,.8,u); fireRing(ctx,hx,hy,9+2*v,7+2*v,hot,.7,-.15,u); return;
+  }
+  if(frame===2){
+    // Fireball grows around the hand before it ever becomes a projectile.
+    const r=10+12*v; fireBlob(ctx,hx,hy,r,hot,.98,u*2); fireRing(ctx,hx,hy,r+4,r*.62,hot,.85,-.15,u*2); return;
+  }
+  if(frame===3){
+    // Launch starts from the hand; it travels only a little at first, then accelerates.
+    const d=10+55*v; const cx=hx+d,cy=hy-2*v; const r=22+4*v;
+    fireBlob(ctx,cx,cy,r,hot,1,u*3); fireRing(ctx,cx,cy,r+4,r*.62,hot,.85,-.1,u*3);
+    for(let i=0;i<6;i++) fireRay(ctx,cx-r*.75,cy,-.18+i*.07,16+i*3,.4);
+    return;
+  }
+  const d=68+70*v,cx=hx+d,cy=hy-4*v,r=12*(1-v)+5;
+  fireBlob(ctx,cx,cy,r,hot,.9*(1-.45*v),u*4);
+  for(let i=0;i<8;i++) fireRay(ctx,cx,cy,-.2+i*.06,10+i*2,.5*(1-v));
+}
+
+function fireAttack(ctx,x,y,p,move){
+  const prev=FIRE_PERF_MODE; FIRE_PERF_MODE=true;
+  try {
+  if(move==='us'){fireUpReference(ctx,x,y,p);return;}
+  if(move==='ss'){fireSideReference(ctx,x,y,p);return;}
+  if(move==='ds'){fireDownReference(ctx,x,y,p);return;}
+  if(move==='uh'||move==='upHeavy'){fireUpHeavyReference(ctx,x,y,p);return;}
+  if(move==='dh'||move==='downHeavy'){fireDownHeavyReference(ctx,x,y,p);return;}
+  if(move==='sh'||move==='heavy'){fireSideHeavyReference(ctx,x,y,p);return;}
+  } finally { FIRE_PERF_MODE=prev; }
+}
+
 
 function grassUpReference(ctx,x,y,p){
   const c='#7CFF28', pale='#D9FF7A';
@@ -383,27 +647,6 @@ function iceUpReference(ctx,x,y,p){
 }
 
 // ── Detailed non-up signatures/heavies ─────────────────────────────────────
-function fireAttack(ctx,x,y,p,move){
-  const c='#FF5A16', hot='#FFB12B', q=attackP(p), a=.25+.75*Math.sin(q*Math.PI);
-  if(move==='us'){fireUpReference(ctx,x,y,p);return;}
-  if(move==='ss'){
-    const t=Math.min(1,q/.72), ex=x+18+t*90, ey=y-43-Math.sin(t*Math.PI)*18;
-    glowStroke(ctx,[[x+8,y-25],[x+25,y-43],[ex,ey]],c,8,a); flameShape(ctx,ex,ey,18,hot,a,.15); return;
-  }
-  if(move==='ds'){
-    const spread=18+q*38; for(let i=-2;i<=2;i++){const xx=x+i*spread*.42; flameShape(ctx,xx,y-15-Math.abs(i)*3,14+q*5,c,a,.1*i); glowStroke(ctx,[[xx,y-2],[xx+i*5,y-28]],hot,3,a*.65);} return;
-  }
-  if(move==='sh'){
-    const t=easeOut(q), ang=-.9+t*1.8, ex=x+26+Math.cos(ang)*58, ey=y-46+Math.sin(ang)*58;
-    glowStroke(ctx,[[x+8,y-34],[x+28,y-48],[ex,ey]],c,13,a); flameShape(ctx,ex,ey,25,hot,a,ang); glowArc(ctx,x+35,y-46,58,44,-.9,ang,c,6,a*.7,-.15); return;
-  }
-  if(move==='uh'){
-    const t=easeOut(q), r=58; glowArc(ctx,x,y-92,r,r*.62,-Math.PI*.15,Math.PI*1.85,c,10,a); for(let i=0;i<9;i++){const ang=i/9*REF_TAU+t*REF_TAU; flameShape(ctx,x+Math.cos(ang)*r,y-92+Math.sin(ang)*r*.62,10,hot,a*.8,ang);} return;
-  }
-  if(move==='dh'){
-    for(let i=0;i<6;i++){const xx=x+(i-2.5)*25*q; glowStroke(ctx,[[x,y-5],[xx,y-38-Math.abs(i-2.5)*8]],c,5,a*.8); flameShape(ctx,xx,y-40-Math.abs(i-2.5)*7,12,hot,a,.2*(i-2.5));} return;
-  }
-}
 // ─────────────────────────────────────────────────────────────────────────────
 // WATER HERO — true frame-by-frame native water animation.
 // The supplied sheet is treated as a motion/design blueprint. Nothing from the
@@ -485,8 +728,18 @@ function waterSideReference(ctx,x,y,p){const q=attackP(p),f=wframe(p,4),phase=q*
 function waterUpHeavyReference(ctx,x,y,p){const q=attackP(p),f=wframe(p,4),phase=q*8;if(p<0){const h=holdCharge(p);wspin(ctx,x,y,.25*h,.6+.2*h,phase);return;}if(f<=1.5){const t=wease((f-1)*2);wspin(ctx,x,y,.15+.25*t,.9,phase);}else if(f<=2.5){wspin(ctx,x,y,wease(f-1.5),1,phase);}else{const t=wease((f-2.5)/1.5);wspin(ctx,x,y,1,1,phase);const launch=wcurve([x+8,y-42],[x+20,y-64],[x+48,y-92],[x+70,y-126],12);wpath(ctx,launch,.95,9,.28);wspray(ctx,x+70,y-126,-1.5,1.0,8,.65,phase);}}
 function waterDownHeavyReference(ctx,x,y,p){const q=attackP(p),f=wframe(p,4),phase=q*8;if(p<0){const h=holdCharge(p);worb(ctx,x+52,y-52,20,.7+.2*h,phase);return;}if(f<=1.5){worb(ctx,x+52,y-52,22,1,phase);}else if(f<=2.5){const t=wease(f-1.5);worb(ctx,x+56,y-52+44*t,22,1,phase);wpath(ctx,[[x+28,y-30],[x+56,y-45+40*t]],.75,6,.25);}else{const t=wease((f-2.5)/1.5);worb(ctx,x+56,y-8,20*(1-.25*t),1-t*.2,phase);wburst(ctx,x+56,y-8,1-t*.15,phase);wpath(ctx,[[x+56,y-8],[x+56,y-70]],.9,9,.25);}}
 function waterSideHeavyReference(ctx,x,y,p){const q=attackP(p),f=wframe(p,6),phase=q*8;if(p<0){const h=holdCharge(p);wcrescent(ctx,x,y,.18*h,.55+.25*h,phase);return;}if(f<=1.5){wpath(ctx,[[x+14,y-38],[x+28,y-47]],.7,6,.3);}else if(f<=5.5){wcrescent(ctx,x,y,wease((f-1.5)/4),1,phase);}else{const t=wease((f-5.5)/.5);wcrescent(ctx,x,y,1,1-t,phase);wspray(ctx,x+92,y-62,.25,1.5,10,(1-t)*.8,phase);}}
-function waterAttack(ctx,x,y,p,move){if(move==='us')return waterUpReference(ctx,x,y,p);if(move==='ds')return waterDownReference(ctx,x,y,p);if(move==='ss')return waterSideReference(ctx,x,y,p);if(move==='uh')return waterUpHeavyReference(ctx,x,y,p);if(move==='dh')return waterDownHeavyReference(ctx,x,y,p);if(move==='sh'||move==='heavy')return waterSideHeavyReference(ctx,x,y,p);}
-function waterSuper(ctx,x,y,p){const q=attackP(p),f=wframe(p,7),phase=q*10,cy=y-62;if(p<0){const h=holdCharge(p);worb(ctx,x,cy,24+10*h,.65+.2*h,phase);return;}if(f<=2){const t=wease(f-1);worb(ctx,x,cy,26+18*t,1,phase);wpath(ctx,[[x-24,y-26],[x-8,cy]],.7,6,.3);wpath(ctx,[[x+24,y-26],[x+8,cy]],.7,6,.3);}else if(f<=3){worb(ctx,x,cy,46+20*wease(f-2),1,phase);for(let i=0;i<5;i++){const a=i/5*TAU+phase;wdrop(ctx,x+Math.cos(a)*55,cy+Math.sin(a)*40,1.3,.55,a);}}else if(f<=4.1){const t=wease((f-3)/1.1);worb(ctx,x,cy,66+30*t,1,phase);wspray(ctx,x,cy,-Math.PI/2,TAU,10,.5,phase);}else if(f<=5.1){const t=wease(f-4.1),r=96-52*t;wring(ctx,x,cy,r,r*.7,1,.1,phase,.1);wburst(ctx,x,cy,.7,phase);}else if(f<=6.1){const t=wease(f-5.1),r=44+84*t;wring(ctx,x,cy,r,r*.68,1,.1,phase,.12);wpath(ctx,[[x,cy],[x+18*t,cy-58*t]],.85,6,.25);}else{const t=wease(f-6.1),r=128-10*t;wring(ctx,x,cy,r,r*.68,1,.12,phase,.1);wspray(ctx,x+42,cy-54,-1.5,1.1,8,.65*(1-t),phase);}}
+function waterAttack(ctx,x,y,p,move){
+  const prev=WATER_PERF_MODE; WATER_PERF_MODE=true;
+  try {
+    if(move==='us')return waterUpReference(ctx,x,y,p);
+    if(move==='ds')return waterDownReference(ctx,x,y,p);
+    if(move==='ss')return waterSideReference(ctx,x,y,p);
+    if(move==='uh'||move==='upHeavy')return waterUpHeavyReference(ctx,x,y,p);
+    if(move==='dh'||move==='downHeavy')return waterDownHeavyReference(ctx,x,y,p);
+    if(move==='sh'||move==='heavy')return waterSideHeavyReference(ctx,x,y,p);
+  } finally { WATER_PERF_MODE=prev; }
+}
+function waterSuper(ctx,x,y,p){ const prev=WATER_PERF_MODE; WATER_PERF_MODE=true; try {const q=attackP(p),f=wframe(p,7),phase=q*10,cy=y-62;if(p<0){const h=holdCharge(p);worb(ctx,x,cy,24+10*h,.65+.2*h,phase);return;}if(f<=2){const t=wease(f-1);worb(ctx,x,cy,26+18*t,1,phase);wpath(ctx,[[x-24,y-26],[x-8,cy]],.7,6,.3);wpath(ctx,[[x+24,y-26],[x+8,cy]],.7,6,.3);}else if(f<=3){worb(ctx,x,cy,46+20*wease(f-2),1,phase);for(let i=0;i<5;i++){const a=i/5*TAU+phase;wdrop(ctx,x+Math.cos(a)*55,cy+Math.sin(a)*40,1.3,.55,a);}}else if(f<=4.1){const t=wease((f-3)/1.1);worb(ctx,x,cy,66+30*t,1,phase);wspray(ctx,x,cy,-Math.PI/2,TAU,10,.5,phase);}else if(f<=5.1){const t=wease(f-4.1),r=96-52*t;wring(ctx,x,cy,r,r*.7,1,.1,phase,.1);wburst(ctx,x,cy,.7,phase);}else if(f<=6.1){const t=wease(f-5.1),r=44+84*t;wring(ctx,x,cy,r,r*.68,1,.1,phase,.12);wpath(ctx,[[x,cy],[x+18*t,cy-58*t]],.85,6,.25);}else{const t=wease(f-6.1),r=128-10*t;wring(ctx,x,cy,r,r*.68,1,.12,phase,.1);wspray(ctx,x+42,cy-54,-1.5,1.1,8,.65*(1-t),phase);}} finally { WATER_PERF_MODE=prev; }}
 
 // Per-attack body pose. The renderer uses these offsets to animate the actual
 // arms/legs/lean; the canvas mirror in drawStickman handles facing automatically.
@@ -497,6 +750,20 @@ export function getGen1AttackPose(move,p,facing=1,charId='g1_water'){
   let punchArmL=0,punchArmR=0,legSwing=0,lean=facing*.05,bob=0;
   const leadPunch=(v)=>{if(lead==='R')punchArmR=v;else punchArmL=-v;};
   const offArm=(v)=>{if(lead==='R')punchArmL=v;else punchArmR=-v;};
+  if(charId==='g1_fire'){
+    const count = move==='dh' ? 6 : move==='super' ? 7 : 4;
+    const z=q*count, i=Math.min(count-1,Math.floor(z)), u=z-Math.floor(z), s=u*u*(3-2*u);
+    const beat=(arr)=>arr[i]+(arr[Math.min(i+1,count-1)]-arr[i])*s;
+    const lead=(angle)=>{if(facing>=0) punchArmR=angle; else punchArmL=-angle;};
+    if(move==='us'){ lead(beat([0,-2.05,-2.25,-2.15])); lean=facing*beat([0,.02,.03,.08]); }
+    else if(move==='ss'){ lead(beat([0,-1.05,-1.72,-1.15])); lean=facing*beat([0,.08,.20,.16]); legSwing=beat([0,.04,.22,.12]); }
+    else if(move==='ds'){ lean=facing*beat([0,.10,.03,-.10]); bob=beat([0,5,8,2]); lead(beat([0,.30,.20,.05])); }
+    else if(move==='uh'){ punchArmR=beat([-1.0,-2.55,-2.70,-2.20]); punchArmL=beat([-1.0,-2.85,-2.95,-2.45]); lean=facing*beat([0,0,.02,.05]); }
+    else if(move==='dh'){ lean=facing*beat([0,.18,.06,-.02,-.04,-.02]); bob=beat([0,9,6,4,2,0]); legSwing=beat([0,.04,.12,.08,.03,0]); lead(beat([0,.62,.55,.35,.18,.05])); }
+    else if(move==='sh'){ lead(beat([-1.15,-1.45,-1.75,-.55])); lean=facing*beat([.02,.08,.18,.10]); legSwing=beat([0,.05,.18,.08]); }
+    else if(move==='super'){ if(i===0){punchArmR=-.85;punchArmL=-.65;lean=facing*.03;} else if(i===1||i===2){punchArmR=-1.15;punchArmL=-.95;lean=facing*.06;} else if(i===3||i===4){punchArmR=-1.7;punchArmL=-1.55;lean=facing*.22;legSwing=.2;} else if(i===5){punchArmR=.2;punchArmL=.1;lean=-facing*.12;} else {punchArmR=-.1;punchArmL=-.05;lean=-facing*.05;} }
+    return {punchArmL,punchArmR,legSwing,lean,bob};
+  }
   if(move==='us'){leadPunch(-1.45*t);offArm(.35*t);lean=facing*(.05+.13*t);legSwing=.12*t;}
   else if(move==='ds'){punchArmL=.72*t;punchArmR=-.72*t;lean=-facing*.14*t;legSwing=.18*t;bob=5*t;}
   else if(move==='ss'){leadPunch(-1.7*t);offArm(.18*t);lean=facing*(.05+.22*t);legSwing=.12*t;}
@@ -547,7 +814,60 @@ function iceAttack(ctx,x,y,p,move){
 }
 
 // Improved supers. Fire keeps its existing design; Water uses the single reference-native implementation above.
-function fireSuper(ctx,x,y,p){const c='#FF5A16',hot='#FFB12B',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const cx=x+90,cy=y-60; if(q<.45){for(let i=0;i<3;i++)flameShape(ctx,x+(i-1)*22,y-60,22+q*20,hot,a*.7,(i-1)*.35);core(ctx,x+18,y-58,16,c,a);} if(q>.25){const r=20+easeOut((q-.25)/.75)*92; spark(ctx,cx,cy,r*.72,c,a*.65); spark(ctx,cx,cy,r*.32,hot,a); glowArc(ctx,cx,cy,r,r,0,REF_TAU,c,10,a); for(let i=0;i<14;i++){const ang=i/14*REF_TAU; flameShape(ctx,cx+Math.cos(ang)*r,cy+Math.sin(ang)*r,9,hot,a*.75,ang);}}}
+function fireFlameOrbitLegacy(ctx,cx,cy,rx,ry,start,end,color,alpha=1,count=7){
+  glowArc(ctx,cx,cy,rx,ry,start,end,color,5,alpha);
+  for(let i=0;i<count;i++){
+    const t=count===1 ? 0 : i/(count-1);
+    const a=start+(end-start)*t;
+    flameShape(ctx,cx+Math.cos(a)*rx,cy+Math.sin(a)*ry,5.5,color,alpha*.9,a+Math.PI/2);
+  }
+}
+
+function fireSuper(ctx,x,y,p){
+  const prev=FIRE_PERF_MODE; FIRE_PERF_MODE=true;
+  try {
+  // Smooth native interpolation through the same seven reference beats.
+  // No hard frame-to-frame snapping: position, size and opacity all ease.
+  const c='#FF5A16', hot='#FFB12B', white='#FFF3B0';
+  const q=clamp01(p)*6, seg=Math.min(5,Math.floor(q)), t=ease(q-seg);
+  const lerp=(a,b,k)=>a+(b-a)*k;
+  const stages=[
+    {cx:18,cy:-56,r:7,a:.55},
+    {cx:26,cy:-60,r:17,a:.95},
+    {cx:26,cy:-60,r:24,a:.98},
+    {cx:62,cy:-58,r:27,a:1},
+    {cx:80,cy:-58,r:22,a:1},
+    {cx:105,cy:-48,r:34,a:1},
+    {cx:105,cy:-48,r:18,a:.35}
+  ];
+  const a=stages[seg], b=stages[Math.min(6,seg+1)];
+  const cx=lerp(a.cx,b.cx,t), cy=lerp(a.cy,b.cy,t), r=lerp(a.r,b.r,t), op=lerp(a.a,b.a,t);
+  // Startup flames smoothly gather toward the hand.
+  if(q<1.2){
+    flameShape(ctx,x-18,y-56,7,hot,.5*(1-q/1.2),-.2);
+    flameShape(ctx,x+18,y-56,7,hot,.5*(1-q/1.2),.2);
+  }
+  // The core and its irregular orbit remain visually consistent while moving.
+  core(ctx,x+cx,y+cy,Math.max(5,r),c,op);
+  fireFlameOrbitLegacy(ctx,x+cx,y+cy,r+5,r*.7,-2.8,.35,hot,op*.95,10);
+  // Keep the travel trail short near the hand, then extend it as the projectile accelerates.
+  const launchT=ease(clamp01((q-1.8)/2.7));
+  if(launchT>0){
+    glowStroke(ctx,[[x+12,y-25],[x+27+launchT*34,y-47-2*launchT]],c,5.5,.48*launchT);
+    for(let i=0;i<5;i++) spark(ctx,x+cx-18-i*5,y+cy+(i-2)*2,1.3,hot,.35*launchT);
+  }
+  // Explosion grows smoothly instead of popping at one discrete frame.
+  const blast=ease(clamp01((q-4.45)/1.05));
+  if(blast>0){
+    fireLineBurstLegacy(ctx,x+105,y-48,70+50*blast,blast);
+    for(let i=0;i<10;i++){
+      const ang=i/10*TAU;
+      flameShape(ctx,x+105+Math.cos(ang)*(38+38*blast),y-48+Math.sin(ang)*(25+25*blast),7+4*blast,hot,blast*.72,ang+Math.PI/2);
+    }
+    spark(ctx,x+105,y-48,14+10*blast,white,.55*blast);
+  }
+  } finally { FIRE_PERF_MODE=prev; }
+}
 
 function grassSuper(ctx,x,y,p){const c='#7CFF28',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*105; for(let i=0;i<14;i++){const ang=i/14*REF_TAU+q*1.8; leafBlade(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.62,13,34,ang,c,a*.85);} glowArc(ctx,x,y-58,r,r*.62,0,REF_TAU,c,6,a);}
 function iceSuper(ctx,x,y,p){const c='#79DFFF',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*120; for(let i=0;i<18;i++){const ang=i/18*REF_TAU;iceShard(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.68,10,28,ang,c,a);} glowArc(ctx,x,y-58,r,r*.68,0,REF_TAU,c,5,a*.8);}

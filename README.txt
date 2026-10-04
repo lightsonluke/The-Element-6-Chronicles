@@ -1,16 +1,10 @@
-WATER HERO — FLUID FRAME / LIMB / PERFORMANCE PATCH
+Water + Fire Gen-I restore / attack-physics correction
 
-Purpose:
-- Rebuilds all Generation I Water Hero attack visuals as native Canvas animation based on the supplied frame-by-frame sheet.
-- Uses flowing/tapered water bodies, internal highlights, spray, droplets, rings, ribbons, crescents and spheres.
-- No reference image is loaded or used as a sprite.
-- Adds attack-synchronized body/limb poses for Gen I characters, with lead-limb selection based on facing direction.
-- Reduces Water attack lag by removing repeated expensive shadowBlur calls from the Water rendering path.
-- Keeps canvas transforms protected with save/restore in Gen I attack rendering.
-- Preserves the third-party hit cancellation/idle reset changes in fighter.js.
-
-IMPORTANT:
-- Do NOT replace renderer.js with an older Water patch after installing this package.
-- The JSX files included here are the battle render callsites that pass live attackData into the character renderer so limb poses can follow the current move.
-
-Replace the matching files in the project with these files.
+- Restores Fire Hero attack visuals and smooth Super from Fire_Hero_All_Attacks_Optimized_Smooth_Super.
+- Keeps Water Hero native flowing-water animations and directional limb poses.
+- Water and Fire reference release timing: 4-beat moves 42 ticks, 6-beat Down Heavy 63 ticks, 7-beat Super 74 ticks.
+- Water Down Heavy supports two phase-specific hits.
+- Hitboxes are authored to the visible effect paths, not generic rectangles.
+- Knockback profiles follow the visual attack direction.
+- Gen-I charge/hold remains the established 180-frame (3 second) window because the supplied frame sheets specify release beats, not charge duration.
+- No renderer/camera replacement.
