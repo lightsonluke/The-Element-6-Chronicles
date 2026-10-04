@@ -884,6 +884,38 @@ function waterSuper(ctx,x,y,p){
   else { const u=ease(f-6.1),r=128-12*u; waterIrregularRing(ctx,x,cy,r,r*.68,1,.12,phase,.1); waterStream(ctx,[[x+12,cy],[x+42,cy-54]],.7*(1-u),5,phase); waterSpray(ctx,x+42,cy-54,-1.5,1.1,12,.8*(1-u),phase); }
 }
 
+export function getGen1AttackPose(move,p,facing=1,charId='g1_water'){
+  const q=clamp01(Math.max(0,p));
+  const t=wease(q);
+  const lead=facing>0?'R':'L';
+  let punchArmL=0,punchArmR=0,legSwing=0,lean=facing*.05,bob=0;
+  const leadPunch=(v)=>{if(lead==='R')punchArmR=v;else punchArmL=-v;};
+  const offArm=(v)=>{if(lead==='R')punchArmL=v;else punchArmR=-v;};
+  if(charId==='g1_fire'){
+    const count = move==='dh' ? 6 : move==='super' ? 7 : 4;
+    const z=q*count, i=Math.min(count-1,Math.floor(z)), u=z-Math.floor(z), s=u*u*(3-2*u);
+    const beat=(arr)=>arr[i]+(arr[Math.min(i+1,count-1)]-arr[i])*s;
+    const lead=(angle)=>{if(facing>=0) punchArmR=angle; else punchArmL=-angle;};
+    if(move==='us'){ lead(beat([0,-2.05,-2.25,-2.15])); lean=facing*beat([0,.02,.03,.08]); }
+    else if(move==='ss'){ lead(beat([0,-1.05,-1.72,-1.15])); lean=facing*beat([0,.08,.20,.16]); legSwing=beat([0,.04,.22,.12]); }
+    else if(move==='ds'){ lean=facing*beat([0,.10,.03,-.10]); bob=beat([0,5,8,2]); lead(beat([0,.30,.20,.05])); }
+    else if(move==='uh'){ punchArmR=beat([-1.0,-2.55,-2.70,-2.20]); punchArmL=beat([-1.0,-2.85,-2.95,-2.45]); lean=facing*beat([0,0,.02,.05]); }
+    else if(move==='dh'){ lean=facing*beat([0,.18,.06,-.02,-.04,-.02]); bob=beat([0,9,6,4,2,0]); legSwing=beat([0,.04,.12,.08,.03,0]); lead(beat([0,.62,.55,.35,.18,.05])); }
+    else if(move==='sh'){ lead(beat([-1.15,-1.45,-1.75,-.55])); lean=facing*beat([.02,.08,.18,.10]); legSwing=beat([0,.05,.18,.08]); }
+    else if(move==='super'){ if(i===0){punchArmR=-.85;punchArmL=-.65;lean=facing*.03;} else if(i===1||i===2){punchArmR=-1.15;punchArmL=-.95;lean=facing*.06;} else if(i===3||i===4){punchArmR=-1.7;punchArmL=-1.55;lean=facing*.22;legSwing=.2;} else if(i===5){punchArmR=.2;punchArmL=.1;lean=-facing*.12;} else {punchArmR=-.1;punchArmL=-.05;lean=-facing*.05;} }
+    return {punchArmL,punchArmR,legSwing,lean,bob};
+  }
+  if(move==='us'){leadPunch(-1.45*t);offArm(.35*t);lean=facing*(.05+.13*t);legSwing=.12*t;}
+  else if(move==='ds'){punchArmL=.72*t;punchArmR=-.72*t;lean=-facing*.14*t;legSwing=.18*t;bob=5*t;}
+  else if(move==='ss'){leadPunch(-1.7*t);offArm(.18*t);lean=facing*(.05+.22*t);legSwing=.12*t;}
+  else if(move==='uh'){leadPunch(-1.35*t);offArm(.72*t);lean=facing*(.08+.18*t);legSwing=-.28*t;}
+  else if(move==='dh'){leadPunch(-.72*t);offArm(.62*t);lean=-facing*.16*t;legSwing=-.38*t;bob=5*t;}
+  else if(move==='sh'||move==='heavy'){leadPunch(-1.28*t);offArm(.32*t);lean=facing*(.08+.26*t);legSwing=.25*t;}
+  else if(move==='super'){punchArmL=-1.15*Math.sin(q*Math.PI);punchArmR=1.15*Math.sin(q*Math.PI);lean=Math.sin(q*Math.PI)*facing*.12;legSwing=.22*Math.sin(q*Math.PI);}
+  return {punchArmL,punchArmR,legSwing,lean,bob};
+}
+
+
 function grassAttack(ctx,x,y,p,move){
   const c='#7CFF28', pale='#D9FF7A', wood='#9B6A3B', q=attackP(p), a=.3+.7*Math.sin(q*Math.PI);
   if(move==='us'){grassUpReference(ctx,x,y,p);return;}
