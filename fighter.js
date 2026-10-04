@@ -1002,19 +1002,32 @@ export { CPU_DIFFICULTY, updateAI, platformNavigate } from './botAI.js';
 function isGen1Fighter(f) { return String(f?.char?.id || '').startsWith('g1_'); }
 
 function gen1ReferenceDuration(charId, sigType, isHeavy=false, isSuper=false) {
-  if(charId==='g1_fire') {
-    if(isSuper) return 74;
-    if(sigType==='downHeavy') return 63;
-    if(sigType==='upHeavy' || sigType==='heavy' || sigType==='side') return 42;
-    if(sigType==='up' || sigType==='down') return 42;
-  }
+  // All Generation I authored attack cycles are intentionally kept in the
+  // requested ~30-50 tick window. The artwork itself remains frame-driven;
+  // these durations only control how smoothly those authored frames play.
+  const tables = {
+    g1_thunder: { us:36, ds:36, side:36, upHeavy:42, heavy:40, downHeavy:42, super:48 },
+    g1_fire:    { us:40, ds:40, side:40, upHeavy:44, heavy:44, downHeavy:48, super:48 },
+    g1_water:   { us:36, ds:36, side:38, upHeavy:42, heavy:44, downHeavy:42, super:48 },
+    g1_grass:   { us:36, ds:36, side:36, upHeavy:42, heavy:44, downHeavy:42, super:48 },
+    g1_ice:     { us:36, ds:36, side:36, upHeavy:42, heavy:44, downHeavy:42, super:48 },
+  };
+  const t = tables[charId];
+  if (!t) return null;
+  if (isSuper) return t.super;
+  if (sigType === 'downHeavy') return t.downHeavy;
+  if (sigType === 'upHeavy') return t.upHeavy;
+  if (sigType === 'side') return isHeavy ? t.heavy : t.side;
+  if (sigType === 'heavy') return t.heavy;
+  if (sigType === 'up') return t.us;
+  if (sigType === 'down') return t.ds;
   return null;
 }
 
 function gen1HoldMaxFrames(charId, sigType, isHeavy=false) {
-  // The supplied frame sheets define release beats, not a charge duration. Keep
-  // the established 3-second Gen-I hold window so holding remains consistent.
-  return 180;
+  // Short, intentional charge/hold phase: the button can be held before the
+  // authored release animation starts, but it no longer delays a move for 3s.
+  return isHeavy ? 20 : 18;
 }
 
 function startGen1Hold(fighter, button, sigType, wasAirborne = false, wasGrounded = false) {
@@ -1078,6 +1091,10 @@ function executeGen1HeldAttack(fighter, hold) {
     fighter.attackData.isGroundPound = true;
   }
   fighter.attackData.spec = getAttackSpecForData(id, fighter.attackData);
+  // Two-stage Gen I moves use the exact authored animation split for collision:
+  // Water's sphere -> splash and Grass's slam -> returning coil.
+  if (id === 'g1_water' && sigType === 'downHeavy') fighter.attackData.multiHitStages = true;
+  if (id === 'g1_grass' && sigType === 'downHeavy') fighter.attackData.multiHitStages = true;
   fighter.attackTimer = dur;
   fighter.state = 'attacking';
   fighter.attackHold = null;
