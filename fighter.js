@@ -1004,27 +1004,14 @@ function isGen1Fighter(f) { return String(f?.char?.id || '').startsWith('g1_'); 
 function gen1ReferenceDuration(charId, sigType, isHeavy=false, isSuper=false) {
   // Thunder and Fire are intentionally left on their original timing. Only
   // Water, Grass and Ice use the new authored Gen-I frame sheets.
-  if(charId==='g1_water') {
-    if(isSuper) return 48;
-    if(sigType==='downHeavy') return 42;
-    if(sigType==='upHeavy') return 42;
-    if(sigType==='heavy' || sigType==='side') return 44;
-    if(sigType==='up') return 36;
-    if(sigType==='down') return 36;
-  }
-  if(charId==='g1_grass') {
-    if(isSuper) return 48;
-    if(sigType==='downHeavy') return 42;
-    if(sigType==='upHeavy') return 42;
-    if(sigType==='heavy' || sigType==='side') return 44;
-    if(sigType==='up' || sigType==='down') return 36;
-  }
-  if(charId==='g1_ice') {
-    if(isSuper) return 48;
-    if(sigType==='downHeavy') return 42;
-    if(sigType==='upHeavy') return 42;
-    if(sigType==='heavy' || sigType==='side') return 44;
-    if(sigType==='up' || sigType==='down') return 36;
+  // Faster Gen-I neutral/recovery timing for Water, Grass and Ice so the moves
+  // can actually chain into follow-ups. Thunder/Fire are intentionally untouched.
+  if(charId==='g1_water' || charId==='g1_grass' || charId==='g1_ice') {
+    if(isSuper) return 30;
+    if(sigType==='downHeavy') return 20;
+    if(sigType==='upHeavy') return 20;
+    if(sigType==='heavy' || sigType==='side') return 19;
+    if(sigType==='up' || sigType==='down') return 16;
   }
   if(charId==='g1_fire') {
     if(isSuper) return 74;

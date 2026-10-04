@@ -698,13 +698,33 @@ function grassUpHeavyReference(ctx,x,y,p){
   else if(f<3){ const u=ease(f-2); grassFlower(ctx,x,y-20,.35+.65*u,1,.95,u*2); }
   else { const u=ease(f-3); grassFlower(ctx,x,y-20,1,1,.98,u*2); for(let i=0;i<10;i++){const a=i/10*TAU; const rr=45+45*u; leafBlade(ctx,x+Math.cos(a)*rr,y-20+Math.sin(a)*rr*.7,8,24,a,'#A8FF38',.8*(1-u*.2));} }
 }
-function grassDownHeavyReference(ctx,x,y,p){
-  const c='#67D51F', hi='#B7FF55';
-  if(p<0){ const q=holdCharge(p); grassVine(ctx,x-8,y-12,x-8-45*q,y-65,q,.55+q*.25,9); return; }
-  const f=1+attackP(p)*3;
-  if(f<2){ const u=ease(f-1); grassVine(ctx,x-12,y-10,x+34*u,y+2,u,.9,10); }
-  else if(f<3){ const u=ease(f-2); const endX=x+36+30*u, endY=y+2+42*u; grassVine(ctx,x-12,y-10,endX,endY,u,1,12); for(let i=0;i<7;i++) spark(ctx,endX+i*2,endY,1.5,hi,.55); }
-  else { const u=ease(f-3); const startX=x+66-72*u, startY=y+44-36*u; grassVine(ctx,x+66,y+44,startX,startY,u,1-u*.15,11); for(let i=0;i<8;i++){const a=i/8*TAU; leafBlade(ctx,startX+Math.cos(a)*7,startY+Math.sin(a)*7,3,9,a,c,.55); } }
+function grassDownHeavyReference(ctx,x,y,p,hit=false,facing=1){
+  const wood='#9B6A3B', hi='#D6A35B', leaf='#7CFF28';
+  if(p<0){const h=holdCharge(p);grassBranch(ctx,x+16,y-48,48+10*h,11,.65+.2*h,0.72,false);return;}
+  const q=attackP(p), f=1+q*3;
+  // Initial stick: comes down diagonally in the direction faced.
+  const diagAngle=facing>0 ? .82 : 2.32;
+  if(f<2){
+    const u=ease(f-1), len=28+62*u;
+    grassBranch(ctx,x+14,y-48,len,11,.85,diagAngle,false);
+  } else if(f<2.35){
+    const u=ease((f-2)/.35), len=90+8*u;
+    grassBranch(ctx,x+14,y-48,len,11,1,diagAngle,false);
+    for(let i=0;i<5;i++) spark(ctx,x+14+Math.cos(diagAngle)*(len-8)+i*2*facing,y-48+Math.sin(diagAngle)*(len-8),1.5,hi,.55);
+  } else if(hit){
+    // Once the first stick connects, a second stick grows out of its tip toward
+    // the knockback direction — behind the Grass Hero.
+    const tipX=x+14+Math.cos(diagAngle)*98, tipY=y-48+Math.sin(diagAngle)*98;
+    grassBranch(ctx,x+14,y-48,98,11,.9,diagAngle,false);
+    const u=ease(Math.min(1,(f-2.35)/.65));
+    const backAngle=facing>0 ? 3.05 : .09;
+    grassBranch(ctx,tipX,tipY,62*u,10,.98,backAngle,false);
+    if(u>.25) for(let i=0;i<5;i++) spark(ctx,tipX+Math.cos(backAngle)*(42*u+i*3),tipY+Math.sin(backAngle)*(42*u+i*3),1.5,leaf,.55);
+  } else {
+    // Miss/recovery: retract the first stick without creating the follow-up branch.
+    const u=ease((f-2.35)/.65), len=98*(1-u*.72);
+    grassBranch(ctx,x+14,y-48,len,11,.9,diagAngle,false);
+  }
 }
 function grassSideHeavyReference(ctx,x,y,p){
   const c='#7CFF28',wood='#9B6A3B',hi='#D6A35B';
@@ -714,12 +734,12 @@ function grassSideHeavyReference(ctx,x,y,p){
   else if(f<3){ const u=ease(f-2); grassBranch(ctx,x+18,y-46,70+55*u,14,.98,0,false); for(let i=0;i<4;i++) spark(ctx,x+88+i*10,y-46+(i-2)*3,1.5,hi,.6); }
   else { const u=ease(f-3), sx=x+143,sy=y-46; grassBranch(ctx,x+18,y-46,125,14,.92,0,true); for(const da of [-.32,0,.32]){const len=40+55*u; grassBranch(ctx,sx,sy,len,7,.9,da,false);} }
 }
-function grassAttack(ctx,x,y,p,move){
+function grassAttack(ctx,x,y,p,move,attack){
   if(move==='us')return grassUpReference(ctx,x,y,p);
   if(move==='ds')return grassDownReference(ctx,x,y,p);
   if(move==='ss')return grassSideReference(ctx,x,y,p);
   if(move==='uh')return grassUpHeavyReference(ctx,x,y,p);
-  if(move==='dh')return grassDownHeavyReference(ctx,x,y,p);
+  if(move==='dh')return grassDownHeavyReference(ctx,x,y,p,!!attack?.hitApplied,1);
   if(move==='sh'||move==='heavy')return grassSideHeavyReference(ctx,x,y,p);
 }
 
@@ -990,46 +1010,65 @@ function wRibbon(ctx,x,y,t,a=1,phase=0){
 }
 function wCrescent(ctx,x,y,t,a=1,phase=0){waterBlade(ctx,x,y,t,a,phase);}
 function waterUpReference(ctx,x,y,p){
-  if(p<0){const q=holdCharge(p);wRing(ctx,x+22,y-45,16+5*q,8+2*q,.7+.25*q,-.2,q);return;}
-  const f=1+attackP(p)*3;
-  if(f<2){const u=ease(f-1);wRing(ctx,x+24+5*u,y-44-18*u,18+6*u,9+3*u,.95,-.1+u*.25,attackP(p));waterStream(ctx,[[x+10,y-25],[x+20,y-40],[x+26,y-55]],.55,5,attackP(p));}
-  else if(f<3){const u=ease(f-2),cx=lerp(x+30,x+52,u),cy=lerp(y-62,y-88,u);wRing(ctx,cx,cy,23,10,1,.05,attackP(p));waterStream(ctx,[[x+24,y-48],[cx,cy]],.8,6,attackP(p)+1);}
-  else {const u=ease(f-3),cx=lerp(x+52,x+92,u),cy=lerp(y-88,y-112,u);wRing(ctx,cx,cy,22-2*u,10-u,1,.12,attackP(p));const trail=[];for(let i=0;i<=22;i++){const z=i/22;trail.push([lerp(x+50,cx,z),lerp(y-88,cy,z)+Math.sin(z*Math.PI)*-12]);}waterStream(ctx,trail,.8,6,attackP(p)+2);for(let i=0;i<8;i++)waterDrop(ctx,cx-18+i*3,cy+8,1.2,.55*(1-u),i);}
+  // Matches the supplied 12-panel sheet: ring starts around the raised arm,
+  // separates, arcs upward, then fades out before returning to neutral.
+  const q=attackP(p), f=1+q*7, phase=q*TAU;
+  if(p<0){ const h=holdCharge(p); wRing(ctx,x+20,y-42,15+3*h,7+2*h,.72+.18*h,-.15,phase); return; }
+  if(f<2){
+    const u=ease(f-1); wRing(ctx,x+18+5*u,y-42-7*u,16+6*u,8+2*u,.95,-.1,phase);
+    waterDrop(ctx,x+20,y-45,2.2,.8);
+  } else if(f<3){
+    const u=ease(f-2), cx=lerp(x+25,x+45,u), cy=lerp(y-54,y-78,u);
+    wRing(ctx,cx,cy,20,9,1,.02,phase); waterStream(ctx,[[x+20,y-44],[cx,cy]],.55,4,phase);
+  } else if(f<5){
+    const u=ease((f-3)/2), cx=lerp(x+45,x+90,u), cy=lerp(y-78,y-108,u)+Math.sin(u*Math.PI)*-8;
+    wRing(ctx,cx,cy,21-2*u,9-u,1,.04,phase);
+    const trail=[]; for(let i=0;i<=16;i++){const z=i/16;trail.push([lerp(x+44,cx,z),lerp(y-78,cy,z)+Math.sin(z*Math.PI)*8]);}
+    waterStream(ctx,trail,.72,4.5,phase+.5);
+  } else if(f<7){
+    const u=ease((f-5)/2), cx=lerp(x+90,x+106,u), cy=lerp(y-108,y-116,u);
+    wRing(ctx,cx,cy,19-7*u,8-3*u,1-u*.55,.04,phase);
+    for(let i=0;i<6;i++){const z=i/5; waterDrop(ctx,lerp(x+74,cx,z),lerp(y-98,cy,z),1.3,.45*(1-u));}
+  }
 }
 function waterDownReference(ctx,x,y,p){
-  if(p<0){const q=holdCharge(p);wRing(ctx,x,y-2,32+8*q,8+2*q,.3,0,q);return;}
-  const f=1+attackP(p)*3;
-  if(f<2){const u=ease(f-1);wRing(ctx,x,y-3,30+5*u,8+2*u,.55+.2*u,0,attackP(p));waterStream(ctx,[[x,y-4],[x-10,y-10],[x-18,y-2]],.5,5,attackP(p));}
-  else if(f<3){const u=ease(f-2);waterSheet(ctx,x-8,y-2,-1,.95+u*.15,1,attackP(p));waterSheet(ctx,x+8,y-2,1,.95+u*.15,1,attackP(p)+1.3);}
-  else {const u=ease(f-3);waterSheet(ctx,x-10-u*5,y-3,-1,1.1-u*.1,1-u*.12,attackP(p)+1);waterSheet(ctx,x+10+u*5,y-3,1,1.1-u*.1,1-u*.12,attackP(p)+2);waterSpray(ctx,x-34,y-22,-2.5,.7,10,.65*(1-u),attackP(p));waterSpray(ctx,x+34,y-22,-.65,.7,10,.65*(1-u),attackP(p)+1);}
+  // Two distinct puddle splashes, one on each side, rather than a ring attack.
+  const q=attackP(p), f=1+q*3;
+  if(p<0){const h=holdCharge(p); waterStream(ctx,[[x,y-2],[x-10,y-4],[x-18,y-1]],.3+.25*h,5);waterStream(ctx,[[x,y-2],[x+10,y-4],[x+18,y-1]],.3+.25*h,5);return;}
+  if(f<2){const u=ease(f-1); waterSpray(ctx,x-4,y-2,-Math.PI/2,.75,8,.65+.2*u,q);waterSpray(ctx,x+4,y-2,-Math.PI/2,.75,8,.65+.2*u,q+1);}
+  else {const u=ease(f-2); waterSheet(ctx,x-5-u*3,y-2,-1,1.0,1-u*.15,q);waterSheet(ctx,x+5+u*3,y-2,1,1.0,1-u*.15,q+1.2);}
 }
 function waterSideReference(ctx,x,y,p){
-  if(p<0){const q=holdCharge(p);waterWhip(ctx,x,y,.25+.2*q,.55+.2*q,attackP(p));return;}
-  const f=1+attackP(p)*3;
-  if(f<2){const u=ease(f-1);waterWhip(ctx,x,y,.18+.22*u,.72,attackP(p));}
-  else if(f<3){const u=ease(f-2);waterWhip(ctx,x,y,.4+.38*u,1,attackP(p));}
-  else {const u=ease(f-3);waterWhip(ctx,x,y,.78+.22*u,.95*(1-u*.25),attackP(p));waterSpray(ctx,x+110,y-70,-.25,1.0,8,.5*(1-u),attackP(p));}
+  // Short whip with a distinct hooked tip. Facing is applied by drawGen1Attack.
+  if(p<0){const h=holdCharge(p);waterWhip(ctx,x,y,.16+.14*h,.5+.2*h,attackP(p));return;}
+  const q=attackP(p), f=1+q*3;
+  if(f<2){waterWhip(ctx,x,y,.12+.12*ease(f-1),.75,q);}
+  else if(f<3){waterWhip(ctx,x,y,.24+.46*ease(f-2),1,q);}
+  else {const u=ease(f-3);waterWhip(ctx,x,y,.70+.30*u,.95*(1-u*.3),q);}
 }
 function waterUpHeavyReference(ctx,x,y,p){
-  if(p<0){const q=holdCharge(p);wRibbon(ctx,x,y,.2*q,.55+.3*q,attackP(p));return;}
-  const f=1+attackP(p)*3;
-  if(f<2){const u=ease(f-1);wRibbon(ctx,x,y,.15+.2*u,1,attackP(p));}
-  else if(f<3){const u=ease(f-2);wRibbon(ctx,x,y,.35+.45*u,1,attackP(p)+1);}
-  else {const u=ease(f-3);wRibbon(ctx,x,y,.8+.2*u,1,attackP(p)+2);const launch=[];for(let i=0;i<=18;i++){const z=i/18;launch.push([x+8+z*(58+18*u),y-48-z*(68+34*u)]);}waterStream(ctx,launch,.95,10,attackP(p));waterSpray(ctx,x+68+18*u,y-116-30*u,-1.55,1.15,12,.9*(1-u*.25),attackP(p));}
+  // Vertical ribbon wraps the fighter, then spirals upward and flings from the top.
+  if(p<0){const h=holdCharge(p);wRibbon(ctx,x,y,.08+.12*h,.55+.25*h,attackP(p));return;}
+  const q=attackP(p), f=1+q*3;
+  if(f<2) wRibbon(ctx,x,y,.10+.18*ease(f-1),1,q);
+  else if(f<3) wRibbon(ctx,x,y,.28+.48*ease(f-2),1,q+.8);
+  else {const u=ease(f-3);wRibbon(ctx,x,y,.76+.24*u,1-u*.25,q+1.6);const launch=[];for(let i=0;i<=14;i++){const z=i/14;launch.push([x+8+z*(54+24*u),y-42-z*(66+34*u)]);}waterStream(ctx,launch,.9,8,q);}
 }
 function waterDownHeavyReference(ctx,x,y,p){
-  if(p<0){const q=holdCharge(p);wOrb(ctx,x+52,y-52,22+4*q,.65+.25*q,attackP(p));return;}
-  const f=1+attackP(p)*3;
-  if(f<2){const u=ease(f-1);wOrb(ctx,x+48+8*u,y-52+4*u,22,1,attackP(p));waterStream(ctx,[[x+24,y-28],[x+48,y-46]],.6,5,attackP(p));}
-  else if(f<3){const u=ease(f-2),sx=x+58,sy=lerp(y-48,y-4,u);wOrb(ctx,sx,sy,22*(1-.1*u),1,attackP(p));waterStream(ctx,[[sx,sy-32],[sx,sy]],.65,6,attackP(p));}
-  else {const u=ease(f-3),sx=x+58,sy=y-4;wOrb(ctx,sx,sy,21*(1-u*.35),.75*(1-u*.2),attackP(p));const pts=[];for(let i=0;i<=18;i++){const z=i/18;pts.push([sx+Math.sin(z*Math.PI)*5,sy-58*z]);}waterStream(ctx,pts,1,11,attackP(p));waterSpray(ctx,sx,sy-58,-Math.PI/2,1.15,14,.85*(1-u*.25),attackP(p));}
+  // Sphere is beside the fighter, gets kicked down, bounces, then bursts upward.
+  if(p<0){const h=holdCharge(p);wOrb(ctx,x+45,y-48,20+3*h,.7+.2*h,attackP(p));return;}
+  const q=attackP(p), f=1+q*3;
+  if(f<2){const u=ease(f-1);wOrb(ctx,x+42+8*u,y-50+4*u,21,1,q);}
+  else if(f<3){const u=ease(f-2),sx=x+50,sy=lerp(y-46,y-4,u);wOrb(ctx,sx,sy,21,1,q);}
+  else {const u=ease(f-3),sx=x+50,sy=y-4;wOrb(ctx,sx,sy,21*(1-u*.35),.9*(1-u*.15),q);waterSpray(ctx,sx,sy,-Math.PI/2,1.0,12,.9*(1-u*.2),q);waterStream(ctx,[[sx,sy],[sx,y-72-u*30]],.65,7,q);}
 }
 function waterSideHeavyReference(ctx,x,y,p){
-  if(p<0){const q=holdCharge(p);wCrescent(ctx,x,y,.15*q,.6+.25*q,attackP(p));return;}
-  const f=1+attackP(p)*3;
-  if(f<2){const u=ease(f-1);wCrescent(ctx,x,y,.05+.18*u,.85,attackP(p));}
-  else if(f<3){const u=ease(f-2);wCrescent(ctx,x,y,.23+.52*u,1,attackP(p));}
-  else {const u=ease(f-3);wCrescent(ctx,x,y,.75+.25*u,1-u*.45,attackP(p));waterSpray(ctx,x+92,y-60,.2,1.5,16,.75*(1-u),attackP(p));}
+  if(p<0){const h=holdCharge(p);wCrescent(ctx,x,y,.08+.1*h,.65+.2*h,attackP(p));return;}
+  const q=attackP(p), f=1+q*4;
+  if(f<2){wCrescent(ctx,x,y,.04+.12*ease(f-1),.9,q);}
+  else if(f<3){wCrescent(ctx,x,y,.16+.42*ease(f-2),1,q);}
+  else if(f<4){wCrescent(ctx,x,y,.58+.27*ease(f-3),1,q);}
+  else {const u=ease(f-4);wCrescent(ctx,x,y,.85+.15*u,1-u*.7,q);}
 }
 function waterAttack(ctx,x,y,p,move){
   if(move==='us')return waterUpReference(ctx,x,y,p);
@@ -1141,7 +1180,7 @@ function fireSuper(ctx,x,y,p){
 function grassSuper(ctx,x,y,p){const c='#7CFF28',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*105; for(let i=0;i<14;i++){const ang=i/14*REF_TAU+q*1.8; leafBlade(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.62,13,34,ang,c,a*.85);} glowArc(ctx,x,y-58,r,r*.62,0,REF_TAU,c,6,a);}
 function iceSuper(ctx,x,y,p){const c='#79DFFF',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*120; for(let i=0;i<18;i++){const ang=i/18*REF_TAU;iceShard(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.68,10,28,ang,c,a);} glowArc(ctx,x,y-58,r,r*.68,0,REF_TAU,c,5,a*.8);}
 
-export function drawGen1Attack(ctx,x,y,color,p,facing,charId,move){
+export function drawGen1Attack(ctx,x,y,color,p,facing,charId,move,attack=null){
   ctx.save();
   try {
     ctx.translate(x,y); ctx.scale(facing<0?-1:1,1);
@@ -1151,7 +1190,7 @@ export function drawGen1Attack(ctx,x,y,color,p,facing,charId,move){
       } else if(move==='us') thunderUp(ctx,0,0,p); else if(move==='ds') thunderDown(ctx,0,0,Math.max(0,p)); else if(move==='ss') thunderSide(ctx,0,0,Math.max(0,p),false); else if(move==='sh'||move==='heavy') thunderSide(ctx,0,0,Math.max(0,p),true); else if(move==='uh'||move==='upHeavy') thunderUpHeavy(ctx,0,0,Math.max(0,p)); else if(move==='dh'||move==='downHeavy') thunderDownHeavy(ctx,0,0,Math.max(0,p));
     } else if(charId==='g1_fire') fireAttack(ctx,0,0,p,move);
     else if(charId==='g1_water') waterAttack(ctx,0,0,p,move);
-    else if(charId==='g1_grass') grassAttack(ctx,0,0,p,move);
+    else if(charId==='g1_grass') grassAttack(ctx,0,0,p,move,attack);
     else if(charId==='g1_ice') iceAttack(ctx,0,0,p,move);
   } finally {
     // Never allow a broken attack effect to leak its translate/scale into the main canvas.
