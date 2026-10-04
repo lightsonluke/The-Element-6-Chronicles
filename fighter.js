@@ -1002,7 +1002,7 @@ export { CPU_DIFFICULTY, updateAI, platformNavigate } from './botAI.js';
 function isGen1Fighter(f) { return String(f?.char?.id || '').startsWith('g1_'); }
 
 function gen1ReferenceDuration(charId, sigType, isHeavy=false, isSuper=false) {
-  if(charId==='g1_fire' || charId==='g1_water') {
+  if(charId==='g1_fire') {
     if(isSuper) return 74;
     if(sigType==='downHeavy') return 63;
     if(sigType==='upHeavy' || sigType==='heavy' || sigType==='side') return 42;
@@ -1525,7 +1525,6 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         const dur = refDur || Math.min(downHeavy.duration, 28);
         fighter.attackTimer = dur;
         fighter.attackData = { ...downHeavy, duration: dur, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true };
-        if (fighter.char.id === 'g1_water') { fighter.attackData.multiHitStages = 2; fighter.attackData.hitStageIds = {}; fighter.attackData.hitStage = -1; }
         fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
         fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
         fighter.vy = 0;
