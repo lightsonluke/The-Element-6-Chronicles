@@ -15,7 +15,7 @@ import { readGamepadInput } from './controllerProfiles.js';
 //   B / Circle (power) → back (dispatch Escape)
 //   Start (start)      → also confirms (handy on some controllers)
 
-const FOCUSABLE = 'button:not([disabled]):not([hidden]), a[href]:not([hidden]), input:not([disabled]):not([hidden]), select:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])';
+const FOCUSABLE = 'button:not([disabled]):not([hidden]), a[href]:not([hidden]), input:not([disabled]):not([hidden]), select:not([disabled]):not([hidden]), [role="combobox"]:not([aria-disabled="true"]):not([hidden]), [role="option"]:not([aria-disabled="true"]):not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])';
 
 function getVisibleFocusable() {
   const els = Array.from(document.querySelectorAll(FOCUSABLE));
@@ -99,19 +99,47 @@ function navigateFocusSpatial(direction) {
   }
 }
 
+function getOpenSelectContent() {
+  return document.querySelector('[role="listbox"][data-state="open"], [data-radix-select-content][data-state="open"]');
+}
+
+function focusOpenedSelectItem() {
+  const content = getOpenSelectContent();
+  if (!content) return;
+  const options = Array.from(content.querySelectorAll('[role="option"]')).filter((el) => {
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && !el.hasAttribute('data-disabled');
+  });
+  if (!options.length) return;
+  const selected = options.find((el) => el.getAttribute('aria-selected') === 'true' || el.getAttribute('data-state') === 'checked');
+  (selected || options[0]).focus();
+}
+
 function activateFocused() {
   const el = document.activeElement;
   if (!el) return;
+
   if (el.tagName === 'SELECT') {
-    // A controller confirm on a focused dropdown should open the actual picker,
-    // not merely focus the select. showPicker() is the native, keyboard/gamepad-
-    // friendly path in Chromium-based browsers; click() remains the fallback.
+    // Native dropdown: open the real picker. Keep focus on the select so the
+    // controller's B/back action can return cleanly to this same control.
     el.focus();
     try { if (typeof el.showPicker === 'function') { el.showPicker(); return; } } catch (_) {}
     el.click();
     return;
   }
+
+  // Radix/custom dropdown trigger. After opening, move controller focus into
+  // the actual listbox option so D-pad navigation works inside the menu.
+  if (el.getAttribute('role') === 'combobox' || el.getAttribute('aria-haspopup') === 'listbox') {
+    el.focus();
+    el.click();
+    requestAnimationFrame(() => requestAnimationFrame(focusOpenedSelectItem));
+    return;
+  }
+
   if (el.tagName === 'BUTTON' || el.tagName === 'A' || el.getAttribute('role') === 'button') {
+    el.click();
+  } else if (el.getAttribute('role') === 'option') {
     el.click();
   } else if (el.tagName === 'INPUT') {
     el.focus();
@@ -226,7 +254,32 @@ export function useGamepadMenuNav(enabled = true) {
         lastConfirm.current = confirm || start;
 
         if (back && !lastBack.current) {
-          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+          const openSelect = getOpenSelectContent();
+          if (openSelect) {
+            // Radix Select listens for Escape and restores focus to its trigger.
+            // Capture the trigger before closing so B reliably returns the
+            // controller focus indicator to the dropdown box itself.
+            const trigger = document.querySelector('[role="combobox"][aria-expanded="true"]')
+              || document.querySelector('[role="combobox"]:focus');
+            const focused = document.activeElement;
+            focused?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
+            requestAnimationFrame(() => {
+              if (getOpenSelectContent()) {
+                // Some browsers do not deliver synthetic Escape to the native
+                // Radix handler; toggling the trigger closes the still-open menu.
+                trigger?.click();
+              }
+              requestAnimationFrame(() => {
+                if (trigger && document.contains(trigger)) trigger.focus();
+                else {
+                  const fallback = document.querySelector('[role="combobox"]');
+                  fallback?.focus();
+                }
+              });
+            });
+          } else {
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+          }
         }
         lastBack.current = back;
         lastStart.current = start;
