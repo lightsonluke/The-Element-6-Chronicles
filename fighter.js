@@ -1002,30 +1002,25 @@ export { CPU_DIFFICULTY, updateAI, platformNavigate } from './botAI.js';
 function isGen1Fighter(f) { return String(f?.char?.id || '').startsWith('g1_'); }
 
 function gen1ReferenceDuration(charId, sigType, isHeavy=false, isSuper=false) {
-  // Thunder and Fire are intentionally left on their original timing. Only
-  // Water, Grass and Ice use the new authored Gen-I frame sheets.
-  // Faster Gen-I neutral/recovery timing for Water, Grass and Ice so the moves
-  // can actually chain into follow-ups. Thunder/Fire are intentionally untouched.
-  if(charId==='g1_water' || charId==='g1_grass' || charId==='g1_ice') {
-    if(isSuper) return 30;
-    if(sigType==='downHeavy') return 20;
-    if(sigType==='upHeavy') return 20;
-    if(sigType==='heavy' || sigType==='side') return 19;
-    if(sigType==='up' || sigType==='down') return 16;
+  // Gen 1 timing is normalized to Thunder's authored attack lengths.
+  // Thunder itself is the timing reference; Fire/Water/Grass/Ice use the
+  // same move-class lengths so their attacks stay fast enough to combo.
+  if (String(charId || '').startsWith('g1_')) {
+    if (isSuper) return 42;
+    if (sigType === 'downHeavy') return 24;
+    if (sigType === 'upHeavy') return 24;
+    if (sigType === 'heavy') return 18;
+    if (sigType === 'side') return 14;
+    if (sigType === 'up') return 28;
+    if (sigType === 'down') return 22;
   }
-  if(charId==='g1_fire') {
-    if(isSuper) return 74;
-    if(sigType==='downHeavy') return 63;
-    if(sigType==='upHeavy' || sigType==='heavy' || sigType==='side') return 42;
-    if(sigType==='up' || sigType==='down') return 42;
-  }
-  return null;
+  return 0;
 }
 
 function gen1HoldMaxFrames(charId, sigType, isHeavy=false) {
-  // New authored Water/Grass/Ice moves have a short pre-attack hold. Thunder
-  // and Fire retain their original hold behavior and are not modified here.
-  if(charId==='g1_water' || charId==='g1_grass' || charId==='g1_ice') return isHeavy ? 20 : 18;
+  // Every Gen 1 signature/heavy has an actual pre-release hold window.
+  // Keep it short enough that a normal tap never feels delayed.
+  if (String(charId || '').startsWith('g1_')) return isHeavy ? 20 : 18;
   return 180;
 }
 

@@ -20,49 +20,49 @@ const CHAR_MAP = new Map([
 
 const GEN1_MOVE_SPECS = {
   g1_thunder: {
-    us:{name:'Lightning Circle',shape:'orbitPoint',range:92,knockback:'upContact',duration:28,damage:16,description:'Only the moving dot at the beginning of the lightning circle is active.'},
-    ds:{name:'Lightning Dome',shape:'smallDome',range:58,knockback:'radialContact',duration:22,damage:17},
-    ss:{name:'Lightning Bolt',shape:'forwardBolt',range:82,knockback:'forwardContact',duration:14,damage:15},
-    upHeavy:{name:'Rising Lightning Trio',shape:'threeBolts',range:190,knockback:'upContact',duration:24,damage:23},
-    dh:{name:'Orbiting Lightning Ball',shape:'orbitBall',range:100,knockback:'forwardContact',duration:24,damage:22},
-    sh:{name:'Large Lightning Bolt',shape:'forwardBoltHeavy',range:105,knockback:'forwardContact',duration:18,damage:23},
+    us:{name:'Lightning Circle',shape:'orbitPoint',range:92,knockback:'upContact',duration:28,damage:16,holdMaxFrames:18},
+    ds:{name:'Lightning Dome',shape:'smallDome',range:58,knockback:'radialContact',duration:22,damage:17,holdMaxFrames:18},
+    ss:{name:'Lightning Bolt',shape:'forwardBolt',range:82,knockback:'forwardContact',duration:14,damage:15,holdMaxFrames:18},
+    upHeavy:{name:'Rising Lightning Trio',shape:'threeBolts',range:190,knockback:'upContact',duration:24,damage:23,holdMaxFrames:20},
+    dh:{name:'Orbiting Lightning Ball',shape:'orbitBall',range:100,knockback:'forwardContact',duration:24,damage:22,holdMaxFrames:20},
+    sh:{name:'Large Lightning Bolt',shape:'forwardBoltHeavy',range:105,knockback:'forwardContact',duration:18,damage:23,holdMaxFrames:20},
     super:{name:'Thunder Strike',shape:'bottomBolt',range:90,knockback:'radialUp',duration:42,damage:38},
   },
   g1_fire: {
-    us:{name:'Flaming Hook',shape:'hook',range:100,knockback:'upContact',duration:42,damage:17,holdMaxFrames:180,referenceFrames:4},
-    ds:{name:'Ember Stamp',shape:'stampFlames',range:92,knockback:'radialContact',duration:42,damage:16,holdMaxFrames:180,referenceFrames:4},
-    ss:{name:'Flaming Elbow',shape:'elbow',range:112,knockback:'forwardContact',duration:42,damage:16,holdMaxFrames:180,referenceFrames:4},
-    upHeavy:{name:'Spinning Fire Wheel',shape:'fireWheel',range:145,knockback:'upContact',duration:42,damage:25,holdMaxFrames:180,referenceFrames:4},
-    dh:{name:'Burning Cracks',shape:'cracks',range:130,knockback:'radialContact',duration:63,damage:22,holdMaxFrames:180,referenceFrames:6},
-    sh:{name:'Flaming Gauntlet',shape:'gauntlet',range:135,knockback:'forwardContact',duration:42,damage:25,holdMaxFrames:180,referenceFrames:4},
-    super:{name:'Fireball Detonation',shape:'explosion',range:185,knockback:'radialContact',duration:74,damage:42,holdMaxFrames:180,referenceFrames:7},
+    us:{name:'Flaming Hook',shape:'hook',range:100,knockback:'upContact',duration:28,damage:17,holdMaxFrames:18,referenceFrames:4},
+    ds:{name:'Ember Stamp',shape:'stampFlames',range:92,knockback:'radialContact',duration:22,damage:16,holdMaxFrames:18,referenceFrames:4},
+    ss:{name:'Flaming Elbow',shape:'elbow',range:112,knockback:'forwardContact',duration:14,damage:16,holdMaxFrames:18,referenceFrames:4},
+    upHeavy:{name:'Spinning Fire Wheel',shape:'fireWheel',range:145,knockback:'upContact',duration:24,damage:25,holdMaxFrames:20,referenceFrames:4},
+    dh:{name:'Burning Cracks',shape:'cracks',range:130,knockback:'radialContact',duration:24,damage:22,holdMaxFrames:20,referenceFrames:6},
+    sh:{name:'Flaming Gauntlet',shape:'gauntlet',range:135,knockback:'forwardContact',duration:18,damage:25,holdMaxFrames:20,referenceFrames:4},
+    super:{name:'Fireball Detonation',shape:'explosion',range:185,knockback:'radialContact',duration:42,damage:42,holdMaxFrames:20,referenceFrames:7},
   },
   g1_water: {
-    us:{name:'Water Ring',shape:'waterRing',range:150,knockback:'velocity',duration:16,damage:16,holdMaxFrames:18,referenceFrames:4},
-    ds:{name:'Twin Splashes',shape:'twinSplashes',range:105,knockback:'splitSplash',duration:16,damage:17,holdMaxFrames:18,referenceFrames:4},
-    ss:{name:'Water Whip Tip',shape:'whipTip',range:130,knockback:'forwardContact',duration:16,damage:16,holdMaxFrames:18,referenceFrames:4},
-    upHeavy:{name:'Spiral Water Ribbon',shape:'waterRibbon',range:165,knockback:'upContact',duration:20,damage:25,holdMaxFrames:20,referenceFrames:4},
-    dh:{name:'Bouncing Water Sphere',shape:'waterBounce',range:125,knockback:'bounceTwoStage',duration:20,damage:22,holdMaxFrames:20,referenceFrames:4},
-    sh:{name:'Water Crescent',shape:'crescent',range:150,knockback:'crescentContact',duration:19,damage:25,holdMaxFrames:20,referenceFrames:6},
-    super:{name:'Collapse Ring',shape:'collapseRing',range:190,knockback:'waterSuper',duration:30,damage:40,holdMaxFrames:20,referenceFrames:7},
+    us:{name:'Water Ring',shape:'waterRing',range:150,knockback:'velocity',duration:28,damage:16,holdMaxFrames:18},
+    ds:{name:'Twin Splashes',shape:'twinSplashes',range:105,knockback:'splitSplash',duration:22,damage:17,holdMaxFrames:18},
+    ss:{name:'Water Whip Tip',shape:'whipTip',range:130,knockback:'forwardContact',duration:14,damage:16,holdMaxFrames:18},
+    upHeavy:{name:'Spiral Water Ribbon',shape:'waterRibbon',range:165,knockback:'upContact',duration:24,damage:25,holdMaxFrames:20},
+    dh:{name:'Bouncing Water Sphere',shape:'waterBounce',range:125,knockback:'bounceTwoStage',duration:24,damage:22,holdMaxFrames:20},
+    sh:{name:'Water Crescent',shape:'crescent',range:150,knockback:'crescentContact',duration:18,damage:25,holdMaxFrames:20},
+    super:{name:'Collapse Ring',shape:'collapseRing',range:190,knockback:'waterSuper',duration:42,damage:40},
   },
   g1_grass: {
-    us:{name:'Leaf Propeller',shape:'propellerLeaves',range:78,knockback:'up',duration:16,damage:16,holdMaxFrames:18,referenceFrames:4},
-    ds:{name:'Thorn Snap',shape:'thornTips',range:82,knockback:'inward',duration:16,damage:15,holdMaxFrames:18,referenceFrames:4},
-    ss:{name:'Wooden Branch Jab',shape:'branchEnd',range:112,knockback:'forwardContact',duration:16,damage:16,holdMaxFrames:18,referenceFrames:4},
-    upHeavy:{name:'Petal Bloom',shape:'flowerPetals',range:132,knockback:'upContact',duration:20,damage:25,holdMaxFrames:20,referenceFrames:4},
-    dh:{name:'Diagonal Branch Return',shape:'grassDownHeavyBranch',range:130,knockback:'grassBehind',duration:20,damage:22,holdMaxFrames:20,referenceFrames:4},
-    sh:{name:'Branch Spear Split',shape:'branchSplit',range:136,knockback:'forwardContact',duration:19,damage:25,holdMaxFrames:20,referenceFrames:4},
-    super:{name:'Flower Snap',shape:'flowerSnap',range:48,knockback:'radialContact',duration:30,damage:41,holdMaxFrames:20,referenceFrames:7},
+    us:{name:'Leaf Propeller',shape:'propellerLeaves',range:78,knockback:'up',duration:28,damage:16,holdMaxFrames:18,referenceFrames:4},
+    ds:{name:'Thorn Snap',shape:'thornTips',range:82,knockback:'inward',duration:22,damage:15,holdMaxFrames:18,referenceFrames:4},
+    ss:{name:'Wooden Branch Jab',shape:'branchEnd',range:112,knockback:'forwardContact',duration:14,damage:16,holdMaxFrames:18,referenceFrames:4},
+    upHeavy:{name:'Petal Bloom',shape:'flowerPetals',range:132,knockback:'upContact',duration:24,damage:25,holdMaxFrames:20,referenceFrames:4},
+    dh:{name:'Branch Follow-Through',shape:'grassDownHeavyBranch',range:130,knockback:'grassbehind',duration:24,damage:22,holdMaxFrames:20,referenceFrames:4},
+    sh:{name:'Branch Spear Split',shape:'branchSplit',range:136,knockback:'forwardContact',duration:18,damage:25,holdMaxFrames:20,referenceFrames:4},
+    super:{name:'Flower Snap',shape:'flowerSnap',range:158,knockback:'radialContact',duration:42,damage:41},
   },
   g1_ice: {
-    us:{name:'Throwing Ice Shard',shape:'throwingShard',range:130,knockback:'velocity',duration:16,damage:17,holdMaxFrames:18,referenceFrames:4},
-    ds:{name:'Shattered Ice Plate',shape:'plateShards',range:96,knockback:'radialContact',duration:16,damage:18,holdMaxFrames:18,referenceFrames:4},
-    ss:{name:'Ice Forearm Blade',shape:'forearmBlade',range:98,knockback:'forwardContact',duration:16,damage:17,holdMaxFrames:18,referenceFrames:4},
-    upHeavy:{name:'Tri-Shard Burst',shape:'shardBurst',range:142,knockback:'velocity',duration:20,damage:25,holdMaxFrames:20,referenceFrames:4},
-    dh:{name:'Sliding Ice Block',shape:'iceBlock',range:140,knockback:'forwardContact',duration:20,damage:23,holdMaxFrames:20,referenceFrames:4},
-    sh:{name:'Ice Hammer',shape:'hammerArc',range:126,knockback:'forwardContact',duration:19,damage:26,holdMaxFrames:20,referenceFrames:4},
-    super:{name:'Crystal Explosion',shape:'crystalShards',range:170,knockback:'radialContact',duration:30,damage:42,holdMaxFrames:20,referenceFrames:7},
+    us:{name:'Throwing Ice Shard',shape:'throwingShard',range:130,knockback:'velocity',duration:28,damage:17,holdMaxFrames:18},
+    ds:{name:'Crashing Icicle',shape:'plateShards',range:96,knockback:'radialContact',duration:22,damage:18,holdMaxFrames:18},
+    ss:{name:'Ice Forearm Blade',shape:'forearmBlade',range:98,knockback:'forwardContact',duration:14,damage:17,holdMaxFrames:18},
+    upHeavy:{name:'Tri-Shard Launch',shape:'shardBurst',range:142,knockback:'velocity',duration:24,damage:25,holdMaxFrames:20},
+    dh:{name:'Shattered Ice Block',shape:'iceBlock',range:140,knockback:'forwardContact',duration:24,damage:23,holdMaxFrames:20},
+    sh:{name:'Overhead Ice Hammer',shape:'hammerArc',range:126,knockback:'forwardContact',duration:18,damage:26,holdMaxFrames:20},
+    super:{name:'Crystal Explosion',shape:'crystalShards',range:170,knockback:'radialContact',duration:42,damage:42},
   },
 };
 
@@ -262,43 +262,59 @@ export function getActiveSpecHitboxes(attacker) {
       break;
     }
     case 'waterRing': {
-      if(q<.12 || q>.82) break;
-      const u=Math.max(0,Math.min(1,(q-.12)/.70));
-      const k=[[24,-46],[31,-62],[53,-88],[92,-112]], z=u*3, i=Math.min(2,Math.floor(z)), e=z-i;
-      const easeT=e*e*(3-2*e), k0=k[i], k1=k[Math.min(3,i+1)];
-      const cx=k0[0]+(k1[0]-k0[0])*easeT, cy=k0[1]+(k1[1]-k0[1])*easeT;
-      const rx=21-3*e, ry=10-1*e; for(let j=0;j<12;j++){const a=j/12*TAU; C(cx+Math.cos(a)*rx,cy+Math.sin(a)*ry,5.5);} break;
+      if(q<.14 || q>.86) break;
+      const u=Math.max(0,Math.min(1,(q-.14)/.72));
+      const z=u*3.2, i=Math.min(2,Math.floor(z)), e=z-i;
+      const k=[[20,-54],[40,-72],[74,-100],[116,-120]], et=e*e*(3-2*e), a=k[i], b=k[Math.min(3,i+1)];
+      const cx=a[0]+(b[0]-a[0])*et, cy=a[1]+(b[1]-a[1])*et;
+      const rx=22-3*e, ry=11-2*e;
+      for(let j=0;j<14;j++){const ang=j/14*TAU;C(cx+Math.cos(ang)*rx,cy+Math.sin(ang)*ry,5.5);}
+      break;
     }
     case 'twinSplashes': {
-      if(q<.30 || q>.88) break;
-      const u=Math.max(0,Math.min(1,(q-.30)/.58)), h=24+30*u, out=18+30*u;
-      for(const side of [-1,1]){ K(side*4,-2,side*out*.55,-h*.62,7); K(side*out*.55,-h*.62,side*out,-h*.32,7); }
+      if(q<.22 || q>.90) break;
+      const u=Math.max(0,Math.min(1,(q-.22)/.68)), e=u*u*(3-2*u);
+      for(const side of [-1,1]){
+        const pts=[];
+        for(let i=0;i<=7;i++){const z=i/7;pts.push([side*(10+84*z*e),-3-Math.sin(z*Math.PI)*34*e]);}
+        for(let i=0;i<pts.length-1;i++) K(pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1],9);
+      }
       break;
     }
     case 'whipTip': {
-      if(q<.28||q>.90) break;
-      const u=Math.max(0,Math.min(1,(q-.28)/.62)), e=u*u*(3-2*u);
-      const tx=42+88*e, ty=-50-34*Math.sin(e*Math.PI);
+      if(q<.20||q>.88) break;
+      const u=Math.max(0,Math.min(1,(q-.20)/.68)),e=u*u*(3-2*u);
+      const tx=42+92*e,ty=-55-30*Math.sin(e*Math.PI);
       C(tx,ty,10); break;
     }
     case 'waterRibbon': {
-      const u=q, cx=4, cy=-72-28*u, r0=22+18*u, r1=58+28*u, turns=.65+1.25*u;
-      for(let i=0;i<14;i++){const z=i/13,a=-Math.PI/2+z*turns*TAU,r=r0+(r1-r0)*z; C(cx+Math.cos(a)*r,cy+Math.sin(a)*r*.78,7);}
-      if(q>.72) for(let i=0;i<5;i++) C(50+i*8,-108-i*8,6); break;
+      const u=q;
+      for(let lane=0;lane<3;lane++){
+        for(let i=0;i<13;i++){
+          const z=i/12,yy=-3-142*u*z,wob=Math.sin(z*TAU*(1.15+u*.8)+lane*2.1)*20,xx=(lane-1)*16+wob+((i%2)?-1:1)*8*z*u;
+          if(i>0){const p0=(i-1)/12,py=-3-142*u*p0,px=(lane-1)*16+Math.sin(p0*TAU*(1.15+u*.8)+lane*2.1)*20+((i-1)%2?-1:1)*8*p0*u;K(px,py,xx,yy,7);}
+        }
+      }
+      break;
     }
     case 'waterBounce': {
-      if(q<.18) break;
-      if(q<.60){const u=Math.min(1,(q-.18)/.42),e=u*u*(3-2*u); C(54+12*e,-52+44*e,22);}
-      else {const u=Math.min(1,(q-.60)/.40),e=u*u*(3-2*u); C(66,-8,Math.max(7,21*(1-e))); for(let i=0;i<10;i++){const a=-Math.PI*.92+i/9*Math.PI*.84; K(66,-8,66+Math.cos(a)*(20+46*e),-8+Math.sin(a)*(12+38*e),5.5);} }
+      if(q<.12) break;
+      if(q<.62){const u=Math.min(1,(q-.12)/.50),e=u*u*(3-2*u); C(52,-55+58*e,22);}
+      else {const u=Math.min(1,(q-.62)/.38),e=u*u*(3-2*u); const sx=52,sy=3; for(let i=0;i<11;i++){const a=Math.PI*1.05+i/10*Math.PI*.9; const ex=sx+Math.cos(a)*(18+46*e),ey=sy+Math.sin(a)*(10+34*e);K(sx,sy,ex,ey,6.5);} }
       break;
     }
     case 'crescent': {
-      if(q<.06||q>.94) break; const u=Math.max(0,Math.min(1,(q-.06)/.88)), e=u*u*(3-2*u),cx=37+22*e,cy=-54,r=53+23*Math.sin(e*Math.PI),start=-1.2+e*.12,end=.95+e*1.55;
-      let prev=null; for(let i=0;i<=14;i++){const s=i/14,a=start+(end-start)*s,rr=r*(.78+.22*Math.sin(s*Math.PI)),px=cx+Math.cos(a)*rr,py=cy+Math.sin(a)*rr*.74;if(prev)K(prev[0],prev[1],px,py,8);prev=[px,py];} break;
+      if(q<.10||q>.96) break;
+      const u=Math.max(0,Math.min(1,(q-.10)/.86)),cx=34+28*u,cy=-48,r=56+18*Math.sin(u*Math.PI),start=-1.45+u*.15,end=.95+u*1.65;
+      let prev=null;for(let i=0;i<=20;i++){const z=i/20,a=start+(end-start)*z,rr=r*(.78+.22*Math.sin(z*Math.PI)),px=cx+Math.cos(a)*rr,py=cy+Math.sin(a)*rr*.72;if(prev)K(prev[0],prev[1],px,py,10);prev=[px,py];}
+      break;
     }
     case 'collapseRing': {
-      if(q<.03) break; let r; if(q<.70){const u=q/.70,e=u*u*(3-2*u);r=25+78*e;} else {const u=(q-.70)/.30,e=u*u*(3-2*u);r=103-22*e;}
-      for(let i=0;i<18;i++){const a=i/18*TAU; C(Math.cos(a)*r,-62+Math.sin(a)*r*.68,7);} break;
+      // Only the outward-moving ring after the inward collapse is active.
+      if(q<.55) break;
+      const u=Math.min(1,(q-.55)/.45),e=u*u*(3-2*u),r=18+122*e;
+      for(let i=0;i<22;i++){const a=i/22*TAU;C(Math.cos(a)*r,-62+Math.sin(a)*r*.68,7.5);}
+      break;
     }
     case 'propellerLeaves': { if(q<.24 || q>.86) break; const u=Math.max(0,Math.min(1,(q-.24)/.62)), cy=-96+u*38, rot=u*TAU; for(let i=0;i<3;i++){const a=rot+i*TAU/3, cx=Math.cos(a)*31, sy=cy+Math.sin(a)*31*.38; P([[cx-7,sy-23],[cx+10,sy],[cx-7,sy+23]]);} break; }
     case 'thornTips': { if(q<.28||q>.88) break; const u=Math.max(0,Math.min(1,(q-.28)/.60)),e=u*u*(3-2*u); C(-22-26*e,-38+4*e,8); C(22+26*e,-38+4*e,8); break; }
@@ -321,12 +337,12 @@ export function getActiveSpecHitboxes(attacker) {
     case 'vineTwoHits': { if(q<.20) break; if(q<.58) { const u=(q-.20)/.38; K(-12,-10,40+58*u,2+38*u,10); } else { const u=(q-.58)/.42; K(98-72*u,40-38*u,58-86*u,12-24*u,10); } break; }
     case 'branchSplit': { const len=120*Math.min(1,q/.72); P([[18,-48],[18+len,-55],[18+len,-41]]); if(q>.62){const s=(q-.62)/.38; for(const a of [-.32,0,.32]) P([[18+len,-48],[18+len+52*s,-48+Math.sin(a)*52*s],[18+len+60*s,-48+Math.sin(a)*52*s+6]]);} break; }
     case 'flowerSnap': { if(q<.4) break; const r=112-(q-.4)/.6*98; for(let i=0;i<12;i++){const a=i/12*TAU; P([[Math.cos(a)*r-10,-48+Math.sin(a)*r*.65-28],[Math.cos(a)*r+14,-48+Math.sin(a)*r*.65],[Math.cos(a)*r-10,-48+Math.sin(a)*r*.65+28]]);} break; }
-    case 'throwingShard': { if(q<.20 || q>.88) break; const u=Math.max(0,Math.min(1,(q-.20)/.68)); const sx=8+u*82, sy=-88-u*78; P([[sx,sy-31],[sx+13,sy+12],[sx-8,sy+20],[sx-4,sy-8]]); break; }
-    case 'plateShards': { if(q<.28) break; const u=Math.min(1,(q-.28)/.58); for(let i=0;i<7;i++){const a=-Math.PI*1.05+i/6*Math.PI*1.1; const rr=18+48*u, sx=Math.cos(a)*rr, sy=-16+Math.sin(a)*30*u; P([[sx,sy-15],[sx+10,sy+5],[sx-8,sy+9]]);} break; }
-    case 'forearmBlade': { if(q<.12||q>.90) break; const u=Math.max(0,Math.min(1,(q-.12)/.78)),a=-.25+u*2.5; K(22,-45,22+Math.cos(a)*62,-45+Math.sin(a)*62,11); break; }
-    case 'shardBurst': { const u=q; for(let i=0;i<3;i++){const a=-Math.PI/2+i*TAU/3+u*.9, rr=22+68*u; const sx=Math.cos(a)*rr, sy=-78+Math.sin(a)*rr*.58; K(Math.cos(a)*10,-78+Math.sin(a)*10*.58,sx,sy,8.5);} break; }
-    case 'iceBlock': { const bx=28+105*Math.min(1,q/.72); if(q<.72) B(bx,-18,66,34); else {B(bx,-18,26,30);B(bx+32,-42,26,24);B(bx+8,12,24,22);} break; }
-    case 'hammerArc': { if(q<.08) break; const u=Math.min(1,q/.92),a=-1.05+u*2.35; C(24+Math.cos(a)*72,-43+Math.sin(a)*72,20); if(q>.82){const e=(q-.82)/.18; for(let i=0;i<5;i++){const aa=-.35+i*.18; C(24+Math.cos(a)*72+Math.cos(aa)*(14+18*e),-43+Math.sin(a)*72+Math.sin(aa)*(10+12*e),5);} } break; }
+    case 'throwingShard': { if(q<.18||q>.88) break; const u=Math.max(0,Math.min(1,(q-.18)/.70)),sx=10+34*u,sy=-96-72*u; P([[sx,sy-30],[sx+14,sy+12],[sx-8,sy+20],[sx-5,sy-8]]); break; }
+    case 'plateShards': { if(q<.48) break; const u=Math.min(1,(q-.48)/.42); const cx=42,cy=-12; for(let i=0;i<8;i++){const a=-Math.PI*.92+i/7*Math.PI*1.08,rr=12+54*u,sx=cx+Math.cos(a)*rr,sy=cy+Math.sin(a)*rr*.62;P([[sx-7,sy-17],[sx+10,sy+5],[sx-8,sy+10]]);} break; }
+    case 'forearmBlade': { if(q<.12||q>.90) break; const u=Math.max(0,Math.min(1,(q-.12)/.78)),a=-.18+u*.55; K(22,-48,22+Math.cos(a)*82,-48+Math.sin(a)*82,13); break; }
+    case 'shardBurst': { const u=Math.min(1,q),startY=-108; for(let i=0;i<3;i++){const sx=(i-1)*30,sy=startY-72*u;K(sx,sy+24,sx,sy-20,8.5);} break; }
+    case 'iceBlock': { const bx=50; if(q<.68) B(bx,-24,66,40); else {const u=Math.min(1,(q-.68)/.32);B(bx,-24,26,28);B(bx+34*u,-44-20*u,24,24);B(bx-20*u,8+14*u,24,22);} break; }
+    case 'hammerArc': { if(q<.08) break; const u=Math.min(1,q/.92),a=-2.15+u*3.0; const ex=24+Math.cos(a)*92,ey=-52+Math.sin(a)*92;K(24,-52,ex,ey,18);if(q>.78){const e=(q-.78)/.22;for(let i=0;i<6;i++){const aa=.25+i*.18;C(ex+Math.cos(aa)*(12+22*e),ey+Math.sin(aa)*(10+18*e),5.5);}}break; }
     case 'crystalShards': { if(q<.38) break; const e=(q-.38)/.62, cx=52, cy=-54, r=24+e*110; for(let i=0;i<16;i++){const a=i/16*TAU; const sx=cx+Math.cos(a)*r, sy=cy+Math.sin(a)*r*.72; const nx=Math.cos(a), ny=Math.sin(a)*.72; P([[sx-8*nx,sy-8*ny],[sx+12*nx,sy+12*ny],[sx-5*nx+ny*6,sy-5*ny-nx*6]]);} break; }
     default: {
       const reach=Math.min(160,Math.max(50,spec.range)); K(24,-42,reach*q,-42,12);

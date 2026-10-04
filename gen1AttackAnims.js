@@ -763,6 +763,12 @@ function iceBlock(ctx,x,y,w,h,a=1,cracked=false){
   if(cracked){ctx.strokeStyle=white;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,y-h*.48);ctx.lineTo(x-8,y-4);ctx.lineTo(x+4,y+h*.48);ctx.stroke();}
   ctx.restore();
 }
+function iceLargeIcicle(ctx,x,y,w=18,h=58,angle=0,a=1){
+  const c='#79DFFF',white='#EFFFFF';
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.globalAlpha=a;ctx.fillStyle=c;ctx.strokeStyle=white;ctx.lineWidth=1.5;ctx.shadowColor=c;ctx.shadowBlur=22;
+  ctx.beginPath();ctx.moveTo(0,-h);ctx.lineTo(w*.55,-h*.28);ctx.lineTo(w*.42,h*.35);ctx.lineTo(0,h*.58);ctx.lineTo(-w*.5,h*.2);ctx.lineTo(-w*.62,-h*.3);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.globalAlpha=a*.55;ctx.strokeStyle=white;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-w*.18,-h*.65);ctx.lineTo(w*.08,h*.35);ctx.lineTo(-w*.05,h*.5);ctx.stroke();ctx.restore();
+}
 function iceCrystal(ctx,x,y,scale,a=1,phase=0){
   const c='#79DFFF',white='#EFFFFF';
   for(let i=0;i<7;i++){const ang=-Math.PI/2+(i-3)*.18; const rr=(28+Math.abs(i-3)*8)*scale; shard(ctx,x+Math.cos(ang)*rr*.35,y+Math.sin(ang)*rr*.15,11*scale,28*scale,ang,c,a*.92);}
@@ -771,52 +777,75 @@ function iceCrystal(ctx,x,y,scale,a=1,phase=0){
 }
 function iceUpReference(ctx,x,y,p){
   const c='#79DFFF',white='#EFFFFF';
-  if(p<0){const q=holdCharge(p);iceShard(ctx,x,y-92,10+q*3,24+q*7,-.08-q*.3,c,.95);spark(ctx,x,y-92,4+q*2,white,.7);return;}
-  const f=1+attackP(p)*3;
-  if(f<2){const u=ease(f-1);iceShard(ctx,x,y-88,11,25,-.1-u*.2,c,.98);return;}
-  if(f<3){const u=ease(f-2),sx=lerp(x+2,x+28,u),sy=lerp(y-88,y-112,u);iceShard(ctx,sx,sy,12,30,-.1-u*.8,c,1);glowStroke(ctx,[[x+6,y-55],[sx,sy+18]],c,3,.55);return;}
-  const u=ease(f-3),sx=lerp(x+28,x+72,u),sy=lerp(y-112,y-150,u),rot=-.9+u*1.8;iceShard(ctx,sx,sy,13,31,rot,c,1);for(let i=0;i<8;i++){const z=i/8; spark(ctx,lerp(x+30,sx,z),lerp(y-112,sy,z),1.3,c,.5*(1-z));}spark(ctx,sx,sy,4,white,.75);
+  if(p<0){const h=holdCharge(p);iceShard(ctx,x,y-94,11+2*h,27+5*h,-.1,c,.65+.3*h);return;}
+  const f=1+attackP(p)*5;
+  if(f<2){const u=ease(f-1);iceShard(ctx,x+2*u,y-92-5*u,12,30,-.15-u*.35,c,1);}
+  else if(f<3){const u=ease(f-2),sx=lerp(x+4,x+10,u),sy=lerp(y-97,y-122,u),rot=-.5+u*TAU;iceShard(ctx,sx,sy,13,32,rot,c,1);spark(ctx,sx,sy,4,white,.75);}
+  else if(f<4.3){const u=ease((f-3)/1.3),sx=lerp(x+10,x+26,u),sy=lerp(y-122,y-148,u),rot=.8+u*1.3;iceShard(ctx,sx,sy,13,32,rot,c,1);for(let i=0;i<6;i++)spark(ctx,sx-i*3,sy+i*4,1.4,c,.45);}
+  else {const u=ease((f-4.3)/.7),sx=lerp(x+26,x+35,u),sy=lerp(y-148,y-166,u),rot=2.1+u*.5;iceShard(ctx,sx,sy,13,31,rot,c,1-u*.3);for(let i=0;i<7;i++)spark(ctx,sx-i*3,sy+i*3,1.5,c,.5*(1-u));}
 }
 function iceDownReference(ctx,x,y,p){
   const c='#79DFFF',white='#EFFFFF';
-  if(p<0){const q=holdCharge(p);icePlate(ctx,x,y-2,34+8*q,.55+.25*q,q*2);return;}
-  const f=1+attackP(p)*3;
-  if(f<2){const u=ease(f-1);icePlate(ctx,x,y-3,34,1,u);return;}
-  if(f<3){const u=ease(f-2);icePlate(ctx,x+20*u,y-8,34*(1-.25*u),1,u);iceBlock(ctx,x+20*u,y-8,48,16,.35);return;}
-  const u=ease(f-3),cx=x+20+12*u,cy=y-18-22*u;iceBlock(ctx,cx,cy,48,18,.5*(1-u),true);for(let i=0;i<7;i++){const ang=-Math.PI*1.05+i/6*Math.PI*1.1;const rr=18+36*u;iceShard(ctx,cx+Math.cos(ang)*rr,cy+Math.sin(ang)*rr*.55,7,17,ang,c,.95);}for(let i=0;i<10;i++){const a=i/10*TAU;spark(ctx,cx+Math.cos(a)*(18+38*u),cy+Math.sin(a)*(10+28*u),1.5,white,.65*(1-u));}
+  if(p<0){const h=holdCharge(p);iceLargeIcicle(ctx,x+42,y-76,18+3*h,54+10*h,0,.6+.3*h);return;}
+  const f=1+attackP(p)*5;
+  if(f<2){const u=ease(f-1);iceLargeIcicle(ctx,x+42,y-78,19,58,-.02*u,1);}
+  else if(f<3){const u=ease(f-2);iceLargeIcicle(ctx,x+42,y-78+42*u,20,62,.04*u,1);}
+  else if(f<4){const u=ease(f-3);iceLargeIcicle(ctx,x+42,y-36+26*u,20,62,.06*u,1-u*.15);}
+  else {
+    const u=ease(f-4),cx=x+42,cy=y-6;
+    for(let i=0;i<8;i++){
+      const a=-Math.PI*.92+i/7*Math.PI*1.08,rr=10+56*u;
+      iceShard(ctx,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr*.62,10,24,a,c,1-u*.12);
+    }
+    for(let i=0;i<12;i++){const a=i/12*TAU;spark(ctx,cx+Math.cos(a)*(18+50*u),cy+Math.sin(a)*(12+34*u),1.6,white,.65*(1-u));}
+  }
 }
+
 function iceSideReference(ctx,x,y,p){
   const c='#79DFFF';
-  if(p<0){const q=holdCharge(p);iceBlade(ctx,x+20,y-45,38+12*q,-.15,.55+.3*q);return;}
-  const f=1+attackP(p)*3;
-  if(f<2){const u=ease(f-1);iceBlade(ctx,x+22,y-45,40+8*u,-.25+u*.15,.75);}
-  else if(f<3){const u=ease(f-2);const ang=-.2+u*1.9;iceBlade(ctx,x+24,y-45,58,ang,.98);for(let i=0;i<5;i++)spark(ctx,x+24+Math.cos(ang)*50,y-45+Math.sin(ang)*50,1.4,c,.55);}
-  else {const u=ease(f-3),ang=1.7+u*1.3;iceBlade(ctx,x+24,y-45,56,ang,.82*(1-u));for(let i=0;i<7;i++)spark(ctx,x+70+i*5,y-35+i*2,1.5,c,.5*(1-u));}
+  if(p<0){const h=holdCharge(p);iceLargeIcicle(ctx,x+30,y-48,18+3*h,50+8*h,-.18,.65+.3*h);return;}
+  const f=1+attackP(p)*4;
+  if(f<2){const u=ease(f-1);iceLargeIcicle(ctx,x+30+8*u,y-48,20,52,-.18+u*.05,.95);}
+  else if(f<3){const u=ease(f-2);iceLargeIcicle(ctx,x+30+42*u,y-48,20,56,-.13+u*.16,1);}
+  else if(f<4){const u=ease(f-3);iceLargeIcicle(ctx,x+30+72*u,y-48,20,56,.03+u*.18,1);for(let i=0;i<5;i++)spark(ctx,x+80+i*5,y-46+i*2,1.5,c,.5);}
+  else {const u=ease(f-4);iceLargeIcicle(ctx,x+104,y-48,20,54,.22,.8*(1-u));}
 }
+
 function iceUpHeavyReference(ctx,x,y,p){
   const c='#79DFFF';
-  if(p<0){const q=holdCharge(p);for(let i=0;i<3;i++)iceShard(ctx,x+(i-1)*24,y-98,12+q*3,30+q*8,-.15+i*.15,.55+.3*q);return;}
-  const f=1+attackP(p)*3;
-  if(f<2){const u=ease(f-1);for(let i=0;i<3;i++)iceShard(ctx,x+(i-1)*24,y-80-25*u,12,30,-.1+i*.1,.95);}
-  else if(f<3){const u=ease(f-2);for(let i=0;i<3;i++){const a=-Math.PI/2+i*TAU/3+u*1.0;iceShard(ctx,x+Math.cos(a)*26,y-82+Math.sin(a)*26*.55,13,32,a,c,1);}}
-  else {const u=ease(f-3);for(let i=0;i<3;i++){const a=-Math.PI/2+i*TAU/3+1.0+u*.65,rr=28+65*u;const sx=x+Math.cos(a)*rr,sy=y-82+Math.sin(a)*rr*.6;iceShard(ctx,sx,sy,13,32,a,c,1);glowStroke(ctx,[[x,y-82],[sx,sy]],c,2.2,.35);}}
+  if(p<0){const h=holdCharge(p);for(let i=0;i<3;i++)iceShard(ctx,x+(i-1)*28,y-104,13+2*h,32+5*h,-.08+i*.08,.6+.25*h);return;}
+  const f=1+attackP(p)*4;
+  if(f<2){const u=ease(f-1);for(let i=0;i<3;i++)iceShard(ctx,x+(i-1)*30,y-88-28*u,13,34,-.05+i*.05,.95);}
+  else if(f<3){const u=ease(f-2);for(let i=0;i<3;i++){
+    const sx=x+(i-1)*30,sy=y-116-35*u;iceShard(ctx,sx,sy,14,35,-.05+i*.05,c,1);
+    glowStroke(ctx,[[sx,sy+26],[sx,sy+52]],c,3,.45);
+  }}
+  else {const u=ease(f-3);for(let i=0;i<3;i++){
+    const sx=x+(i-1)*30,sy=y-151-55*u;iceShard(ctx,sx,sy,14,36,-.05+i*.05,c,1-u*.2);
+    for(let j=0;j<3;j++)spark(ctx,sx+(j-1)*5,sy+24+j*6,1.4,c,.45*(1-u));
+  }}
 }
 function iceDownHeavyReference(ctx,x,y,p){
-  const c='#79DFFF';
-  if(p<0){const q=holdCharge(p);iceBlock(ctx,x+30,y-18,60+10*q,36+5*q,.65+.25*q,false);return;}
-  const f=1+attackP(p)*3;
-  if(f<2){const u=ease(f-1);iceBlock(ctx,x+28+18*u,y-18,62,36,.95,false);}
-  else if(f<3){const u=ease(f-2),bx=x+46+55*u;iceBlock(ctx,bx,y-18,62,36,1,false);for(let i=0;i<4;i++)spark(ctx,bx-25+i*15,y+2,1.5,c,.45);}
-  else {const u=ease(f-3),bx=x+101,by=y-18;iceBlock(ctx,bx-24*u,by,30,30,.25*(1-u),true);iceShard(ctx,bx+28*u,by-18*u,12,24,.55,c,1);iceShard(ctx,bx+4*u,by+18*u,12,24,-.55,c,1);for(let i=0;i<8;i++){const a=i/8*TAU;spark(ctx,bx+Math.cos(a)*(20+35*u),by+Math.sin(a)*(10+24*u),1.5,c,.55*(1-u));}}
+  const c='#79DFFF',white='#EFFFFF';
+  if(p<0){const h=holdCharge(p);iceBlock(ctx,x+50,y-24,64+8*h,38+5*h,.6+.3*h,false);return;}
+  const f=1+attackP(p)*4;
+  if(f<2){const u=ease(f-1);iceBlock(ctx,x+50,y-24,64,38,.95,false);}
+  else if(f<3){const u=ease(f-2),bx=lerp(x+50,x+62,u);iceBlock(ctx,bx,y-24,66,40,1,false);}
+  else if(f<3.5){const u=ease((f-3)/.5),bx=x+62;iceBlock(ctx,bx,y-24,66,40,1-u,true);}
+  else {const u=ease((f-3.5)/.5),bx=x+62,by=y-24;for(let i=0;i<8;i++){
+    const a=-Math.PI*.92+i/7*Math.PI*1.08,rr=14+58*u;iceShard(ctx,bx+Math.cos(a)*rr,by+Math.sin(a)*rr*.65,9,23,a,c,1);
+  }for(let i=0;i<10;i++){const a=i/10*TAU;spark(ctx,bx+Math.cos(a)*(20+50*u),by+Math.sin(a)*(12+32*u),1.5,white,.65*(1-u));}}
 }
 function iceSideHeavyReference(ctx,x,y,p){
   const c='#79DFFF';
-  if(p<0){const q=holdCharge(p);iceBlade(ctx,x+25,y-45,62+15*q,-.25,.6+.25*q);return;}
-  const f=1+attackP(p)*3;
-  if(f<2){const u=ease(f-1);iceBlade(ctx,x+25,y-45,60+20*u,-.5+u*.2,.95);}
-  else if(f<3){const u=ease(f-2),ang=-.3+u*2.6;iceBlade(ctx,x+25,y-45,86,ang,1);glowArc(ctx,x+25,y-45,74,54,-.7,ang,c,4,.6,ang*.2);}
-  else {const u=ease(f-3),ang=2.3+u*.2;iceBlade(ctx,x+25,y-45,84,ang,.85*(1-u));for(let i=0;i<7;i++){const a=-.45+i*.15;iceShard(ctx,x+100+Math.cos(a)*(8+25*u),y-45+Math.sin(a)*(8+25*u),4,10,a,c,.7*(1-u));}}
+  if(p<0){const h=holdCharge(p);iceLargeIcicle(ctx,x-30,y-72,25+4*h,72+10*h,-.12,.6+.3*h);return;}
+  const f=1+attackP(p)*4;
+  if(f<2){const u=ease(f-1);iceLargeIcicle(ctx,x-30,y-72,26,74,-.12-u*.12,1);}
+  else if(f<3){const u=ease(f-2);iceLargeIcicle(ctx,x-30+32*u,y-72-22*u,27,78,-.25+u*1.15,1);}
+  else if(f<4){const u=ease(f-3);iceLargeIcicle(ctx,x+2+48*u,y-94+34*u,28,80,.9+u*.9,1);}
+  else {const u=ease(f-4),ang=1.8+u*.15;iceLargeIcicle(ctx,x+52,y-50,28,80,ang,.9*(1-u));for(let i=0;i<8;i++)iceShard(ctx,x+82+Math.cos(i)*12,y-48+Math.sin(i)*12,5,14,i*.45,c,.65*(1-u));}
 }
+
 function iceAttack(ctx,x,y,p,move){
   if(move==='us')return iceUpReference(ctx,x,y,p);
   if(move==='ds')return iceDownReference(ctx,x,y,p);
@@ -1009,67 +1038,155 @@ function wRibbon(ctx,x,y,t,a=1,phase=0){
   for(let i=0;i<3;i++){const u=.72+i*.09, ang=-Math.PI/2+u*(TAU*(.65+t*1.25)),r=outer+7+i*5;waterDrop(ctx,cx+Math.cos(ang)*r,cy+Math.sin(ang)*r*.82,1.5,a*.55,ang);}
 }
 function wCrescent(ctx,x,y,t,a=1,phase=0){waterBlade(ctx,x,y,t,a,phase);}
+function waterWave(ctx,x,y,side,t,a=1,phase=0){
+  // Broad, layered flowing water sheet — deliberately NOT a neon line.
+  const u=clamp01(t), dir=side;
+  const pts=[];
+  for(let i=0;i<=28;i++){
+    const z=i/28;
+    const xx=x+dir*(8+92*z*u);
+    const crest=-Math.sin(z*Math.PI)*34*u - Math.sin(z*TAU+phase*2)*5;
+    const yy=y-3+crest;
+    pts.push([xx,yy]);
+  }
+  waterCurve(ctx,pts,a,18-5*u);
+  const pts2=pts.map(([xx,yy],i)=>[xx,yy+8+Math.sin(i*.8+phase)*2]);
+  waterCurve(ctx,pts2,a*.58,10-3*u);
+  for(let i=0;i<10;i++){
+    const z=i/9, xx=x+dir*(18+76*z*u), yy=y-8-Math.sin(z*Math.PI)*30*u;
+    waterDrop(ctx,xx,yy,1.8+(i%3)*.45,a*.65,dir*.4);
+  }
+}
+function waterWhipReferenceShape(ctx,x,y,t,a=1,phase=0){
+  const u=clamp01(t);
+  const hand=[x+22,y-54];
+  const tip=[x+42+92*u,y-55-30*Math.sin(u*Math.PI)];
+  const pts=[];
+  for(let i=0;i<=30;i++){
+    const z=i/30;
+    const xx=lerp(hand[0],tip[0],z);
+    const yy=lerp(hand[1],tip[1],z)-Math.sin(z*Math.PI)*16*u;
+    pts.push([xx,yy]);
+  }
+  waterCurve(ctx,pts,a,16-7*u);
+  if(u>.18){
+    const r=14+18*u;
+    waterTaperedArc(ctx,tip[0]-5,tip[1]+4,r,-.25,1.35,a,.5+phase,8);
+  }
+  for(let i=0;i<12;i++){
+    const z=.15+i*.065, idx=Math.min(30,Math.floor(z*30));
+    const pt=pts[idx]; waterDrop(ctx,pt[0],pt[1]-3,1.3+(i%2)*.5,a*.5,0);
+  }
+}
+function waterSpiralFlow(ctx,x,y,t,a=1,phase=0){
+  const u=clamp01(t);
+  // Several overlapping liquid ribbons rise from below/around the fighter.
+  for(let lane=0;lane<3;lane++){
+    const pts=[];
+    for(let i=0;i<=42;i++){
+      const z=i/42;
+      const yy=y+2-(142*u)*z;
+      const wob=Math.sin(z*TAU*(1.15+u*.8)+phase+lane*2.1)*20;
+      const zig=((i%2)?-1:1)*8*z*u;
+      const xx=x+(lane-1)*16 + wob + zig;
+      pts.push([xx,yy]);
+    }
+    waterCurve(ctx,pts,a*.82,15-lane*2);
+    for(let i=5;i<38;i+=6){
+      const pt=pts[i]; waterDrop(ctx,pt[0],pt[1],1.5,a*.45,phase);
+    }
+  }
+  // Crown of flowing water above the head.
+  const crownY=y-42-130*u;
+  waterIrregularRing(ctx,x,crownY,30+22*u,10+5*u,a*.8,phase*.7,phase,.04);
+}
+function waterDownHeavyShape(ctx,x,y,p,a=1,phase=0){
+  const u=clamp01(p);
+  const bx=x+52;
+  if(u<.32){
+    const k=ease(u/.32); waterOrb(ctx,bx,y-55,22+2*k,a,phase);
+    return;
+  }
+  if(u<.62){
+    const k=ease((u-.32)/.30);
+    // The ball is visibly driven downward by the stomp.
+    waterOrb(ctx,bx,y-55+58*k,22,a,phase+1);
+    waterSpray(ctx,bx,y-55+58*k,Math.PI/2,.8,10,a*.5,phase);
+    return;
+  }
+  const k=ease((u-.62)/.38), sy=y+3;
+  waterOrb(ctx,bx,sy,20*(1-k*.55),a*(1-k*.35),phase+2);
+  waterWave(ctx,bx,sy,-1,k,a*.95,phase);
+  waterWave(ctx,bx,sy,1,k,a*.95,phase+1.3);
+}
 function waterUpReference(ctx,x,y,p){
-  // Matches the supplied 12-panel sheet: ring starts around the raised arm,
-  // separates, arcs upward, then fades out before returning to neutral.
-  const q=attackP(p), f=1+q*7, phase=q*TAU;
-  if(p<0){ const h=holdCharge(p); wRing(ctx,x+20,y-42,15+3*h,7+2*h,.72+.18*h,-.15,phase); return; }
+  if(p<0){const h=holdCharge(p);waterRing(ctx,x+22,y-52,17+3*h,9+2*h,.65+.3*h,-h*.4,h);return;}
+  const f=1+attackP(p)*7;
   if(f<2){
-    const u=ease(f-1); wRing(ctx,x+18+5*u,y-42-7*u,16+6*u,8+2*u,.95,-.1,phase);
-    waterDrop(ctx,x+20,y-45,2.2,.8);
+    const u=ease(f-1); waterRing(ctx,x+20,y-54,18+5*u,10+2*u,.9,-u*TAU,.4+u*2);
   } else if(f<3){
-    const u=ease(f-2), cx=lerp(x+25,x+45,u), cy=lerp(y-54,y-78,u);
-    wRing(ctx,cx,cy,20,9,1,.02,phase); waterStream(ctx,[[x+20,y-44],[cx,cy]],.55,4,phase);
-  } else if(f<5){
-    const u=ease((f-3)/2), cx=lerp(x+45,x+90,u), cy=lerp(y-78,y-108,u)+Math.sin(u*Math.PI)*-8;
-    wRing(ctx,cx,cy,21-2*u,9-u,1,.04,phase);
-    const trail=[]; for(let i=0;i<=16;i++){const z=i/16;trail.push([lerp(x+44,cx,z),lerp(y-78,cy,z)+Math.sin(z*Math.PI)*8]);}
-    waterStream(ctx,trail,.72,4.5,phase+.5);
+    const u=ease(f-2),cx=lerp(x+20,x+40,u),cy=lerp(y-54,y-72,u);
+    waterRing(ctx,cx,cy,22,11,1,u*TAU,.8); waterCurve(ctx,[[x+20,y-54],[cx,cy]],.6,6);
+  } else if(f<5.5){
+    const u=ease((f-3)/2.5),cx=lerp(x+40,x+108,u),cy=lerp(y-72,y-116,u);
+    waterRing(ctx,cx,cy,22-3*u,11-2*u,1,u*TAU,1.4+u*3);
+    const trail=[];for(let i=0;i<=20;i++){const z=i/20;trail.push([lerp(x+40,cx,z),lerp(y-72,cy,z)+Math.sin(z*Math.PI)*8]);}
+    waterCurve(ctx,trail,.55,5);
   } else if(f<7){
-    const u=ease((f-5)/2), cx=lerp(x+90,x+106,u), cy=lerp(y-108,y-116,u);
-    wRing(ctx,cx,cy,19-7*u,8-3*u,1-u*.55,.04,phase);
-    for(let i=0;i<6;i++){const z=i/5; waterDrop(ctx,lerp(x+74,cx,z),lerp(y-98,cy,z),1.3,.45*(1-u));}
+    const u=ease((f-5.5)/1.5),cx=lerp(x+108,x+116,u),cy=lerp(y-116,y-120,u);
+    waterRing(ctx,cx,cy,19-8*u,9-4*u,1-u*.8,(u+1)*TAU,2);
+    for(let i=0;i<8;i++)waterDrop(ctx,cx+(i-4)*4,cy+(i%2?5:-5),1.4,.55*(1-u),i);
   }
 }
 function waterDownReference(ctx,x,y,p){
-  // Two distinct puddle splashes, one on each side, rather than a ring attack.
-  const q=attackP(p), f=1+q*3;
-  if(p<0){const h=holdCharge(p); waterStream(ctx,[[x,y-2],[x-10,y-4],[x-18,y-1]],.3+.25*h,5);waterStream(ctx,[[x,y-2],[x+10,y-4],[x+18,y-1]],.3+.25*h,5);return;}
-  if(f<2){const u=ease(f-1); waterSpray(ctx,x-4,y-2,-Math.PI/2,.75,8,.65+.2*u,q);waterSpray(ctx,x+4,y-2,-Math.PI/2,.75,8,.65+.2*u,q+1);}
-  else {const u=ease(f-2); waterSheet(ctx,x-5-u*3,y-2,-1,1.0,1-u*.15,q);waterSheet(ctx,x+5+u*3,y-2,1,1.0,1-u*.15,q+1.2);}
+  if(p<0){const h=holdCharge(p);waterWave(ctx,x,y,-1,.18+h*.12,.45+.25*h,0);waterWave(ctx,x,y,1,.18+h*.12,.45+.25*h,1.3);return;}
+  const f=1+attackP(p)*4;
+  if(f<2){
+    const u=ease(f-1);
+    // Bend/slap startup: low water begins at both palms.
+    waterWave(ctx,x,y,-1,.15+.18*u,.75+.2*u,0);
+    waterWave(ctx,x,y,1,.15+.18*u,.75+.2*u,1.2);
+  } else if(f<3.3){
+    const u=ease((f-2)/1.3);
+    waterWave(ctx,x,y,-1,.33+.67*u,1,.2);
+    waterWave(ctx,x,y,1,.33+.67*u,1,1.5);
+  } else {
+    const u=ease((f-3.3)/.7);
+    waterWave(ctx,x,y,-1,1,1-u*.75,.3);
+    waterWave(ctx,x,y,1,1,1-u*.75,1.6);
+  }
 }
 function waterSideReference(ctx,x,y,p){
-  // Short whip with a distinct hooked tip. Facing is applied by drawGen1Attack.
-  if(p<0){const h=holdCharge(p);waterWhip(ctx,x,y,.16+.14*h,.5+.2*h,attackP(p));return;}
-  const q=attackP(p), f=1+q*3;
-  if(f<2){waterWhip(ctx,x,y,.12+.12*ease(f-1),.75,q);}
-  else if(f<3){waterWhip(ctx,x,y,.24+.46*ease(f-2),1,q);}
-  else {const u=ease(f-3);waterWhip(ctx,x,y,.70+.30*u,.95*(1-u*.3),q);}
+  if(p<0){const h=holdCharge(p);waterWhipReferenceShape(ctx,x,y,.12+.12*h,.55+.25*h,.2);return;}
+  const q=attackP(p),f=1+q*4;
+  if(f<2){waterWhipReferenceShape(ctx,x,y,.10+.15*ease(f-1),.8,.2);}
+  else if(f<3){waterWhipReferenceShape(ctx,x,y,.25+.5*ease(f-2),1,.5);}
+  else if(f<4){waterWhipReferenceShape(ctx,x,y,.75+.25*ease(f-3),1,.8);}
+  else waterWhipReferenceShape(ctx,x,y,1,.72,1);
 }
 function waterUpHeavyReference(ctx,x,y,p){
-  // Vertical ribbon wraps the fighter, then spirals upward and flings from the top.
-  if(p<0){const h=holdCharge(p);wRibbon(ctx,x,y,.08+.12*h,.55+.25*h,attackP(p));return;}
-  const q=attackP(p), f=1+q*3;
-  if(f<2) wRibbon(ctx,x,y,.10+.18*ease(f-1),1,q);
-  else if(f<3) wRibbon(ctx,x,y,.28+.48*ease(f-2),1,q+.8);
-  else {const u=ease(f-3);wRibbon(ctx,x,y,.76+.24*u,1-u*.25,q+1.6);const launch=[];for(let i=0;i<=14;i++){const z=i/14;launch.push([x+8+z*(54+24*u),y-42-z*(66+34*u)]);}waterStream(ctx,launch,.9,8,q);}
+  if(p<0){const h=holdCharge(p);waterSpiralFlow(ctx,x,y,.12+.12*h,.55+.25*h,.2);return;}
+  const q=attackP(p),f=1+q*4;
+  if(f<2)waterSpiralFlow(ctx,x,y,.12+.18*ease(f-1),.9,q);
+  else if(f<3)waterSpiralFlow(ctx,x,y,.30+.34*ease(f-2),1,q+.7);
+  else if(f<4)waterSpiralFlow(ctx,x,y,.64+.22*ease(f-3),1,q+1.2);
+  else waterSpiralFlow(ctx,x,y,.86+.14*ease(f-4),.8,q+2);
 }
 function waterDownHeavyReference(ctx,x,y,p){
-  // Sphere is beside the fighter, gets kicked down, bounces, then bursts upward.
-  if(p<0){const h=holdCharge(p);wOrb(ctx,x+45,y-48,20+3*h,.7+.2*h,attackP(p));return;}
-  const q=attackP(p), f=1+q*3;
-  if(f<2){const u=ease(f-1);wOrb(ctx,x+42+8*u,y-50+4*u,21,1,q);}
-  else if(f<3){const u=ease(f-2),sx=x+50,sy=lerp(y-46,y-4,u);wOrb(ctx,sx,sy,21,1,q);}
-  else {const u=ease(f-3),sx=x+50,sy=y-4;wOrb(ctx,sx,sy,21*(1-u*.35),.9*(1-u*.15),q);waterSpray(ctx,sx,sy,-Math.PI/2,1.0,12,.9*(1-u*.2),q);waterStream(ctx,[[sx,sy],[sx,y-72-u*30]],.65,7,q);}
+  if(p<0){const h=holdCharge(p);waterOrb(ctx,x+52,y-55,22+2*h,.65+.25*h,0);return;}
+  waterDownHeavyShape(ctx,x,y,attackP(p),1,attackP(p)*4);
 }
 function waterSideHeavyReference(ctx,x,y,p){
-  if(p<0){const h=holdCharge(p);wCrescent(ctx,x,y,.08+.1*h,.65+.2*h,attackP(p));return;}
-  const q=attackP(p), f=1+q*4;
-  if(f<2){wCrescent(ctx,x,y,.04+.12*ease(f-1),.9,q);}
-  else if(f<3){wCrescent(ctx,x,y,.16+.42*ease(f-2),1,q);}
-  else if(f<4){wCrescent(ctx,x,y,.58+.27*ease(f-3),1,q);}
-  else {const u=ease(f-4);wCrescent(ctx,x,y,.85+.15*u,1-u*.7,q);}
+  if(p<0){const h=holdCharge(p);waterTaperedArc(ctx,x+36,y-48,55+12*h,-1.55,.9,.55+.25*h,h,18);return;}
+  const q=attackP(p),f=1+q*4;
+  const u=f<2?ease(f-1)*.22:f<3?.22+ease(f-2)*.34:f<4?.56+ease(f-3)*.34:.90+ease(f-4)*.10;
+  // Large flowing water slash, broad and layered like a real sheet of water.
+  const cx=x+34+28*u,cy=y-48,r=56+18*Math.sin(u*Math.PI);
+  waterTaperedArc(ctx,cx,cy,r,-1.45+u*.15,.95+u*1.65,1-u*.12,q,22);
+  waterTaperedArc(ctx,cx-4,cy+2,r*.78,-1.3+u*.12,.75+u*1.45,.55,q+1,9);
+  if(u>.72)waterSpray(ctx,cx+Math.cos(.95+u*1.65)*r,cy+Math.sin(.95+u*1.65)*r*.72,.4,1.3,16,.8,q);
 }
+
 function waterAttack(ctx,x,y,p,move){
   if(move==='us')return waterUpReference(ctx,x,y,p);
   if(move==='ds')return waterDownReference(ctx,x,y,p);
@@ -1110,13 +1227,31 @@ export function getGen1AttackPose(move,p,facing=1,charId='g1_water'){
     else if(move==='super'){ if(i===0){punchArmR=-.85;punchArmL=-.65;lean=facing*.03;} else if(i===1||i===2){punchArmR=-1.15;punchArmL=-.95;lean=facing*.06;} else if(i===3||i===4){punchArmR=-1.7;punchArmL=-1.55;lean=facing*.22;legSwing=.2;} else if(i===5){punchArmR=.2;punchArmL=.1;lean=-facing*.12;} else {punchArmR=-.1;punchArmL=-.05;lean=-facing*.05;} }
     return {punchArmL,punchArmR,legSwing,lean,bob};
   }
-  if(move==='us'){leadPunch(-1.45*t);offArm(.35*t);lean=facing*(.05+.13*t);legSwing=.12*t;}
-  else if(move==='ds'){punchArmL=.72*t;punchArmR=-.72*t;lean=-facing*.14*t;legSwing=.18*t;bob=5*t;}
-  else if(move==='ss'){leadPunch(-1.7*t);offArm(.18*t);lean=facing*(.05+.22*t);legSwing=.12*t;}
-  else if(move==='uh'){leadPunch(-1.35*t);offArm(.72*t);lean=facing*(.08+.18*t);legSwing=-.28*t;}
-  else if(move==='dh'){leadPunch(-.72*t);offArm(.62*t);lean=-facing*.16*t;legSwing=-.38*t;bob=5*t;}
-  else if(move==='sh'||move==='heavy'){leadPunch(-1.28*t);offArm(.32*t);lean=facing*(.08+.26*t);legSwing=.25*t;}
-  else if(move==='super'){punchArmL=-1.15*Math.sin(q*Math.PI);punchArmR=1.15*Math.sin(q*Math.PI);lean=Math.sin(q*Math.PI)*facing*.12;legSwing=.22*Math.sin(q*Math.PI);}
+  if(charId==='g1_water'){
+    if(move==='us'){leadPunch(-1.65*t);offArm(.15*t);lean=facing*(.04+.08*t);}
+    else if(move==='ds'){punchArmL=.95*t;punchArmR=-.95*t;lean=-facing*(.10+.10*t);bob=7*t;}
+    else if(move==='ss'){leadPunch(-1.85*t);offArm(.25*t);lean=facing*(.05+.18*t);}
+    else if(move==='uh'){leadPunch(-1.15*t);offArm(-1.0*t);lean=facing*.10*t;}
+    else if(move==='dh'){leadPunch(.15*t);offArm(.15*t);lean=-facing*.12*t;legSwing=.65*t;bob=6*t;}
+    else if(move==='sh'||move==='heavy'){leadPunch(-1.35*t);offArm(.45*t);lean=facing*(.08+.20*t);}
+    else if(move==='super'){punchArmL=-.9*Math.sin(q*Math.PI);punchArmR=.9*Math.sin(q*Math.PI);lean=facing*.10*Math.sin(q*Math.PI);}
+  } else if(charId==='g1_ice'){
+    if(move==='us'){leadPunch(-1.75*t);offArm(.2*t);lean=facing*.04*t;}
+    else if(move==='ds'){leadPunch(.85*t);offArm(.45*t);lean=facing*.14*t;bob=6*t;}
+    else if(move==='ss'){leadPunch(-1.9*t);offArm(.15*t);lean=facing*(.05+.20*t);}
+    else if(move==='uh'){leadPunch(-1.45*t);offArm(-1.1*t);lean=facing*.08*t;}
+    else if(move==='dh'){leadPunch(-1.65*t);offArm(.3*t);lean=facing*.18*t;}
+    else if(move==='sh'||move==='heavy'){leadPunch(-2.0*t);offArm(.55*t);lean=facing*.12*t;}
+    else if(move==='super'){punchArmL=-.7*Math.sin(q*Math.PI);punchArmR=1.35*Math.sin(q*Math.PI);lean=facing*.12*Math.sin(q*Math.PI);}
+  } else {
+    if(move==='us'){leadPunch(-1.45*t);offArm(.35*t);lean=facing*(.05+.13*t);legSwing=.12*t;}
+    else if(move==='ds'){punchArmL=.72*t;punchArmR=-.72*t;lean=-facing*.14*t;legSwing=.18*t;bob=5*t;}
+    else if(move==='ss'){leadPunch(-1.7*t);offArm(.18*t);lean=facing*(.05+.22*t);legSwing=.12*t;}
+    else if(move==='uh'){leadPunch(-1.35*t);offArm(.72*t);lean=facing*(.08+.18*t);legSwing=-.28*t;}
+    else if(move==='dh'){leadPunch(-.72*t);offArm(.62*t);lean=-facing*.16*t;legSwing=-.38*t;bob=5*t;}
+    else if(move==='sh'||move==='heavy'){leadPunch(-1.28*t);offArm(.32*t);lean=facing*(.08+.26*t);legSwing=.25*t;}
+    else if(move==='super'){punchArmL=-1.15*Math.sin(q*Math.PI);punchArmR=1.15*Math.sin(q*Math.PI);lean=Math.sin(q*Math.PI)*facing*.12;legSwing=.22*Math.sin(q*Math.PI);}
+  }
   return {punchArmL,punchArmR,legSwing,lean,bob};
 }
 
