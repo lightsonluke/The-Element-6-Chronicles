@@ -344,6 +344,7 @@ function fireRay(ctx,x,y,angle,len,a=1,hot='#FF9A22'){
   flameShape(ctx,x+ux*len,y+uy*len,5.5,hot,a*.9,angle+Math.PI/2);
   if(len>35) glowStroke(ctx,[[x+ux*18+px*2,y+uy*18+py*2],[x+ux*(len*.68)-px*1,y+uy*(len*.68)-py*1]],'#FF5A16',1.7,a*.75);
 }
+function fireLineBurstLegacy(ctx,x,y,r,alpha=1){ fireLineBurst(ctx,x,y,r,alpha,0); }
 function fireLineBurst(ctx,x,y,r,alpha=1,phase=0){
   // Short jagged flame rays radiating from the impact point.
   const count=10;
@@ -886,7 +887,7 @@ function waterSuper(ctx,x,y,p){
 
 export function getGen1AttackPose(move,p,facing=1,charId='g1_water'){
   const q=clamp01(Math.max(0,p));
-  const t=wease(q);
+  const t=ease(q);
   const lead=facing>0?'R':'L';
   let punchArmL=0,punchArmR=0,legSwing=0,lean=facing*.05,bob=0;
   const leadPunch=(v)=>{if(lead==='R')punchArmR=v;else punchArmL=-v;};

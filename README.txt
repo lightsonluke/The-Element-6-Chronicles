@@ -1,12 +1,15 @@
-WATER + FIRE RESTORATION
+Water Fluid FIXED — runtime crash fix
 
-Fire Hero is preserved from the Fire-restored package, including the optimized/smooth Super implementation.
+This is a minimal correction of the previous Water_Fire_Restored_Water_Fluid_FIXED_BUILD_SAFE package.
 
-Water Hero is restored to the animation and hitbox/attack-spec implementation from Water_Hero_FLUID_BUILD_FIXED.zip. Only Water-specific sections were changed.
+Fixes:
+- Corrected a runtime typo in getGen1AttackPose: wease(...) -> ease(...).
+- Restored the legacy Fire Super burst helper used by the restored Fire animation.
+- No Water animation redesign.
+- No Fire animation redesign.
+- No renderer/camera changes.
 
-Files:
-gen1AttackAnims.js
-attackSpecs.js
-fighter.js
-
-renderer.js is intentionally not included.
+Replace only:
+- gen1AttackAnims.js
+- fighter.js
+- attackSpecs.js
