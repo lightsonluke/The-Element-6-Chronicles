@@ -13,6 +13,7 @@ import GameIcon from "./GameIcon.jsx";
 import { getEmoteForKey } from './emoteSlots.js';
 import { drawEmote } from './emotes.js';
 import PauseMenu from "./PauseMenu.jsx";
+import { drawConstructWeapon, drawResonanceOrb, updateResonanceMatch, tryActivateResonanceConstruct, deactivateConstruct } from './resonanceConstructs.js';
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 const VIEW_W = 1280, VIEW_H = 720;
@@ -171,11 +172,14 @@ export default function CaptureTheFlag({
     let over = false;
     let camX = 0, camY = 0, camX2 = 0, camY2 = 0;
 
-    gameRef.current = { fighters, flags, score, timer, running: true, platforms, captureLimit: matchSettings.captureLimit };
+    const resonancePlatforms = platforms.filter(p => !p.flagBase && Math.abs((p.x + (p.w || p.width) / 2) - (WORLD_W / 2)) < WORLD_W * 0.34).map(p => ({ ...p, width: p.w || p.width }));
+    const resonanceMatch = { frame: 0, orb: null, spawnWait: 480 + Math.random() * 480 };
+    gameRef.current = { fighters, flags, score, timer, running: true, platforms, captureLimit: matchSettings.captureLimit, resonanceMatch };
 
     const respawnFighter = (f) => {
       f.x = f.spawnPoint.x; f.y = f.spawnPoint.y - 40; f.vx = 0; f.vy = 0;
       f.damage = 0; f.hp = CTF_HP; f.grounded = true; f.invincible = 120;
+      if (f.resonanceActive) deactivateConstruct(f);
       f.state = 'idle'; f.attackData = null; f.attackTimer = 0; f.hitstun = 0;
       f._stuckTimer = 0;
       for (const key of ['A', 'B']) {
@@ -372,6 +376,7 @@ export default function CaptureTheFlag({
       if (timer <= 0) { over = true; gameRef.current.winner = score.A > score.B ? 'A' : score.B > score.A ? 'B' : null; finish(); return; }
 
       // Input — same attack buttons as normal fight mode (standard per-player keybinds)
+      updateResonanceMatch(gameRef.current.resonanceMatch, fighters, [], resonancePlatforms, WORLD_W, WORLD_H, dt);
       const k = keysRef.current;
       const _kb = getKeybinds(settings);
       const gp1 = settings.controllerEnabled !== false ? readGamepadInput(0) : null;
@@ -413,7 +418,9 @@ export default function CaptureTheFlag({
           input = { left:false,right:false,jump:false,up:false,down:false,sig:false,power:false,superMove:false,heavy:false };
         }
         try {
+          tryActivateResonanceConstruct(gameRef.current.resonanceMatch, f, input);
           updateFighter(f, input, platforms, WORLD_W, WORLD_H, null);
+          if (f.resonanceActive && (f.state === 'superAttack' || f.hp <= 0)) deactivateConstruct(f);
         } catch (error) {
           // A malformed custom character/stage object must never take down the CTF match.
           console.warn('[Element 6 CTF] Recovered from fighter update error', error);
@@ -780,6 +787,8 @@ function drawScene(ctx, g, frame, camX, camY, vp) {
   drawFlag(ctx, flags.A, TEAM_COLORS.A, frame);
   drawFlag(ctx, flags.B, TEAM_COLORS.B, frame);
 
+  if (g.resonanceMatch?.orb) drawResonanceOrb(ctx, g.resonanceMatch.orb, frame);
+
   // Fighters — keep character color, draw team uniform overlay
   fighters.forEach(f => {
     if (f.hp <= 0) return;
@@ -791,6 +800,7 @@ function drawScene(ctx, g, frame, camX, camY, vp) {
     ctx.beginPath(); ctx.ellipse(f.x, f.y + 3, 28, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     // Draw stickman with character's own color (NOT team color)
     drawStickman(ctx, f.x, f.y, charColor, f.facing, frame, 1, false, f.state, f.char, f.powerActive, false, null, f.emote, f.attackData);
+    if (f.resonanceActive) drawConstructWeapon(ctx, f, 1);
     if (f.emote) drawEmote(ctx, f.x, f.y, f.emote.id, f.emote.timer, f.emote.maxTimer, frame);
     // Team uniform overlay — colored jersey band on torso
     ctx.fillStyle = TEAM_COLORS[f.team];

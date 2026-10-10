@@ -1573,12 +1573,14 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         if (fighter.normalCooldown <= 0) {
           fighter.state = 'attacking';
           fighter.attackTimer = 18;
-          fighter.attackData = {
-            name: 'Aerial', type: 'aerialNormal',
-            duration: 18, damage: 7 + Math.random() * 4,
-            range: 55, color: fighter.char.color,
-            sigType: 'aerial', hitApplied: false, progress: 0, isNormal: true,
-          };
+          fighter.attackData = fighter.resonanceActive && fighter.char?.lightAttack
+            ? { ...fighter.char.lightAttack, name: `${fighter.resonanceConstruct || 'Resonance'} Aerial`, type: 'aerialNormal', duration: fighter.char.lightAttack.duration || 18, sigType: 'aerial', hitApplied: false, progress: 0, isNormal: true }
+            : {
+                name: 'Aerial', type: 'aerialNormal',
+                duration: 18, damage: 7 + Math.random() * 4,
+                range: 55, color: fighter.char.color,
+                sigType: 'aerial', hitApplied: false, progress: 0, isNormal: true,
+              };
           fighter.normalCooldown = NORMAL_COOLDOWN * (fighter.statControlRecoveryMul || 1);
           fighter.moveStats.aerial++;
         }
@@ -1609,7 +1611,17 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     if (inputs.power && !inputs._powerConsumed && !fighter.powerActive && fighter.powerTimer <= 0 && fighter.powerCooldown <= 0 && fighter.powerDisabled <= 0) {
       inputs._powerConsumed = true;
       fighter.moveStats.power++;
-      activatePower(fighter, opponent);
+      if (fighter.resonanceActive && fighter.char?.powerAttack) {
+        const burst = fighter.char.powerAttack;
+        const dur = Math.max(10, Math.min(24, burst.duration || 16));
+        fighter.state = 'attacking'; fighter.attackTimer = dur;
+        fighter.attackData = { ...burst, name: burst.name || 'Resonance Burst', duration: dur, sigType: 'power', hitApplied: false, progress: 0, isNormal: true };
+        fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
+        fighter.powerCooldown = Math.max(fighter.powerCooldown || 0, 48);
+        fighter.powerTimer = 0;
+      } else {
+        activatePower(fighter, opponent);
+      }
     }
     if (!inputs.power) inputs._powerConsumed = false;
 
@@ -2076,8 +2088,28 @@ export function checkHit(attacker, defender) {
   // Hand-authored spec hitboxes take precedence for Generation I and any future
   // move that supplies a spec. This keeps collision locked to the actual visual.
   const specHitboxes = activeSpecHitboxes;
-  if (specHitboxes.length) {
+  if (specHitboxes.length && !attacker.attackData.resonanceFamily) {
     try { return specHitboxes.some(hb => hitboxIntersectsBody(hb, defender)); } catch (err) { return false; }
+  }
+
+  // Resonance constructs use family-specific active geometry. This changes only
+  // the shape/coverage of the attack, never its damage, knockback, or fighter stats.
+  const resonance = attacker.attackData;
+  if (resonance.resonanceFamily) {
+    const facing = attacker.facing || 1;
+    const range = Math.max(38, (resonance.range || 80) * (attacker.rangeBoost || 1));
+    const dx = defender.x - attacker.x;
+    const dy = (defender.y - 36) - (attacker.y - 30);
+    const ax = Math.abs(dx), ay = Math.abs(dy);
+    const family = resonance.resonanceFamily;
+    const front = dx * facing;
+    let w = range, h = 56, cx = facing * (range * 0.36), cy = 0;
+    if (['spear','trident','rapier','halberd','katana','bow','cannons','blasters','projector'].includes(family)) { w = range * 1.05; h = family === 'rapier' || family === 'spear' ? 42 : 62; cx = facing * range * .43; }
+    else if (['hammer','maul','greatblade','axe','scythe'].includes(family)) { w = range * .9; h = 88; cx = facing * range * .35; cy = -4; }
+    else if (['whip','flail','rings','core','shards','disc'].includes(family)) { w = range; h = 94; cx = facing * range * .3; cy = -5; }
+    else if (['greaves','claws','tonfas','dual','crescent','staff','shield','bastion','tether'].includes(family)) { w = range * .82; h = 72; cx = facing * range * .28; }
+    const inside = ax <= w / 2 + 16 && Math.abs(dy - cy) <= h / 2 + 36 && front >= -20;
+    if (inside) return true;
   }
 
   // ── Fallback AABB hitbox collision ──

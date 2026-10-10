@@ -1,0 +1,13 @@
+RESONANCE CONSTRUCTS — ANIMATION ART PATCH
+
+Replace the matching files beside the existing game modules. Back up your current project first.
+
+Included: the arena, Battle Royale and Capture the Flag integration files; fighter combat logic; shared construct profiles and weapon rendering; the main renderer with family-specific animated construct attack art; and two smoke-test files.
+
+Checks already run:
+- node --check on renderer.js, resonanceConstructs.js and fighter.js
+- node resonanceConstructs.test.mjs
+- node resonanceConstructsAnimation.test.mjs (30 construct families x 7 phases)
+- TypeScript parser check on the changed JS/JSX files
+
+A full Vite build and live gameplay/multiplayer test have not been run because dependencies are not installed in this environment. After installing dependencies, run `npm run build` and then test matches in each mode.

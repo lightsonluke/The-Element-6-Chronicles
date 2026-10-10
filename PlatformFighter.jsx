@@ -30,6 +30,7 @@ import { getCrossoverColor, getCrossoverAttackColor, getCrossover, getCrossoverP
 import { drawKillFX } from './killFX.js';
 import { drawShikigamiFollower } from './shikigami.js';
 import { applyElement } from './elements.js';
+import { updateResonanceMatch, drawResonanceOrb, drawConstructWeapon } from './resonanceConstructs.js';
 import { EMOTES, getEmoteById, getEmoteProgress, drawEmote } from './emotes.js';
 import { getEmoteForKey } from './emoteSlots.js';
 import { getActiveEvent } from './events.js';
@@ -930,6 +931,8 @@ export default function PlatformFighter({
     if (matchTime === 0 && gameMode !== 'sudden') timer = 99999;
     if (comboMode) { timer = 99999; f1.stocks = 999; f2.stocks = 999; }
     let lastTime = performance.now();
+    // Per-match Resonance state: one shared orb, consumed by the first successful activation.
+    const resonanceMatch = { frame: 0, orb: null, spawnWait: 480 + Math.random() * 480 };
     // Normalized sandbox mods — applied every frame to alter physics/combat
     const M = mods ? { damageMultiplier: 1, gravity: 1, jumpHeight: 1, movementSpeed: 1, superChargeRate: 1, powerCooldownRate: 1, slowMotion: 1, respawnTime: 1, infiniteJumps: false, infiniteStocks: false, infiniteHP: false, infinitePower: false, freezeAI: false, cpuBehavior: 'balanced', ...mods } : null;
     let superFlash1 = null, superFlash2 = null;
@@ -1260,6 +1263,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         if (c.damageResetEnabled && ((c.damageResetTimer > 0 && f1.frame % Math.max(1, c.damageResetTimer) === 0) || (c.resetWhenGrounded && c.quietFrames >= 180))) f2.damage = Number(c.damageResetValue ?? 0);
         if (c.positionResetEnabled && ((c.positionResetTimer > 0 && f1.frame % Math.max(1, c.positionResetTimer) === 0) || (c.positionResetWhenGrounded && c.quietFrames >= 180))) { f2.x = c.positionReset.x; f2.y = c.positionReset.y; f2.vx = 0; f2.vy = 0; f2.grounded = true; }
       }
+      // Resonance activation/deactivation is resolved before combat input is consumed.
+      // Every mode hosted by PlatformFighter receives the same match-level rules.
+      updateResonanceMatch(resonanceMatch, [f1, f2], [p1In, p2In], platforms, W, H, dt);
       updateFighter(f1, p1In, platforms, W, H, f2);
       updateFighter(f2, p2In, platforms, W, H, f1);
       if (trainingMode && trainingController) {
@@ -1667,6 +1673,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       }
 
       platforms.forEach(p => { if (!p?._freehandSegment) drawMaterialOverlay(ctx, p, f1.frame); });
+      drawResonanceOrb(ctx, resonanceMatch.orb, resonanceMatch.frame);
       // Visual indicator for erased platforms
       platforms.forEach(p => {
         if (p._deleted > 0) {
@@ -1710,6 +1717,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         // Shikigami — purely cosmetic floating companion (behind + above the fighter)
         drawShikigamiFollower(ctx, f, botShikigamiRef.current?.[effId], f.frame, fScale);
         if (!flashing) drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote, f.attackData);
+        if (!flashing && f.resonanceActive) drawConstructWeapon(ctx, f, fScale);
         if (!flashing) {
           const skinParts = getSkinParts(effId, equippedSkins);
           const accs = getEquippedAccessories(botAccessoriesRef.current, effId);

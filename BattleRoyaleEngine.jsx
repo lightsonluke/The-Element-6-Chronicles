@@ -37,6 +37,7 @@ import { strategicBR } from './botStrategicBrain.js';
 import { drawDestructiblePlatforms, drawMovementItems, drawHazards, drawObjects } from './brRender.js';
 import PauseMenu from './PauseMenu.jsx';
 import GameIcon from './GameIcon.jsx';
+import { drawConstructWeapon, drawResonanceOrb, updateResonanceMatch, tryActivateResonanceConstruct, deactivateConstruct } from './resonanceConstructs.js';
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 const ALL = ALL_CHARS;
@@ -58,6 +59,7 @@ const mergeGp = (kb, gp) => gp ? {
 const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
 
 export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, myElement, players, sfxVolume = 70, musicVolume = 50, settings = {}, matchSettings = {}, onEnd, equippedAccessories = {}, equippedSkins = {}, equippedShikigami = {}, equippedEmotes = {} }) {
+  const resonanceMatchRef = useRef({ frame: 0, orb: null, spawnWait: 480 + Math.random() * 480 });
   const canvasRef = useRef(null);
   const [countdown, setCountdown] = useState(3);
   const [gameStarted, setGameStarted] = useState(false);
@@ -283,6 +285,8 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
 
     // ── HOST SIM STEP ──
     const hostStep = (dt, input) => {
+      updateResonanceMatch(resonanceMatchRef.current, fighters, [], BR_PLATFORMS.filter(p => (p.x + (p.w || p.width || 0) / 2) >= zone.leftX && (p.x + (p.w || p.width || 0) / 2) <= zone.rightX).map(p => ({ ...p, width: p.w || p.width })), BR_W, BR_H, dt);
+      if (resonanceMatchRef.current.orb && (resonanceMatchRef.current.orb.x < zone.leftX + 40 || resonanceMatchRef.current.orb.x > zone.rightX - 40)) { resonanceMatchRef.current.orb = null; resonanceMatchRef.current.spawnWait = 120; }
       tick++; matchTime += dt;
       updateZone(dt);
 
@@ -338,8 +342,10 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           if (gi) f._lastInputTick = gi._tick || 0;
           inp = gi ? { left: !!gi.left, right: !!gi.right, jump: !!gi.jump, up: !!gi.up, down: !!gi.down, sig: !!gi.sig, power: !!gi.power, superMove: !!gi.superMove, heavy: !!gi.heavy } : { ...NO_INPUT };
         }
+        tryActivateResonanceConstruct(resonanceMatchRef.current, f, inp);
         const _nearest = nearestMap[f.playerIndex] || null;
         updateFighter(f, inp, brSections, BR_W, BR_H, _nearest);
+        if (f.resonanceActive && (f.state === 'superAttack' || f._eliminated || f.stocks <= 0)) deactivateConstruct(f);
         updateProjectiles(f, _nearest);
 
         // zone damage (damage-percentage mode — 300% = death)
@@ -435,7 +441,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           x: f.x, y: f.y, vx: f.vx, vy: f.vy, facing: f.facing, frame: f.frame,
           state: f.state, grounded: f.grounded,           damage: f.damage, hp: f.hp, stocks: f.stocks,
           superMeter: f.superMeter, powerActive: f.powerActive, invincible: f.invincible,
-          eliminated: !!f._eliminated, placement: f._placement,
+          eliminated: !!f._eliminated, placement: f._placement, resonanceActive: !!f.resonanceActive, resonanceConstruct: f.resonanceConstruct || null,
           inputTick: f._lastInputTick || 0,
           accs: f._accessories || [],
           attackData: f.attackData ? { type: f.attackData.type, progress: f.attackData.progress, sigType: f.attackData.sigType, isNormal: f.attackData.isNormal, isHeavy: f.attackData.isHeavy, isSuper: f.attackData.isSuper, color: f.attackData.color, name: f.attackData.name, range: f.attackData.range } : null,
@@ -444,6 +450,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           dashSlash: f._dashSlashEffect ? { fromX: f._dashSlashEffect.fromX, toX: f._dashSlashEffect.toX, y: f._dashSlashEffect.y, facing: f._dashSlashEffect.facing, timer: f._dashSlashEffect.timer, maxTimer: f._dashSlashEffect.maxTimer } : null,
         })),
         zone: { leftX: zone.leftX, rightX: zone.rightX },
+        resonanceOrb: resonanceMatchRef.current.orb ? { ...resonanceMatchRef.current.orb } : null,
         loot: loot.map(l => ({ id: l.id, type: l.type, x: l.x, y: l.y, taken: l.taken })),
         ...(frameCount <= 1 || frameCount % 200 === 0 ? {
           brSections: serializeDestructible(brSections),
@@ -491,6 +498,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
         ctx.restore();
       }
       if (!flashing) drawStickman(ctx, f.x, f.y, col, f.facing, f.frame || 0, 1, charData?.isSpirit, f.state, charData, f.powerActive, false, null, f.emote, f.attackData);
+      if (!flashing && f.resonanceActive) drawConstructWeapon(ctx, f, 1);
       // front accessories
       if (!flashing) {
         accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive));
@@ -592,11 +600,12 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
             x: sf.x, y: sf.y, vx: sf.vx, vy: sf.vy, facing: sf.facing, frame: sf.frame,
             state: sf.state, grounded: sf.grounded, damage: sf.damage, hp: sf.hp, stocks: sf.stocks,
             superMeter: sf.superMeter, powerActive: sf.powerActive, invincible: sf.invincible,
-            _eliminated: sf.eliminated, _placement: sf.placement, _lastInputTick: sf.inputTick,
+            _eliminated: sf.eliminated, _placement: sf.placement, _lastInputTick: sf.inputTick, resonanceActive: !!sf.resonanceActive, resonanceConstruct: sf.resonanceConstruct || null,
             attackData: sf.attackData, projectiles: sf.projectiles || [], emote: sf.emote,
           });
         }
         if (remoteState.zone) Object.assign(zone, remoteState.zone);
+        resonanceMatchRef.current.orb = remoteState.resonanceOrb ? { ...remoteState.resonanceOrb } : null;
         if (Array.isArray(remoteState.loot)) loot = remoteState.loot.map(l => ({ ...l }));
         if (Array.isArray(remoteState.brSections)) applyDestructibleSync(brSections, remoteState.brSections);
         // Rebuild the serialized environment state into the fixed local shells.
@@ -645,6 +654,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
       ctx.translate(-camX, -camY);
 
       // platforms — destructible sections (host owns live state; guests render from sync)
+      if (resonanceMatchRef.current?.orb) drawResonanceOrb(ctx, resonanceMatchRef.current.orb, frameCount);
       drawDestructiblePlatforms(ctx, brSections, frameCount);
 
       // ── BR environment: movement items, hazards, interactive objects ──
