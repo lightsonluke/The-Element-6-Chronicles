@@ -107,6 +107,86 @@ function arcStrip(cx,cy,r,thickness,start,end,steps=8) {
   return {shape:'polygon',points:pts};
 }
 
+// Per-weapon authored pose curves. t is normalized attack time; each move has
+// its own wind-up, strike, and follow-through instead of inheriting one generic arc.
+function authoredWeaponMotion(family, slot, t, facing, baseAngle) {
+  const active = t >= 0;
+  if (!active) return null;
+  const smooth = (a,b,x) => { const u=Math.max(0,Math.min(1,(x-a)/(b-a))); return u*u*(3-2*u); };
+  const phase = (a,b,x) => smooth(a,b,x);
+  let angle=baseAngle, x=0, y=0;
+  const s=String(slot||'').toLowerCase();
+  if (family==='blade') {
+    if(s==='sideheavy') { angle += t<.24?-.45*phase(0,.24,t):t<.43?1.28-1.8*phase(.24,.43,t):t<.68?-.5+1.7*phase(.43,.68,t):.8*(1-phase(.68,1,t)); }
+    else if(s==='upheavy') { angle += -.15-1.35*phase(.18,.48,t); y=-4*phase(.2,.48,t); }
+    else if(s==='downheavy') { angle += .25+1.15*phase(.18,.5,t); y=4*phase(.2,.5,t); }
+    else if(s==='sidesignature') { x=-8*phase(0,.22,t)+3*phase(.3,.5,t); angle += -.6+1.6*phase(.25,.54,t); }
+    else if(s==='upsignature') { angle += Math.sin(t*10*Math.PI)*.9*phase(.18,.68,t); y=-10*phase(.05,.28,t)+10*phase(.68,1,t); }
+    else if(s==='downsignature') { angle += .9*(1-phase(.15,.38,t)); }
+    else if(s==='recovery') { angle += -.2-1.3*phase(.16,.44,t); y=-12*phase(.08,.44,t); }
+  } else if (family==='dual') {
+    if(s==='sideheavy') angle += t<.28?-.25-1.0*phase(0,.28,t):.65-1.35*phase(.28,.65,t);
+    else if(s==='upheavy') { angle += -.25-1.0*phase(.18,.4,t); y=-3*phase(.2,.66,t); }
+    else if(s==='downheavy') { angle += .45+Math.sin(t*2*Math.PI)*.55; y=4; }
+    else if(s==='sidesignature') { x=18*phase(.12,.5,t)-7*phase(.6,.86,t); angle += -.5+Math.sin(t*6*Math.PI)*.65; }
+    else if(s==='upsignature') { x=facing*5*phase(0,.3,t); y=-15*phase(.1,.5,t)+7*phase(.55,1,t); angle += Math.sin(t*5*Math.PI)*.85; }
+    else if(s==='downsignature') { x=-9*phase(0,.28,t)+13*phase(.35,.58,t); angle += .6; }
+    else if(s==='recovery') { y=-13*phase(.08,.52,t); angle += -.9+Math.sin(t*4*Math.PI)*.45; }
+  } else if (family==='katana') {
+    if(s==='sideheavy') angle += t<.46?-.05:1.35*phase(.46,.55,t)-.15*phase(.55,.72,t);
+    else if(s==='upheavy') angle += .5-1.65*phase(.22,.54,t);
+    else if(s==='downheavy') angle += -.65+1.75*phase(.28,.6,t);
+    else if(s==='sidesignature') { x=8*phase(.2,.4,t); angle += t<.43?-.15:1.2*phase(.43,.56,t); }
+    else if(s==='upsignature') { y=-6*phase(.15,.5,t); angle += -.2-1.2*phase(.38,.57,t); }
+    else if(s==='downsignature') angle += -.05; // compact stillness/counter stance
+    else if(s==='recovery') { y=-13*phase(.12,.46,t); angle += -.2-1.5*phase(.24,.48,t); }
+  } else if (family==='rapier') {
+    const thrust=['sideheavy','downheavy','sidesignature','downsignature'].includes(s);
+    if(thrust) { x= (s==='sidesignature'?22: s==='downsignature'?3:14)*phase(.18,.43,t)-5*phase(.5,.8,t); angle += s==='downheavy'?.28:s==='downsignature'?.15:-.05; }
+    else if(s==='upheavy') { angle += -.1-1.15*phase(.16,.7,t); y=-4*phase(.1,.7,t); }
+    else if(s==='upsignature') { y=-9*phase(.05,.38,t); angle += -.5-0.55*phase(.35,.6,t); }
+    else if(s==='recovery') { y=-14*phase(.1,.48,t); angle += -.15-1.0*phase(.22,.48,t); }
+  } else if (family==='crescent') {
+    if(s==='sideheavy') angle += t<.4?-.65+1.25*phase(.12,.38,t):.6-1.3*phase(.4,.66,t);
+    else if(s==='upheavy') { angle += Math.sin(t*2*Math.PI)*.95; y=-5*phase(.15,.42,t); }
+    else if(s==='downheavy') { angle += .8+Math.sin(t*2*Math.PI)*.65; y=5; }
+    else if(s==='sidesignature') angle += -.45+1.4*phase(.35,.62,t);
+    else if(s==='upsignature'||s==='recovery') { angle += Math.sin(t*3*Math.PI)*1.1; y=-10*phase(.12,.4,t)+7*phase(.65,.95,t); }
+    else if(s==='downsignature') angle += .15+Math.sin(t*Math.PI)*.2;
+  } else if (family==='greatblade') {
+    if(s==='sideheavy') angle += t<.42?-.85*phase(0,.42,t):1.65*phase(.42,.62,t);
+    else if(s==='upheavy') { angle += .65-1.75*phase(.25,.58,t); y=-3*phase(.2,.58,t); }
+    else if(s==='downheavy') { angle += -.85+1.8*phase(.25,.58,t); y=7*phase(.3,.6,t); }
+    else if(s==='sidesignature') { x=13*phase(.15,.48,t); angle += -.6+1.5*phase(.42,.66,t); }
+    else if(s==='upsignature') { y=-12*phase(.08,.42,t)+6*phase(.65,.95,t); angle += -.6+2.1*phase(.42,.66,t); }
+    else if(s==='downsignature') angle += .55;
+    else if(s==='recovery') { y=-15*phase(.08,.46,t); angle += .5-1.9*phase(.22,.5,t); }
+  } else if (family==='scythe') {
+    if(s==='sideheavy') angle += t<.36?-.85*phase(0,.36,t):1.75*phase(.36,.6,t);
+    else if(s==='upheavy') angle += .8-1.65*phase(.2,.52,t);
+    else if(s==='downheavy') { angle += .8+1.0*phase(.15,.42,t); y=5; }
+    else if(s==='sidesignature') { x=12*phase(.12,.36,t)-8*phase(.52,.7,t); angle += -.7+1.4*phase(.38,.58,t); }
+    else if(s==='upsignature'||s==='recovery') { y=-13*phase(.08,.48,t); angle += Math.sin(t*2*Math.PI)*1.25; }
+    else if(s==='downsignature') { x=-10*phase(.05,.3,t); angle += -1.1*phase(.12,.38,t)+.8*phase(.4,.6,t); }
+  } else if (family==='claws') {
+    if(s==='sideheavy') angle += Math.sin(t*3*Math.PI)*.6;
+    else if(s==='upheavy') { angle += -.15-1.1*phase(.2,.6,t); y=-4*phase(.2,.6,t); }
+    else if(s==='downheavy') { x=9*phase(.18,.48,t); y=4*phase(.35,.6,t); angle += .7; }
+    else if(s==='sidesignature') { x=22*phase(.18,.5,t); angle += -.35+Math.sin(t*2*Math.PI)*.35; }
+    else if(s==='upsignature') { angle += -.25; y=-4*phase(.2,.45,t); }
+    else if(s==='downsignature') { x=-8*phase(0,.25,t); angle += .1; }
+    else if(s==='recovery') { y=-12*phase(.08,.65,t); angle += -.45-Math.sin(t*3*Math.PI)*.35; }
+  } else if (family==='tonfas') {
+    if(s==='sideheavy'||s==='sidesignature') angle += Math.sin(t*8*Math.PI)*.35;
+    else if(s==='upheavy') { angle += -.15-1.0*phase(.2,.65,t); y=-3*phase(.2,.65,t); }
+    else if(s==='downheavy') { angle += .55+Math.sin(t*2*Math.PI)*.45; y=4; }
+    else if(s==='upsignature') { angle += Math.sin(t*4*Math.PI)*.75; y=-11*phase(.08,.45,t); }
+    else if(s==='downsignature') angle += .15;
+    else if(s==='recovery') { angle += .1; y=-7*phase(.15,.45,t); }
+  }
+  return {angle, x, y};
+}
+
 // Shared source of truth for combat collision AND Settings -> Hitboxes. The
 // shapes follow the specific animated weapon/action, not a generic range box.
 function constructWeaponPose(fighter) {
@@ -155,6 +235,7 @@ function constructWeaponPose(fighter) {
     }
     if(t>.68){angle*=.76;offsetX*=.45;offsetY*=.45;}
   }
+  if(active) { const authored=authoredWeaponMotion(spec.family, slot, t, facing, angle); if(authored){angle=authored.angle;offsetX+=authored.x;offsetY+=authored.y;} }
   const scale=2;
   const fx=Number(fighter?.x)||0, fy=Number(fighter?.y)||0;
   // Each weapon family has its own attachment point/orientation. Feet weapons
@@ -260,7 +341,7 @@ export function getResonanceConstructHitboxes(fighter) {
     if(slotName==='downheavy') { if(p<.48||p>.62)return []; return [cap([10,-2],[27,24],r*.48),cap([17,14],[30,30],r*.38)]; }
     if(slotName==='sidesignature') { if(p<.44||p>.56)return []; return [cap([10,-13],[49,-12],r*.52),cap([18,-18],[48,-14],r*.38)]; }
     if(slotName==='upsignature') { if(p<.39||p>.56)return []; return [cap([13,-8],[24,-47],r*.45),cap([17,-32],[27,-51],r*.38)]; }
-    if(slotName==='downsignature') { if(p<.52||p>.65)return []; return [cap([-22,-10],[25,-20],r*.52),circ([-20,-11],r*.44)]; }
+    if(slotName==='downsignature') { return []; } // counter stance has no passive damage; successful trigger is resolved in checkHit
     if(slotName==='recovery') { if(p<.29||p>.46)return []; return [cap([13,-13],[25,-55],r*.53),cap([18,-37],[29,-57],r*.4)]; }
   }
   if(fam==='rapier') { // Resonance Rapier: point-only thrust hitboxes.
@@ -305,7 +386,7 @@ export function getResonanceConstructHitboxes(fighter) {
     if(slotName==='downheavy') { if(p<.43||p>.58)return []; return [cap([9,-4],[29,14],r*.46),cap([17,2],[34,17],r*.42)]; }
     if(slotName==='sidesignature') { if(p<.35||p>.54)return []; return [cap([8,-13],[34,-5],r*.46),cap([9,-3],[33,4],r*.46)]; }
     if(slotName==='upsignature') { if(p<.42||p>.58)return []; return [grabBox(15,-37,32,28,[.58,.74])]; }
-    if(slotName==='downsignature') { if(p<.46||p>.62)return []; return [grabBox(-17,-10,30,27,[.62,.77])]; }
+    if(slotName==='downsignature') { return []; } // defensive phase-counter trigger, not a passive grab hitbox
     if(slotName==='recovery') { if(!inWindows([[.23,.34],[.39,.50],[.55,.67]]))return []; return [cap([6,-9],[13,-32],r*.42),cap([14,-11],[22,-36],r*.42)]; }
   }
   if(fam==='tonfas') { // Pulse Tonfas: compact baton impact caps, multi-hit windows.
@@ -314,7 +395,7 @@ export function getResonanceConstructHitboxes(fighter) {
     if(slotName==='downheavy') { if(p<.29||p>.48)return []; return [cap([-21,3],[21,3],r*.48),cap([-15,7],[15,7],r*.4)]; }
     if(slotName==='sidesignature') { if(!inWindows([[.2,.29],[.34,.43],[.48,.57],[.60,.69]]))return []; return [cap([7,-12],[28,-7],r*.44),cap([9,-2],[27,-11],r*.4)]; }
     if(slotName==='upsignature') { if(p<.33||p>.58)return []; return [cap([-20,-27],[0,-42],r*.46),cap([0,-42],[20,-27],r*.46),circ([0,-39],r*.48)]; }
-    if(slotName==='downsignature') { if(p<.44||p>.58)return []; return [grabBox(15,-9,30,25,[.58,.75])]; }
+    if(slotName==='downsignature') { return []; } // counter stance; the successful trigger supplies the throw
     if(slotName==='recovery') { if(p<.28||p>.44)return []; return [circ([0,9],r*.72),cap([-13,4],[13,4],r*.46)]; }
   }
   // Geometry tags authored per move control timing and collider form. These
@@ -643,7 +724,9 @@ export function drawConstructWeapon(ctx, fighter, scale=1) {
     }
     if(recovering) { angle = angle*.76; offsetX*=.45; offsetY*=.45; }
   }
-  const size=scale*2*(1+(active?.09*swing:0));
+  const drawSlot=String(attack?.resonanceMoveSlot||'').toLowerCase();
+  if(active) { const authored=authoredWeaponMotion(spec.family, drawSlot, progress, facing, angle); if(authored){angle=authored.angle;offsetX+=authored.x*scale;offsetY+=authored.y*scale;} }
+  const size=scale*(1+(active?.09*swing:0));
   const mount=({
     greaves:[0,7,-.08], claws:[facing*7,-20,-.18], tonfas:[facing*8,-20,-.18],
     tether:[facing*8,-20,-.14], blasters:[facing*9,-20,-.12], cannons:[facing*10,-20,-.08],

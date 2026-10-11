@@ -1128,6 +1128,29 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
   fighter.prevY = fighter.y;
   fighter._platforms = platforms;
 
+  // Captured fighters cannot steer, jump, attack, or be repeatedly recaptured.
+  // The attacker completes the authored move and then releases with a bounded
+  // directional throw; if the attacker is interrupted, the victim is released.
+  if (fighter._resonanceCapturedBy) {
+    const captor=fighter._resonanceCapturedBy, attack=captor?.attackData;
+    if (!attack || captor.state==='hitstun' || captor.state==='dead' || captor.state==='respawning') {
+      fighter._resonanceCapturedBy=null; fighter._resonanceCaptureUntil=0; fighter.state='falling';
+    } else {
+      fighter.x=captor.x+(captor.facing||1)*22; fighter.y=captor.y-5;
+      fighter.vx=0; fighter.vy=0; fighter.state='captured'; fighter.grounded=false;
+      if ((Number(attack.progress)||0) >= (Number(fighter._resonanceCaptureUntil)||.72)) {
+        const weapon=String(fighter._resonanceCaptureWeapon||'');
+        const f=captor.facing||1, launch=(weapon==='Greatblade'||weapon==='Resonance Rapier')?1.0:0.82;
+        fighter.vx=f*launch*7.5; fighter.vy=(weapon==='Pulse Tonfas'||weapon==='Resonance Rapier')?-8.5:-4.5;
+        fighter.damage=(Number(fighter.damage)||0)+6;
+        fighter.hitstun=18; fighter.state='hitstun'; fighter.grounded=false;
+        fighter._lastHitBy=captor; fighter._resonanceCapturedBy=null; fighter._resonanceCaptureUntil=0;
+        if (attack._resonanceCapturedTarget===fighter) attack._resonanceCapturedTarget=null;
+      }
+      return;
+    }
+  }
+
   // Reverse controls (Controller / Nightmare / Whami powers) — swap left/right and up/down
   if (fighter.reverseControls > 0) {
     const tmp = inputs.left; inputs.left = inputs.right; inputs.right = tmp;
@@ -2073,10 +2096,34 @@ function gen1HitStage(attacker){
 }
 function defenderHitKey(defender){ return String(defender?.playerIndex ?? defender?.id ?? defender?.playerId ?? defender?.slot ?? Math.round(defender?.x||0)+':'+Math.round(defender?.y||0)); }
 
+// Each authored resonance combo window gets its own per-target hit token. This
+// is what lets a four-strike tonfa string or three-cut claw string actually hit
+// several times without dealing repeated damage on every animation frame.
+function resonanceHitStage(attacker) {
+  const a=attacker?.attackData;
+  if(!a?.resonanceFamily) return -1;
+  const p=Math.max(0,Math.min(1,Number(a.progress)||0));
+  const weapon=String(attacker.resonanceConstruct||a.resonanceSpec?.weapon||'');
+  const slot=String(a.resonanceMoveSlot||'').toLowerCase();
+  const windows={
+    'Twin Fangs':{sideheavy:[[.22,.37],[.48,.66]],upheavy:[[.24,.39],[.52,.69]],downheavy:[[.2,.34],[.38,.53]],sidesignature:[[.2,.3],[.34,.45],[.49,.65]],upsignature:[[.24,.35],[.36,.47],[.48,.59]],recovery:[[.2,.34],[.4,.54]]},
+    'Crescent Blades':{sideheavy:[[.24,.37],[.48,.62]],upheavy:[[.22,.34],[.36,.48],[.5,.62]],downheavy:[[.24,.36],[.37,.5]],upsignature:[[.24,.36],[.39,.51],[.54,.67]],recovery:[[.2,.32],[.35,.47],[.5,.65]]},
+    'Rift Claws':{sideheavy:[[.17,.27],[.32,.42],[.48,.61]],upheavy:[[.27,.39],[.46,.6]],sidesignature:[[.22,.32],[.35,.45],[.46,.58]],recovery:[[.23,.34],[.39,.5],[.55,.67]]},
+    'Pulse Tonfas':{sideheavy:[[.16,.26],[.29,.39],[.42,.53],[.55,.70]],upheavy:[[.28,.42],[.52,.69]],sidesignature:[[.2,.29],[.34,.43],[.48,.57],[.6,.71]],upsignature:[[.26,.37],[.38,.49],[.5,.61]],recovery:[[.28,.44]]},
+    'Reaper Scythe':{upsignature:[[.27,.38],[.44,.57]],recovery:[[.27,.38],[.39,.5],[.51,.63]]},
+    'Resonance Rapier':{upheavy:[[.18,.29],[.36,.47],[.55,.68]]},
+    'Phase Katana':{upheavy:[[.28,.4],[.41,.53]]}
+  };
+  const list=windows[weapon]?.[slot];
+  if(!list) return -1;
+  return list.findIndex(([lo,hi])=>p>=lo&&p<=hi);
+}
+
 export function checkHit(attacker, defender) {
   if (!attacker.attackData) return false;
-  const multi = !!attacker.attackData.multiHitStages;
-  const stage = multi ? gen1HitStage(attacker) : 0;
+  const resonanceStage = resonanceHitStage(attacker);
+  const multi = !!attacker.attackData.multiHitStages || resonanceStage >= 0;
+  const stage = resonanceStage >= 0 ? resonanceStage : (multi ? gen1HitStage(attacker) : 0);
   if (!multi && attacker.attackData.hitApplied) return false;
   if (multi) {
     attacker.attackData.hitStage = stage;
@@ -2085,6 +2132,29 @@ export function checkHit(attacker, defender) {
     if (attacker.attackData.hitStageIds[stage]?.[key]) return false;
   }
   if (defender.invincible > 0) return false;
+  // Explicit short defensive-trigger windows for Phase Katana, Rift Claws and
+  // Pulse Tonfas. These stances do not deal passive damage: only an incoming
+  // attack in front and within range can trigger the counter, once per stance.
+  const counterData=defender.attackData;
+  const counterWeapon=String(defender.resonanceConstruct||'');
+  const counterSlot=String(counterData?.resonanceMoveSlot||'').toLowerCase();
+  const counterWindow=counterWeapon==='Phase Katana' ? [.27,.47] : counterWeapon==='Rift Claws' ? [.29,.48] : counterWeapon==='Pulse Tonfas' ? [.28,.47] : null;
+  if (counterData?.resonanceFamily && counterSlot==='downsignature' && counterWindow && !counterData._counterUsed) {
+    const cp=Number(counterData.progress)||0, ap=Number(attacker.attackData.progress)||0;
+    const dx=attacker.x-defender.x, dy=(attacker.y||0)-(defender.y||0);
+    const inFront=dx*(defender.facing||1)>-8;
+    if (cp>=counterWindow[0] && cp<=counterWindow[1] && ap>=.12 && ap<=.82 && inFront && Math.abs(dx)<=76 && Math.abs(dy)<=65) {
+      counterData._counterUsed=true;
+      attacker.attackData.hitApplied=true;
+      attacker.attackData=null; attacker.attackTimer=0;
+      attacker.vx=(defender.facing||1)*8.5; attacker.vy=-4.8;
+      attacker.damage=(Number(attacker.damage)||0)+7;
+      attacker.hitstun=22; attacker.state='hitstun'; attacker.grounded=false;
+      attacker._lastHitBy=defender;
+      defender.vx=0; defender.vy=0;
+      return false;
+    }
+  }
   // Pearl's Sixth Sense — 50% chance to auto-dodge any incoming attack
   if (defender.dodgeChance && Math.random() < defender.dodgeChance) {
     return false;
@@ -2117,8 +2187,13 @@ export function checkHit(attacker, defender) {
   // Settings -> Hitboxes overlay renders. No fallback range rectangle for these moves.
   const resonance = attacker.attackData;
   if (resonance.resonanceFamily) {
-    try { return activeSpecHitboxes.some(hb => hitboxIntersectsBody(hb, defender)); }
-    catch (err) { return false; }
+    try {
+      const contact=activeSpecHitboxes.find(hb => hitboxIntersectsBody(hb, defender));
+      if (!contact) return false;
+      attacker.attackData._resonanceHitKind=contact.kind || null;
+      attacker.attackData._resonanceThrowWindow=contact.throwWindow || null;
+      return true;
+    } catch (err) { return false; }
   }
 
   // ── Fallback AABB hitbox collision ──
@@ -2155,14 +2230,26 @@ export function checkHit(attacker, defender) {
 
 export function applyHit(attacker, defender) {
   if (!attacker.attackData) return;
-  if (attacker.attackData.multiHitStages) {
-    const stage = gen1HitStage(attacker);
+  if (attacker.attackData.multiHitStages || resonanceHitStage(attacker) >= 0) {
+    const stage = resonanceHitStage(attacker) >= 0 ? resonanceHitStage(attacker) : gen1HitStage(attacker);
     attacker.attackData.hitStageIds ||= {};
     attacker.attackData.hitStageIds[stage] ||= {};
     attacker.attackData.hitStageIds[stage][defenderHitKey(defender)] = true;
     attacker.attackData.hitApplied = false;
   } else {
     attacker.attackData.hitApplied = true;
+  }
+  // Capture-style weapon contacts are triggers, not ordinary damage boxes.
+  // Only a confirmed overlap enters the captured state; a whiff never throws.
+  if (attacker.attackData.resonanceFamily && attacker.attackData._resonanceHitKind === 'grab') {
+    defender._resonanceCapturedBy = attacker;
+    defender._resonanceCaptureUntil = Math.max(Number(attacker.attackData.progress)||0, 0.48) + 0.24;
+    defender._resonanceCaptureWeapon = String(attacker.resonanceConstruct||'');
+    defender.vx = 0; defender.vy = 0; defender.grounded = false;
+    defender.state = 'captured';
+    attacker.attackData._resonanceCapturedTarget = defender;
+    attacker.attackData._resonanceHitKind = null;
+    return;
   }
   defender.trapped = false; // getting hit frees you from tar / vines / freeze
   defender.reverseControls = 0; // getting hit frees you from reversed controls
@@ -2250,6 +2337,83 @@ export function applyHit(attacker, defender) {
   } else {
     defender.vx = attacker.facing * kb * 1.2;
     defender.vy = -kb * 0.55;
+  }
+
+  // Construct-specific launch vectors. These override the generic move-label
+  // direction so each of the first nine weapons can launch by its authored hit.
+  if (attacker.attackData.resonanceFamily) {
+    const weapon=String(attacker.resonanceConstruct||attacker.attackData.resonanceSpec?.weapon||'');
+    const slot=String(attacker.attackData.resonanceMoveSlot||'').toLowerCase();
+    const t=Math.max(0,Math.min(1,Number(attacker.attackData.progress)||0));
+    const face=attacker.facing||1;
+    let dir=null, power=1;
+    const finisher=(windows)=>windows.some(([lo,hi])=>t>=lo&&t<=hi);
+    if (weapon==='Resonance Blade') {
+      if(slot==='sideheavy') { if(finisher([[.22,.34]])){dir=defender.grounded?'forward':'down';power=.78;} else if(finisher([[.47,.61]])){dir='up';power=1.18;} }
+      else if(slot==='upheavy'||slot==='upsignature'||slot==='recovery'){dir='up';power=slot==='recovery'?1.1:1;}
+      else if(slot==='downheavy'){dir=defender.grounded?'forward':(defender.y<attacker.y?'down':'up');}
+      else if(slot==='sidesignature'||slot==='downsignature'){dir='forward';power=slot==='sidesignature'?1.1:.9;}
+    } else if (weapon==='Twin Fangs') {
+      if(slot==='sideheavy') {dir='forward';power=finisher([[.49,.63]])?1.05:.48;}
+      else if(slot==='upheavy') {dir='up';power=finisher([[.52,.67]])?1:.48;}
+      else if(slot==='downheavy'){dir='forward';power=.58;}
+      else if(slot==='sidesignature'){dir='forward';power=finisher([[.53,.64]])?1:.42;}
+      else if(slot==='upsignature'){dir='diagonalUp';power=finisher([[.43,.55]])?1:.42;}
+      else if(slot==='downsignature'){dir='forward';power=.88;}
+      else if(slot==='recovery'){dir='up';power=finisher([[.48,.61]])?1:.5;}
+    } else if (weapon==='Phase Katana') {
+      if(slot==='sideheavy'||slot==='sidesignature'){dir='forward';power=1.18;}
+      else if(slot==='upheavy'||slot==='upsignature'||slot==='recovery'){dir='up';power=slot==='recovery'?1.15:1;}
+      else if(slot==='downheavy'){dir=defender.grounded?'forward':'down';power=1.08;}
+      else if(slot==='downsignature'){dir='forward';power=1.22;}
+    } else if (weapon==='Resonance Rapier') {
+      if(slot==='sideheavy'||slot==='sidesignature'){dir='forward';power=slot==='sidesignature'?1.05:.72;}
+      else if(slot==='upheavy'){dir='up';power=finisher([[.55,.68]])?1:.42;}
+      else if(slot==='downheavy'){dir=defender.grounded?'forward':(defender.y<attacker.y?'down':'up');power=.62;}
+      else if(slot==='upsignature'||slot==='recovery'){dir='up';power=1.05;}
+      else if(slot==='downsignature'){dir='forward';power=1.05;}
+    } else if (weapon==='Crescent Blades') {
+      if(slot==='sideheavy'){dir='forward';power=finisher([[.48,.62]])?1:.48;}
+      else if(slot==='upheavy'||slot==='upsignature'||slot==='recovery'){dir='up';power=finisher([[.54,.67]])?1.05:.5;}
+      else if(slot==='downheavy'){dir='forward';power=finisher([[.38,.49]])?.78:.58;}
+      else if(slot==='sidesignature'){dir='forward';power=1;}
+      else if(slot==='downsignature'){dir='diagonalUp';power=1.05;}
+    } else if (weapon==='Greatblade') {
+      if(slot==='sideheavy'||slot==='sidesignature'){dir='forward';power=1.35;}
+      else if(slot==='upheavy'||slot==='recovery'){dir='up';power=1.3;}
+      else if(slot==='downheavy'){dir=defender.grounded?'forward':'down';power=1.35;}
+      else if(slot==='upsignature'){dir='diagonal';power=1.4;}
+      else if(slot==='downsignature'){dir=defender.grounded?'forward':'down';power=1.35;}
+    } else if (weapon==='Reaper Scythe') {
+      if(slot==='sideheavy'){dir='forward';power=1.1;}
+      else if(slot==='upheavy'||slot==='upsignature'||slot==='recovery'){dir='up';power=finisher([[.44,.57],[.47,.6]])?1.08:.48;}
+      else if(slot==='downheavy'){dir=defender.grounded?'forward':'down';power=.68;}
+      else if(slot==='sidesignature'){dir=finisher([[.56,.72]])?'forward':'pull';power=finisher([[.56,.72]])?1.15:.35;}
+      else if(slot==='downsignature'){dir=finisher([[.35,.5]])?'forward':'pull';power=.65;}
+    } else if (weapon==='Rift Claws') {
+      if(slot==='sideheavy'){dir='forward';power=finisher([[.48,.61]])?1:.42;}
+      else if(slot==='upheavy'){dir='up';power=finisher([[.46,.6]])?1:.45;}
+      else if(slot==='downheavy'){dir=defender.grounded?'forward':'diagonalDown';power=.85;}
+      else if(slot==='sidesignature'){dir='forward';power=finisher([[.45,.58]])?1.05:.35;}
+      else if(slot==='upsignature'){dir='up';power=1.05;}
+      else if(slot==='downsignature'){dir='forward';power=1.05;}
+      else if(slot==='recovery'){dir='up';power=finisher([[.55,.67]])?1:.42;}
+    } else if (weapon==='Pulse Tonfas') {
+      if(slot==='sideheavy'||slot==='sidesignature'){dir='forward';power=finisher([[.55,.70],[.60,.69]])?1:.35;}
+      else if(slot==='upheavy'||slot==='upsignature'||slot==='recovery'){dir='up';power=finisher([[.52,.69],[.28,.44]])?1:.45;}
+      else if(slot==='downheavy'){dir='forward';power=.62;}
+      else if(slot==='downsignature'){dir='forward';power=1.05;}
+    }
+    if (dir) {
+      const mag=kb*power;
+      if(dir==='up'){defender.vx=face*mag*.12;defender.vy=-mag*1.7;}
+      else if(dir==='down'){defender.vx=face*mag*.45;defender.vy=mag*1.15;}
+      else if(dir==='diagonalUp'){defender.vx=face*mag*.85;defender.vy=-mag*1.05;}
+      else if(dir==='diagonalDown'){defender.vx=face*mag*.85;defender.vy=mag*.8;}
+      else if(dir==='diagonal'){defender.vx=face*mag*1.1;defender.vy=-mag*.85;}
+      else if(dir==='pull'){defender.vx=-face*mag*.55;defender.vy=-mag*.15;}
+      else {defender.vx=face*mag*1.2;defender.vy=-mag*.35;}
+    }
   }
 
   const baseStun = attacker.attackData.isHeavy ? 20 : attacker.attackData.isSuper ? 35 : isLight ? 16 : 18;
