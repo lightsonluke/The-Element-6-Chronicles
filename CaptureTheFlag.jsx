@@ -13,7 +13,7 @@ import GameIcon from "./GameIcon.jsx";
 import { getEmoteForKey } from './emoteSlots.js';
 import { drawEmote } from './emotes.js';
 import PauseMenu from "./PauseMenu.jsx";
-import { drawResonanceOrb, drawResonanceRangeGlow, updateResonanceMatch, tryActivateResonanceConstruct, deactivateConstruct, consumeConstructSuperInput } from './resonanceConstructs.js';
+import { drawResonanceOrb, drawResonanceRangeGlow, updateResonanceMatch, tryActivateResonanceConstruct, steerBotToResonanceOrb, deactivateConstruct, consumeConstructSuperInput } from './resonanceConstructs.js';
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 const VIEW_W = 1280, VIEW_H = 720;
@@ -382,7 +382,7 @@ export default function CaptureTheFlag({
       const gp1 = settings.controllerEnabled !== false ? readGamepadInput(0) : null;
       const gp2 = settings.controllerEnabled !== false ? readGamepadInput(1) : null;
       const mergeGp = (kb, gp) => gp ? { left: kb.left || gp.left, right: kb.right || gp.right, jump: kb.jump || gp.jump, up: kb.up || gp.up, down: kb.down || gp.down, sig: kb.sig || gp.sig, power: kb.power || gp.power, superMove: kb.superMove || gp.superMove, heavy: kb.heavy || gp.heavy } : kb;
-      const stripPowers = (inp) => { inp.power = false; return inp; };
+      const stripPowers = (inp) => inp; // power is disabled below unless a Resonance Construct is active
 
       fighters.forEach((f, i) => {
         if (f.hp <= 0) { f.respawnTimer -= dt; if (f.respawnTimer <= 0) respawnFighter(f); return; }
@@ -412,12 +412,13 @@ export default function CaptureTheFlag({
         input = input || {};
         input.left = !!input.left; input.right = !!input.right; input.jump = !!input.jump;
         input.up = !!input.up; input.down = !!input.down; input.sig = !!input.sig;
-        input.power = false; input.superMove = !!input.superMove; input.heavy = !!input.heavy;
+        input.power = !!f.resonanceActive && !!input.power; input.superMove = !!input.superMove; input.heavy = !!input.heavy;
 
         if (f.emote && f.emote.timer > 0) {
           input = { left:false,right:false,jump:false,up:false,down:false,sig:false,power:false,superMove:false,heavy:false };
         }
         try {
+          if (f.isAI || f.isBot || f._isBot) steerBotToResonanceOrb(gameRef.current.resonanceMatch, f, input);
           tryActivateResonanceConstruct(gameRef.current.resonanceMatch, f, input);
           consumeConstructSuperInput(f, input);
           updateFighter(f, input, platforms, WORLD_W, WORLD_H, null);

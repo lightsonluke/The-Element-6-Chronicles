@@ -1603,10 +1603,10 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const fitZoom = Math.min(fitZoomX, fitZoomY);
       targetZoom = Math.min(targetZoom, Math.max(0.50, fitZoom));
       const constructCameraLock = !!(f1.resonanceActive || f2.resonanceActive || f1.resonanceActivationFrames > 0 || f2.resonanceActivationFrames > 0);
-      targetZoom *= zoomMul * (Number.isFinite(stageZoom) && stageZoom > 0 ? stageZoom : 1.0);
+      targetZoom *= zoomMul * (Number.isFinite(stageZoom) && stageZoom > 0 ? Math.max(0.75, Math.min(1.25, stageZoom)) : 1.0);
       // Construct activation must never drive the camera into a shrinking/invalid transform.
       // Hold a stable framing while a construct is active, and sanitize fighter coordinates.
-      targetZoom = constructCameraLock ? 0.82 : (Number.isFinite(targetZoom) ? Math.max(0.65, Math.min(1.0, targetZoom)) : 0.82);
+      targetZoom = constructCameraLock ? 0.88 : (Number.isFinite(targetZoom) ? Math.max(0.65, Math.min(1.0, targetZoom)) : 0.82);
       if (!Number.isFinite(g.camZoom) || g.camZoom < 0.65 || g.camZoom > 1.0) g.camZoom = targetZoom;
       g.camZoom += (targetZoom - g.camZoom) * 0.08;
       if (hitstop > 0) g.camZoom = Math.min(1.0, g.camZoom + 0.006);
@@ -1626,6 +1626,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       else { g.shakeMag = Math.max(g.shakeMag, shakeMag); if (g.shakeMag > 0.3) { g.shakeX = (Math.random() - 0.5) * g.shakeMag; g.shakeY = (Math.random() - 0.5) * g.shakeMag; g.shakeMag *= 0.72; shakeMag = g.shakeMag; } else { g.shakeX = 0; g.shakeY = 0; g.shakeMag = 0; shakeMag = 0; } }
 
       ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, W, H);
       ctx.restore();

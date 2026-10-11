@@ -158,7 +158,20 @@ export function getConstructMoveProfile(family, key, characterName = '') {
   const authored = CHARACTER_MOVE_OVERRIDES[characterName]?.[key] || {};
   const baseMotion = authored.motion || base.motion;
   const familyMode = authored.familyMode || fc.mode;
-  return { ...base, ...authored, family, familyMode, baseMotion, characterName,
+  const rangedFamilies = ['bow','cannons','blasters','projector','disc','shards','core','rings'];
+  const grabFamilies = ['tether','whip','flail','shield','bastion'];
+  const attackKind = key === 'light' ? (rangedFamilies.includes(family) ? 'projectile' : family === 'tether' ? 'grab' : 'jab')
+    : key === 'sideSignature' ? (rangedFamilies.includes(family) ? 'projectile' : grabFamilies.includes(family) ? 'grab' : 'slash')
+    : key === 'upSignature' ? 'rising-slash'
+    : key === 'downSignature' ? (family === 'tether' || family === 'whip' ? 'grab-slam' : 'slam')
+    : key === 'recovery' ? 'recovery-launch'
+    : key === 'sideHeavy' ? (rangedFamilies.includes(family) ? 'charged-projectile' : grabFamilies.includes(family) ? 'lunge-grab' : 'heavy-slash')
+    : key === 'upHeavy' ? 'rising-heavy'
+    : key === 'downHeavy' ? (family === 'tether' || family === 'whip' ? 'snare-slam' : 'heavy-slam')
+    : key === 'aerial' ? (rangedFamilies.includes(family) ? 'air-projectile' : 'air-slash') : 'energy-burst';
+  const autoMove = ['sweeping-lunge','recovery-launch','lunge-grab','rising-slash','rising-heavy'].includes(attackKind);
+  return { ...base, ...authored, family, familyMode, baseMotion, characterName, attackKind, autoMove,
+    directional: !['upSignature','upHeavy','downSignature','downHeavy','recovery'].includes(key),
     arc: (authored.arc ?? base.arc) * (authored.familyMode ? 1 : fc.arc),
     extension: (authored.extension ?? base.extension) * (authored.familyMode ? 1 : fc.extension),
     motion:`${familyMode}:${baseMotion}`, windup:base.windup*(heavy?1.12:1), active:base.active*(familyMode.includes('thrust')?.92:1),
@@ -217,8 +230,18 @@ export function activateConstruct(fighter) {
     fighter.attackData = null;
     fighter.attackTimer = 0;
     fighter.attackHold = null;
+    // Cancel the original character's power state too. Purple's dash_slash uses
+    // vx=52 while its dash object is active; leaving that state alive at pickup
+    // can fling the fighter off-screen and make the camera appear to collapse.
+    fighter.powerActive = null;
+    fighter.powerTimer = 0;
+    fighter._dash = null;
+    fighter._powerProjectiles = [];
     fighter.projectiles = [];
     fighter.genProjectiles = [];
+    fighter.vx = Math.max(-12, Math.min(12, Number.isFinite(Number(fighter.vx)) ? Number(fighter.vx) : 0));
+    fighter.vy = Math.max(-14, Math.min(14, Number.isFinite(Number(fighter.vy)) ? Number(fighter.vy) : 0));
+    if (fighter.state === 'attacking' || fighter.state === 'superAttack' || fighter.state === 'attackHold') fighter.state = fighter.grounded ? 'idle' : 'jumping';
     fighter.resonanceOriginalChar = originalChar;
     fighter.resonanceConstruct = constructName;
     fighter.char = constructChar;
@@ -255,6 +278,14 @@ export function deactivateConstruct(fighter) {
   fighter.resonanceActivationFrames = 0;
   return true;
 }
+export function steerBotToResonanceOrb(match, fighter, input) {
+  if (!match?.orb || !fighter || !input || !(fighter.isAI || fighter.isBot || fighter._gcBot || fighter._isBot) || fighter.resonanceActive || fighter.stocks===0 || fighter.hp===0 || fighter._eliminated) return input;
+  const dx=match.orb.x-(Number(fighter.x)||0), dy=match.orb.y-((Number(fighter.y)||0)-28);
+  if (Math.hypot(dx,dy)<=92) { input.sig=true; input.left=false; input.right=false; }
+  else { input.left=dx < -20; input.right=dx > 20; if (dy < -72 && fighter.grounded) input.jump=true; if (dy > 95 && !fighter.grounded) input.down=true; }
+  return input;
+}
+
 export function tryActivateResonanceConstruct(match, fighter, input) {
   if (!match?.orb || !fighter || !input?.sig || fighter.resonanceActive || fighter.stocks === 0 || fighter.hp === 0 || fighter._eliminated) return false;
   const orb = match.orb;
@@ -276,13 +307,13 @@ export function updateResonanceMatch(match, fighters, inputs, platforms, W, H, d
     if (f.resonanceActivationFrames>0) f.resonanceActivationFrames--;
     if (f.resonanceDeactivateFrames>0) f.resonanceDeactivateFrames--;
   }
-  if (!match.orb && fighters.some(f=>f && f.stocks!==0 && f.hp!==0 && !f._eliminated && !f.resonanceActive)) {
+  if (!match.orb && fighters.some(f=>f && f.stocks!==0 && f.hp!==0 && !f._eliminated) && fighters.every(f=>!f || f.stocks===0 || f.hp===0 || f._eliminated || !f.resonanceActive)) {
     // A living player without a construct keeps the orb cycle eligible, even if
     // another living player is already using theirs. Shorter interval = more frequent drops.
     if (match.spawnWait == null) match.spawnWait = 300 + Math.random() * 240;
     match.spawnWait--;
     if (match.spawnWait<=0) {
-      const ground=(platforms||[]).filter(p=>p && Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.width>40);
+      const ground=(platforms||[]).filter(p=>p && Number.isFinite(p.x)&&Number.isFinite(p.y)&&(p.width||p.w||0)>40);
       const p=ground.length ? ground[Math.floor(Math.random()*ground.length)] : null;
       // Pick a random landing lane along the selected platform, not its midpoint.
       // If there are no platform records, choose any safe horizontal lane on stage.
@@ -322,6 +353,17 @@ export function updateResonanceMatch(match, fighters, inputs, platforms, W, H, d
         match.orb.y=H-48;
         match.orb.vy=0;
         match.orb.landed=true;
+      }
+    }
+    // Bots deliberately seek the orb instead of treating it as scenery.
+    // Clone their input object so shared NO_INPUT constants are never mutated.
+    if (match.orb && Array.isArray(inputs)) {
+      for (let i=0;i<fighters.length;i++) {
+        const f=fighters[i];
+        if (!f || !(f.isAI || f.isBot || f._gcBot)) continue;
+        const botInput=inputs[i] || {};
+        if (!inputs[i]) inputs[i]=botInput;
+        steerBotToResonanceOrb(match, f, botInput);
       }
     }
     for (let i=0;i<fighters.length;i++) {

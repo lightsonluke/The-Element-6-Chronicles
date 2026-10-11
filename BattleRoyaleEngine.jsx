@@ -37,7 +37,7 @@ import { strategicBR } from './botStrategicBrain.js';
 import { drawDestructiblePlatforms, drawMovementItems, drawHazards, drawObjects } from './brRender.js';
 import PauseMenu from './PauseMenu.jsx';
 import GameIcon from './GameIcon.jsx';
-import { drawResonanceOrb, drawResonanceRangeGlow, updateResonanceMatch, tryActivateResonanceConstruct, deactivateConstruct, consumeConstructSuperInput } from './resonanceConstructs.js';
+import { drawResonanceOrb, drawResonanceRangeGlow, updateResonanceMatch, tryActivateResonanceConstruct, steerBotToResonanceOrb, deactivateConstruct, consumeConstructSuperInput } from './resonanceConstructs.js';
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 const ALL = ALL_CHARS;
@@ -342,6 +342,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           if (gi) f._lastInputTick = gi._tick || 0;
           inp = gi ? { left: !!gi.left, right: !!gi.right, jump: !!gi.jump, up: !!gi.up, down: !!gi.down, sig: !!gi.sig, power: !!gi.power, superMove: !!gi.superMove, heavy: !!gi.heavy } : { ...NO_INPUT };
         }
+        if (f._isBot || f.isAI || f.isBot) steerBotToResonanceOrb(resonanceMatchRef.current, f, inp);
         tryActivateResonanceConstruct(resonanceMatchRef.current, f, inp);
         consumeConstructSuperInput(f, inp);
         const _nearest = nearestMap[f.playerIndex] || null;

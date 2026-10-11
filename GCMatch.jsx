@@ -6,7 +6,8 @@ import React, { useRef, useEffect, useState } from 'react';
 import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 import { ALL_CHARS_MAP } from './allCharacters.js';
 import { createFighter, updateFighter, updateProjectiles, checkHit, applyHit, updateAI, loseStock } from './fighter.js';
-import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles } from './renderer.js';
+import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles, drawConstructWeapon } from './renderer.js';
+import { updateResonanceMatch, drawResonanceOrb, drawResonanceRangeGlow } from './resonanceConstructs.js';
 import { drawProjectiles } from './projectileRenderer.js';
 import { drawStageBackground } from './stageBackgrounds.js';
 import { applyElement } from './elements.js';
@@ -253,6 +254,9 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
     f2._gcNoRetreat = true; // Grand Circuit bots never run away
     f2._gcNoBlast = true; // Grand Circuit: never lose stock from blast zone
     f1._allOpponents = [f2]; f2._allOpponents = [f1];
+    if (!p1IsHuman) f1._gcBot = true;
+    if (!p2IsHuman) f2._gcBot = true;
+    const resonanceMatch = { frame: 0, orb: null, spawnWait: 150 + Math.random()*120 };
 
     const keys = {};
     const kd = e => {
@@ -297,9 +301,11 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
         const gp2 = settings?.controllerEnabled !== false ? readGamepadInput(1) : null;
         let rawP2 = p2IsHuman ? mergeGp(readPlayerInput(keys, p2Binds), gp2) : updateAI(f2, f1, cpuDifficulty, BOX_PLATFORMS);
         // Emote movement lock — if emote active, force no input
-        if (f1.emote && f1.emote.timer > 0) rawP1 = NO_INPUT;
-        if (f2.emote && f2.emote.timer > 0) rawP2 = NO_INPUT;
+        if (f1.emote && f1.emote.timer > 0) rawP1 = { ...NO_INPUT };
+        if (f2.emote && f2.emote.timer > 0) rawP2 = { ...NO_INPUT };
 
+        // Grand Circuit uses the same Resonance orb/construct combat rules as other fight modes.
+        updateResonanceMatch(resonanceMatch, [f1,f2], [rawP1,rawP2], BOX_PLATFORMS, W, H, dt);
         updateFighter(f1, rawP1, BOX_PLATFORMS, W, H, f2);
         updateFighter(f2, rawP2, BOX_PLATFORMS, W, H, f1);
         // Update emote timers — cancel if airborne, decrement timer, update progress
@@ -380,6 +386,8 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
       ctx.strokeStyle = 'rgba(255,255,255,0.15)';
       ctx.lineWidth = 2;
       ctx.strokeRect(30, 30, W - 60, H - 60);
+      if (resonanceMatch.orb) drawResonanceOrb(ctx, resonanceMatch.orb, resonanceMatch.frame);
+      for (const f of [f1,f2]) if (resonanceMatch.orb) drawResonanceRangeGlow(ctx,f,resonanceMatch.orb,resonanceMatch.frame);
 
       const drawF = (f, charData, isP1) => {
         const skinColor = isP1 ? getCharRenderColor(charData?.id, equippedSkins) : null;
@@ -394,11 +402,12 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
         }
         drawDoubleJumpParticles(ctx, f.doubleJumpParticles || []);
         if (!flashing) accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive));
-        if (!flashing) drawStickman(ctx, f.x, f.y, col, f.facing, f.frame || 0, 1, charData?.isSpirit, f.state, charData, f.powerActive, false, null, f.emote, f.attackData);
+        if (!flashing) drawStickman(ctx, f.x, f.y, col, f.facing, f.frame || 0, 1, (f.resonanceActive ? f.char : charData)?.isSpirit, f.state, f.resonanceActive ? f.char : charData, f.powerActive, false, null, f.emote, f.attackData);
+        if (!flashing && f.resonanceActive) { try { drawConstructWeapon(ctx,f,1); } catch (error) { console.error('[Grand Circuit Resonance] Weapon render failed safely:',error); } }
         if (!flashing) accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive));
         drawShikigamiFollower(ctx, f, equippedShikigamiRef.current?.[charData?.id], f.frame || 0, 1);
 
-        if (f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
+        if (!f.resonanceActive && f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
           if (f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, col, f.attackData.progress, charData?.superMove?.name, charData?.id);
           else drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || col, f.attackData.isNormal, charData?.id, charData?.power, f.powerActive);
         }

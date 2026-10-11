@@ -1125,6 +1125,7 @@ function updateGen1HoldPhysics(fighter, platforms, stageWidth, stageHeight) {
 export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeight, opponent) {
   // While a Resonance Construct is active, the construct kit is the only moveset.
   // Never let a stale/original power or super input enter the normal ability pipeline.
+  const resonanceLightRequested = !!(fighter?.resonanceActive && inputs?.power && !inputs._powerConsumed);
   if (fighter?.resonanceActive && inputs) { inputs.power = false; inputs.superMove = false; }
   fighter.frame++;
   fighter.prevX = fighter.x;
@@ -1138,6 +1139,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
   }
 
   if (fighter.invincible > 0) fighter.invincible--;
+  if (fighter._resonanceGrabTimer > 0) { fighter._resonanceGrabTimer--; if (fighter._resonanceGrabTimer <= 0) fighter.trapped = false; }
   if (fighter.landingLag > 0) fighter.landingLag--;
   if (fighter.sigCooldown > 0) fighter.sigCooldown--;
   if (fighter.normalCooldown > 0) fighter.normalCooldown--;
@@ -1285,6 +1287,16 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     }
   }
 
+  // Directional construct actions have matching movement: lunges travel in facing
+  // direction; rising attacks lift the fighter; downward slams commit to the drop.
+  if (fighter.resonanceActive && fighter.attackData?.resonanceAnimation && !fighter.attackData._resonanceMotionApplied) {
+    const prof=fighter.attackData.resonanceAnimation, kind=prof.attackKind||'';
+    if (['sweeping-lunge','lunge-grab','heavy-slash'].includes(kind)) fighter.vx=(fighter.facing===-1?-1:1)*(kind==='heavy-slash'?7:5.5);
+    if (['rising-slash','rising-heavy','recovery-launch'].includes(kind)) { fighter.vy=kind==='recovery-launch'?-12:-7.5; fighter.grounded=false; }
+    if (['slam','heavy-slam','grab-slam','snare-slam'].includes(kind)) { if (!fighter.grounded) fighter.vy=Math.max(fighter.vy||0,8); }
+    fighter.attackData._resonanceMotionApplied=true;
+  }
+
   // Attack state — can't act but still apply physics
   if (fighter.state === 'attacking' || fighter.state === 'superAttack') {
     fighter.attackTimer--;
@@ -1310,7 +1322,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         fighter.recoveryCooldown <= 0 && fighter.recoveryAirUses < 1) {
       inputs._sigConsumed = true;
       fighter.state = 'attacking';
-      const upSig = fighter.char.signatures?.up;
+      const upSig = fighter.resonanceActive ? (fighter.char.recoveryAttack || fighter.char.signatures?.up) : fighter.char.signatures?.up;
       const recoveryDuration = Math.min(upSig?.duration || 16, 28);
       fighter.attackTimer = recoveryDuration;
       fighter.attackData = {
@@ -1319,7 +1331,9 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         type: 'recovery',
         duration: recoveryDuration,
         color: upSig?.color || fighter.char.color,
-        sigType: 'up',
+        sigType: 'up', resonanceMoveKey: fighter.resonanceActive ? 'recovery' : (upSig?.resonanceMoveKey || 'upSignature'),
+        resonanceAnimation: fighter.resonanceActive ? upSig?.resonanceAnimation : upSig?.resonanceAnimation,
+        resonanceHitboxFamily: upSig?.resonanceHitboxFamily,
         hitApplied: false,
         progress: 0,
         isRecovery: true,
@@ -1336,7 +1350,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     // Gen I captures the attack and direction on the initial button-down before
     // jump/movement processing. This prevents Up+Signature from becoming a
     // jump first, and guarantees the held move cannot be changed mid-charge.
-    if (isGen1Fighter(fighter) && !fighter.attackHold) {
+    if (isGen1Fighter(fighter) && !fighter.resonanceActive && !fighter.attackHold) {
       if (inputs.heavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
         let holdType = (inputs.up || inputs.jump) ? 'upHeavy' : (inputs.down ? 'downHeavy' : 'heavy');
         const hasAttack = holdType === 'upHeavy' ? !!UP_HEAVIES[fighter.char.id] : holdType === 'downHeavy' ? !!DOWN_HEAVIES[fighter.char.id] : !!fighter.char.heavyAttack;
@@ -1485,7 +1499,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
     // ── Heavy Attack ──
     // Gen I heavies use the same captured-button hold behavior as signatures.
-    if (isGen1Fighter(fighter) && inputs.heavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
+    if (isGen1Fighter(fighter) && !fighter.resonanceActive && inputs.heavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
       let holdType = 'heavy';
       if (inputs.up || inputs.jump) holdType = 'upHeavy';
       else if (inputs.down) holdType = 'downHeavy';
@@ -1501,14 +1515,14 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     // input as jump in the fight controls, so test both fields explicitly and
     // consume the heavy before the jump logic can turn the input into a jump.
     const wantsUpHeavy = !!inputs.heavy && (!!inputs.up || !!inputs.jump);
-    if (wantsUpHeavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && UP_HEAVIES[fighter.char.id]) {
+    if (wantsUpHeavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && (fighter.resonanceActive ? !!fighter.char?.upHeavy : !!UP_HEAVIES[fighter.char.id])) {
       inputs._heavyConsumed = true;
-      const upHeavy = UP_HEAVIES[fighter.char.id];
+      const upHeavy = fighter.resonanceActive ? fighter.char.upHeavy : UP_HEAVIES[fighter.char.id];
       fighter.state = 'attacking';
       const refDur = gen1ReferenceDuration(fighter.char.id, 'upHeavy', true, false);
       const dur = refDur || Math.min(upHeavy.duration || 24, 30);
       fighter.attackTimer = dur;
-      fighter.attackData = { ...upHeavy, duration: dur, sigType: 'upHeavy', hitApplied: false, progress: 0, isHeavy: true };
+      fighter.attackData = { ...upHeavy, duration: dur, sigType: 'upHeavy', resonanceMoveKey: fighter.resonanceActive ? 'upHeavy' : upHeavy.resonanceMoveKey, hitApplied: false, progress: 0, isHeavy: true };
       fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
       fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
       fighter.vy = 0;
@@ -1518,8 +1532,12 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     if (inputs.heavy && inputs.down && !fighter.grounded && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && fighter.groundPoundCooldown <= 0) {
       inputs._heavyConsumed = true;
       fighter.state = 'attacking';
-      fighter.attackTimer = 20;
-      fighter.attackData = { name: 'Ground Pound', type: 'groundPound', duration: 20, damage: 18, range: 130, color: fighter.char.color, sigType: 'down', hitApplied: false, progress: 0, isHeavy: true, isGroundPound: true };
+      const constructDown = fighter.resonanceActive ? fighter.char?.downHeavy : null;
+      const dur = constructDown ? Math.max(10, Math.min(28, Number(constructDown.duration)||20)) : 20;
+      fighter.attackTimer = dur;
+      fighter.attackData = constructDown
+        ? { ...constructDown, duration:dur, sigType:'downHeavy', resonanceMoveKey:'downHeavy', hitApplied:false, progress:0, isHeavy:true }
+        : { name: 'Ground Pound', type: 'groundPound', duration: 20, damage: 18, range: 130, color: fighter.char.color, sigType: 'down', hitApplied: false, progress: 0, isHeavy: true, isGroundPound: true };
       fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
       fighter.groundPoundCooldown = 45 * (fighter.statControlRecoveryMul || 1);
       fighter.vy = 18;
@@ -1528,13 +1546,13 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     // Ground + down + heavy = Down Heavy (unique per character, different from side heavy)
     else if (inputs.heavy && inputs.down && fighter.grounded && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
       inputs._heavyConsumed = true;
-      const downHeavy = DOWN_HEAVIES[fighter.char.id];
+      const downHeavy = fighter.resonanceActive ? fighter.char?.downHeavy : DOWN_HEAVIES[fighter.char.id];
       if (downHeavy) {
         fighter.state = 'attacking';
         const refDur = gen1ReferenceDuration(fighter.char.id, 'downHeavy', true, false);
         const dur = refDur || Math.min(downHeavy.duration, 28);
         fighter.attackTimer = dur;
-        fighter.attackData = { ...downHeavy, duration: dur, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true };
+        fighter.attackData = { ...downHeavy, duration: dur, sigType: 'downHeavy', resonanceMoveKey: fighter.resonanceActive ? 'downHeavy' : downHeavy.resonanceMoveKey, hitApplied: false, progress: 0, isHeavy: true };
         fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
         fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
         fighter.vy = 0;
@@ -1562,7 +1580,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
     // ── Signature / Recovery ──
     if (inputs.sig && !inputs._sigConsumed) {
-      if (isGen1Fighter(fighter) && fighter.sigCooldown <= 0) {
+      if (isGen1Fighter(fighter) && !fighter.resonanceActive && fighter.sigCooldown <= 0) {
         const capturedType = (inputs.left || inputs.right) ? 'side' : (inputs.down ? 'down' : 'up');
         inputs._sigConsumed = true;
         startGen1Hold(fighter, 'sig', capturedType, !fighter.grounded, fighter.grounded);
@@ -1576,12 +1594,9 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         if (fighter.normalCooldown <= 0) {
           fighter.state = 'attacking';
           fighter.attackTimer = 18;
-          fighter.attackData = {
-            name: 'Aerial', type: 'aerialNormal',
-            duration: 18, damage: 7 + Math.random() * 4,
-            range: 55, color: fighter.char.color,
-            sigType: 'aerial', hitApplied: false, progress: 0, isNormal: true,
-          };
+          fighter.attackData = fighter.resonanceActive
+            ? { ...(fighter.char?.aerialAttack || fighter.char?.lightAttack || {}), name:'Construct Aerial', type:'aerialNormal', duration:18, sigType:'aerial', resonanceMoveKey:'aerial', hitApplied:false, progress:0, isNormal:true }
+            : { name: 'Aerial', type: 'aerialNormal', duration: 18, damage: 7 + Math.random() * 4, range: 55, color: fighter.char.color, sigType: 'aerial', hitApplied: false, progress: 0, isNormal: true };
           fighter.normalCooldown = NORMAL_COOLDOWN * (fighter.statControlRecoveryMul || 1);
           fighter.moveStats.aerial++;
         }
@@ -1608,8 +1623,24 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     }
     if (!inputs.sig) inputs._sigConsumed = false;
 
+    // Construct mode remaps the light/power button to its own light strike.
+    // It never calls the original character's power ability while a construct is held.
+    if (fighter.resonanceActive && resonanceLightRequested && fighter.normalCooldown <= 0 && !fighter.attackData) {
+      const light = fighter.char?.lightAttack;
+      if (light) {
+        const dur=Math.max(8, Math.min(24, Number(light.duration)||14));
+        fighter.state='attacking'; fighter.attackTimer=dur;
+        fighter.attackData={...light, duration:dur, sigType:'light', resonanceMoveKey:'light', hitApplied:false, progress:0};
+        fighter.normalCooldown=18; fighter.moveStats.normal++;
+        const prof=fighter.attackData.resonanceAnimation;
+        if (prof?.autoMove) { fighter.vx=(fighter.facing===-1?-1:1)*Math.max(4,Number(prof.dashSpeed)||6); if (prof.attackKind==='recovery-launch'||prof.attackKind==='rising-slash') { fighter.vy=-Math.max(5,Number(prof.launchSpeed)||7); fighter.grounded=false; } }
+      }
+      inputs._powerConsumed=true;
+    }
+    if (!inputs.power) inputs._powerConsumed = false;
+
     // ── Power Activation (replaces light attack) ──
-    if (inputs.power && !inputs._powerConsumed && !fighter.powerActive && fighter.powerTimer <= 0 && fighter.powerCooldown <= 0 && fighter.powerDisabled <= 0) {
+    if (!fighter.resonanceActive && inputs.power && !inputs._powerConsumed && !fighter.powerActive && fighter.powerTimer <= 0 && fighter.powerCooldown <= 0 && fighter.powerDisabled <= 0) {
       inputs._powerConsumed = true;
       fighter.moveStats.power++;
       activatePower(fighter, opponent);
@@ -2088,13 +2119,26 @@ export function checkHit(attacker, defender) {
     const profile = attacker.attackData.resonanceAnimation;
     const family = attacker.attackData.resonanceHitboxFamily || attacker.char?.resonanceFamily || 'blade';
     const facing = attacker.facing === -1 ? -1 : 1;
-    const range = Math.max(38, Number(attacker.attackData.range) || 80) * (Number(profile.extension) || 1);
+    const range = Math.max(38, Number(attacker.attackData.range) || 80) * Math.max(.55, Math.min(1.8, Number(profile.extension) || 1));
     const mode = String(profile.hitbox || 'forward-arc');
-    let hbW = range, hbH = 58, hbCX = attacker.x + facing * range * .42, hbCY = attacker.y - 30;
-    if (/vertical|column|launch|overhead/i.test(mode) || ['upSignature','upHeavy','recovery'].includes(attacker.attackData.resonanceMoveKey)) { hbW = family==='spear'||family==='trident'||family==='rapier' ? 48 : 78; hbH = range; hbCX = attacker.x + facing * (family==='spear'||family==='trident'||family==='rapier' ? 14 : 0); hbCY = attacker.y - range*.42; }
-    else if (/ground|slam|shockwave/i.test(mode) || ['downSignature','downHeavy'].includes(attacker.attackData.resonanceMoveKey)) { hbW = Math.max(74, range*.92); hbH = Math.max(44, range*.5); hbCX = attacker.x + facing * (family==='maul'||family==='hammer'?18:0); hbCY = attacker.y + 4; }
-    else if (/projectile|lane|thrust/i.test(mode) || ['bow','cannons','blasters','projector','spear','trident','rapier'].includes(family)) { hbW = range*1.08; hbH = family==='projector'||family==='cannons'||family==='blasters'?48:36; hbCX = attacker.x + facing*hbW*.48; hbCY = attacker.y - 30; }
-    else if (['hammer','maul','greatblade','scythe','axe','halberd','flail','whip','tether'].includes(family)) { hbW = range*1.08; hbH = 92; hbCX = attacker.x + facing*hbW*.40; hbCY = attacker.y - 32; }
+    const kind = String(profile.attackKind || 'slash');
+    const progress = Math.max(0, Math.min(1, Number(attacker.attackData.progress)||0));
+    // Every construct hitbox only exists during the weapon's visible active frames.
+    if (progress < (profile.windup ?? .18) * .72 || progress > Math.min(.94, (profile.windup ?? .18)+(profile.active ?? .3)+.12)) return false;
+    let hbW = range*.76, hbH = 54, hbCX = attacker.x + facing * range*.42, hbCY = attacker.y - 30;
+    if (/projectile/i.test(kind) || /projectile|lane/i.test(mode)) {
+      const travel=Math.max(.18, Math.min(.92, (progress-(profile.windup||.18)) / Math.max(.12, profile.active||.3)));
+      const projectileX=attacker.x+facing*(range*.20+range*.72*travel);
+      hbW=Math.max(28,range*.24); hbH=family==='projector'||family==='cannons'||family==='blasters'?42:30; hbCX=projectileX; hbCY=attacker.y-34;
+    } else if (/vertical|column|launch|overhead/i.test(mode) || ['upSignature','upHeavy','recovery'].includes(attacker.attackData.resonanceMoveKey)) {
+      hbW = ['spear','trident','rapier'].includes(family) ? 42 : 64; hbH = range*.82; hbCX = attacker.x + facing * (['spear','trident','rapier'].includes(family) ? 10 : 0); hbCY = attacker.y - range*.42;
+    } else if (/ground|slam|shockwave/i.test(mode) || ['downSignature','downHeavy'].includes(attacker.attackData.resonanceMoveKey)) {
+      hbW = Math.max(70, range*.92); hbH = Math.max(34, range*.34); hbCX = attacker.x + facing * (family==='maul'||family==='hammer'?18:0); hbCY = attacker.y + 7;
+    } else if (kind.includes('grab')) {
+      hbW=range*.62; hbH=76; hbCX=attacker.x+facing*range*.34; hbCY=attacker.y-30;
+    } else if (['hammer','maul','greatblade','scythe','axe','halberd','flail','whip','tether'].includes(family)) {
+      hbW=range*.92; hbH=kind.includes('heavy')?82:64; hbCX=attacker.x+facing*range*.36; hbCY=attacker.y-31;
+    }
     const dBW=32, dBH=72, dBX=defender.x, dBY=defender.y-36;
     return (hbCX-hbW/2)<(dBX+dBW/2) && (hbCX+hbW/2)>(dBX-dBW/2) && (hbCY-hbH/2)<(dBY+dBH/2) && (hbCY+hbH/2)>(dBY-dBH/2);
   }
@@ -2226,6 +2270,14 @@ export function applyHit(attacker, defender) {
   const baseStun = attacker.attackData.isHeavy ? 20 : attacker.attackData.isSuper ? 35 : isLight ? 16 : 18;
   const controlHitstunMul = attacker.statControlHitstunMul || 1;
   defender.hitstun = Math.min(Math.round((baseStun + Math.floor(dmg * 0.4)) * controlHitstunMul), 50);
+  // Construct grab attacks briefly snare, then throw the target away from the grabber.
+  // This is a real combat property, not just a different visual smear.
+  const resonanceKind=String(attacker.attackData.resonanceAnimation?.attackKind||'');
+  if (attacker.resonanceActive && resonanceKind.includes('grab')) {
+    defender.trapped=true; defender._resonanceGrabTimer=12;
+    defender.vx=(attacker.facing===-1?-1:1)*Math.max(5,Math.abs(defender.vx||0)*.45);
+    defender.vy=-Math.max(4,Math.abs(defender.vy||0)*.25);
+  }
   // A third-party hit always hard-cancels the defender's current attack/charge.
   // This prevents an interrupted Gen I attack from leaking into the running/idle pose.
   defender.attackHold = null;

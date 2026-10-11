@@ -1,32 +1,29 @@
-RESONANCE CONSTRUCTS — ANIMATION + MOVESET UPDATE
+RESONANCE CONSTRUCTS — PURPLE / COMBAT / GRAND CIRCUIT PATCH
 
-Replacement files:
+REPLACEMENT FILES (copy these to the root of the existing project and overwrite):
 - resonanceConstructs.js
 - fighter.js
 - renderer.js
 - PlatformFighter.jsx
 - CaptureTheFlag.jsx
 - BattleRoyaleEngine.jsx
+- GCMatch.jsx
 
-Install:
-1. Back up the six matching files in your existing game project.
-2. Copy these replacement files into the same project directory, overwriting the old files.
-3. Restart the development server/game and test a local match, CTF, and Battle Royale.
+CHANGES
+1. Purple's dash_slash power state and high dash velocity are cancelled when the orb is collected. This prevents the old 52-speed dash from continuing while the construct is active and throwing the camera/fighter off-screen.
+2. Construct pickup clears the previous attack, old projectiles, old power state, and stale attack state; movement is clamped to a safe range on activation.
+3. Tether Gauntlets are attached to both hand-joint positions and follow the character's attack pose instead of appearing below the hands.
+4. Construct attacks now carry per-move action types (jab, slash, projectile, grab, rising attack, slam, etc.), use matching active-window hitboxes, mirror with facing, and include blue projectile/smear artwork. The light/power button becomes the construct light attack while active; original power and super activation remain suppressed.
+5. Up-heavy, down-heavy, aerial, and recovery attacks use the construct profiles while active instead of falling back to generic/original attack data.
+6. Bots seek Resonance Orbs and attempt to collect them in the shared fight loop, Battle Royale, Capture the Flag, and Grand Circuit.
+7. Grand Circuit now has Resonance Orb spawns, pickup glow, construct weapon rendering, and construct combat hitboxes.
+8. Orb spawning waits until all living fighters are out of construct mode. Platform records using either `w` or `width` are supported.
+9. Camera zoom is clamped and the canvas transform is reset before clearing each frame.
 
-What this update changes:
-- Adds a faint blue rim-glow to a fighter who is close enough to collect an orb.
-- Uses construct-specific body/limb choreography during construct attacks and suppresses the original character attack/super overlays while the construct is active.
-- Makes construct attack hitboxes use construct move-profile geometry rather than the original character's authored hitbox specs.
-- Replaces the original attack and clears already-launched character-specific projectiles at pickup, so an old attack cannot continue alongside the construct moveset.
-- Makes construct weapons light-blue with the character's main color as an accent; improves attack smear trails and gives Tether Gauntlets a gauntlet silhouette positioned at the hands.
-- Prevents the super button from triggering a super while a construct is active; the existing dismiss-on-super-input behavior consumes the press.
-- Updates the Battle Royale render path to use the construct-transformed character data for the limb animation.
+INSTALL
+1. Back up the seven matching files in the existing project.
+2. Extract this ZIP directly into the existing project root and overwrite matching files.
+3. Restart the game and test Purple collecting an orb, a gauntlet character, a bot match, and Grand Circuit.
 
-Verification:
-The project's four existing Node test suites passed after these changes:
-- resonanceConstructs.test.mjs
-- resonanceConstructsAnimation.test.mjs
-- resonanceConstructsAudit.test.mjs
-- resonanceActivationCrash.test.mjs
-
-A production Vite build and live browser gameplay test were not run in this environment. Please test the replacement in your actual project before treating it as fully verified.
+VERIFICATION LIMITS
+All seven automated Resonance Construct test suites passed in the working source tree. The four edited JSX files passed a syntax parse. A full Vite production build and live browser gameplay test were not completed in this environment, so test these modes in your actual project.
