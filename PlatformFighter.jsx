@@ -673,6 +673,25 @@ function drawTrainingHitbox(ctx, x, y, w, h, label) {
 
 function drawExactAttackHitboxOverlay(ctx, fighter, label) {
   if (!fighter?.attackData) return;
+  // Construct geometry mirrors the live collision branch in fighter.js. It is
+  // rendered by the existing Settings > Hitboxes toggle, not a separate debug mode.
+  if (fighter.resonanceActive && fighter.attackData.resonanceAnimation) {
+    const a=fighter.attackData, profile=a.resonanceAnimation, family=a.resonanceHitboxFamily||fighter.char?.resonanceFamily||'blade';
+    const progress=Math.max(0,Math.min(1,Number(a.progress)||0));
+    const windup=Number(profile.windup??.18), active=Number(profile.active??.3);
+    if (progress < windup*.72 || progress > Math.min(.94,windup+active+.12)) return;
+    const facing=fighter.facing===-1?-1:1;
+    const range=Math.max(38,Number(a.range)||80)*Math.max(.55,Math.min(1.8,Number(profile.extension)||1));
+    const mode=String(profile.hitbox||'forward-arc'), kind=String(profile.attackKind||'slash');
+    let w=range*.76,h=54,cx=fighter.x+facing*range*.42,cy=fighter.y-30;
+    if (/projectile/i.test(kind)||/projectile|lane/i.test(mode)) { const t=Math.max(.18,Math.min(.92,(progress-(profile.windup||.18))/Math.max(.12,profile.active||.3))); cx=fighter.x+facing*(range*.20+range*.72*t); w=Math.max(28,range*.24); h=['projector','cannons','blasters'].includes(family)?42:30; cy=fighter.y-34; }
+    else if (/vertical|column|launch|overhead/i.test(mode)||['upSignature','upHeavy','recovery'].includes(a.resonanceMoveKey)) { w=['spear','trident','rapier'].includes(family)?42:64; h=range*.82; cx=fighter.x+facing*(['spear','trident','rapier'].includes(family)?10:0); cy=fighter.y-range*.42; }
+    else if (/ground|slam|shockwave/i.test(mode)||['downSignature','downHeavy'].includes(a.resonanceMoveKey)) { w=Math.max(70,range*.92); h=Math.max(34,range*.34); cx=fighter.x+facing*(family==='maul'||family==='hammer'?18:0); cy=fighter.y+7; }
+    else if (kind.includes('grab')) { w=range*.62; h=76; cx=fighter.x+facing*range*.34; cy=fighter.y-30; }
+    else if (['hammer','maul','greatblade','scythe','axe','halberd','flail','whip','tether'].includes(family)) { w=range*.92; h=kind.includes('heavy')?82:64; cx=fighter.x+facing*range*.36; cy=fighter.y-31; }
+    ctx.save(); ctx.fillStyle='rgba(255,45,90,.20)'; ctx.strokeStyle='#ff315d'; ctx.lineWidth=3; ctx.setLineDash([7,4]); ctx.fillRect(cx-w/2,cy-h/2,w,h); ctx.strokeRect(cx-w/2,cy-h/2,w,h); ctx.setLineDash([]); ctx.shadowColor='#ff315d'; ctx.shadowBlur=10; ctx.font='bold 10px monospace'; ctx.textAlign='center'; ctx.fillStyle='#ff315d'; ctx.fillText(`${label} CONSTRUCT HITBOX · ${a.resonanceMoveKey||'attack'}`,cx,cy-h/2-6); ctx.restore();
+    return;
+  }
   let boxes = [];
   try { boxes = getActiveSpecHitboxes(fighter) || []; } catch (err) { return; }
   if (!boxes.length) return;

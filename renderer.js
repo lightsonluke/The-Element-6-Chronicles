@@ -988,7 +988,7 @@ export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isN
   ctx.save();
   // Construct attacks own their visual choreography. Do not overlay the original
   // character's unrelated signature animation on top of the physical construct.
-  if (attack?.resonanceConstruct || attack?.resonanceFamily) {
+  if (attack?.resonanceConstruct || attack?.resonanceFamily || attack?.resonanceHitboxFamily || attack?.resonanceAnimation) {
     const p=Math.max(0,Math.min(1,Number(progress)||0));
     const prof=attack.resonanceAnimation||{}; const mode=prof.familyMode||'';
     // Preserve the game's existing character-authored animation for the matching
@@ -1003,7 +1003,7 @@ export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isN
       // below remains the fallback if an older character lacks a matching move.
     }
     const active=Math.max(0,Math.sin(Math.PI*Math.max(0,Math.min(1,(p-.18)/.64))));
-    const dir=facing===-1?-1:1; const reach=Math.max(32,Math.min(220,Number(attack.range)||120))*(Number(prof.extension)||1);
+    const dir=facing===-1?-1:1; const reach=Math.max(78,Math.min(300,Number(attack.range)||120))*(Number(prof.extension)||1)*1.28;
     ctx.translate(x,y-22);ctx.scale(dir,1);ctx.globalAlpha=.78*active;ctx.strokeStyle=attack.accentColor||color||'#62eaff';ctx.fillStyle=ctx.strokeStyle;ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=3;
     // Character-specific elemental choreography: distinct silhouettes and impacts,
     // not the generic weapon-family arc used by ordinary attacks.
@@ -1037,6 +1037,28 @@ export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isN
     } else {
       const a=-1.15+p*2.3;ctx.beginPath();ctx.arc(reach*.08,0,reach*.78,a,a+Math.PI*.9);ctx.stroke();
       if(mode.includes('cross')||mode.includes('twin')||mode.includes('rake')){ctx.beginPath();ctx.arc(reach*.08,0,reach*.58,a+Math.PI*.55,a+Math.PI*1.4);ctx.stroke();}
+    }
+    // Large signature-scale energy silhouette: intentionally broader and brighter than
+    // the weapon trail so construct moves read clearly at normal gameplay zoom.
+    if (active > .03) {
+      const key = attack.resonanceMoveKey || attack.sigType || '';
+      const vertical = /up|recovery/i.test(key) || /rise|column|vertical|launch/i.test(mode);
+      const ground = /down|slam|ground/i.test(key) || /slam|ground|shockwave|quake/i.test(mode);
+      const ranged = /projectile|beam|blast|volley|disc|bolt|thrust/i.test(String(prof.attackKind||'')+' '+mode);
+      ctx.save(); ctx.globalCompositeOperation = 'screen';
+      ctx.globalAlpha = .22 + active*.28; ctx.strokeStyle = '#bff8ff'; ctx.lineWidth = 14 + active*12;
+      ctx.shadowColor = attack.accentColor || '#43dfff'; ctx.shadowBlur = 24;
+      ctx.beginPath();
+      if (vertical) { ctx.ellipse(reach*.10, -reach*.34, reach*.36, reach*.68, p*.5, Math.PI*1.08, Math.PI*1.93); }
+      else if (ground) { ctx.ellipse(reach*.32, reach*.17, reach*.70, 16+active*24, 0, Math.PI, Math.PI*2); }
+      else if (ranged) { ctx.moveTo(0,0); ctx.lineTo(reach*(.75+.20*p),0); ctx.arc(reach*(.75+.20*p),0,16+active*13,0,Math.PI*2); }
+      else { ctx.ellipse(reach*.34,0,reach*.66,reach*.42,-.15+p*.3,-1.18,1.18); }
+      ctx.stroke(); ctx.shadowBlur = 0; ctx.globalAlpha = .62*active; ctx.lineWidth = 3;
+      ctx.strokeStyle = '#f3ffff'; ctx.stroke();
+      // Three moving shards make the active frames visibly animated without drawing
+      // a decorative effect outside the move's active window.
+      for (let i=0;i<3;i++) { const q=(p*1.7+i/3)%1; const sx=reach*(.18+q*.72); const sy=(vertical?-1:ground?1:Math.sin(q*Math.PI))*reach*(vertical?.52:ground?.10:.24); ctx.globalAlpha=.48*active; ctx.fillStyle=i%2?'#56dfff':(attack.accentColor||'#bdfaff'); ctx.beginPath(); ctx.moveTo(sx,sy-10); ctx.lineTo(sx+8,sy+3); ctx.lineTo(sx-3,sy+9); ctx.closePath(); ctx.fill(); }
+      ctx.restore();
     }
     ctx.restore();return;
   }

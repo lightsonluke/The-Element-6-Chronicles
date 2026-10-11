@@ -313,7 +313,7 @@ export function updateResonanceMatch(match, fighters, inputs, platforms, W, H, d
     if (match.spawnWait == null) match.spawnWait = 300 + Math.random() * 240;
     match.spawnWait--;
     if (match.spawnWait<=0) {
-      const ground=(platforms||[]).filter(p=>p && Number.isFinite(p.x)&&Number.isFinite(p.y)&&(p.width||p.w||0)>40);
+      const ground=(platforms||[]).filter(p=>p && Number.isFinite(p.x)&&Number.isFinite(p.y)&&(p.width||p.w||0)>80 && p.y>H*.25 && p.y<H-18 && (p.h==null || p.h<=80));
       const p=ground.length ? ground[Math.floor(Math.random()*ground.length)] : null;
       // Pick a random landing lane along the selected platform, not its midpoint.
       // If there are no platform records, choose any safe horizontal lane on stage.
@@ -324,7 +324,9 @@ export function updateResonanceMatch(match, fighters, inputs, platforms, W, H, d
       // The orb is a physical pickup: it falls under gravity and settles on the
       // selected platform instead of hovering at an arbitrary height in mid-air.
       const landingY=p ? p.y-22 : H-70;
-      match.orb={x:left,y:-48,vy:0,landingY,landed:false,age:0,pulse:0,fallSpeed:0};
+      // Spawn on the selected arena surface. Starting at -48 made Grand Circuit
+      // constructs appear above the playfield and sometimes outside the camera.
+      match.orb={x:left,y:landingY,vy:0,landingY,landed:true,age:0,pulse:0,fallSpeed:0};
       match.spawnWait=null;
     }
   }

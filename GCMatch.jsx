@@ -404,12 +404,24 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
         if (!flashing) accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive));
         if (!flashing) drawStickman(ctx, f.x, f.y, col, f.facing, f.frame || 0, 1, (f.resonanceActive ? f.char : charData)?.isSpirit, f.state, f.resonanceActive ? f.char : charData, f.powerActive, false, null, f.emote, f.attackData);
         if (!flashing && f.resonanceActive) { try { drawConstructWeapon(ctx,f,1); } catch (error) { console.error('[Grand Circuit Resonance] Weapon render failed safely:',error); } }
+        // The existing Settings > Hitboxes option also exposes live construct attack geometry here.
+        if (settings?.hitboxes === true && f.resonanceActive && f.attackData?.resonanceAnimation && f.state === 'attacking') {
+          const a=f.attackData, pr=a.resonanceAnimation, prog=Number(a.progress)||0, wind=Number(pr.windup??.18), active=Number(pr.active??.3);
+          if (prog>=wind*.72 && prog<=Math.min(.94,wind+active+.12)) {
+            const fam=a.resonanceHitboxFamily||f.char?.resonanceFamily||'blade', mode=String(pr.hitbox||'forward-arc'), kind=String(pr.attackKind||'slash'), dir=f.facing===-1?-1:1;
+            const range=Math.max(38,Number(a.range)||80)*Math.max(.55,Math.min(1.8,Number(pr.extension)||1)); let bw=range*.76,bh=54,bx=f.x+dir*range*.42,by=f.y-30;
+            if (/projectile/i.test(kind)||/projectile|lane/i.test(mode)) { const t=Math.max(.18,Math.min(.92,(prog-(pr.windup||.18))/Math.max(.12,pr.active||.3))); bx=f.x+dir*(range*.2+range*.72*t);bw=Math.max(28,range*.24);bh=['projector','cannons','blasters'].includes(fam)?42:30;by=f.y-34; }
+            else if (/vertical|column|launch|overhead/i.test(mode)||['upSignature','upHeavy','recovery'].includes(a.resonanceMoveKey)) { bw=['spear','trident','rapier'].includes(fam)?42:64;bh=range*.82;bx=f.x+dir*(['spear','trident','rapier'].includes(fam)?10:0);by=f.y-range*.42; }
+            else if (/ground|slam|shockwave/i.test(mode)||['downSignature','downHeavy'].includes(a.resonanceMoveKey)) { bw=Math.max(70,range*.92);bh=Math.max(34,range*.34);bx=f.x+dir*(fam==='maul'||fam==='hammer'?18:0);by=f.y+7; }
+            ctx.save();ctx.fillStyle='rgba(255,45,90,.2)';ctx.strokeStyle='#ff315d';ctx.lineWidth=3;ctx.setLineDash([7,4]);ctx.fillRect(bx-bw/2,by-bh/2,bw,bh);ctx.strokeRect(bx-bw/2,by-bh/2,bw,bh);ctx.setLineDash([]);ctx.fillStyle='#ff315d';ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText(`CONSTRUCT HITBOX · ${a.resonanceMoveKey||'attack'}`,bx,by-bh/2-6);ctx.restore();
+          }
+        }
         if (!flashing) accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive));
         drawShikigamiFollower(ctx, f, equippedShikigamiRef.current?.[charData?.id], f.frame || 0, 1);
 
-        if (!f.resonanceActive && f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
-          if (f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, col, f.attackData.progress, charData?.superMove?.name, charData?.id);
-          else drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || col, f.attackData.isNormal, charData?.id, charData?.power, f.powerActive);
+        if (f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
+          if (f.state === 'superAttack' && !f.resonanceActive) drawSuperEffect(ctx, f.x, f.y, col, f.attackData.progress, charData?.superMove?.name, charData?.id);
+          else drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || col, f.attackData.isNormal, (f.resonanceActive ? f.char : charData)?.id, (f.resonanceActive ? f.char : charData)?.power, f.powerActive);
         }
         if (f.hitEffects) f.hitEffects = f.hitEffects.filter(he => drawHitSparks(ctx, he.x, he.y, he.color, f.frame || 0, he.spawnFrame));
         drawProjectiles(ctx, f);
