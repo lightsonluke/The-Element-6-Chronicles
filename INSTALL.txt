@@ -1,18 +1,19 @@
-RESONANCE ORB GRAVITY + CAMERA ZOOM FIX
+MATCH SCREEN BACKDROP REPLACEMENT — SIDE UPDATE
 
-Replacement files (2 total):
-- resonanceConstructs.js
-- PlatformFighter.jsx
+Files included:
+- GameCanvasPortal.jsx
+- VolleyballCanvasPortal.jsx
+- index.css
 
 Install:
-1. Back up the two matching files in your existing game project.
-2. Copy these two replacement files into the same project folder as the originals.
-3. Allow them to overwrite the originals, then restart the dev server/game.
+1. Back up the three matching files in your existing project.
+2. Copy these files into the project root, replacing the existing files.
+3. Restart the dev server / rebuild the game.
 
-Changes:
-- Resonance orbs now accelerate downward under gravity and land on platforms instead of hovering in midair.
-- The match camera validates its zoom inputs and clamps the final zoom to a safe range, preventing the playfield from collapsing to near zero scale.
+What this changes:
+- While a normal match canvas is mounted, its full-screen host is an opaque dark gameplay surface. The menu/page backdrop no longer shows through around the 16:9 match canvas.
+- Volleyball uses the same active-match backdrop behavior through its separate canvas host.
+- The opaque surface is marked active only during a match and is cleared when the portal unmounts, so it should not stay over menus after leaving a match.
+- Pause controls and other React match UI are not moved or removed.
 
-Verification:
-- Ran the four existing Resonance Construct test suites in the full source tree; all passed.
-- A production build and live browser gameplay test were not run in this environment.
+This is a focused source patch. It has not been verified in live browser gameplay in this environment.

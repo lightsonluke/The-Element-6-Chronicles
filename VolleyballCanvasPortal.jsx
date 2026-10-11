@@ -32,13 +32,15 @@ export default function VolleyballCanvasPortal({ children }) {
   const host = getHost();
 
   useEffect(() => {
+    host?.setAttribute('data-match-active', 'true');
     document.documentElement.classList.add('el6-volleyball-active');
     document.body.classList.add('el6-volleyball-active');
     return () => {
+      host?.removeAttribute('data-match-active');
       document.documentElement.classList.remove('el6-volleyball-active');
       document.body.classList.remove('el6-volleyball-active');
     };
-  }, []);
+  }, [host]);
 
   if (!host) return null;
   return createPortal(children, host);

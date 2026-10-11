@@ -409,3 +409,18 @@ body.el6-volleyball-active {
   z-index: 1 !important;
   flex: none !important;
 }
+
+
+/* MATCH BACKDROP REPLACEMENT
+   Active match canvases are the actual gameplay surface, not a transparent
+   overlay over the menu backdrop. The unused letterbox area stays dark, and
+   the previous page backdrop is hidden only while a match canvas is mounted. */
+.el6-game-canvas-host[data-match-active="true"],
+#el6-volleyball-canvas-host[data-match-active="true"] {
+  background: #06040f !important;
+  background-color: #06040f !important;
+}
+.el6-game-canvas-host[data-match-active="true"] > canvas,
+#el6-volleyball-canvas-host[data-match-active="true"] > canvas {
+  background-color: #06040f !important;
+}

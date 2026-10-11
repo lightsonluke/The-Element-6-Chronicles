@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 const HOST_ID = 'el6-game-canvas-host';
@@ -27,6 +27,17 @@ function getHost() {
 
 export default function GameCanvasPortal({ children, gameMode = null }) {
   const host = getHost();
+
+  // Keep hooks unconditional so server rendering / hydration does not change hook order.
+  useEffect(() => {
+    if (!host) return undefined;
+    host.dataset.matchActive = 'true';
+    return () => {
+      delete host.dataset.matchActive;
+      delete host.dataset.gameMode;
+    };
+  }, [host]);
+
   if (!host) return null;
   if (gameMode) host.dataset.gameMode = String(gameMode);
   else delete host.dataset.gameMode;
