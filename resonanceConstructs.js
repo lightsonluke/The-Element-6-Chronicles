@@ -156,7 +156,22 @@ function constructWeaponPose(fighter) {
     if(t>.68){angle*=.76;offsetX*=.45;offsetY*=.45;}
   }
   const scale=1;
-  return {facing,angle,x:(Number(fighter?.x)||0)+facing*(10+v*8)+offsetX,y:(Number(fighter?.y)||0)-23+bob+offsetY,scale,spec,action,slot,progress,active,holding};
+  const fx=Number(fighter?.x)||0, fy=Number(fighter?.y)||0;
+  // Each weapon family has its own attachment point/orientation. Feet weapons
+  // sit on the boots, arm gear sits at the fists, shields stay in front, and
+  // orbiting constructs float beside the fighter instead of pretending to be held.
+  const mount=({
+    greaves:[0,7,-.08], claws:[facing*7,-20,-.18], tonfas:[facing*8,-20,-.18],
+    tether:[facing*8,-20,-.14], blasters:[facing*9,-20,-.12], cannons:[facing*10,-20,-.08],
+    shield:[facing*11,-23,-.12], bastion:[facing*10,-20,-.1],
+    bow:[facing*8,-23,-.62], rapier:[facing*8,-23,-.25], spear:[facing*8,-23,-.18],
+    trident:[facing*8,-23,-.16], halberd:[facing*8,-23,-.35], staff:[facing*7,-22,-.08],
+    whip:[facing*7,-22,-.24], flail:[facing*7,-22,-.15], rings:[facing*19,-28,0],
+    core:[facing*21,-28,0], shards:[facing*17,-26,0], disc:[facing*9,-21,-.18],
+    projector:[facing*5,-35,-.08], maul:[facing*8,-22,-.2], hammer:[facing*8,-22,-.2],
+  })[spec.family] || [facing*(10+v*8),-23,-.38];
+  const mountedAngle=mount[2];
+  return {facing,angle:angle+mountedAngle,x:fx+mount[0]+offsetX,y:fy+mount[1]+bob+offsetY,scale,spec,action,slot,progress,active,holding};
 }
 function transformWeaponPoint(pose, lx, ly) {
   const c=Math.cos(pose.angle),s=Math.sin(pose.angle);
@@ -192,6 +207,53 @@ export function getResonanceConstructHitboxes(fighter) {
   const r=a.isHeavy?7.5:5.5;
   const cap=(a1,b1,rad=r)=>localCapsule(pose,a1,b1,rad);
   const circ=(pt,rad=r)=>localCircle(pose,pt,rad);
+  const geometry=String(a.resonanceGeometry||spec?.geometry||'').toLowerCase();
+  // Geometry tags authored per move control timing and collider form. These
+  // branches intentionally run before family fallbacks so traps, counters,
+  // rifts, spins and broad sweeps are not treated as ordinary sword slashes.
+  if(geometry==='phase') {
+    // Phase attacks become hittable only after the displacement/afterimage.
+    if(p<.43 || p>.68) return [];
+    return [cap([9,-8],[31,-26],r*.78),circ([29,-24],r*.72)];
+  }
+  if(geometry==='control') {
+    if(p<.34 || p>.76) return [];
+    if(move.includes('down')) return [circ([pose.facing*19,7],r*1.15),cap([pose.facing*7,8],[pose.facing*32,8],r*.75)];
+    return [circ([pose.facing*22,-8],r*1.05),cap([pose.facing*10,-7],[pose.facing*31,-8],r*.72)];
+  }
+  if(geometry==='spin') {
+    const rad=fam==='staff'||fam==='halberd'||fam==='flail'?27:22;
+    return [cap([-rad,-10],[rad,-10],r*.7),cap([0,-rad],[0,rad],r*.7),circ([0,-rad],r*.75),circ([0,rad],r*.75)];
+  }
+  if(geometry==='sweep') {
+    if(move.includes('down')||move.includes('ground')) return [cap([-25,8],[25,8],r*.85),cap([-18,3],[18,3],r*.7)];
+    return [cap([7,-30],[30,-15],r),cap([9,-10],[29,3],r*.78)];
+  }
+  if(geometry==='burst') {
+    if(p<.36 || p>.69) return [];
+    return [circ([pose.facing*20,-12],r*1.05),circ([pose.facing*29,-17],r*.72)];
+  }
+  if(geometry==='dash') {
+    // Dash thrusts extend in front of the weapon; the mirrored local-space
+    // transform handles facing-left attacks without separate hard-coded boxes.
+    return [cap([9,-8],[34,-8],r*.72),circ([33,-8],r*.72)];
+  }
+  if(geometry==='rise') {
+    return [cap([8,2],[20,-34],r*.76),cap([15,-24],[27,-43],r*.65)];
+  }
+  if(geometry==='slam') {
+    if(p<.32) return [];
+    return [cap([-26,7],[26,7],r*.8),circ([pose.facing*21,6],r*.85)];
+  }
+  if(geometry==='grab') {
+    if(p<.28 || p>.56) return [];
+    return [{shape:'box',x:pose.x+pose.facing*10-10,y:pose.y-17,w:20,h:27,kind:'grab',throwWindow:[.56,.78]}];
+  }
+  if(geometry==='combo') {
+    // Combo move hit windows are filtered above; each window gets a tight
+    // weapon-proximal collider instead of a full-duration generic overlap.
+    return [cap([7,-12],[26,-18],r*.7),circ([25,-18],r*.68)];
+  }
   // Projectile hitboxes are centered on the weapon's muzzle/launch point, not
   // the whole character. Their direction mirrors with the same facing transform.
   const isProjectile=['projectile','projectileUp'].includes(pose.action) || ['projectile'].includes(a.resonanceGeometry);
@@ -324,11 +386,14 @@ export function updateResonanceMatch(match, fighters, inputs, platforms, W, H, d
     if (match.spawnWait == null) match.spawnWait = 480 + Math.random() * 480;
     match.spawnWait--;
     if (match.spawnWait<=0) {
-      const ground=(platforms||[]).filter(p=>p && Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.width>100);
-      const p=ground[Math.floor(Math.random()*ground.length)];
-      const left=Math.max(100, Math.min(W-100, p ? p.x+p.width/2 : W/2));
-      const targetY=p?Math.max(70,p.y-110):Math.max(120,H*.38);
-      match.orb={x:left,y:-48,targetY,age:0,pulse:0,fallSpeed:3.2};
+      // Spawn anywhere across the playable stage width, not at a selected
+      // platform's midpoint. Keep a safe edge margin and choose a fresh lane
+      // so repeated orbs don't keep dropping through center-stage.
+      const margin=Math.max(48,Math.min(110,W*.07));
+      const minX=margin, maxX=Math.max(margin+1,W-margin);
+      const x=minX+Math.random()*(maxX-minX);
+      const targetY=Math.max(70,Math.min(H*.65,H*(.22+Math.random()*.42)));
+      match.orb={x,y:-48,targetY,age:0,pulse:0,fallSpeed:3.2};
       match.spawnWait=null;
     }
   }
@@ -470,8 +535,18 @@ export function drawConstructWeapon(ctx, fighter, scale=1) {
     if(recovering) { angle = angle*.76; offsetX*=.45; offsetY*=.45; }
   }
   const size=scale*(1+(active?.09*swing:0));
-  const x=fighter.x+facing*(10+v*8)*scale+offsetX, y=fighter.y-23*scale+bob*scale+offsetY;
-  ctx.save();ctx.translate(x,y);ctx.scale(facing*size,size);ctx.rotate(angle);
+  const mount=({
+    greaves:[0,7,-.08], claws:[facing*7,-20,-.18], tonfas:[facing*8,-20,-.18],
+    tether:[facing*8,-20,-.14], blasters:[facing*9,-20,-.12], cannons:[facing*10,-20,-.08],
+    shield:[facing*11,-23,-.12], bastion:[facing*10,-20,-.1], bow:[facing*8,-23,-.62],
+    rapier:[facing*8,-23,-.25], spear:[facing*8,-23,-.18], trident:[facing*8,-23,-.16],
+    halberd:[facing*8,-23,-.35], staff:[facing*7,-22,-.08], whip:[facing*7,-22,-.24],
+    flail:[facing*7,-22,-.15], rings:[facing*19,-28,0], core:[facing*21,-28,0],
+    shards:[facing*17,-26,0], disc:[facing*9,-21,-.18], projector:[facing*5,-35,-.08],
+    maul:[facing*8,-22,-.2], hammer:[facing*8,-22,-.2],
+  })[spec.family] || [facing*(10+v*8),-23,-.38];
+  const x=fighter.x+mount[0]*scale+offsetX, y=fighter.y+mount[1]*scale+bob*scale+offsetY;
+  ctx.save();ctx.translate(x,y);ctx.scale(facing*size,size);ctx.rotate(angle+mount[2]);
   // Soft cyan bounce light and a narrow rim bloom, not a trailing line.
   const glow=ctx.createRadialGradient(11,0,1,11,0,37);
   glow.addColorStop(0,'rgba(80,245,255,.32)');glow.addColorStop(.55,'rgba(43,187,255,.13)');glow.addColorStop(1,'rgba(43,187,255,0)');
