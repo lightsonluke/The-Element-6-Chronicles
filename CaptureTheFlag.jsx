@@ -813,7 +813,7 @@ function drawScene(ctx, g, frame, camX, camY, vp) {
     // Team indicator dot above head
     ctx.fillStyle = TEAM_COLORS[f.team];
     ctx.beginPath(); ctx.arc(f.x, f.y - 52, 4, 0, Math.PI * 2); ctx.fill();
-    if (f.attackData && !f.resonanceActive && f.state === 'attacking') drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || charColor, f.attackData.isNormal, f.char?.id, f.char?.power, f.powerActive);
+    if (f.attackData && (f.state === 'attacking' || f.state === 'attackHold')) drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.holding ? (-1 - Math.max(0, Math.min(1, f.attackData.holdProgress || 0))) : f.attackData.progress, f.facing, f.attackData.color || charColor, f.attackData.isNormal, f.char?.id, f.char?.power, f.powerActive);
     drawProjectiles(ctx, f);
   });
 

@@ -507,7 +507,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
         accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive));
       }
       drawShikigamiFollower(ctx, f, equippedShikigamiRef.current?.[charData?.id], f.frame || 0, 1);
-      if (f.attackData && !f.resonanceActive && f.state === 'attacking') drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || col, f.attackData.isNormal, charData?.id, charData?.power, f.powerActive);
+      if (f.attackData && (f.state === 'attacking' || f.state === 'attackHold')) drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.holding ? (-1 - Math.max(0, Math.min(1, f.attackData.holdProgress || 0))) : f.attackData.progress, f.facing, f.attackData.color || col, f.attackData.isNormal, charData?.id, charData?.power, f.powerActive);
       if (!f.resonanceActive && f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, col, f.attackData.progress, charData?.superMove?.name, charData?.id);
       if (f.hitEffects) f.hitEffects = f.hitEffects.filter(he => drawHitSparks(ctx, he.x, he.y, he.color, f.frame || 0, he.spawnFrame));
       // power projectiles

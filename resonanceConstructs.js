@@ -326,26 +326,62 @@ export function drawResonanceOrb(ctx, orb, frame=0) {
 // inset energy channels and animated parts; the weapon is rendered continuously while active.
 export function drawConstructWeapon(ctx, fighter, scale=1) {
   if (!fighter?.resonanceActive || !fighter.resonanceConstruct) return;
-  // The active attack renderer draws the weapon through its full animated swing.
-  // Avoid drawing a second idle copy on top of that authored attack pose.
-  if (fighter.state === 'attacking' || fighter.state === 'attackHold') return;
+  // Keep the actual weapon visible during every attack; the renderer adds the
+  // move-specific smear/impact layer over this articulated weapon pose.
   const name=fighter.resonanceConstruct, spec=CONSTRUCTS[name]||CONSTRUCTS['Resonance Blade'];
   const facing=fighter.facing||1, frame=fighter.frame||0, attack=fighter.attackData;
-  const active=(fighter.state==='attacking' || fighter.state==='superAttack') && attack;
-  const progress=active ? Math.max(0,Math.min(1,attack.progress||0)) : 0;
+  const active=(fighter.state==='attacking' || fighter.state==='superAttack') && !!attack;
+  const holding=fighter.state==='attackHold' || !!attack?.holding;
+  const progress=active ? Math.max(0,Math.min(1,Number(attack.progress)||0)) : 0;
   const swing=Math.sin(progress*Math.PI), recovering=active && progress>.68;
   const v=variation(fighter.resonanceOriginalChar?.id||fighter.char?.id||name,'pose');
   const bob=Math.sin(frame*.13+v*20)*1.2;
+  const action=attack?.resonanceAction || getResonanceAttackAction(spec.family, attack?.resonanceMove, attack?.sigType);
+  const move=String(attack?.resonanceMove || attack?.sigType || (attack?.isHeavy?'heavy':'side')).toLowerCase();
+  const wind=holding ? .25 : Math.min(1,progress/.28);
+  const strike=active && progress>=.28 && progress<=.68 ? Math.sin(((progress-.28)/.4)*Math.PI) : 0;
+  const familyMotion = ({ hammer:1.05, maul:1.18, greatblade:1.22, scythe:1.45, whip:1.65, flail:1.6, spear:.62, trident:.72, halberd:1.12, rapier:.48, katana:1.24, staff:1.58, rings:1.9, core:1.82, shards:1.38, bow:.34, projector:.26, greaves:.9, claws:1.28, shield:.92, axe:1.2 })[spec.family] ?? 1.02;
+  const characterPhase = variation(fighter.resonanceOriginalChar?.id || fighter.char?.id || name, 'attack-phase') * 4;
   let angle=-.38+bob*.012;
-  if(active) {
-    const familyMotion = ({ hammer:.7, maul:.62, greatblade:.82, scythe:1.15, whip:1.3, flail:1.25, spear:.42, rapier:.32, katana:.95, staff:1.4, rings:1.6, core:1.7, shards:1.2, bow:.22, projector:.18, greaves:.6 })[spec.family] ?? .9;
-    const characterPhase = variation(fighter.resonanceOriginalChar?.id || fighter.char?.id || name, 'attack-phase') * 4;
-    const arc = Math.sin(Math.max(0, Math.min(1, progress + characterPhase * .035)) * Math.PI);
-    angle += (attack.sigType==='up'?-familyMotion:attack.sigType==='down'?familyMotion:familyMotion)*(progress<.5?arc:-arc*.7) + characterPhase * .12;
+  let offsetX=0, offsetY=0;
+  if(holding) {
+    angle += move.includes('up') ? -.5 : move.includes('down') ? .78 : -.82;
+    offsetX -= facing*5*scale; offsetY -= 3*scale;
+  } else if(active) {
+    const t=progress;
+    if(action==='projectile' || action==='projectileUp') {
+      angle = action==='projectileUp' ? -.14 + Math.sin(t*Math.PI)*.12 : 1.40 + (1-t)*.2;
+      offsetX = facing*(t>.2 ? Math.min(18,(t-.2)*24) : -4)*scale;
+      offsetY = action==='projectileUp' ? -Math.sin(t*Math.PI)*11*scale : Math.sin(t*Math.PI*2)*2*scale;
+    } else if(action==='rise') {
+      angle = -.12 + Math.sin(t*Math.PI*1.25)*.52 + characterPhase*.08;
+      offsetY = -Math.sin(t*Math.PI)*14*scale;
+      offsetX = facing*Math.sin(t*Math.PI)*4*scale;
+    } else if(action==='slam') {
+      angle = .15 + Math.sin(t*Math.PI)*1.95 + (t>.68 ? -.65*(t-.68)/.32 : 0);
+      offsetY = Math.sin(t*Math.PI)*8*scale;
+    } else if(action==='grab') {
+      angle = -1.05 + Math.sin(t*Math.PI*1.35)*familyMotion + characterPhase*.12;
+      offsetX = facing*Math.sin(t*Math.PI)*8*scale;
+    } else if(action==='dashThrust' || action==='jab') {
+      angle = 1.35 + (1-wind)*.18 - strike*.12 + (t>.68 ? -.35*(t-.68)/.32 : 0);
+      offsetX = facing*((t<.28 ? -7*(1-wind) : 6+strike*9) - (t>.68 ? 8*(t-.68)/.32 : 0))*scale;
+    } else if(move.includes('up') || move==='aerial' || move.includes('recovery')) {
+      angle = -.12 + Math.sin(t*Math.PI)*familyMotion*.68;
+      offsetY = -Math.sin(t*Math.PI)*10*scale;
+    } else if(move.includes('down') || move.includes('ground')) {
+      angle = .18 + Math.sin(t*Math.PI)*familyMotion*1.55;
+      offsetY = Math.sin(t*Math.PI)*7*scale;
+    } else {
+      const sweep = -1.05 + t*2.15;
+      angle = sweep * Math.min(1,familyMotion) + Math.sin(t*Math.PI)*.22 + characterPhase*.08;
+      offsetX = facing*Math.sin(t*Math.PI)*7*scale;
+      offsetY = Math.sin(t*Math.PI*2)*4*scale;
+    }
+    if(recovering) { angle = angle*.76; offsetX*=.45; offsetY*=.45; }
   }
-  if(recovering) angle*=.72;
-  const size=scale*(1+(active?.06*swing:0));
-  const x=fighter.x+facing*(10+v*8)*scale, y=fighter.y-23*scale+bob*scale;
+  const size=scale*(1+(active?.09*swing:0));
+  const x=fighter.x+facing*(10+v*8)*scale+offsetX, y=fighter.y-23*scale+bob*scale+offsetY;
   ctx.save();ctx.translate(x,y);ctx.scale(facing*size,size);ctx.rotate(angle);
   // Soft cyan bounce light and a narrow rim bloom, not a trailing line.
   const glow=ctx.createRadialGradient(11,0,1,11,0,37);
@@ -354,6 +390,7 @@ export function drawConstructWeapon(ctx, fighter, scale=1) {
   const metal=ctx.createLinearGradient(-4,-30,18,27);
   metal.addColorStop(0,'#f5ffff');metal.addColorStop(.18,'#9cffff');metal.addColorStop(.42,'#37d9f4');metal.addColorStop(.7,'#0876b9');metal.addColorStop(1,'#073c78');
   const dark='#073b69', edge='#d8ffff', cyan='#6ff7ff';
+  const accent=(fighter.resonanceOriginalChar?.color || fighter.char?.accentColor || '#ffb65c');
   ctx.lineJoin='round';ctx.lineCap='round';ctx.lineWidth=1.5;ctx.strokeStyle=edge;ctx.fillStyle=metal;
   const poly=(pts,fill=metal,stroke=edge)=>{ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}};
   const line=(pts,color=cyan,w=2)=>{ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.strokeStyle=color;ctx.lineWidth=w;ctx.stroke();};
@@ -411,6 +448,17 @@ export function drawConstructWeapon(ctx, fighter, scale=1) {
     default:
       grip();poly([[7,-27],[13,-31],[18,-24],[17,8],[12,20],[6,8]],'#075b9d',edge);poly([[10,-26],[13,-30],[15,-21],[12,4]],'#eaffff',null);poly([[0,2],[20,0],[22,4],[1,7]],'#21cde8',edge);break;
   }
+  // A faceted character-color powerstone, recessed socket, and tiny etched runes
+  // give every construct a second identity color rather than a flat cyan silhouette.
+  ctx.save();
+  ctx.shadowColor=accent; ctx.shadowBlur=active ? 10+strike*10 : 6;
+  ctx.fillStyle='#062c50'; ctx.strokeStyle=edge; ctx.lineWidth=1.15;
+  ctx.beginPath(); ctx.moveTo(9,-10); ctx.lineTo(15,-15); ctx.lineTo(21,-10); ctx.lineTo(19,-3); ctx.lineTo(12,-2); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle=accent; ctx.beginPath(); ctx.moveTo(10,-10); ctx.lineTo(15,-13); ctx.lineTo(19,-9); ctx.lineTo(17,-4); ctx.lineTo(12,-4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.88)'; ctx.beginPath(); ctx.moveTo(11,-10); ctx.lineTo(15,-12); ctx.lineTo(14,-8); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=accent; ctx.lineWidth=1.2; ctx.globalAlpha=.9;
+  for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(-1+i*2,7+i*4);ctx.lineTo(3+i*2,5+i*4);ctx.stroke();}
+  ctx.restore();
   // Individual characters get a stable, deterministic pose offset, plus their own attack cadence.
   // Attack arcs are compact impact flashes aligned to the weapon's active frames, not permanent trails.
   if(active && progress>=.18 && progress<=.58){
