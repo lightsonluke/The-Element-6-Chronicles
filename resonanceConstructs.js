@@ -109,80 +109,141 @@ function arcStrip(cx,cy,r,thickness,start,end,steps=8) {
 
 // Shared source of truth for combat collision AND Settings -> Hitboxes. The
 // shapes follow the specific animated weapon/action, not a generic range box.
+function constructWeaponPose(fighter) {
+  const a=fighter?.attackData;
+  const name=fighter?.resonanceConstruct;
+  const spec=CONSTRUCTS[name]||CONSTRUCTS['Resonance Blade'];
+  const facing=Number(fighter?.facing)||1;
+  const frame=Number(fighter?.frame)||0;
+  const active=(fighter?.state==='attacking'||fighter?.state==='superAttack')&&!!a;
+  const holding=fighter?.state==='attackHold'||!!a?.holding;
+  const progress=active?clamp01(a.progress):0;
+  const variationSeed=fighter?.resonanceOriginalChar?.id||fighter?.char?.id||name||'fighter';
+  const v=variation(variationSeed,'pose');
+  const bob=Math.sin(frame*.13+v*20)*1.2;
+  const action=a?.resonanceAction||getResonanceAttackAction(spec.family,a?.resonanceMove,a?.sigType);
+  const slot=String(a?.resonanceMoveSlot||'').toLowerCase();
+  const move=slot || String(a?.resonanceMove||a?.sigType||'side').toLowerCase();
+  const t=progress;
+  const familyMotion=({hammer:1.05,maul:1.18,greatblade:1.22,scythe:1.45,whip:1.65,flail:1.6,spear:.62,trident:.72,halberd:1.12,rapier:.48,katana:1.24,staff:1.58,rings:1.9,core:1.82,shards:1.38,bow:.34,projector:.26,greaves:.9,claws:1.28,shield:.92,axe:1.2})[spec.family]??1.02;
+  const characterPhase=variation(variationSeed,'attack-phase')*4;
+  let angle=-.38+bob*.012, offsetX=0, offsetY=0;
+  if(holding){angle+=(move.includes('up')?-.5:move.includes('down')?.78:-.82);offsetX-=facing*5;offsetY-=3;}
+  else if(active){
+    if(action==='projectile'||action==='projectileUp'){
+      angle=action==='projectileUp'?-.14+Math.sin(t*Math.PI)*.12:1.40+(1-t)*.2;
+      offsetX=facing*(t>.2?Math.min(18,(t-.2)*24):-4);
+      offsetY=action==='projectileUp'?-Math.sin(t*Math.PI)*11:Math.sin(t*Math.PI*2)*2;
+    } else if(action==='rise'){
+      angle=-.12+Math.sin(t*Math.PI*1.25)*.52+characterPhase*.08;
+      offsetY=-Math.sin(t*Math.PI)*14;offsetX=facing*Math.sin(t*Math.PI)*4;
+    } else if(action==='slam'){
+      angle=.15+Math.sin(t*Math.PI)*1.95+(t>.68?-.65*(t-.68)/.32:0);offsetY=Math.sin(t*Math.PI)*8;
+    } else if(action==='grab'){
+      angle=-1.05+Math.sin(t*Math.PI*1.35)*familyMotion+characterPhase*.12;offsetX=facing*Math.sin(t*Math.PI)*8;
+    } else if(action==='dashThrust'||action==='jab'){
+      const wind=Math.min(1,t/.28), strike=t>=.28&&t<=.68?Math.sin(((t-.28)/.4)*Math.PI):0;
+      angle=1.35+(1-wind)*.18-strike*.12+(t>.68?-.35*(t-.68)/.32:0);
+      offsetX=facing*((t<.28?-7*(1-wind):6+strike*9)-(t>.68?8*(t-.68)/.32:0));
+    } else if(move.includes('up')||move==='recovery'){
+      angle=-.12+Math.sin(t*Math.PI)*familyMotion*.68;offsetY=-Math.sin(t*Math.PI)*10;
+    } else if(move.includes('down')){
+      angle=.18+Math.sin(t*Math.PI)*familyMotion*1.55;offsetY=Math.sin(t*Math.PI)*7;
+    } else {
+      const sweep=-1.05+t*2.15;angle=sweep*Math.min(1,familyMotion)+Math.sin(t*Math.PI)*.22+characterPhase*.08;
+      offsetX=facing*Math.sin(t*Math.PI)*7;offsetY=Math.sin(t*Math.PI*2)*4;
+    }
+    if(t>.68){angle*=.76;offsetX*=.45;offsetY*=.45;}
+  }
+  const scale=1;
+  return {facing,angle,x:(Number(fighter?.x)||0)+facing*(10+v*8)+offsetX,y:(Number(fighter?.y)||0)-23+bob+offsetY,scale,spec,action,slot,progress,active,holding};
+}
+function transformWeaponPoint(pose, lx, ly) {
+  const c=Math.cos(pose.angle),s=Math.sin(pose.angle);
+  return [pose.x+pose.facing*(lx*c-ly*s),pose.y+(lx*s+ly*c)];
+}
+function localCapsule(pose, a, b, r) {
+  const p1=transformWeaponPoint(pose,a[0],a[1]),p2=transformWeaponPoint(pose,b[0],b[1]);
+  return {shape:'capsule',x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1],r};
+}
+function localCircle(pose, p, r) { const q=transformWeaponPoint(pose,p[0],p[1]);return {shape:'circle',x:q[0],y:q[1],r}; }
+
+// Collision follows the same pose and local weapon silhouette as drawConstructWeapon.
+// This deliberately avoids the old oversized, fighter-centered generic attack boxes.
 export function getResonanceConstructHitboxes(fighter) {
   const a=fighter?.attackData;
-  if(!a?.resonanceFamily) return [];
-  const p=clamp01(a.progress);
-  if(p < .20 || p > .70) return [];
-  const active=(p-.20)/.50;
-  const f=Number(fighter.facing)||1, x=Number(fighter.x)||0, y=(Number(fighter.y)||0)-30;
-  const range=Math.max(42,Math.min(190,Number(a.range)||100));
-  const heavy=!!a.isHeavy;
-  const action=a.resonanceAction || getResonanceAttackAction(a.resonanceFamily, a.resonanceMove, a.sigType);
-  const authoredGeometry=a.resonanceSpec?.geometry || a.resonanceGeometry;
-  const reach=range*(heavy?1.02:.78);
-  const visualLen=(42+25*Math.max(.7,Math.min(1.55,range/125)))*(heavy?1.16:1);
-  const strike=p>=.28&&p<=.68?Math.sin(((p-.28)/.4)*Math.PI):0;
-  // Weapon-and-move-authored collision geometry. The same slot metadata drives the renderer.
-  if (authoredGeometry) {
-    const midX=x+f*(18+reach*.25), midY=y-4;
-    const endX=x+f*(18+reach*(.56+strike*.12));
-    const topY=y-reach*(.44+strike*.14), groundY=(Number(fighter.y)||0)+9;
-    const r=(heavy?17:12)+strike*4;
-    if(authoredGeometry==='projectile') return [circle(endX, midY+(a.resonanceMoveSlot==='upHeavy'||a.resonanceMoveSlot==='upSignature'?-reach*.48:0),r+3),capsule(endX-f*r,midY,endX+f*r,midY,r*.45)];
-    if(authoredGeometry==='thrust') return [capsule(x+f*10,midY,endX+f*reach*.12,midY- (a.resonanceMoveSlot==='upHeavy'?-reach*.28:0),r*.72)];
-    if(authoredGeometry==='dash') return [capsule(x+f*7,midY,endX,midY- (a.resonanceMoveSlot==='upSignature'?reach*.16:0),r),circle(endX,midY,r*.9)];
-    if(authoredGeometry==='rise') return [capsule(x+f*4,y-2,x+f*13,topY,r),capsule(x-f*10,topY+8,x+f*30,topY+8,r*.82)];
-    if(authoredGeometry==='slam') return [box(x+f*10,groundY-reach*.05,reach*.62,heavy?34:25),arcStrip(midX,groundY,radiusSafe(reach),heavy?22:15,Math.PI*1.04,Math.PI*1.96,10)];
-    if(authoredGeometry==='grab') return [capsule(x+f*8,midY,x+f*(20+reach*.7),midY+Math.sin(active*Math.PI)*12,r*.78),circle(x+f*(20+reach*.7),midY,r)];
-    if(authoredGeometry==='counter') return [arcStrip(x+f*7,midY,reach*.38,r*.65, f>0?-1.4:Math.PI-1.4, f>0?1.4:Math.PI+1.4,10),circle(x+f*22,midY,r*.8)];
-    if(authoredGeometry==='control') return [circle(midX,midY,reach*.32),capsule(x+f*7,midY,endX,midY-reach*.12,r*.7)];
-    if(authoredGeometry==='phase') return [capsule(x+f*10,midY,endX+f*8,midY-8,r),circle(endX+f*8,midY-8,r*1.05)];
-    if(authoredGeometry==='spin') return [arcStrip(x+f*7,midY,reach*.48,r*.78, -Math.PI*.92,Math.PI*.92,14),circle(midX,midY,r*.7)];
-    if(authoredGeometry==='combo') return [capsule(x+f*8,midY-5,endX,midY-5,r*.68),capsule(x+f*10,midY+7,endX-f*6,midY+7,r*.62),circle(endX,midY,r*.78)];
-    if(authoredGeometry==='sweep') return [arcStrip(midX,midY,reach*.54,r*.86, -1.25,1.18,12)];
-    if(authoredGeometry==='burst') return [circle(midX,midY,reach*(.25+strike*.12)),arcStrip(midX,midY,reach*(.32+strike*.08),r*.75,-1.9,1.9,12)];
+  if(!a?.resonanceFamily || !(fighter?.state==='attacking'||fighter?.state==='superAttack')) return [];
+  const p=clamp01(a.progress), move=String(a.resonanceMoveSlot||'').toLowerCase();
+  const spec=a.resonanceSpec, win=spec?.phaseWindows?.active||[.24,.72];
+  // Separate hit windows for combo moves; this prevents one overlapping collider
+  // from dealing repeated hits throughout the whole animation.
+  const comboWindows = ({
+    'crosscut':[[.28,.43],[.52,.68]], 'crossing fangs':[[.22,.37],[.48,.66]],
+    'twin ascension':[[.24,.39],[.52,.69]], 'needle lift':[[.18,.31],[.37,.50],[.56,.71]],
+    'pulse flurry':[[.16,.27],[.29,.40],[.42,.53],[.55,.70]], 'double pop':[[.28,.42],[.52,.69]],
+    'staff combination':[[.25,.41],[.49,.68]], 'threefold thrust':[[.16,.29],[.33,.46],[.50,.69]],
+    'shard volley':[[.18,.30],[.36,.48],[.54,.68]], 'rising burst':[[.16,.28],[.34,.46],[.52,.69]],
+    'boxer rush':[[.18,.31],[.36,.49],[.54,.70]], 'rake combo':[[.16,.29],[.34,.47],[.52,.70]],
+  })[String(a.resonanceMove||'').toLowerCase()];
+  if(comboWindows && !comboWindows.some(([lo,hi])=>p>=lo&&p<=hi)) return [];
+  if(!comboWindows && (p<win[0]||p>win[1])) return [];
+  const pose=constructWeaponPose(fighter), fam=pose.spec.family;
+  const pulse=Math.sin(Math.PI*Math.max(0,Math.min(1,(p-win[0])/(win[1]-win[0]))));
+  const r=a.isHeavy?7.5:5.5;
+  const cap=(a1,b1,rad=r)=>localCapsule(pose,a1,b1,rad);
+  const circ=(pt,rad=r)=>localCircle(pose,pt,rad);
+  // Projectile hitboxes are centered on the weapon's muzzle/launch point, not
+  // the whole character. Their direction mirrors with the same facing transform.
+  const isProjectile=['projectile','projectileUp'].includes(pose.action) || ['projectile'].includes(a.resonanceGeometry);
+  if(isProjectile) {
+    const origin=transformWeaponPoint(pose,[30, -4]);
+    const travel=String(a.resonanceGeometry||'').includes('up') || move.includes('up') ? -1 : pose.facing;
+    return [{shape:'circle',x:origin[0]+travel*(8+p*20),y:origin[1]+(move.includes('down')?p*18:move.includes('up')?-p*18:0),r:Math.max(5,r*.85)}];
   }
-  if(action==='jab') return [capsule(x+f*9,y-8,x+f*(Math.min(74,visualLen*(.42+strike*.18))+9),y-29,heavy?15:11)];
-  if(action==='projectile' || action==='projectileUp') {
-    const px=x+f*(action==='projectileUp'?19:9+visualLen*(.36+active*.86));
-    const py=action==='projectileUp' ? (Number(fighter.y)||0)-33-visualLen*(.18+active*.62) : y+Math.sin(active*Math.PI*2)*6;
-    const r=heavy?19:14;
-    return [circle(px,py,r), capsule(px-f*r*.7,py,px+f*r*.7,py,r*.52)];
+  // Narrow thrusts, jabs, and spear attacks stay narrow instead of inheriting
+  // the broad sweep collider used by slashing weapons.
+  if(['rapier','spear','trident'].includes(fam) && (move.includes('side')||move.includes('heavy')||pose.action==='jab')) {
+    const tip=fam==='rapier'?[27,-8]:[26,-17];
+    const base=fam==='rapier'?[8,-3]:[5,7];
+    const thrust=pulse*7;
+    return [cap(base,[tip[0]+thrust,tip[1]],fam==='rapier'?r*.55:r*.62)];
   }
-  if(action==='rise') {
-    const lift=visualLen*(.35+strike*.32);
-    return [capsule(x+f*4,y-2,x+f*14,y-lift,heavy?19:15), capsule(x-f*9,y-lift+7,x+f*29,y-lift+7,heavy?16:12)];
+  if(['blade','katana','greatblade','axe','rapier'].includes(fam)) {
+    if(fam==='rapier') return [cap([9,-3],[28,-9],r*.58)];
+    if(fam==='greatblade') return [cap([5,-10],[21,-48],r+1),cap([14,-33],[24,-45],r*.7)];
+    if(fam==='axe') return [cap([10,-29],[28,-19],r+1),circ([24,-24],r*.8)];
+    return [cap([7,-10],[19,-45],r*.82)];
   }
-  if(action==='slam') {
-    const groundY=(Number(fighter.y)||0)+9+active*12;
-    const radius=visualLen*(.35+strike*.20);
-    return [box(x+f*19,groundY,radius*2,heavy?36:27), arcStrip(x+f*19,groundY+3,radius,heavy?22:16,Math.PI*1.03,Math.PI*1.97,10)];
+  if(['spear','trident','halberd','staff'].includes(fam)) {
+    const main=cap([8,20],[11,-43],fam==='staff'?r*.65:r*.58);
+    if(fam==='trident') return [main,cap([10,-29],[1,-38],r*.5),cap([10,-29],[20,-38],r*.5)];
+    if(fam==='halberd') return [main,cap([12,-29],[27,-23],r*.85)];
+    if(fam==='staff' && (move.includes('down')||pose.action==='slam')) return [cap([-4,4],[27,5],r*.85)];
+    return [main];
   }
-  if(action==='grab') {
-    const reachNow=9+visualLen*(.32+active*.43);
-    const yy=(Number(fighter.y)||0)-38+Math.sin(active*Math.PI)*12;
-    return [capsule(x+f*9,(Number(fighter.y)||0)-38,x+f*reachNow,yy,heavy?15:10), circle(x+f*reachNow,yy,heavy?18:13)];
+  if(['hammer','maul','projector'].includes(fam)) {
+    if(move.includes('down')||pose.action==='slam') return [cap([-5,4],[27,5],r+1),circ([25,5],r*.8)];
+    return [cap([4,-17],[25,-11],r+1),circ([23,-12],r*.9)];
   }
-  if(action==='dashThrust') {
-    const end=x+f*(9+visualLen*(.62+strike*.18));
-    const cy=(Number(fighter.y)||0)-32;
-    return [capsule(x+f*7,cy,end,cy,heavy?18:12), circle(end,cy,heavy?13:9)];
+  if(fam==='scythe') return [cap([9,12],[32,-29],r+1),cap([25,-23],[37,-34],r*.75)];
+  if(['crescent','dual','claws'].includes(fam)) return [cap([5,-16],[17,-2],r*.8),cap([12,3],[24,16],r*.8)];
+  if(fam==='bow') return [cap([7,-27],[15,22],r*.55)];
+  if(['cannons','blasters'].includes(fam)) return [cap([9,-12],[23,-7],r*.8),circ([24,-8],r*.7)];
+  if(fam==='disc') return [circ([28,-5],r+1)];
+  if(fam==='rings'||fam==='core'||fam==='shards') {
+    const rad=fam==='shards'?r*.65:r*.8;
+    return [circ([20,-4],rad),circ([29,-17],rad),circ([29,10],rad)];
   }
-  if(action==='burst') {
-    const r=25+strike*25, cx=x+f*(9+visualLen*.52), cy=(Number(fighter.y)||0)-33;
-    return [circle(cx,cy,r), arcStrip(cx,cy,r,heavy?24:16,Math.PI*1.1,Math.PI*2.9,12)];
+  if(['shield','bastion'].includes(fam)) return [cap([5,-19],[20,13],r+1)];
+  if(['whip','flail','tether'].includes(fam)) {
+    const extension=12+Math.sin(p*Math.PI)*18;
+    return [cap([8,-2],[23+extension,8],r*.78),circ([23+extension,8],r*.82)];
   }
-  // Weapon slash: a thick swept arc in front of the fighter, with radius and
-  // thickness sized to the actual weapon family and heavy/light attack slot.
-  const radius=Math.min(118,Math.max(48,visualLen*.82));
-  const width=heavy?31:22;
-  const start=-1.12+active*.05, end=.95+active*.1;
-  const points=[];
-  for(let i=0;i<=10;i++){const t=i/10,ang=start+(end-start)*t;points.push([x+f*(12+Math.cos(ang)*radius),y+Math.sin(ang)*radius]);}
-  for(let i=10;i>=0;i--){const t=i/10,ang=start+(end-start)*t;points.push([x+f*(12+Math.cos(ang)*(radius-width)),y+Math.sin(ang)*(radius-width)]);}
-  return [{shape:'polygon',points}];
+  if(fam==='greaves') return [cap([5,4],[18,21],r+1)];
+  if(fam==='tonfas') return [cap([2,-12],[9,10],r*.8),cap([12,-10],[19,10],r*.8)];
+  return [cap([5,-12],[18,12],r*.8)];
 }
+
 export function makeConstructCharacter(baseChar, fighterId) {
   const constructName = getConstructForCharacter(baseChar);
   const spec = CONSTRUCTS[constructName] || CONSTRUCTS['Resonance Blade'];

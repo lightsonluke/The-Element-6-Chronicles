@@ -1221,7 +1221,8 @@ function drawResonanceConstructAttack(ctx, x, y, attack, progress, facing, color
 
 export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isNormal = false, charId = '', power = null, powerActive = null) {
   if (attack?.resonanceFamily) {
-    drawResonanceConstructAttack(ctx, x, y, attack, progress, facing, color);
+    // The actual construct weapon is animated in-hand by drawConstructWeapon.
+    // Do not draw a second unrelated generic blade/line overlay here.
     return;
   }
   ctx.save();
