@@ -238,6 +238,85 @@ export function getResonanceConstructHitboxes(fighter) {
     if(downSig) { if(p<.42||p>.51)return []; return [cap([2,-4],[15,-3],r*.34),circ([3,-4],r*.36)]; } // handle pommel jab only
     if(recovery) { if(p<.28||p>.43)return []; return [cap([12,-22],[19,-53],r*.6),cap([17,-42],[24,-58],r*.45)]; }
   }
+  // Weapon-specific authored paths for the remaining first nine weapon categories.
+  // Each branch uses the actual contact part and distinct active windows; local
+  // coordinates are mirrored by transformWeaponPoint for left-facing fighters.
+  const slotName=move;
+  const isHeavy=!!a.isHeavy;
+  const inWindows=(windows)=>windows.some(([lo,hi])=>p>=lo&&p<=hi);
+  const grabBox=(x,y,w,h,throwWindow=[.56,.78])=>({shape:'box',x:pose.x+pose.facing*x-w/2,y:pose.y+y-h/2,w,h,kind:'grab',throwWindow});
+  if(fam==='dual') { // Twin Fangs: short hooked dagger edges, never a sword-length box.
+    if(slotName==='sideheavy') { if(!inWindows([[.22,.34],[.49,.63]]))return []; return [cap([8,-13],[24,-2],r*.43),cap([8,-2],[24,-14],r*.43)]; }
+    if(slotName==='upheavy') { if(!inWindows([[.24,.36],[.52,.67]]))return []; return [cap([7,-8],[14,-31],r*.42),cap([15,-8],[20,-38],r*.45)]; }
+    if(slotName==='downheavy') { if(p<.32||p>.49)return []; return [cap([-21,5],[-5,2],r*.48),cap([5,2],[21,5],r*.48)]; }
+    if(slotName==='sidesignature') { if(!inWindows([[.25,.34],[.39,.48],[.53,.64]]))return []; return [cap([8,-14],[29,-4],r*.48),cap([8,-3],[28,-15],r*.44)]; }
+    if(slotName==='upsignature') { if(!inWindows([[.27,.38],[.43,.55]]))return []; return [cap([5,-9],[21,-27],r*.5),cap([20,-27],[28,-10],r*.45)]; }
+    if(slotName==='downsignature') { if(p<.49||p>.63)return []; return [cap([8,-10],[30,-8],r*.48),cap([8,0],[30,-3],r*.48)]; }
+    if(slotName==='recovery') { if(!inWindows([[.25,.37],[.48,.61]]))return []; return [cap([7,-10],[16,-35],r*.46),cap([15,-14],[22,-39],r*.46)]; }
+  }
+  if(fam==='katana') { // Phase Katana: long, narrow edge; delayed draw and phase timing.
+    if(slotName==='sideheavy') { if(p<.48||p>.57)return []; return [cap([8,-12],[48,-13],r*.52),cap([16,-18],[48,-15],r*.38)]; }
+    if(slotName==='upheavy') { if(p<.34||p>.51)return []; return [cap([10,-13],[31,-52],r*.5),cap([23,-35],[37,-49],r*.38)]; }
+    if(slotName==='downheavy') { if(p<.48||p>.62)return []; return [cap([10,-2],[27,24],r*.48),cap([17,14],[30,30],r*.38)]; }
+    if(slotName==='sidesignature') { if(p<.44||p>.56)return []; return [cap([10,-13],[49,-12],r*.52),cap([18,-18],[48,-14],r*.38)]; }
+    if(slotName==='upsignature') { if(p<.39||p>.56)return []; return [cap([13,-8],[24,-47],r*.45),cap([17,-32],[27,-51],r*.38)]; }
+    if(slotName==='downsignature') { if(p<.52||p>.65)return []; return [cap([-22,-10],[25,-20],r*.52),circ([-20,-11],r*.44)]; }
+    if(slotName==='recovery') { if(p<.29||p>.46)return []; return [cap([13,-13],[25,-55],r*.53),cap([18,-37],[29,-57],r*.4)]; }
+  }
+  if(fam==='rapier') { // Resonance Rapier: point-only thrust hitboxes.
+    if(slotName==='sideheavy') { if(p<.25||p>.44)return []; return [cap([10,-5],[43,-7],r*.32),circ([43,-7],r*.28)]; }
+    if(slotName==='upheavy') { if(!inWindows([[.18,.29],[.36,.47],[.55,.68]]))return []; return [cap([12,-8],[18,-35],r*.3),circ([18,-35],r*.27)]; }
+    if(slotName==='downheavy') { if(p<.32||p>.47)return []; return [cap([9,1],[39,5],r*.3),circ([39,5],r*.27)]; }
+    if(slotName==='sidesignature') { if(p<.48||p>.62)return []; return [cap([9,-5],[49,-7],r*.36),circ([49,-7],r*.3)]; }
+    if(slotName==='upsignature') { if(p<.43||p>.60)return []; return [cap([12,-14],[39,1],r*.34),circ([39,1],r*.29)]; }
+    if(slotName==='downsignature') { if(p<.35||p>.53)return []; return [grabBox(20,-7,30,24,[.53,.72])]; }
+    if(slotName==='recovery') { if(p<.25||p>.43)return []; return [cap([12,-10],[19,-45],r*.32),circ([19,-45],r*.28)]; }
+  }
+  if(fam==='crescent') { // Crescent Blades: paired curved edges, both sides on sweeps.
+    if(slotName==='sideheavy') { if(!inWindows([[.24,.37],[.48,.62]]))return []; return [cap([7,-14],[29,-3],r*.48),cap([-7,-3],[-27,-14],r*.48)]; }
+    if(slotName==='upheavy') { if(p<.28||p>.58)return []; return [cap([-20,-25],[0,-42],r*.43),cap([0,-42],[20,-25],r*.43),cap([-19,-27],[19,-27],r*.36)]; }
+    if(slotName==='downheavy') { if(p<.31||p>.49)return []; return [cap([-27,5],[-7,9],r*.48),cap([7,9],[27,5],r*.48)]; }
+    if(slotName==='sidesignature') { if(p<.38||p>.63)return []; return [cap([9,-13],[36,-27],r*.48),cap([5,-3],[21,-13],r*.4)]; }
+    if(slotName==='upsignature') { if(!inWindows([[.28,.39],[.43,.54],[.57,.67]]))return []; return [cap([-16,-8],[1,-32],r*.44),cap([1,-32],[17,-8],r*.44)]; }
+    if(slotName==='downsignature') { if(p<.36||p>.64)return []; return [circ([pose.facing*16,-7],r*.82),cap([pose.facing*7,-18],[pose.facing*28,-3],r*.42)]; }
+    if(slotName==='recovery') { if(!inWindows([[.23,.34],[.39,.50],[.54,.66]]))return []; return [cap([-17,-8],[-3,-31],r*.44),cap([3,-31],[18,-8],r*.44)]; }
+  }
+  if(fam==='greatblade') { // Greatblade: broad steel edge, slower committed arcs.
+    if(slotName==='sideheavy') { if(p<.43||p>.62)return []; return [cap([5,-13],[42,-25],r*.82),cap([18,-22],[43,-26],r*.65)]; }
+    if(slotName==='upheavy') { if(p<.37||p>.56)return []; return [cap([8,-16],[26,-53],r*.78),cap([19,-39],[32,-55],r*.62)]; }
+    if(slotName==='downheavy') { if(p<.38||p>.56)return []; return [cap([-29,6],[29,6],r*.78),cap([10,-2],[26,9],r*.58)]; }
+    if(slotName==='sidesignature') { if(p<.46||p>.64)return []; return [cap([8,-13],[43,-21],r*.82),cap([10,-17],[36,-31],r*.68)]; }
+    if(slotName==='upsignature') { if(p<.47||p>.64)return []; return [cap([-16,-48],[23,-13],r*.78),cap([-14,-43],[26,-10],r*.62)]; }
+    if(slotName==='downsignature') { if(p<.34||p>.49)return []; return [grabBox(15,-7,28,28,[.49,.68])]; }
+    if(slotName==='recovery') { if(p<.28||p>.47)return []; return [cap([8,-12],[24,-52],r*.78),cap([17,-39],[30,-56],r*.62)]; }
+  }
+  if(fam==='scythe') { // Reaper Scythe: hooked outer blade; pulls use dedicated grab contact.
+    if(slotName==='sideheavy') { if(p<.37||p>.58)return []; return [cap([12,-34],[39,-17],r*.72),cap([30,-22],[43,-34],r*.58)]; }
+    if(slotName==='upheavy') { if(p<.34||p>.51)return []; return [cap([13,-15],[32,-44],r*.64),cap([26,-35],[38,-43],r*.52)]; }
+    if(slotName==='downheavy') { if(p<.32||p>.47)return []; return [cap([-27,7],[27,7],r*.62),cap([pose.facing*15,2],[pose.facing*29,7],r*.5)]; }
+    if(slotName==='sidesignature') { if(p<.42||p>.56)return []; return [grabBox(26,-14,38,28,[.56,.72]),cap([18,-27],[42,-12],r*.62)]; }
+    if(slotName==='upsignature') { if(!inWindows([[.27,.38],[.44,.57]]))return []; return [cap([-25,-21],[3,-39],r*.62),cap([3,-39],[28,-18],r*.62)]; }
+    if(slotName==='downsignature') { if(p<.35||p>.61)return []; return [cap([-35,-18],[-8,1],r*.62),grabBox(-14,-9,26,24,[.61,.76])]; }
+    if(slotName==='recovery') { if(p<.27||p>.47)return []; return [cap([-25,-16],[0,-42],r*.62),cap([0,-42],[24,-15],r*.62)]; }
+  }
+  if(fam==='claws') { // Rift Claws: short talon tips, not full-arm boxes.
+    if(slotName==='sideheavy') { if(!inWindows([[.17,.27],[.32,.42],[.48,.61]]))return []; return [cap([7,-13],[25,-7],r*.4),cap([9,-5],[25,1],r*.4)]; }
+    if(slotName==='upheavy') { if(!inWindows([[.27,.39],[.46,.60]]))return []; return [cap([5,-7],[13,-31],r*.42),cap([14,-7],[22,-34],r*.42)]; }
+    if(slotName==='downheavy') { if(p<.43||p>.58)return []; return [cap([9,-4],[29,14],r*.46),cap([17,2],[34,17],r*.42)]; }
+    if(slotName==='sidesignature') { if(p<.35||p>.54)return []; return [cap([8,-13],[34,-5],r*.46),cap([9,-3],[33,4],r*.46)]; }
+    if(slotName==='upsignature') { if(p<.42||p>.58)return []; return [grabBox(15,-37,32,28,[.58,.74])]; }
+    if(slotName==='downsignature') { if(p<.46||p>.62)return []; return [grabBox(-17,-10,30,27,[.62,.77])]; }
+    if(slotName==='recovery') { if(!inWindows([[.23,.34],[.39,.50],[.55,.67]]))return []; return [cap([6,-9],[13,-32],r*.42),cap([14,-11],[22,-36],r*.42)]; }
+  }
+  if(fam==='tonfas') { // Pulse Tonfas: compact baton impact caps, multi-hit windows.
+    if(slotName==='sideheavy') { if(!inWindows([[.16,.26],[.29,.39],[.42,.52],[.55,.67]]))return []; return [cap([7,-12],[24,-7],r*.42),circ([24,-7],r*.34)]; }
+    if(slotName==='upheavy') { if(!inWindows([[.28,.40],[.52,.66]]))return []; return [cap([7,-8],[13,-30],r*.4),cap([15,-8],[21,-33],r*.4)]; }
+    if(slotName==='downheavy') { if(p<.29||p>.48)return []; return [cap([-21,3],[21,3],r*.48),cap([-15,7],[15,7],r*.4)]; }
+    if(slotName==='sidesignature') { if(!inWindows([[.2,.29],[.34,.43],[.48,.57],[.60,.69]]))return []; return [cap([7,-12],[28,-7],r*.44),cap([9,-2],[27,-11],r*.4)]; }
+    if(slotName==='upsignature') { if(p<.33||p>.58)return []; return [cap([-20,-27],[0,-42],r*.46),cap([0,-42],[20,-27],r*.46),circ([0,-39],r*.48)]; }
+    if(slotName==='downsignature') { if(p<.44||p>.58)return []; return [grabBox(15,-9,30,25,[.58,.75])]; }
+    if(slotName==='recovery') { if(p<.28||p>.44)return []; return [circ([0,9],r*.72),cap([-13,4],[13,4],r*.46)]; }
+  }
   // Geometry tags authored per move control timing and collider form. These
   // branches intentionally run before family fallbacks so traps, counters,
   // rifts, spins and broad sweeps are not treated as ordinary sword slashes.
