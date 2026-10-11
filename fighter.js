@@ -1123,6 +1123,9 @@ function updateGen1HoldPhysics(fighter, platforms, stageWidth, stageHeight) {
 }
 
 export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeight, opponent) {
+  // While a Resonance Construct is active, the construct kit is the only moveset.
+  // Never let a stale/original power or super input enter the normal ability pipeline.
+  if (fighter?.resonanceActive && inputs) { inputs.power = false; inputs.superMove = false; }
   fighter.frame++;
   fighter.prevX = fighter.x;
   fighter.prevY = fighter.y;
@@ -1614,7 +1617,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     if (!inputs.power) inputs._powerConsumed = false;
 
     // ── Super ──
-    if (inputs.superMove && !inputs._superConsumed && fighter.superMeter >= fighter.maxSuper) {
+    if (!fighter.resonanceActive && inputs.superMove && !inputs._resonanceDismissConsumed && !inputs._superConsumed && fighter.superMeter >= fighter.maxSuper) {
       inputs._superConsumed = true;
       fighter.superMeter = 0;
       const sm = fighter.char?.superMove || { name: 'Super', duration: 42, damage: 30, color: fighter.char?.color || '#FFFFFF' };
@@ -2064,7 +2067,7 @@ export function checkHit(attacker, defender) {
   // use their exact active geometry instead. Geometry generation is isolated so
   // one malformed optional attack can never take down the whole match.
   let activeSpecHitboxes = [];
-  try { activeSpecHitboxes = getActiveSpecHitboxes(attacker) || []; } catch (err) { activeSpecHitboxes = []; }
+  try { activeSpecHitboxes = attacker.resonanceActive ? [] : (getActiveSpecHitboxes(attacker) || []); } catch (err) { activeSpecHitboxes = []; }
   const hasExactSuper = attacker.attackData.isSuper && activeSpecHitboxes.length > 0;
   if (attacker.attackData.isSuper && attacker.char?.id?.startsWith('g1_') && !hasExactSuper) return false;
   if (attacker.attackData.isSuper && !hasExactSuper) {
@@ -2078,6 +2081,22 @@ export function checkHit(attacker, defender) {
   const specHitboxes = activeSpecHitboxes;
   if (specHitboxes.length) {
     try { return specHitboxes.some(hb => hitboxIntersectsBody(hb, defender)); } catch (err) { return false; }
+  }
+
+  // Construct attacks use their own move-profile geometry, never the original character's authored hitboxes.
+  if (attacker.resonanceActive && attacker.attackData.resonanceAnimation) {
+    const profile = attacker.attackData.resonanceAnimation;
+    const family = attacker.attackData.resonanceHitboxFamily || attacker.char?.resonanceFamily || 'blade';
+    const facing = attacker.facing === -1 ? -1 : 1;
+    const range = Math.max(38, Number(attacker.attackData.range) || 80) * (Number(profile.extension) || 1);
+    const mode = String(profile.hitbox || 'forward-arc');
+    let hbW = range, hbH = 58, hbCX = attacker.x + facing * range * .42, hbCY = attacker.y - 30;
+    if (/vertical|column|launch|overhead/i.test(mode) || ['upSignature','upHeavy','recovery'].includes(attacker.attackData.resonanceMoveKey)) { hbW = family==='spear'||family==='trident'||family==='rapier' ? 48 : 78; hbH = range; hbCX = attacker.x + facing * (family==='spear'||family==='trident'||family==='rapier' ? 14 : 0); hbCY = attacker.y - range*.42; }
+    else if (/ground|slam|shockwave/i.test(mode) || ['downSignature','downHeavy'].includes(attacker.attackData.resonanceMoveKey)) { hbW = Math.max(74, range*.92); hbH = Math.max(44, range*.5); hbCX = attacker.x + facing * (family==='maul'||family==='hammer'?18:0); hbCY = attacker.y + 4; }
+    else if (/projectile|lane|thrust/i.test(mode) || ['bow','cannons','blasters','projector','spear','trident','rapier'].includes(family)) { hbW = range*1.08; hbH = family==='projector'||family==='cannons'||family==='blasters'?48:36; hbCX = attacker.x + facing*hbW*.48; hbCY = attacker.y - 30; }
+    else if (['hammer','maul','greatblade','scythe','axe','halberd','flail','whip','tether'].includes(family)) { hbW = range*1.08; hbH = 92; hbCX = attacker.x + facing*hbW*.40; hbCY = attacker.y - 32; }
+    const dBW=32, dBH=72, dBX=defender.x, dBY=defender.y-36;
+    return (hbCX-hbW/2)<(dBX+dBW/2) && (hbCX+hbW/2)>(dBX-dBW/2) && (hbCY-hbH/2)<(dBY+dBH/2) && (hbCY+hbH/2)>(dBY-dBH/2);
   }
 
   // ── Fallback AABB hitbox collision ──

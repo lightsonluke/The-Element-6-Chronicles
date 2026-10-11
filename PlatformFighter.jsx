@@ -30,7 +30,7 @@ import { getCrossoverColor, getCrossoverAttackColor, getCrossover, getCrossoverP
 import { drawKillFX } from './killFX.js';
 import { drawShikigamiFollower } from './shikigami.js';
 import { applyElement } from './elements.js';
-import { updateResonanceMatch, drawResonanceOrb } from './resonanceConstructs.js';
+import { updateResonanceMatch, drawResonanceOrb, drawResonanceRangeGlow } from './resonanceConstructs.js';
 import { EMOTES, getEmoteById, getEmoteProgress, drawEmote } from './emotes.js';
 import { getEmoteForKey } from './emoteSlots.js';
 import { getActiveEvent } from './events.js';
@@ -1602,17 +1602,23 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const fitZoomY = H / Math.max(spreadY, 200);
       const fitZoom = Math.min(fitZoomX, fitZoomY);
       targetZoom = Math.min(targetZoom, Math.max(0.50, fitZoom));
+      const constructCameraLock = !!(f1.resonanceActive || f2.resonanceActive || f1.resonanceActivationFrames > 0 || f2.resonanceActivationFrames > 0);
       targetZoom *= zoomMul * (Number.isFinite(stageZoom) && stageZoom > 0 ? stageZoom : 1.0);
-      // Keep camera zoom sane after stage/user multipliers too; a malformed
-      // stage zoom must not make the entire game appear to collapse on pickup.
-      targetZoom = Number.isFinite(targetZoom) ? Math.max(0.35, Math.min(1.25, targetZoom)) : 0.75;
-      if (!Number.isFinite(g.camZoom) || g.camZoom <= 0) g.camZoom = targetZoom;
-      g.camZoom += (targetZoom - g.camZoom) * 0.05;
-      if (hitstop > 0) g.camZoom += 0.015;
-      const midX = (f1.x + f2.x) / 2;
-      const midY = ((f1.y + f2.y) / 2) - 70;
-      const targetCamX = (midX - W / 2) * (1 - g.camZoom) * 0.35;
-      const targetCamY = (midY - H / 2) * (1 - g.camZoom) * 0.35;
+      // Construct activation must never drive the camera into a shrinking/invalid transform.
+      // Hold a stable framing while a construct is active, and sanitize fighter coordinates.
+      targetZoom = constructCameraLock ? 0.82 : (Number.isFinite(targetZoom) ? Math.max(0.65, Math.min(1.0, targetZoom)) : 0.82);
+      if (!Number.isFinite(g.camZoom) || g.camZoom < 0.65 || g.camZoom > 1.0) g.camZoom = targetZoom;
+      g.camZoom += (targetZoom - g.camZoom) * 0.08;
+      if (hitstop > 0) g.camZoom = Math.min(1.0, g.camZoom + 0.006);
+      g.camZoom = Number.isFinite(g.camZoom) ? Math.max(0.65, Math.min(1.0, g.camZoom)) : 0.82;
+      const safeX1 = Number.isFinite(f1.x) ? f1.x : W * 0.35;
+      const safeX2 = Number.isFinite(f2.x) ? f2.x : W * 0.65;
+      const safeY1 = Number.isFinite(f1.y) ? f1.y : H * 0.55;
+      const safeY2 = Number.isFinite(f2.y) ? f2.y : H * 0.55;
+      const midX = (safeX1 + safeX2) / 2;
+      const midY = ((safeY1 + safeY2) / 2) - 70;
+      const targetCamX = Number.isFinite(midX) ? (midX - W / 2) * (1 - g.camZoom) * 0.35 : 0;
+      const targetCamY = Number.isFinite(midY) ? (midY - H / 2) * (1 - g.camZoom) * 0.35 : 0;
       const stageCamMotion = stageMotionOffset(activeStageCamera?.motion, (now - g.stageStartTime) / 1000);
       g.camX += (targetCamX + stageCamMotion.x - g.camX) * 0.07;
       g.camY += (targetCamY + stageCamMotion.y - g.camY) * 0.07;
@@ -1690,6 +1696,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       });
 
       const drawFighter = (f, slot) => {
+        if (resonanceMatch.orb) drawResonanceRangeGlow(ctx, f, resonanceMatch.orb, resonanceMatch.frame);
         const effId = f.char.baseCharId || f.char.id;
         const renderChar = f.char.baseCharId ? { ...f.char, id: f.char.baseCharId } : f.char;
         const flashing = f.invincible > 0 && Math.floor(f.frame / 4) % 2 === 0;
@@ -1732,7 +1739,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           // Crossover custom parts (e.g. The King of Fire's crown of fire)
           getCrossoverParts(f.char.id, equippedCrossovers).filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote));
         }
-        if (f.attackData && (f.state === 'attacking' || f.state === 'attackHold')) {
+        if (!f.resonanceActive && f.attackData && (f.state === 'attacking' || f.state === 'attackHold')) {
           // Negative visual progress is reserved for Gen I's authored charging stance.
           const visualProgress = f.attackData.holding
             ? (-1 - Math.max(0, Math.min(1, f.attackData.holdProgress || 0)))
@@ -1741,7 +1748,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           const crossoverAttackColor = getCrossoverAttackColor(f.char.id, equippedCrossovers);
           drawAttackEffect(ctx, f.x, f.y, f.attackData, visualProgress, f.facing, moveColor || crossoverAttackColor || f.attackData.color || renderColor, f.attackData.isNormal, effId, f.char.power, f.powerActive);
         }
-        if (f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, crossoverColors?.super || renderColor, f.attackData.progress, f.char.superMove?.name, effId, f.facing);
+        if (!f.resonanceActive && f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, crossoverColors?.super || renderColor, f.attackData.progress, f.char.superMove?.name, effId, f.facing);
         if (f.hitEffects) f.hitEffects = f.hitEffects.filter(he => drawHitSparks(ctx, he.x, he.y, he.color, f.frame, he.spawnFrame));
         // Nametag (toggleable)
         if (settings.showNametags !== false) {

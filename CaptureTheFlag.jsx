@@ -13,7 +13,7 @@ import GameIcon from "./GameIcon.jsx";
 import { getEmoteForKey } from './emoteSlots.js';
 import { drawEmote } from './emotes.js';
 import PauseMenu from "./PauseMenu.jsx";
-import { drawResonanceOrb, updateResonanceMatch, tryActivateResonanceConstruct, deactivateConstruct, consumeConstructSuperInput } from './resonanceConstructs.js';
+import { drawResonanceOrb, drawResonanceRangeGlow, updateResonanceMatch, tryActivateResonanceConstruct, deactivateConstruct, consumeConstructSuperInput } from './resonanceConstructs.js';
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 const VIEW_W = 1280, VIEW_H = 720;
@@ -793,6 +793,7 @@ function drawScene(ctx, g, frame, camX, camY, vp) {
   // Fighters — keep character color, draw team uniform overlay
   fighters.forEach(f => {
     if (f.hp <= 0) return;
+    if (g.resonanceMatch?.orb) drawResonanceRangeGlow(ctx, f, g.resonanceMatch.orb, frame);
     const flashing = f.invincible > 0 && Math.floor(frame / 4) % 2 === 0;
     if (flashing) return;
     const charColor = f.char?.color || '#888';
@@ -811,7 +812,7 @@ function drawScene(ctx, g, frame, camX, camY, vp) {
     // Team indicator dot above head
     ctx.fillStyle = TEAM_COLORS[f.team];
     ctx.beginPath(); ctx.arc(f.x, f.y - 52, 4, 0, Math.PI * 2); ctx.fill();
-    if (f.attackData && f.state === 'attacking') drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || charColor, f.attackData.isNormal, f.char?.id, f.char?.power, f.powerActive);
+    if (!f.resonanceActive && f.attackData && f.state === 'attacking') drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || charColor, f.attackData.isNormal, f.char?.id, f.char?.power, f.powerActive);
     drawProjectiles(ctx, f);
   });
 

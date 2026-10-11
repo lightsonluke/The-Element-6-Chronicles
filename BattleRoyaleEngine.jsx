@@ -37,7 +37,7 @@ import { strategicBR } from './botStrategicBrain.js';
 import { drawDestructiblePlatforms, drawMovementItems, drawHazards, drawObjects } from './brRender.js';
 import PauseMenu from './PauseMenu.jsx';
 import GameIcon from './GameIcon.jsx';
-import { drawResonanceOrb, updateResonanceMatch, tryActivateResonanceConstruct, deactivateConstruct, consumeConstructSuperInput } from './resonanceConstructs.js';
+import { drawResonanceOrb, drawResonanceRangeGlow, updateResonanceMatch, tryActivateResonanceConstruct, deactivateConstruct, consumeConstructSuperInput } from './resonanceConstructs.js';
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 const ALL = ALL_CHARS;
@@ -471,6 +471,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
 
     // ── Render ──
     const drawFighter = (f, charData, isLocal) => {
+      if (resonanceMatchRef.current?.orb) drawResonanceRangeGlow(ctx, f, resonanceMatchRef.current.orb, frameCount);
       const flashing = f.invincible > 0 && Math.floor((f.frame || 0) / 4) % 2 === 0;
       if (f.doubleJumpParticles) drawDoubleJumpParticles(ctx, f.doubleJumpParticles);
       // shadow
@@ -498,15 +499,15 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
         ctx.fillText(charData?.name || 'Clone', f._clone.x, f._clone.y - 72);
         ctx.restore();
       }
-      if (!flashing) drawStickman(ctx, f.x, f.y, col, f.facing, f.frame || 0, 1, charData?.isSpirit, f.state, charData, f.powerActive, false, null, f.emote, f.attackData);
+      if (!flashing) drawStickman(ctx, f.x, f.y, col, f.facing, f.frame || 0, 1, (f.resonanceActive ? f.char : charData)?.isSpirit, f.state, f.resonanceActive ? f.char : charData, f.powerActive, false, null, f.emote, f.attackData);
       if (!flashing && f.resonanceActive) drawConstructWeapon(ctx, f, 1);
       // front accessories
       if (!flashing) {
         accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive));
       }
       drawShikigamiFollower(ctx, f, equippedShikigamiRef.current?.[charData?.id], f.frame || 0, 1);
-      if (f.attackData && f.state === 'attacking') drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || col, f.attackData.isNormal, charData?.id, charData?.power, f.powerActive);
-      if (f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, col, f.attackData.progress, charData?.superMove?.name, charData?.id);
+      if (!f.resonanceActive && f.attackData && f.state === 'attacking') drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || col, f.attackData.isNormal, charData?.id, charData?.power, f.powerActive);
+      if (!f.resonanceActive && f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, col, f.attackData.progress, charData?.superMove?.name, charData?.id);
       if (f.hitEffects) f.hitEffects = f.hitEffects.filter(he => drawHitSparks(ctx, he.x, he.y, he.color, f.frame || 0, he.spawnFrame));
       // power projectiles
       drawProjectiles(ctx, f);

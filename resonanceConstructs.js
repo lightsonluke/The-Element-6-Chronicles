@@ -179,23 +179,26 @@ export function makeConstructCharacter(baseChar, fighterId) {
     knockback:(old?.knockback || 1),
     range:Math.round((old?.range || 145)*spec.reach*rangeScale),
     duration:Math.max(8,Math.round((old?.duration || 18)/spec.speed)),
-    resonanceConstruct:constructName, resonanceFamily:spec.family,
+    resonanceConstruct:constructName, resonanceFamily:spec.family, resonanceAccent:color,
     resonanceMove:label, resonanceShape:spec.shape, accentColor:color, characterVariation:v,
   });
   const signatures = {
-    side: { ...make(baseChar?.signatures?.side,'Side Resonance',spec.power+v,'dash',1.12), sigType:'side', resonanceMoveKey:'sideSignature', resonanceAnimation:getConstructMoveProfile(spec.family,'sideSignature',baseChar?.name || baseChar?.id || '') },
-    up: { ...make(baseChar?.signatures?.up,'Rising Resonance',spec.power+v,'launch',.95), sigType:'up', resonanceMoveKey:'upSignature', resonanceAnimation:getConstructMoveProfile(spec.family,'upSignature',baseChar?.name || baseChar?.id || '') },
-    down: { ...make(baseChar?.signatures?.down,'Ground Resonance',spec.power+v,'groundSlam',1.05), sigType:'down', resonanceMoveKey:'downSignature', resonanceAnimation:getConstructMoveProfile(spec.family,'downSignature',baseChar?.name || baseChar?.id || '') },
+    side: { ...make(baseChar?.signatures?.side,'Side Resonance',spec.power+v,'dash',1.12), sigType:'side', resonanceMoveKey:'sideSignature', resonanceAnimation:getConstructMoveProfile(spec.family,'sideSignature',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family },
+    up: { ...make(baseChar?.signatures?.up,'Rising Resonance',spec.power+v,'launch',.95), sigType:'up', resonanceMoveKey:'upSignature', resonanceAnimation:getConstructMoveProfile(spec.family,'upSignature',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family },
+    down: { ...make(baseChar?.signatures?.down,'Ground Resonance',spec.power+v,'groundSlam',1.05), sigType:'down', resonanceMoveKey:'downSignature', resonanceAnimation:getConstructMoveProfile(spec.family,'downSignature',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family },
   };
-  const heavyAttack={ ...make(baseChar?.heavyAttack,'Side Heavy',spec.power+v,'dash',1.18), sigType:'sideHeavy', resonanceMoveKey:'sideHeavy', resonanceAnimation:getConstructMoveProfile(spec.family,'sideHeavy',baseChar?.name || baseChar?.id || '') };
-  const upHeavy={ ...make(baseChar?.upHeavy || baseChar?.heavyAttack,'Up Heavy',spec.power+v,'launch',1.02), sigType:'upHeavy', resonanceMoveKey:'upHeavy', resonanceAnimation:getConstructMoveProfile(spec.family,'upHeavy',baseChar?.name || baseChar?.id || '') };
-  const downHeavy={ ...make(baseChar?.downHeavy || baseChar?.heavyAttack,'Down Heavy',spec.power+v,'groundSlam',1.08), sigType:'downHeavy', resonanceMoveKey:'downHeavy', resonanceAnimation:getConstructMoveProfile(spec.family,'downHeavy',baseChar?.name || baseChar?.id || '') };
+  const heavyAttack={ ...make(baseChar?.heavyAttack,'Side Heavy',spec.power+v,'dash',1.18), sigType:'sideHeavy', resonanceMoveKey:'sideHeavy', resonanceAnimation:getConstructMoveProfile(spec.family,'sideHeavy',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family };
+  const upHeavy={ ...make(baseChar?.upHeavy || baseChar?.heavyAttack,'Up Heavy',spec.power+v,'launch',1.02), sigType:'upHeavy', resonanceMoveKey:'upHeavy', resonanceAnimation:getConstructMoveProfile(spec.family,'upHeavy',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family };
+  const downHeavy={ ...make(baseChar?.downHeavy || baseChar?.heavyAttack,'Down Heavy',spec.power+v,'groundSlam',1.08), sigType:'downHeavy', resonanceMoveKey:'downHeavy', resonanceAnimation:getConstructMoveProfile(spec.family,'downHeavy',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family };
   const lightSource = baseChar?.lightAttack || baseChar?.normalAttack;
-  const lightAttack = { ...make(lightSource, 'Light Attack', 1, 'dash', .78), damage: Number(lightSource?.damage ?? 9), knockback: Number(lightSource?.knockback ?? 1), sigType:'light', resonanceMoveKey:'light', resonanceAnimation:getConstructMoveProfile(spec.family,'light',baseChar?.name || baseChar?.id || '') };
-  const aerialAttack = { ...make(lightSource, 'Aerial Attack', 1, 'aerialNormal', .88), isNormal:true, sigType:'aerial', resonanceMoveKey:'aerial', resonanceAnimation:getConstructMoveProfile(spec.family,'aerial',baseChar?.name || baseChar?.id || '') };
-  const powerAttack = { ...make(baseChar?.powerAttack, 'Resonance Burst', 1, 'dash', .92), sigType:'burst', resonanceMoveKey:'burst', resonanceAnimation:getConstructMoveProfile(spec.family,'burst',baseChar?.name || baseChar?.id || '') };
-  const recoveryAttack = { ...make(baseChar?.signatures?.up, 'Recovery', spec.power+v, 'recovery', .9), isRecovery:true, sigType:'recovery', resonanceMoveKey:'recovery', resonanceAnimation:getConstructMoveProfile(spec.family,'recovery',baseChar?.name || baseChar?.id || '') };
+  const lightAttack = { ...make(lightSource, 'Light Attack', 1, 'dash', .78), damage: Number(lightSource?.damage ?? 9), knockback: Number(lightSource?.knockback ?? 1), sigType:'light', resonanceMoveKey:'light', resonanceAnimation:getConstructMoveProfile(spec.family,'light',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family };
+  const aerialAttack = { ...make(lightSource, 'Aerial Attack', 1, 'aerialNormal', .88), isNormal:true, sigType:'aerial', resonanceMoveKey:'aerial', resonanceAnimation:getConstructMoveProfile(spec.family,'aerial',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family };
+  const powerAttack = { ...make(baseChar?.powerAttack, 'Resonance Burst', 1, 'dash', .92), sigType:'burst', resonanceMoveKey:'burst', resonanceAnimation:getConstructMoveProfile(spec.family,'burst',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family };
+  const recoveryAttack = { ...make(baseChar?.signatures?.up, 'Recovery', spec.power+v, 'recovery', .9), isRecovery:true, sigType:'recovery', resonanceMoveKey:'recovery', resonanceAnimation:getConstructMoveProfile(spec.family,'recovery',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family };
   return { ...original, signatures, heavyAttack, upHeavy, downHeavy, lightAttack, normalAttack: lightAttack, aerialAttack, recoveryAttack, powerAttack,
+    // Constructs temporarily replace the normal moveset. The fighter engine uses these flags
+    // to suppress original power/super logic and character-authored hitbox specs.
+    _resonanceMovesetOnly: true, superMove: { name: 'Construct Dismiss', damage: 0, duration: 0, disabled: true, color: '#62eaff' },
     resonanceFamily: spec.family, resonanceShape: spec.shape, resonanceConstruct: constructName,
     _resonanceConstruct:constructName, _resonanceOriginal:baseChar };
 
@@ -209,6 +212,13 @@ export function activateConstruct(fighter) {
     const constructChar = makeConstructCharacter(originalChar, fighter.id);
     // Validate the exact fields consumed by updateFighter before swapping live state.
     if (!constructChar || !constructChar.signatures || !constructChar.signatures.side || !constructChar.signatures.up || !constructChar.signatures.down || !constructChar.heavyAttack || !constructChar.lightAttack) return false;
+    // Pickup immediately cancels the previous move's active hitbox/animation and any
+    // already-launched character-specific projectiles, so only construct attacks remain.
+    fighter.attackData = null;
+    fighter.attackTimer = 0;
+    fighter.attackHold = null;
+    fighter.projectiles = [];
+    fighter.genProjectiles = [];
     fighter.resonanceOriginalChar = originalChar;
     fighter.resonanceConstruct = constructName;
     fighter.char = constructChar;
@@ -326,6 +336,29 @@ export function updateResonanceMatch(match, fighters, inputs, platforms, W, H, d
     // KO, BR elimination, and CTF death/respawn cannot leave a stale construct.
     if ((f.stocks===0 || f._eliminated || f.hp===0) && f.resonanceActive) deactivateConstruct(f);
   }
+}
+
+/** Draw a subtle proximity cue while a fighter is close enough to collect the orb. */
+export function drawResonanceRangeGlow(ctx, fighter, orb, frame=0) {
+  if (!ctx || !fighter || !orb || fighter.resonanceActive || fighter.stocks===0 || fighter.hp===0 || fighter._eliminated) return;
+  const fx=Number(fighter.x), fy=Number(fighter.y)-28, ox=Number(orb.x), oy=Number(orb.y);
+  if (![fx,fy,ox,oy].every(Number.isFinite) || Math.hypot(fx-ox,fy-oy)>104) return;
+  ctx.save();
+  const pulse=0.92+Math.sin((frame||0)*0.12)*0.08;
+  const grad=ctx.createRadialGradient(fx,fy-20,5,fx,fy-20,54*pulse);
+  grad.addColorStop(0,'rgba(80,205,255,0.10)');
+  grad.addColorStop(0.62,'rgba(80,205,255,0.07)');
+  grad.addColorStop(1,'rgba(80,205,255,0)');
+  ctx.fillStyle=grad; ctx.beginPath(); ctx.ellipse(fx,fy-20,40*pulse,50*pulse,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(125,220,255,0.38)'; ctx.lineWidth=1.5; ctx.shadowColor='#5bd8ff'; ctx.shadowBlur=9;
+  ctx.beginPath(); ctx.ellipse(fx,fy-20,25*pulse,34*pulse,0,0,Math.PI*2); ctx.stroke();
+  // Soft silhouette-shaped blue light makes it clear which fighter is in pickup range.
+  // This is drawn behind the fighter, so it reads as a faint rim-light rather than a shield.
+  ctx.globalAlpha=0.22; ctx.strokeStyle='#83eaff'; ctx.lineWidth=5; ctx.shadowColor='#55cfff'; ctx.shadowBlur=16;
+  const headY=fy-33, shoulderY=fy-16, hipY=fy+7;
+  ctx.beginPath(); ctx.arc(fx,headY,8,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(fx,headY+8); ctx.lineTo(fx,hipY); ctx.moveTo(fx-9,shoulderY); ctx.lineTo(fx+9,shoulderY); ctx.moveTo(fx-8,shoulderY); ctx.lineTo(fx-14,fy-5); ctx.moveTo(fx+8,shoulderY); ctx.lineTo(fx+14,fy-5); ctx.moveTo(fx,hipY); ctx.lineTo(fx-9,fy+1); ctx.moveTo(fx,hipY); ctx.lineTo(fx+9,fy+1); ctx.stroke();
+  ctx.restore();
 }
 export function drawResonanceOrb(ctx, orb, frame=0) {
   if (!orb) return;

@@ -668,10 +668,22 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
     lean = 0;
   }
 
+  // Construct-only full-body choreography: the arms, torso, and legs move with the
+  // weapon trajectory instead of leaving the fighter in the ordinary punch pose.
+  if (charData?._resonanceMovesetOnly && attackData && (state === 'attacking' || state === 'attackHold')) {
+    const k = attackData.resonanceMoveKey || attackData.sigType || 'light';
+    const p = Math.max(0, Math.min(1, Number(attackData.progress) || (attackData.holding ? Number(attackData.holdProgress)||0 : 0)));
+    const swing = Math.sin(Math.PI*p), snap = Math.sin(Math.PI*Math.min(1,p*1.7));
+    if (k === 'sideSignature' || k === 'sideHeavy' || k === 'light' || k === 'burst') { lean = facing * (.12 + .24*swing); punchArmL = facing > 0 ? -.25 - .4*snap : .55*snap; punchArmR = facing > 0 ? -.95 - .75*snap : .15 + .3*snap; legSwing = .28 + .48*swing; bob = -2*swing; }
+    else if (k === 'upSignature' || k === 'upHeavy' || k === 'recovery') { lean = -facing*.08; punchArmL = -.85 - .65*snap; punchArmR = -.9 - .9*snap; legSwing = -.35 - .45*swing; bob = -5*swing; }
+    else if (k === 'downSignature' || k === 'downHeavy') { lean = facing*.18*snap; punchArmL = .65 + .75*snap; punchArmR = .75 + .85*snap; legSwing = .12 + .35*swing; bob = 5*swing; }
+    else if (k === 'aerial') { lean = facing*.22; punchArmL = -.6 + .6*Math.sin(p*Math.PI*2); punchArmR = -.6 - .6*Math.sin(p*Math.PI*2); legSwing = Math.sin(p*Math.PI*2)*.7; bob = -4; }
+  }
+
   // Gen I attacks have authored body motion, not just effect motion.  The
   // attack effect and the fighter pose use the same progress value, and the
   // existing facing system swaps the lead limb for left/right attacks.
-  if (charData?.id?.startsWith('g1_') && attackData && (state === 'attacking' || state === 'superAttack')) {
+  if (!charData?._resonanceMovesetOnly && charData?.id?.startsWith('g1_') && attackData && (state === 'attacking' || state === 'superAttack')) {
     const st = attackData.isSuper ? 'super' : (attackData.isHeavy ?
       ((attackData.sigType === 'upHeavy' || attackData.sigType === 'up') ? 'uh' :
        (attackData.sigType === 'downHeavy' || attackData.isGroundPound || attackData.sigType === 'down') ? 'dh' : 'sh') :
@@ -2117,7 +2129,12 @@ function rcDrawWeaponShape(ctx,family,L,palette,frame){
       ctx.strokeStyle=edge;ctx.lineWidth=5;ctx.beginPath();ctx.arc(L*.48,0,family==='core'?14:11,0,Math.PI*2);ctx.stroke();ctx.strokeStyle=glow;ctx.lineWidth=2;ctx.beginPath();ctx.arc(L*.48,0,6,frame*.06,frame*.06+Math.PI*1.6);ctx.stroke();if(family==='disc'){ctx.fillStyle=dark;ctx.beginPath();ctx.arc(L*.48,0,6,0,Math.PI*2);ctx.fill();}break;
     case 'shield':case 'bastion':
       ctx.fillStyle=dark;ctx.strokeStyle=edge;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-4,-16);ctx.lineTo(15,-22);ctx.lineTo(31,-12);ctx.lineTo(28,10);ctx.lineTo(13,22);ctx.lineTo(-2,10);ctx.closePath();ctx.fill();ctx.stroke();ctx.strokeStyle=glow;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(13,-14);ctx.lineTo(13,14);ctx.moveTo(2,0);ctx.lineTo(24,0);ctx.stroke();break;
-    case 'whip':case 'tether':case 'flail':
+    case 'tether':
+      // Resonance Gauntlet: cuff, articulated knuckle plates, and blue-lit seams.
+      ctx.fillStyle=dark;ctx.strokeStyle=edge;ctx.lineWidth=1.7;ctx.beginPath();ctx.roundRect(-5,-8,18,16,4);ctx.fill();ctx.stroke();
+      for(let i=0;i<3;i++){ctx.fillStyle=dark;ctx.beginPath();ctx.roundRect(8+i*3,-7+i%2*2,8,5,2);ctx.fill();ctx.stroke();}
+      ctx.strokeStyle=glow;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-2,0);ctx.lineTo(15,0);ctx.stroke();ctx.fillStyle=edge;ctx.beginPath();ctx.arc(4,0,3,0,Math.PI*2);ctx.fill();break;
+    case 'whip':case 'flail':
       ctx.strokeStyle=edge;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,0);ctx.bezierCurveTo(L*.25,-25,L*.55,25,L,Math.sin(frame*.15)*8);ctx.stroke();ctx.strokeStyle=glow;ctx.lineWidth=1.2;ctx.stroke();if(family==='flail'){ctx.fillStyle=dark;ctx.strokeStyle=edge;ctx.lineWidth=2;ctx.beginPath();ctx.arc(L,Math.sin(frame*.15)*8,8,0,Math.PI*2);ctx.fill();ctx.stroke();}break;
     case 'greaves':
       ctx.fillStyle=dark;ctx.strokeStyle=edge;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-4,-8);ctx.lineTo(18,-8);ctx.lineTo(26,0);ctx.lineTo(18,9);ctx.lineTo(-4,8);ctx.closePath();ctx.fill();ctx.stroke();ctx.strokeStyle=glow;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(1,0);ctx.lineTo(22,0);ctx.stroke();break;
@@ -2171,16 +2188,17 @@ export function drawConstructWeapon(ctx, fighter, scale=1){
   else if(fm==='shard-fan') angle += Math.sin(p*Math.PI*1.6)*.22;
   const profileExtension=Math.max(.5,Math.min(2,Number(profile?.extension)||1));
   const reach=(pose?.reach||1); const L=34*scale*reach; const s=scale;
-  const palette=RC_PALETTES[family]||RC_PALETTES.blade; const x=Number(fighter.x)||0; const footWeapon=family==='greaves'; const y=(Number(fighter.y)||0)+(footWeapon?18*s:-27*s)+(pose?pose.lift*s*Math.sin(Math.PI*p):0);
+  const basePalette=RC_PALETTES[family]||RC_PALETTES.blade; const accent=char.resonanceAccent||char.accentColor||char.color||basePalette[1]; const palette=['#eaffff',accent,'#15578e']; const x=Number(fighter.x)||0; const footWeapon=family==='greaves'; const gauntlets=construct==='Tether Gauntlets'; const y=(Number(fighter.y)||0)+(footWeapon?18*s:-27*s)+(pose?pose.lift*s*Math.sin(Math.PI*p):0);
   const facing=fighter.facing===-1||fighter.facing==='left'?-1:1;
   ctx.save();ctx.translate(x,y);ctx.scale(facing,1);
   const attacking=!!attack && fighter.attackTimer>0;
   if(attacking){
+    if(gauntlets) { ctx.save(); ctx.translate(9*s,-1*s); ctx.rotate(angle); ctx.scale(s,s); rcDrawWeaponShape(ctx,'tether',L/s,palette,(fighter.frame||0)+p*14); ctx.restore(); ctx.save(); ctx.translate(-12*s,2*s); ctx.scale(-1,1); ctx.rotate(-angle*.72); ctx.scale(s,s); rcDrawWeaponShape(ctx,'tether',L/s,palette,(fighter.frame||0)+p*14+4); ctx.restore(); }
     const thrusting=['spear','trident','rapier','projector','cannons','blasters'].includes(family);
     const extension=thrusting ? (p<.45 ? p/.45 : 1-(p-.45)*.18)*L*.28*profileExtension : 0;
-    ctx.translate((5*s)+extension, footWeapon?0:0);ctx.rotate(angle);ctx.scale(s,s);
+    if(!gauntlets){ ctx.translate((5*s)+extension, footWeapon?0:0);ctx.rotate(angle);ctx.scale(s,s);
     if(family==='greaves') ctx.rotate(.5);
-    rcDrawWeaponShape(ctx,family,L/s,palette,(fighter.frame||0)+p*14);
+    rcDrawWeaponShape(ctx,family,L/s,palette,(fighter.frame||0)+p*14); }
   }
   else {
     // Neutral carry pose: weapons sit at the hand, with dual weapons on both sides.
@@ -2189,14 +2207,16 @@ export function drawConstructWeapon(ctx, fighter, scale=1){
       ctx.save();ctx.translate(-20,-3);ctx.scale(-1,1);rcDrawWeaponShape(ctx,family,L*.72/s,palette,(fighter.frame||0)+3);ctx.restore();
     }
   }
-  if(attacking && p>.38 && p<.72){
-    const pulse=Math.sin(Math.PI*(p-.38)/.34);ctx.globalAlpha=.2*pulse;ctx.strokeStyle=palette[1];ctx.fillStyle=palette[1];ctx.lineWidth=3*s;
+  if(attacking && p>.30 && p<.78){
+    const pulse=Math.sin(Math.PI*(p-.30)/.48);ctx.globalAlpha=.28*pulse;ctx.strokeStyle=palette[1];ctx.fillStyle=palette[1];ctx.lineWidth=4*s;
     if(['spear','trident','rapier','projector','cannons','blasters','bow'].includes(family)){
       ctx.beginPath();ctx.moveTo(5*s,-3*s);ctx.lineTo(L*1.22,0);ctx.stroke();
       if(family==='cannons'||family==='blasters'||family==='projector'||family==='bow'){ctx.globalAlpha=.25*pulse;ctx.beginPath();ctx.arc(L*.9,0,5+4*pulse,0,Math.PI*2);ctx.fill();}
     } else if(family==='greaves'){
       ctx.beginPath();ctx.ellipse(L*.3,0,L*.72,12*s,-.12,-.25,Math.PI*.95);ctx.stroke();
-    } else if(family==='whip'||family==='tether'||family==='flail'){
+    } else if(family==='tether'){
+      ctx.lineWidth=5*s;ctx.beginPath();ctx.moveTo(2*s,-5*s);ctx.lineTo(L*.72,-L*.22);ctx.moveTo(2*s,5*s);ctx.lineTo(L*.72,L*.18);ctx.stroke();ctx.globalAlpha*=.6;ctx.lineWidth=8*s;ctx.beginPath();ctx.moveTo(L*.52,-L*.16);ctx.lineTo(L*.84,-L*.08);ctx.moveTo(L*.52,L*.16);ctx.lineTo(L*.84,L*.08);ctx.stroke();
+    } else if(family==='whip'||family==='flail'){
       ctx.beginPath();ctx.arc(L*.68,0,L*.32,-1.1,1.1);ctx.stroke();
     } else if(family==='hammer'||family==='maul'||family==='shield'||family==='bastion'){
       ctx.beginPath();ctx.ellipse(L*.72,0,13*s,17*s,angle,0,Math.PI*2);ctx.stroke();
@@ -2204,9 +2224,9 @@ export function drawConstructWeapon(ctx, fighter, scale=1){
       ctx.beginPath();ctx.arc(L*.45,0,L*.48,p*.8,p*.8+Math.PI*1.45);ctx.stroke();
     } else {ctx.beginPath();ctx.arc(0,0,L*.78,-.9,.9);ctx.stroke();}
   }
-  if(attacking && p>.38 && p<.78 && profile){
+  if(attacking && p>.30 && p<.78 && profile){
     const pulse=Math.sin(Math.PI*Math.max(0,Math.min(1,(p-.38)/.40)));
-    ctx.save();ctx.translate(x+facing*L*.42,y);ctx.globalAlpha=.68*pulse;ctx.strokeStyle=palette[1];ctx.fillStyle=palette[1];ctx.lineWidth=2.2*s;
+    ctx.save();ctx.translate(L*.42,0);ctx.globalAlpha=.68*pulse;ctx.strokeStyle=palette[1];ctx.fillStyle=palette[1];ctx.lineWidth=2.2*s;
     const mode=profile.familyMode||'';
     if(['recoil-blast','dual-volley','beam-charge','draw-release','disc-release'].includes(mode)){
       const reach=L*(.7+(profileExtension||1)*.45);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(reach,0);ctx.stroke();
@@ -2214,6 +2234,8 @@ export function drawConstructWeapon(ctx, fighter, scale=1){
       ctx.beginPath();ctx.arc(reach,0,3+5*pulse,0,Math.PI*2);ctx.fill();
     } else if(['orbit-pulse','orbiting-ring','staff-spin'].includes(mode)){
       ctx.beginPath();ctx.arc(0,0,L*.34,p*Math.PI*2,p*Math.PI*2+Math.PI*1.35);ctx.stroke();
+    } else if(mode==='tether-snap' && family==='tether'){
+      ctx.lineWidth=5*s;ctx.beginPath();ctx.moveTo(0,-5*s);ctx.lineTo(L*.65,-L*.18);ctx.lineTo(L*.9,-L*.08);ctx.moveTo(0,5*s);ctx.lineTo(L*.65,L*.18);ctx.lineTo(L*.9,L*.08);ctx.stroke();
     } else if(['whip-crack','tether-snap','lagging-orbit'].includes(mode)){
       ctx.beginPath();ctx.moveTo(-L*.25,0);ctx.quadraticCurveTo(L*.25,-L*.45,L*.78,Math.sin(p*Math.PI*2)*L*.12);ctx.stroke();
     } else if(['impact-smash','heavy-drop','guard-counter'].includes(mode)){
