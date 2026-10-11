@@ -1,3 +1,4 @@
+import { RESONANCE_CONSTRUCT_SPECS, RESONANCE_CONSTRUCT_SPEC_BY_NAME, getResonanceMoveSpec } from './resonanceConstructsAttackSpecs.js';
 // Resonance Constructs — match-level state and construct combat profiles.
 // Kept separate from the fighter engine so the rules can be reused by other fight modes.
 export const CONSTRUCTS = {
@@ -32,6 +33,8 @@ export const CONSTRUCTS = {
   'Shard Array': { family:'shards', reach:1.18, speed:.94, power:.90, shape:'shards' },
   'Bastion Set': { family:'bastion', reach:1.00, speed:.94, power:.96, shape:'counter' },
 };
+
+export { RESONANCE_CONSTRUCT_SPECS, RESONANCE_CONSTRUCT_SPEC_BY_NAME, getResonanceMoveSpec };
 
 const ASSIGNMENTS = {
   'Fire Hero':'Greatblade','Water Hero':'Triad Trident','Grass Hero':'Shard Array','Ice Hero':'Resonance Spear','Thunder Hero':'Resonance Cannons',
@@ -92,6 +95,7 @@ export function getResonanceAttackAction(family, label, sigType = '') {
   return 'slash';
 }
 
+function radiusSafe(v) { return Math.max(32, Math.min(120, Number(v)||60)); }
 function clamp01(v) { return Math.max(0, Math.min(1, Number(v) || 0)); }
 function capsule(x1,y1,x2,y2,r) { return { shape:'capsule', x1,y1,x2,y2,r }; }
 function box(x,y,w,h) { return { shape:'box',x,y,w,h }; }
@@ -115,9 +119,30 @@ export function getResonanceConstructHitboxes(fighter) {
   const range=Math.max(42,Math.min(190,Number(a.range)||100));
   const heavy=!!a.isHeavy;
   const action=a.resonanceAction || getResonanceAttackAction(a.resonanceFamily, a.resonanceMove, a.sigType);
+  const authoredGeometry=a.resonanceSpec?.geometry || a.resonanceGeometry;
   const reach=range*(heavy?1.02:.78);
   const visualLen=(42+25*Math.max(.7,Math.min(1.55,range/125)))*(heavy?1.16:1);
   const strike=p>=.28&&p<=.68?Math.sin(((p-.28)/.4)*Math.PI):0;
+  // Weapon-and-move-authored collision geometry. The same slot metadata drives the renderer.
+  if (authoredGeometry) {
+    const midX=x+f*(18+reach*.25), midY=y-4;
+    const endX=x+f*(18+reach*(.56+strike*.12));
+    const topY=y-reach*(.44+strike*.14), groundY=(Number(fighter.y)||0)+9;
+    const r=(heavy?17:12)+strike*4;
+    if(authoredGeometry==='projectile') return [circle(endX, midY+(a.resonanceMoveSlot==='upHeavy'||a.resonanceMoveSlot==='upSignature'?-reach*.48:0),r+3),capsule(endX-f*r,midY,endX+f*r,midY,r*.45)];
+    if(authoredGeometry==='thrust') return [capsule(x+f*10,midY,endX+f*reach*.12,midY- (a.resonanceMoveSlot==='upHeavy'?-reach*.28:0),r*.72)];
+    if(authoredGeometry==='dash') return [capsule(x+f*7,midY,endX,midY- (a.resonanceMoveSlot==='upSignature'?reach*.16:0),r),circle(endX,midY,r*.9)];
+    if(authoredGeometry==='rise') return [capsule(x+f*4,y-2,x+f*13,topY,r),capsule(x-f*10,topY+8,x+f*30,topY+8,r*.82)];
+    if(authoredGeometry==='slam') return [box(x+f*10,groundY-reach*.05,reach*.62,heavy?34:25),arcStrip(midX,groundY,radiusSafe(reach),heavy?22:15,Math.PI*1.04,Math.PI*1.96,10)];
+    if(authoredGeometry==='grab') return [capsule(x+f*8,midY,x+f*(20+reach*.7),midY+Math.sin(active*Math.PI)*12,r*.78),circle(x+f*(20+reach*.7),midY,r)];
+    if(authoredGeometry==='counter') return [arcStrip(x+f*7,midY,reach*.38,r*.65, f>0?-1.4:Math.PI-1.4, f>0?1.4:Math.PI+1.4,10),circle(x+f*22,midY,r*.8)];
+    if(authoredGeometry==='control') return [circle(midX,midY,reach*.32),capsule(x+f*7,midY,endX,midY-reach*.12,r*.7)];
+    if(authoredGeometry==='phase') return [capsule(x+f*10,midY,endX+f*8,midY-8,r),circle(endX+f*8,midY-8,r*1.05)];
+    if(authoredGeometry==='spin') return [arcStrip(x+f*7,midY,reach*.48,r*.78, -Math.PI*.92,Math.PI*.92,14),circle(midX,midY,r*.7)];
+    if(authoredGeometry==='combo') return [capsule(x+f*8,midY-5,endX,midY-5,r*.68),capsule(x+f*10,midY+7,endX-f*6,midY+7,r*.62),circle(endX,midY,r*.78)];
+    if(authoredGeometry==='sweep') return [arcStrip(midX,midY,reach*.54,r*.86, -1.25,1.18,12)];
+    if(authoredGeometry==='burst') return [circle(midX,midY,reach*(.25+strike*.12)),arcStrip(midX,midY,reach*(.32+strike*.08),r*.75,-1.9,1.9,12)];
+  }
   if(action==='jab') return [capsule(x+f*9,y-8,x+f*(Math.min(74,visualLen*(.42+strike*.18))+9),y-29,heavy?15:11)];
   if(action==='projectile' || action==='projectileUp') {
     const px=x+f*(action==='projectileUp'?19:9+visualLen*(.36+active*.86));
@@ -165,28 +190,31 @@ export function makeConstructCharacter(baseChar, fighterId) {
   const v = variation(seed, 'move');
   const color = baseChar?.color || '#56e7ff';
   const original = { ...baseChar };
-  const make = (old, label, scale, type, rangeScale=1) => ({
+  const make = (old, label, scale, type, rangeScale=1, moveSlot=null) => {
+    const moveSpec = moveSlot ? getResonanceMoveSpec(constructName, moveSlot) : null;
+    return ({
     ...(old || {}), name:`${constructName} ${label}`, type,
     color:'#62eaff', damage:(old?.damage || 14),
     knockback:(old?.knockback || 1),
     range:Math.round((old?.range || 145)*spec.reach*rangeScale),
     duration:Math.max(8,Math.round((old?.duration || 18)/spec.speed)),
     resonanceConstruct:constructName, resonanceFamily:spec.family,
-    resonanceMove:label, resonanceShape:spec.shape, accentColor:color, characterVariation:v,
-    resonanceAction:getResonanceAttackAction(spec.family, label, type),
-  });
+    resonanceMove:moveSpec?.name || label, resonanceMoveSlot:moveSlot, resonanceSpec:moveSpec, resonanceDescription:moveSpec?.description || '', resonanceMotion:moveSpec?.motion || '', resonanceGeometry:moveSpec?.geometry || '', resonanceShape:spec.shape, accentColor:color, characterVariation:v,
+    resonanceAction:moveSpec ? ({projectile:'projectile',thrust:'jab',dash:'dashThrust',rise:'rise',slam:'slam',grab:'grab',counter:'burst',control:'grab',phase:'dashThrust',spin:'burst',combo:'jab',sweep:'heavySlash',burst:'burst'}[moveSpec.geometry] || getResonanceAttackAction(spec.family, label, type)) : getResonanceAttackAction(spec.family, label, type),
+  }); }; 
   const signatures = {
-    side:make(baseChar?.signatures?.side,'Side Resonance',spec.power+v,'dash',1.12),
-    up:make(baseChar?.signatures?.up,'Rising Resonance',spec.power+v,'launch',.95),
-    down:make(baseChar?.signatures?.down,'Ground Resonance',spec.power+v,'groundSlam',1.05),
+    side:make(baseChar?.signatures?.side,'Side Resonance',spec.power+v,'dash',1.12,'sideSignature'),
+    up:make(baseChar?.signatures?.up,'Rising Resonance',spec.power+v,'launch',.95,'upSignature'),
+    down:make(baseChar?.signatures?.down,'Ground Resonance',spec.power+v,'groundSlam',1.05,'downSignature'),
   };
-  const heavyAttack=make(baseChar?.heavyAttack,'Heavy Resonance',spec.power+v,'dash',1.18);
+  const heavyAttack=make(baseChar?.heavyAttack,'Heavy Resonance',spec.power+v,'dash',1.18,'sideHeavy');
   const lightSource = baseChar?.lightAttack || baseChar?.normalAttack;
-  const lightAttack = { ...make(lightSource, 'Light Resonance', 1, 'dash', .78), damage: Number(lightSource?.damage ?? 9), knockback: Number(lightSource?.knockback ?? 1) };
-  const powerAttack = make(baseChar?.powerAttack, 'Resonance Burst', 1, 'dash', .92);
-  const upHeavy = make(baseChar?.upHeavy || baseChar?.up_heavy, 'Up Heavy Resonance', spec.power + v, 'launch', 1.08);
-  const downHeavy = make(baseChar?.downHeavy || baseChar?.down_heavy, 'Down Heavy Resonance', spec.power + v, 'groundSlam', 1.12);
-  return { ...original, signatures, heavyAttack, upHeavy, downHeavy, lightAttack, normalAttack: lightAttack, powerAttack,
+  const lightAttack = { ...make(lightSource, 'Light Resonance', 1, 'dash', .78, 'sideHeavy'), resonanceMoveSlot:'light', damage: Number(lightSource?.damage ?? 9), knockback: Number(lightSource?.knockback ?? 1) };
+  const powerAttack = make(baseChar?.powerAttack, 'Resonance Burst', 1, 'dash', .92, 'sideSignature');
+  const upHeavy = make(baseChar?.upHeavy || baseChar?.up_heavy, 'Up Heavy Resonance', spec.power + v, 'launch', 1.08, 'upHeavy');
+  const downHeavy = make(baseChar?.downHeavy || baseChar?.down_heavy, 'Down Heavy Resonance', spec.power + v, 'groundSlam', 1.12, 'downHeavy');
+  const recoveryAttack = { ...make(baseChar?.recoveryAttack || baseChar?.recovery, 'Recovery Resonance', spec.power + v, 'recovery', .95, 'recovery'), type: 'recovery', isRecovery: true };
+  return { ...original, signatures, heavyAttack, upHeavy, downHeavy, recoveryAttack, lightAttack, normalAttack: lightAttack, powerAttack,
     _resonanceConstruct:constructName, _resonanceOriginal:baseChar };
 
 }
@@ -448,6 +476,29 @@ export function drawConstructWeapon(ctx, fighter, scale=1) {
     default:
       grip();poly([[7,-27],[13,-31],[18,-24],[17,8],[12,20],[6,8]],'#075b9d',edge);poly([[10,-26],[13,-30],[15,-21],[12,4]],'#eaffff',null);poly([[0,2],[20,0],[22,4],[1,7]],'#21cde8',edge);break;
   }
+  // Authored design-specific detailing: recessed grooves, rivets, runes, and inlays.
+  // These layers sit on the weapon itself (not as detached motion trails).
+  const weaponSpec = RESONANCE_CONSTRUCT_SPEC_BY_NAME[name];
+  const designText = weaponSpec?.design || '';
+  const designAccent = /orange|molten/i.test(designText) ? '#ff8a32' : /crimson|red rift/i.test(designText) ? '#ff4c62' : /violet|purple|dimensional/i.test(designText) ? '#a78bff' : /gold/i.test(designText) ? '#ffd66b' : /jade|green/i.test(designText) ? '#7dffb0' : /turquoise/i.test(designText) ? '#73fff0' : accent;
+  ctx.save(); ctx.globalAlpha=.95; ctx.strokeStyle=designAccent; ctx.fillStyle=designAccent; ctx.lineWidth=1.35;
+  // Family-specific etched motif makes each silhouette feel manufactured rather than primitive.
+  if (['blade','katana','greatblade','rapier','axe','scythe','crescent','halberd','spear','trident'].includes(spec.family)) {
+    for(let i=0;i<4;i++){const yy=-35+i*7;ctx.beginPath();ctx.moveTo(7+(i%2)*2,yy);ctx.lineTo(12+(i%2)*2,yy-3);ctx.lineTo(14+(i%2)*2,yy+1);ctx.stroke();}
+    ctx.strokeStyle='#efffff';ctx.globalAlpha=.75;ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(11,-42);ctx.lineTo(14,-30);ctx.lineTo(12,-18);ctx.stroke();
+  } else if (['hammer','maul','flail','projector'].includes(spec.family)) {
+    for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(1+i*6,-16+(i%2)*17,1.4,0,Math.PI*2);ctx.fill();}
+    ctx.strokeStyle=designAccent;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-2,-11);ctx.lineTo(3,-14);ctx.lineTo(8,-10);ctx.lineTo(13,-13);ctx.stroke();
+  } else if (['rings','core','shards','disc'].includes(spec.family)) {
+    for(let i=0;i<3;i++){ctx.save();ctx.rotate(frame*.018+i*Math.PI*2/3);ctx.strokeStyle=designAccent;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(12,0,17+i*2,.22,1.12);ctx.stroke();ctx.fillStyle='#f5ffff';ctx.beginPath();ctx.arc(12,-17-i*2,1.5,0,Math.PI*2);ctx.fill();ctx.restore();}
+  } else {
+    for(let i=0;i<4;i++){ctx.fillStyle=i%2?designAccent:'#dfffff';ctx.beginPath();ctx.moveTo(3+i*4,-16+i*7);ctx.lineTo(6+i*4,-12+i*7);ctx.lineTo(2+i*4,-9+i*7);ctx.closePath();ctx.fill();}
+  }
+  // Expose a tiny rune seam and rivets for every weapon; the cyan channel stays readable.
+  ctx.globalAlpha=.9;ctx.strokeStyle=designAccent;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(2,9);ctx.lineTo(5,7);ctx.lineTo(8,10);ctx.lineTo(11,8);ctx.stroke();
+  ctx.fillStyle='#f4ffff';for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(4+i*4,14+i*2,1,0,Math.PI*2);ctx.fill();}
+  ctx.restore();
+
   // A faceted character-color powerstone, recessed socket, and tiny etched runes
   // give every construct a second identity color rather than a flat cyan silhouette.
   ctx.save();

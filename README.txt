@@ -1,22 +1,37 @@
-Resonance Constructs build/import compatibility patch
+THE ELEMENT 6 CHRONICLES — RESONANCE CONSTRUCTS AUTHORED MOVES PACKAGE
 
-Files included:
-- PlatformFighter.jsx
-- CaptureTheFlag.jsx
-- BattleRoyaleEngine.jsx
-- GCMatch.jsx
+This package implements the 30-weapon / 7-move-per-weapon specification supplied with the request.
+
+REPLACEMENT FILES
 - resonanceConstructs.js
+  Integrates the authored weapon moves into each construct fighter, adds weapon-design details,
+  provides action-specific collision geometry, and wires a dedicated Recovery attack.
+- resonanceConstructsAttackSpecs.js
+  Complete authored data for all 30 weapon designs and all 210 move definitions, including the
+  exact move names and descriptions, plus animation / hitbox geometry tags.
+- renderer.js
+  Adds distinct layered visual effects for the authored move geometry: counter, grab, projectile,
+  phase, control/trap, dash, rise, slam, spin, thrust, combo, and sweep.
+- fighter.js
+  Uses the dedicated construct Recovery attack for airborne Up + Signature.
 
-Install:
-1. Back up the five matching files in your project root.
-2. Extract this ZIP into the project root and overwrite the matching files.
-3. Run `pnpm build` again.
+INSTALL
+1. Back up your current project first.
+2. Extract this ZIP.
+3. Copy all four replacement files into the same project directory as the existing files.
+4. Overwrite matching files.
+5. Run: pnpm build
+6. Play-test all seven attack slots across weapon families and enable Settings > Hitboxes to compare
+   collision geometry against the rendered attack.
 
-Fixes:
-- Restores exports imported by CaptureTheFlag and Battle Royale: steerBotToResonanceOrb and consumeConstructSuperInput.
-- Exposes getConstructAttackGeometry as a compatibility wrapper around the shared construct collision geometry.
-- Imports drawConstructWeapon from resonanceConstructs.js, where the action-specific patch defines it, rather than renderer.js.
-- Updates Grand Circuit's Settings > Hitboxes drawing to support circles, polygons, boxes, and capsules returned by the actual construct hitbox geometry.
-- Keeps PlatformFighter's construct weapon import consistent with the same source module.
-
-Validation performed here: named import/export scan across root source files, default import scan, JavaScript syntax checks, and JSX transpilation/syntax checks. This environment does not have the project's pnpm dependencies installed, so a production Vite build was not run here.
+IMPLEMENTATION NOTES
+- Weapon names, design descriptions, and all seven named attacks per weapon are based on the
+  attached specification. There are 30 constructs and 210 authored attack definitions.
+- Geometry categories and the layered visual treatment are implemented in code; they are not 210
+  individually hand-drawn sprite sheets. The current renderer animates vector-based weapon forms,
+  smears, projectiles, arcs, traps, and impact effects according to each move's authored geometry.
+- Exact damage, knockback, frame counts, and collision tuning still require live in-game balancing.
+- Validation performed for this package: JavaScript syntax checks, the project's two existing
+  Resonance Construct test suites, and a custom check that all 30 constructs have all seven move
+  definitions and that the Recovery slot is wired. A full production pnpm build was not run in this
+  environment because the project's installed dependencies / pnpm executable are unavailable.

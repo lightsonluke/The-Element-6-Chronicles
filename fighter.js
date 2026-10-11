@@ -1324,7 +1324,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         fighter.recoveryCooldown <= 0 && fighter.recoveryAirUses < 1) {
       inputs._sigConsumed = true;
       fighter.state = 'attacking';
-      const upSig = fighter.char.signatures?.up;
+      const upSig = fighter.resonanceActive ? (fighter.char.recoveryAttack || fighter.char.signatures?.up) : fighter.char.signatures?.up;
       const recoveryDuration = Math.min(upSig?.duration || 16, 28);
       fighter.attackTimer = recoveryDuration;
       fighter.attackData = {
@@ -1333,6 +1333,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         type: 'recovery',
         duration: recoveryDuration,
         color: upSig?.color || fighter.char.color,
+        isRecovery: true,
         sigType: 'up',
         hitApplied: false,
         progress: 0,

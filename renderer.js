@@ -974,6 +974,9 @@ function drawResonanceConstructAttack(ctx, x, y, attack, progress, facing, color
   const family = attack.resonanceFamily || 'blade';
   const move = attack.sigType || (attack.isHeavy ? 'heavy' : 'side');
   const action = attack.resonanceAction || getResonanceAttackAction(family, attack.resonanceMove, move);
+  const authored = attack.resonanceSpec || null;
+  const authoredGeometry = authored?.geometry || attack.resonanceGeometry || '';
+  const authoredSlot = attack.resonanceMoveSlot || ''; 
   const characterCadence = Math.max(-0.12, Math.min(0.12, Number(attack.characterVariation || 0) * 2.2));
   const reach = Math.max(.7, Math.min(1.55, Number(attack.range || 120) / 125));
   const wind = p < .28 ? p / .28 : 1;
@@ -1086,6 +1089,78 @@ function drawResonanceConstructAttack(ctx, x, y, attack, progress, facing, color
     const radius=Math.min(118,len*.82), thick=attack.isHeavy?32:23;
     ctx.save();ctx.globalAlpha=.2+strike*.65;ctx.shadowColor=cyan;ctx.shadowBlur=24;ctx.strokeStyle='#075b9d';ctx.lineWidth=thick+15;ctx.beginPath();ctx.arc(baseX,baseY,radius,-1.18+active*0.04,1.05+active*.05);ctx.stroke();ctx.strokeStyle=cyan;ctx.lineWidth=thick;ctx.stroke();ctx.strokeStyle=white;ctx.lineWidth=Math.max(5,thick*.32);ctx.stroke();ctx.restore();
     drawBlade(arc,len*(family==='greatblade'?1.13:.95),family==='greatblade'?26:19,family==='greatblade'||attack.isHeavy);impact(baseX+Math.cos(arc)*radius,baseY+Math.sin(arc)*radius,'burst');
+  }
+  // Extra weapon-specific effect layer driven by the authored move bible. These
+  // effects are distinct per move category and remain synchronized to the same
+  // startup / active / recovery phases as the hitboxes.
+  if (authored) {
+    const t = Math.max(0, Math.min(1, (p - .20) / .50));
+    const ex = baseX + len * (.36 + t * .50);
+    const ey = baseY + (authoredSlot === 'downHeavy' || authoredSlot === 'downSignature' ? 24 : authoredSlot === 'upHeavy' || authoredSlot === 'upSignature' || authoredSlot === 'recovery' ? -len*.34 : 0);
+    ctx.save(); ctx.globalAlpha = hold ? .7 : .24 + strike*.72; ctx.lineJoin='round'; ctx.lineCap='round';
+    const thick = attack.isHeavy ? 22 : 15;
+    const outlinedSlash = (cx,cy,rx,ry,rotation=0,start=-1.2,end=1.1) => {
+      ctx.save();ctx.translate(cx,cy);ctx.rotate(rotation);ctx.shadowColor=cyan;ctx.shadowBlur=18;
+      ctx.strokeStyle=dark;ctx.lineWidth=thick+10;ctx.beginPath();ctx.ellipse(0,0,rx,ry,0,start,end);ctx.stroke();
+      ctx.strokeStyle=cyan;ctx.lineWidth=thick;ctx.beginPath();ctx.ellipse(0,0,rx,ry,0,start,end);ctx.stroke();
+      ctx.strokeStyle=white;ctx.lineWidth=3.5;ctx.beginPath();ctx.ellipse(0,0,rx,ry,0,start,end);ctx.stroke();ctx.restore();
+    };
+    const crystal = (cx,cy,r,rotation=0) => {ctx.save();ctx.translate(cx,cy);ctx.rotate(rotation);ctx.shadowColor=cyan;ctx.shadowBlur=16;ctx.fillStyle='rgba(42,220,255,.3)';ctx.beginPath();ctx.arc(0,0,r*1.45,0,Math.PI*2);ctx.fill();ctx.fillStyle='#0876b9';ctx.strokeStyle=white;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-r);ctx.lineTo(r*.68,-r*.25);ctx.lineTo(r*.48,r*.72);ctx.lineTo(-r*.42,r*.8);ctx.lineTo(-r*.78,-r*.2);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#dfffff';ctx.beginPath();ctx.moveTo(-r*.28,-r*.35);ctx.lineTo(0,-r*.75);ctx.lineTo(r*.08,-r*.12);ctx.closePath();ctx.fill();ctx.restore();};
+    switch(authoredGeometry) {
+      case 'counter':
+        // Defensive crest, then a sharp return cut when the counter window is active.
+        ctx.strokeStyle=white;ctx.lineWidth=5;ctx.beginPath();ctx.arc(baseX+12,baseY,27,-1.4,1.4);ctx.stroke();ctx.strokeStyle=cyan;ctx.lineWidth=12;ctx.beginPath();ctx.arc(baseX+12,baseY,27,-1.22,1.22);ctx.stroke();
+        for(let i=0;i<5;i++){const a=-1.1+i*.55;ctx.fillStyle=i%2?white:cyan;ctx.beginPath();ctx.moveTo(baseX+12+Math.cos(a)*31,baseY+Math.sin(a)*31);ctx.lineTo(baseX+12+Math.cos(a+.12)*42,baseY+Math.sin(a+.12)*42);ctx.lineTo(baseX+12+Math.cos(a-.1)*34,baseY+Math.sin(a-.1)*34);ctx.fill();}
+        if(strike) outlinedSlash(ex,ey,len*.42,len*.22,.2,-1.5,.8); break;
+      case 'grab':
+        // Catch ring and a directional throw burst.
+        ctx.strokeStyle=dark;ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(baseX,baseY);ctx.bezierCurveTo(baseX+len*.2,baseY-28,ex-len*.18,ey+24,ex,ey);ctx.stroke();ctx.strokeStyle=cyan;ctx.lineWidth=6;ctx.stroke();
+        ctx.strokeStyle=white;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(baseX,baseY);ctx.bezierCurveTo(baseX+len*.2,baseY-28,ex-len*.18,ey+24,ex,ey);ctx.stroke();
+        ctx.beginPath();ctx.ellipse(ex,ey,16+strike*8,21+strike*5,t*2,0,Math.PI*2);ctx.strokeStyle=cyan;ctx.lineWidth=7;ctx.stroke();crystal(ex,ey,9,p*3);break;
+      case 'projectile':
+        // Distinct projectile body with faceted nose and discrete segmented wake.
+        ctx.save();ctx.translate(ex,ey);ctx.rotate(authoredSlot==='upHeavy'||authoredSlot==='upSignature'||authoredSlot==='recovery'?-Math.PI/2:0);ctx.shadowColor=cyan;ctx.shadowBlur=22;
+        ctx.fillStyle=dark;ctx.beginPath();ctx.moveTo(-len*.22,-11);ctx.lineTo(len*.1,-15);ctx.lineTo(len*.25,0);ctx.lineTo(len*.1,15);ctx.lineTo(-len*.22,11);ctx.closePath();ctx.fill();
+        ctx.fillStyle=cyan;ctx.beginPath();ctx.moveTo(-len*.17,-7);ctx.lineTo(len*.1,-9);ctx.lineTo(len*.21,0);ctx.lineTo(len*.1,9);ctx.lineTo(-len*.17,7);ctx.closePath();ctx.fill();ctx.fillStyle=white;ctx.fillRect(-len*.08,-2,len*.2,4);ctx.restore();
+        for(let i=0;i<4;i++){ctx.globalAlpha=(.5-i*.09)*(hold?.5:1);ctx.fillStyle=i%2?white:cyan;ctx.beginPath();ctx.moveTo(ex-len*(.16+i*.08),ey-4-i%2*4);ctx.lineTo(ex-len*(.11+i*.08),ey);ctx.lineTo(ex-len*(.16+i*.08),ey+4+i%2*4);ctx.closePath();ctx.fill();}break;
+      case 'phase':
+        // Offset afterimage panes, not a continuous trailing line.
+        for(let i=3;i>=0;i--){ctx.globalAlpha=(.12+i*.1)*(hold?.5:1);ctx.fillStyle=i%2?cyan:'#a86bff';ctx.beginPath();ctx.moveTo(ex-i*9,ey-len*.25);ctx.lineTo(ex+8-i*9,ey-len*.08);ctx.lineTo(ex+3-i*9,ey+len*.18);ctx.lineTo(ex-8-i*9,ey+len*.08);ctx.closePath();ctx.fill();}
+        outlinedSlash(ex,ey,len*.32,len*.12,-.18,-1.25,1.15);break;
+      case 'control':
+        // Trap/control effects use a clearly bounded field so the effect reads as a setup move.
+        ctx.strokeStyle=dark;ctx.lineWidth=13;ctx.beginPath();ctx.ellipse(ex,ey,len*.3,len*.19,p*.6,0,Math.PI*2);ctx.stroke();ctx.strokeStyle=cyan;ctx.lineWidth=5;ctx.setLineDash([8,5]);ctx.beginPath();ctx.ellipse(ex,ey,len*.3,len*.19,p*.6,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+        for(let i=0;i<6;i++){const a=i*Math.PI/3+p*2;ctx.fillStyle=i%2?white:cyan;ctx.beginPath();ctx.moveTo(ex+Math.cos(a)*len*.22,ey+Math.sin(a)*len*.14);ctx.lineTo(ex+Math.cos(a+.13)*len*.31,ey+Math.sin(a+.13)*len*.21);ctx.lineTo(ex+Math.cos(a-.1)*len*.24,ey+Math.sin(a-.1)*len*.16);ctx.closePath();ctx.fill();}break;
+      case 'dash':
+        // Armor/weapon-led rush wedge and large contact burst.
+        ctx.fillStyle='rgba(38,220,255,.28)';ctx.beginPath();ctx.moveTo(baseX-5,baseY-20);ctx.lineTo(ex,ey-14);ctx.lineTo(ex+18,ey);ctx.lineTo(ex,ey+15);ctx.lineTo(baseX-5,baseY+12);ctx.closePath();ctx.fill();
+        ctx.strokeStyle=dark;ctx.lineWidth=thick+10;ctx.beginPath();ctx.moveTo(baseX,baseY);ctx.lineTo(ex,ey);ctx.stroke();ctx.strokeStyle=cyan;ctx.lineWidth=thick;ctx.stroke();ctx.strokeStyle=white;ctx.lineWidth=3;ctx.stroke();crystal(ex,ey,attack.isHeavy?14:10,p*4);break;
+      case 'rise':
+        // Tall vertical launch column with layered fins.
+        ctx.fillStyle='rgba(28,211,255,.26)';ctx.beginPath();ctx.moveTo(baseX-20,baseY+12);ctx.lineTo(ex-13,ey+12);ctx.lineTo(ex,ey-len*.12);ctx.lineTo(ex+13,ey+12);ctx.lineTo(baseX+20,baseY+12);ctx.closePath();ctx.fill();
+        ctx.strokeStyle=dark;ctx.lineWidth=thick+10;ctx.beginPath();ctx.moveTo(baseX,baseY+8);ctx.lineTo(ex,ey);ctx.stroke();ctx.strokeStyle=cyan;ctx.lineWidth=thick;ctx.stroke();ctx.strokeStyle=white;ctx.lineWidth=3;ctx.stroke();outlinedSlash(ex,ey,len*.27,10,-.2,-Math.PI,Math.PI);break;
+      case 'slam':
+        // Chunky impact crater, opposing floor waves, and debris shards.
+        ctx.fillStyle='rgba(24,210,255,.25)';ctx.beginPath();ctx.ellipse(ex,ey+22,len*.38,15,0,0,Math.PI*2);ctx.fill();
+        for(let side=-1;side<=1;side+=2){ctx.strokeStyle=dark;ctx.lineWidth=15;ctx.beginPath();ctx.moveTo(ex,ey+18);ctx.quadraticCurveTo(ex+side*len*.18,ey-4,ex+side*len*.4,ey+12);ctx.stroke();ctx.strokeStyle=cyan;ctx.lineWidth=7;ctx.stroke();}
+        for(let i=0;i<7;i++){const sx=ex+(i-3)*len*.09;ctx.fillStyle=i%2?white:cyan;ctx.beginPath();ctx.moveTo(sx,ey+17);ctx.lineTo(sx+(i%2?9:-7),ey-4-(i%3)*7);ctx.lineTo(sx+12,ey+18);ctx.closePath();ctx.fill();}crystal(ex,ey+9,9,p*2);break;
+      case 'spin':
+        // Multiple distinct orbital rings / rotating slashes.
+        for(let i=0;i<3;i++){ctx.save();ctx.translate(baseX+Math.cos(p*5+i*2.1)*12,baseY+Math.sin(p*5+i*2.1)*10);ctx.rotate(p*4+i*1.05);ctx.strokeStyle=dark;ctx.lineWidth=12;ctx.beginPath();ctx.ellipse(0,0,len*(.22+i*.035),len*(.11+i*.02),0,-2.1,1.3);ctx.stroke();ctx.strokeStyle=i%2?white:cyan;ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(0,0,len*(.22+i*.035),len*(.11+i*.02),0,-2.1,1.3);ctx.stroke();ctx.restore();}break;
+      case 'thrust':
+        // Needle point and focused impact cone; intentionally narrow rather than a broad arc.
+        ctx.fillStyle='rgba(55,226,255,.24)';ctx.beginPath();ctx.moveTo(baseX,baseY-8);ctx.lineTo(ex+17,ey);ctx.lineTo(baseX,baseY+8);ctx.closePath();ctx.fill();
+        ctx.strokeStyle=dark;ctx.lineWidth=16;ctx.beginPath();ctx.moveTo(baseX,baseY);ctx.lineTo(ex+8,ey);ctx.stroke();ctx.strokeStyle=cyan;ctx.lineWidth=8;ctx.stroke();ctx.strokeStyle=white;ctx.lineWidth=2.5;ctx.stroke();crystal(ex+8,ey,7,p*3);break;
+      case 'combo':
+        // Separate staggered hit beats rather than a single generic slash.
+        for(let i=0;i<3;i++){const q=(p*3+i*.27)%1;ctx.globalAlpha=.25+strike*.65;outlinedSlash(baseX+len*(.18+i*.18),baseY+(i-1)*13,len*.18,8,(i-1)*.42,-1.15,1.1);ctx.globalAlpha=.8;ctx.fillStyle=i===2?white:cyan;ctx.beginPath();ctx.arc(baseX+len*(.3+i*.2),baseY+(i-1)*13,3+strike*4,0,Math.PI*2);ctx.fill();}break;
+      case 'sweep':
+        // Wide weapon arc with a thick dark edge, cyan body, and white cutting edge.
+        outlinedSlash(baseX+len*.32,baseY,len*.44,len*.25,authoredSlot==='downHeavy'||authoredSlot==='downSignature'?.6:0,-1.2,1.15);break;
+      default:
+        outlinedSlash(ex,ey,len*.3,len*.2,p*.3,-1.4,1.4);crystal(ex,ey,11,p*3);
+    }
+    ctx.restore();
   }
   // The branch above is the complete move-specific effect; the legacy generic
   // family switch remains only as a fallback for malformed legacy action values.
