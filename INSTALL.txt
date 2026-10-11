@@ -1,11 +1,18 @@
-RESONANCE CONSTRUCTS PATCH INSTALLATION
+RESONANCE ORB GRAVITY + CAMERA ZOOM FIX
 
-1. Make a backup of the existing project files listed in this ZIP.
-2. Extract the ZIP into the existing project root and overwrite matching files.
-3. Run:
-   node --test resonanceConstructs.test.mjs resonanceConstructsAnimation.test.mjs resonanceConstructsAudit.test.mjs
-4. In an environment with the project's dependencies installed, run:
-   npm run build
+Replacement files (2 total):
+- resonanceConstructs.js
+- PlatformFighter.jsx
 
-The tests need the existing project modules imported by renderer.js; they are not standalone tests from inside the ZIP folder.
-See ANIMATION_VERIFICATION_REPORT.md for results and known verification limits.
+Install:
+1. Back up the two matching files in your existing game project.
+2. Copy these two replacement files into the same project folder as the originals.
+3. Allow them to overwrite the originals, then restart the dev server/game.
+
+Changes:
+- Resonance orbs now accelerate downward under gravity and land on platforms instead of hovering in midair.
+- The match camera validates its zoom inputs and clamps the final zoom to a safe range, preventing the playfield from collapsing to near zero scale.
+
+Verification:
+- Ran the four existing Resonance Construct test suites in the full source tree; all passed.
+- A production build and live browser gameplay test were not run in this environment.

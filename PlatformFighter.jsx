@@ -1602,7 +1602,11 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const fitZoomY = H / Math.max(spreadY, 200);
       const fitZoom = Math.min(fitZoomX, fitZoomY);
       targetZoom = Math.min(targetZoom, Math.max(0.50, fitZoom));
-      targetZoom *= zoomMul * stageZoom;
+      targetZoom *= zoomMul * (Number.isFinite(stageZoom) && stageZoom > 0 ? stageZoom : 1.0);
+      // Keep camera zoom sane after stage/user multipliers too; a malformed
+      // stage zoom must not make the entire game appear to collapse on pickup.
+      targetZoom = Number.isFinite(targetZoom) ? Math.max(0.35, Math.min(1.25, targetZoom)) : 0.75;
+      if (!Number.isFinite(g.camZoom) || g.camZoom <= 0) g.camZoom = targetZoom;
       g.camZoom += (targetZoom - g.camZoom) * 0.05;
       if (hitstop > 0) g.camZoom += 0.015;
       const midX = (f1.x + f2.x) / 2;

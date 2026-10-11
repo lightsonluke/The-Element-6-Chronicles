@@ -276,20 +276,44 @@ export function updateResonanceMatch(match, fighters, inputs, platforms, W, H, d
       const p=ground.length ? ground[Math.floor(Math.random()*ground.length)] : null;
       // Pick a random landing lane along the selected platform, not its midpoint.
       // If there are no platform records, choose any safe horizontal lane on stage.
-      const minX=Math.max(48, p ? p.x+18 : 48);
-      const maxX=Math.min(W-48, p ? p.x+p.width-18 : W-48);
+      const platformWidth = p ? (p.width || p.w || 0) : 0;
+      const minX=Math.max(48, p ? p.x+Math.min(24, platformWidth*.15) : 48);
+      const maxX=Math.min(W-48, p ? p.x+platformWidth-Math.min(24, platformWidth*.15) : W-48);
       const left=maxX>minX ? minX+Math.random()*(maxX-minX) : Math.max(48,Math.min(W-48,W*.5));
-      const targetY=p?Math.max(70,p.y-86):Math.max(120,H*.38);
-      match.orb={x:left,y:-48,targetY,age:0,pulse:0,fallSpeed:3.6};
+      // The orb is a physical pickup: it falls under gravity and settles on the
+      // selected platform instead of hovering at an arbitrary height in mid-air.
+      const landingY=p ? p.y-22 : H-70;
+      match.orb={x:left,y:-48,vy:0,landingY,landed:false,age:0,pulse:0,fallSpeed:0};
       match.spawnWait=null;
     }
   }
   if (match.orb) {
     match.orb.age++; match.orb.pulse+=.09;
-    // Move the orb down gently until it reaches a stable hover above the stage.
-    const targetY=Math.max(75,Math.min(H*.65,match.orb.targetY ?? match.orb.y));
-    if (match.orb.y < targetY) match.orb.y = Math.min(targetY, match.orb.y + (match.orb.fallSpeed || 3.2));
-    else match.orb.y = targetY + Math.sin(match.orb.pulse)*.22;
+    // Gravity-driven fall with platform collision. Once it lands, it remains
+    // resting on that surface; the tiny visual pulse is applied only by drawing.
+    if (!match.orb.landed) {
+      const previousY=match.orb.y;
+      match.orb.vy=Math.min(9,(Number(match.orb.vy)||0)+0.34);
+      match.orb.y+=match.orb.vy;
+      let landingSurface=null;
+      for (const platform of (platforms||[])) {
+        const width=platform?.width || platform?.w || 0;
+        if (!platform || !Number.isFinite(platform.x) || !Number.isFinite(platform.y) || width<=0) continue;
+        const overlapsX=match.orb.x+20>=platform.x && match.orb.x-20<=platform.x+width;
+        if (overlapsX && previousY+22<=platform.y && match.orb.y+22>=platform.y) {
+          if (!landingSurface || platform.y<landingSurface.y) landingSurface=platform;
+        }
+      }
+      if (landingSurface) {
+        match.orb.y=landingSurface.y-22;
+        match.orb.vy=0;
+        match.orb.landed=true;
+      } else if (match.orb.y>=H-48) {
+        match.orb.y=H-48;
+        match.orb.vy=0;
+        match.orb.landed=true;
+      }
+    }
     for (let i=0;i<fighters.length;i++) {
       if (tryActivateResonanceConstruct(match, fighters[i], inputs[i])) break;
     }
