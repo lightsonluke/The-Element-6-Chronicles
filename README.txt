@@ -1,28 +1,27 @@
-RESONANCE CONSTRUCTS — ACTION-SPECIFIC ANIMATION + HITBOX PATCH
+Resonance Constructs Build Import Fix
 
-Replace these four files in the project's root folder:
-  resonanceConstructs.js
-  attackSpecs.js
-  fighter.js
-  renderer.js
+Fixes the mixed-version imports that caused the reported Vite/Rollup error.
 
-Back up the current versions first. Extract this ZIP directly into the project root and allow the four matching files to be overwritten.
+Files:
+- PlatformFighter.jsx
+  * Removes the stale getConstructAttackGeometry import and uses the same
+    getActiveSpecHitboxes path as combat for the Settings > Hitboxes overlay.
+  * Imports drawConstructWeapon from resonanceConstructs.js, where the current
+    action-specific patch defines it, rather than from renderer.js.
+- resonanceConstructs.js
+  * Adds the missing drawResonanceRangeGlow export required by PlatformFighter.
 
-WHAT THIS PATCH CHANGES
-- Gives each construct attack slot an action profile rather than making every move a generic weapon swing.
-- Uses distinct jab, projectile, upward projectile, rising/jump, ground slam, grab/tether, dash-thrust, burst, and sweeping-slash behavior.
-- Draws weapon silhouettes based on the actual construct family (blades, polearms, hammers, bows, cannons/blasters, gauntlets/greaves/claws, chains/whips, rings/cores/shards, shields, and others).
-- Adds attack-driven movement for construct dash-thrusts, rising moves, and airborne slams.
-- Uses the same active per-move geometry for checkHit collision and getActiveSpecHitboxes(), which is what the existing Settings -> Hitboxes overlay reads.
-- Hitboxes only exist during the authored active portion of the attack and are tied to the current move's projectile, tether, thrust, rising path, slam area, or slash arc rather than a generic family-sized rectangle.
-- Adds construct-specific up-heavy and down-heavy move data, including aerial down-heavy/slam behavior.
+Install:
+1. Back up these two files in the project root.
+2. Extract this ZIP into the project root and overwrite the matching files.
+3. Run `pnpm build` in your own project environment.
 
-VERIFICATION
-- `node --check` passed for all four changed JavaScript files.
-- Construct tests passed: resonanceConstructs.test.mjs, resonanceConstructsAnimation.test.mjs, resonanceConstructsCombat.test.mjs.
-- The animation smoke test exercised all 30 construct families at seven animation phases.
-- The combat test checks that the settings-overlay hitbox API returns the same geometry used by `checkHit`.
-- JSX syntax checks passed for PlatformFighter.jsx, CaptureTheFlag.jsx, BattleRoyaleEngine.jsx, and GCMatch.jsx.
+Validation performed here:
+- 396 root-level JS/JSX source files passed TypeScript transpile syntax checks.
+- Static audit found no missing named exports among root-level source imports.
+- `node --check` passed for resonanceConstructs.js, fighter.js, and renderer.js.
 
-LIMITATION
-A production build and live browser gameplay session were not run in this environment. Please test in-game with Settings -> Hitboxes enabled, including both facing directions and ground/air variants.
+Limitations:
+- A full Vite build could not be run in this environment because pnpm/node_modules
+  are not installed and package registry access is unavailable. The checks above
+  are static validation, not a substitute for `pnpm build`.

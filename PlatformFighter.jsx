@@ -8,7 +8,7 @@ import { POWER_EFFECTS, getPowerEffect } from './powerEffects.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, CPU_DIFFICULTY, updateProjectiles, drawProjectiles, loseStock } from './fighter.js';
 import { getActiveSpecHitboxes } from './attackSpecs.js';
 import {
-  drawStickman, drawAttackEffect, drawSuperEffect, drawConstructWeapon,
+  drawStickman, drawAttackEffect, drawSuperEffect,
   drawHealthBar, drawTimer, drawPlatforms, drawBackground,
   drawHitSparks, drawDoubleJumpParticles, drawSuperFlash,
   STAGE_MAPS,
@@ -30,7 +30,7 @@ import { getCrossoverColor, getCrossoverAttackColor, getCrossover, getCrossoverP
 import { drawKillFX } from './killFX.js';
 import { drawShikigamiFollower } from './shikigami.js';
 import { applyElement } from './elements.js';
-import { updateResonanceMatch, drawResonanceOrb, drawResonanceRangeGlow, getConstructAttackGeometry } from './resonanceConstructs.js';
+import { updateResonanceMatch, drawResonanceOrb, drawResonanceRangeGlow, drawConstructWeapon } from './resonanceConstructs.js';
 import { EMOTES, getEmoteById, getEmoteProgress, drawEmote } from './emotes.js';
 import { getEmoteForKey } from './emoteSlots.js';
 import { getActiveEvent } from './events.js';
@@ -673,19 +673,6 @@ function drawTrainingHitbox(ctx, x, y, w, h, label) {
 
 function drawExactAttackHitboxOverlay(ctx, fighter, label) {
   if (!fighter?.attackData) return;
-  if (fighter.resonanceActive && fighter.attackData.resonanceAnimation) {
-    let boxes=[]; try { boxes=getConstructAttackGeometry(fighter)||[]; } catch (err) { return; }
-    if (!boxes.length) return;
-    ctx.save(); ctx.lineWidth=3; ctx.strokeStyle='#ff315d'; ctx.fillStyle='rgba(255,45,90,.20)';
-    ctx.shadowColor='#ff315d'; ctx.shadowBlur=9; ctx.setLineDash([6,3]);
-    for (const hb of boxes) {
-      if (hb.shape==='circle') { ctx.beginPath(); ctx.arc(hb.x,hb.y,hb.r||0,0,Math.PI*2); ctx.fill(); ctx.stroke(); }
-      else if (hb.shape==='polygon' && hb.points?.length) { ctx.beginPath(); ctx.moveTo(hb.points[0][0],hb.points[0][1]); for(let i=1;i<hb.points.length;i++)ctx.lineTo(hb.points[i][0],hb.points[i][1]);ctx.closePath();ctx.fill();ctx.stroke(); }
-      else { ctx.fillRect(hb.left,hb.top,hb.w,hb.h); ctx.strokeRect(hb.left,hb.top,hb.w,hb.h); }
-    }
-    const hb=boxes[0]; ctx.setLineDash([]); ctx.shadowBlur=0; ctx.font='bold 10px monospace'; ctx.textAlign='center'; ctx.fillStyle='#ff315d';
-    ctx.fillText(`${label} CONSTRUCT ${fighter.attackData.resonanceMoveKey||'ATTACK'}`,hb.x,hb.top-6); ctx.restore(); return;
-  }
   let boxes = [];
   try { boxes = getActiveSpecHitboxes(fighter) || []; } catch (err) { return; }
   if (!boxes.length) return;

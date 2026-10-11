@@ -262,6 +262,22 @@ export function updateResonanceMatch(match, fighters, inputs, platforms, W, H, d
     if ((f.stocks===0 || f._eliminated || f.hp===0) && f.resonanceActive) deactivateConstruct(f);
   }
 }
+/** Draw a subtle proximity cue while a fighter is close enough to collect the orb. */
+export function drawResonanceRangeGlow(ctx, fighter, orb, frame=0) {
+  if (!ctx || !fighter || !orb || fighter.resonanceActive || fighter.stocks===0 || fighter.hp===0 || fighter._eliminated) return;
+  const fx=Number(fighter.x), fy=Number(fighter.y)-28, ox=Number(orb.x), oy=Number(orb.y);
+  if (![fx,fy,ox,oy].every(Number.isFinite) || Math.hypot(fx-ox,fy-oy)>104) return;
+  ctx.save();
+  const pulse=0.92+Math.sin((frame||0)*0.12)*0.08;
+  const grad=ctx.createRadialGradient(fx,fy-20,5,fx,fy-20,54*pulse);
+  grad.addColorStop(0,'rgba(80,205,255,0.10)');
+  grad.addColorStop(0.62,'rgba(80,205,255,0.07)');
+  grad.addColorStop(1,'rgba(80,205,255,0)');
+  ctx.fillStyle=grad; ctx.beginPath(); ctx.ellipse(fx,fy-20,40*pulse,50*pulse,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(125,220,255,0.38)'; ctx.lineWidth=1.5; ctx.shadowColor='#5bd8ff'; ctx.shadowBlur=9;
+  ctx.beginPath(); ctx.ellipse(fx,fy-20,25*pulse,34*pulse,0,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
 export function drawResonanceOrb(ctx, orb, frame=0) {
   if (!orb) return;
   const x=orb.x,y=orb.y,pulse=1+Math.sin(frame*.12)*.08;
