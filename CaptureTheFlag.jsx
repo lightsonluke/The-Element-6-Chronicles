@@ -3,7 +3,7 @@ import { ALL_CHARS } from './sports.js';
 import { applyElement, getCharLevelData, getUnlockedElements } from './elements.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, loseStock, updateProjectiles, drawProjectiles } from './fighter.js';
 import { navigateToward, selectTarget } from './botNavigation.js';
-import { drawStickman, drawPlatforms, drawAttackEffect } from './renderer.js';
+import { drawStickman, drawPlatforms, drawAttackEffect, drawConstructWeapon } from './renderer.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import { readGamepadInput } from './controllerProfiles.js';
@@ -13,7 +13,7 @@ import GameIcon from "./GameIcon.jsx";
 import { getEmoteForKey } from './emoteSlots.js';
 import { drawEmote } from './emotes.js';
 import PauseMenu from "./PauseMenu.jsx";
-import { drawConstructWeapon, drawResonanceOrb, updateResonanceMatch, tryActivateResonanceConstruct, deactivateConstruct } from './resonanceConstructs.js';
+import { drawResonanceOrb, updateResonanceMatch, tryActivateResonanceConstruct, deactivateConstruct, consumeConstructSuperInput } from './resonanceConstructs.js';
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 const VIEW_W = 1280, VIEW_H = 720;
@@ -173,7 +173,7 @@ export default function CaptureTheFlag({
     let camX = 0, camY = 0, camX2 = 0, camY2 = 0;
 
     const resonancePlatforms = platforms.filter(p => !p.flagBase && Math.abs((p.x + (p.w || p.width) / 2) - (WORLD_W / 2)) < WORLD_W * 0.34).map(p => ({ ...p, width: p.w || p.width }));
-    const resonanceMatch = { frame: 0, orb: null, spawnWait: 480 + Math.random() * 480 };
+    const resonanceMatch = { frame: 0, orb: null, spawnWait: 300 + Math.random() * 240 };
     gameRef.current = { fighters, flags, score, timer, running: true, platforms, captureLimit: matchSettings.captureLimit, resonanceMatch };
 
     const respawnFighter = (f) => {
@@ -419,6 +419,7 @@ export default function CaptureTheFlag({
         }
         try {
           tryActivateResonanceConstruct(gameRef.current.resonanceMatch, f, input);
+          consumeConstructSuperInput(f, input);
           updateFighter(f, input, platforms, WORLD_W, WORLD_H, null);
           if (f.resonanceActive && (f.state === 'superAttack' || f.hp <= 0)) deactivateConstruct(f);
         } catch (error) {

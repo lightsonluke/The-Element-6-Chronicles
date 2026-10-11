@@ -8,7 +8,7 @@ import { POWER_EFFECTS, getPowerEffect } from './powerEffects.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, CPU_DIFFICULTY, updateProjectiles, drawProjectiles, loseStock } from './fighter.js';
 import { getActiveSpecHitboxes } from './attackSpecs.js';
 import {
-  drawStickman, drawAttackEffect, drawSuperEffect,
+  drawStickman, drawAttackEffect, drawSuperEffect, drawConstructWeapon,
   drawHealthBar, drawTimer, drawPlatforms, drawBackground,
   drawHitSparks, drawDoubleJumpParticles, drawSuperFlash,
   STAGE_MAPS,
@@ -30,7 +30,7 @@ import { getCrossoverColor, getCrossoverAttackColor, getCrossover, getCrossoverP
 import { drawKillFX } from './killFX.js';
 import { drawShikigamiFollower } from './shikigami.js';
 import { applyElement } from './elements.js';
-import { updateResonanceMatch, drawResonanceOrb, drawConstructWeapon } from './resonanceConstructs.js';
+import { updateResonanceMatch, drawResonanceOrb } from './resonanceConstructs.js';
 import { EMOTES, getEmoteById, getEmoteProgress, drawEmote } from './emotes.js';
 import { getEmoteForKey } from './emoteSlots.js';
 import { getActiveEvent } from './events.js';
@@ -932,7 +932,7 @@ export default function PlatformFighter({
     if (comboMode) { timer = 99999; f1.stocks = 999; f2.stocks = 999; }
     let lastTime = performance.now();
     // Per-match Resonance state: one shared orb, consumed by the first successful activation.
-    const resonanceMatch = { frame: 0, orb: null, spawnWait: 480 + Math.random() * 480 };
+    const resonanceMatch = { frame: 0, orb: null, spawnWait: 300 + Math.random() * 240 };
     // Normalized sandbox mods — applied every frame to alter physics/combat
     const M = mods ? { damageMultiplier: 1, gravity: 1, jumpHeight: 1, movementSpeed: 1, superChargeRate: 1, powerCooldownRate: 1, slowMotion: 1, respawnTime: 1, infiniteJumps: false, infiniteStocks: false, infiniteHP: false, infinitePower: false, freezeAI: false, cpuBehavior: 'balanced', ...mods } : null;
     let superFlash1 = null, superFlash2 = null;

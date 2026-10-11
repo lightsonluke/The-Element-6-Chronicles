@@ -1,26 +1,21 @@
-# Element 6 — Clan + Volleyball Full Fix
+# Resonance Constructs — animation verification patch
 
-Built only from the supplied `The-Element-6-Chronicles-main-2.zip`.
+This is a replacement-file patch for the existing The-Element-6-Chronicles project, not a standalone game.
 
-## Included fixes
-- Clan tournament weekly matchups resolve and display the actual clan names instead of fallback `Clan B`.
-- Weekly matchup XP is shown for both clans.
-- Monthly standings are restricted to the current month.
-- Monthly championship reward uses the current month instead of incorrectly checking the previous month.
-- Monthly championship reward is locked until 4 weekly clan battles have completed.
-- Only the #1 clan can claim the championship reward after the four-battle requirement.
-- Clan meeting cards show a red X and `PASSED` after their scheduled time.
-- Clan badge update RPC is hardened and the UI refreshes the saved badge immediately.
-- Clan leaders and lieutenants can edit the clan bio.
-- Volleyball canvas gets a final CSS-level fixed-center override so the generic canvas CSS cannot move it to the right/top-left after the match loads.
+## Included
+- Updated construct assignment, activation/deactivation, and seven-slot attack profiles.
+- Explicit seven-slot motion overrides for Fire Hero, Water Hero, Grass Hero, Ice Hero, Thunder Hero, Life, Mercy, and Death.
+- Family-specific weapon artwork and attack effects for 30 construct weapon families.
+- Fight-mode integration and fighter/renderer replacements.
+- Automated tests and `ANIMATION_VERIFICATION_REPORT.md` describing exactly what was and was not verified.
 
-## Supabase
-Run `Supabase-clan-tournament-bio-volleyball-FIX.sql` in the Supabase SQL editor after the existing clan/tournament SQL.
+## Install
+1. Back up files with matching names in the project root.
+2. Extract this ZIP into the existing project root and replace matching files.
+3. Run `node --test resonanceConstructs.test.mjs resonanceConstructsAnimation.test.mjs resonanceConstructsAudit.test.mjs`.
+4. Run `npm run build` in the project's normal development environment.
 
-## Files to replace
-- `ClanTournamentPanel.jsx`
-- `ClansScreen.jsx`
-- `VolleyballGame.jsx`
-- `index.css`
+The animation smoke test relies on the original project modules imported by `renderer.js`, so run tests from the project root after applying the patch, not from the ZIP folder in isolation.
 
-No other project files are included.
+## Verification boundary
+Automated syntax and renderer smoke tests pass. The renderer test covers 30 weapon families × seven attack slots × seven progress samples. Eight named characters have explicit profiles for all seven slots. Other characters currently use family-level choreography; they have not been manually verified as exact frame-by-frame recreations of every individual description. The Vite build and live gameplay have not been verified in this environment. See `ANIMATION_VERIFICATION_REPORT.md`.

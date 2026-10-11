@@ -14,7 +14,7 @@ import React, { useRef, useEffect, useState } from 'react';
 
 import { ALL_CHARS } from './allCharacters.js';
 import { createFighter, updateFighter, updateProjectiles, updateAI, checkHit, applyHit, loseStock, drawProjectiles, platformNavigate } from './fighter.js';
-import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles, drawBackground } from './renderer.js';
+import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles, drawBackground, drawConstructWeapon } from './renderer.js';
 import { getEquippedAccessories, drawAccessory, isBehindAccessory, resolveAccColor } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { drawShikigamiFollower } from './shikigami.js';
@@ -37,7 +37,7 @@ import { strategicBR } from './botStrategicBrain.js';
 import { drawDestructiblePlatforms, drawMovementItems, drawHazards, drawObjects } from './brRender.js';
 import PauseMenu from './PauseMenu.jsx';
 import GameIcon from './GameIcon.jsx';
-import { drawConstructWeapon, drawResonanceOrb, updateResonanceMatch, tryActivateResonanceConstruct, deactivateConstruct } from './resonanceConstructs.js';
+import { drawResonanceOrb, updateResonanceMatch, tryActivateResonanceConstruct, deactivateConstruct, consumeConstructSuperInput } from './resonanceConstructs.js';
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 const ALL = ALL_CHARS;
@@ -59,7 +59,7 @@ const mergeGp = (kb, gp) => gp ? {
 const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
 
 export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, myElement, players, sfxVolume = 70, musicVolume = 50, settings = {}, matchSettings = {}, onEnd, equippedAccessories = {}, equippedSkins = {}, equippedShikigami = {}, equippedEmotes = {} }) {
-  const resonanceMatchRef = useRef({ frame: 0, orb: null, spawnWait: 480 + Math.random() * 480 });
+  const resonanceMatchRef = useRef({ frame: 0, orb: null, spawnWait: 300 + Math.random() * 240 });
   const canvasRef = useRef(null);
   const [countdown, setCountdown] = useState(3);
   const [gameStarted, setGameStarted] = useState(false);
@@ -343,6 +343,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           inp = gi ? { left: !!gi.left, right: !!gi.right, jump: !!gi.jump, up: !!gi.up, down: !!gi.down, sig: !!gi.sig, power: !!gi.power, superMove: !!gi.superMove, heavy: !!gi.heavy } : { ...NO_INPUT };
         }
         tryActivateResonanceConstruct(resonanceMatchRef.current, f, inp);
+        consumeConstructSuperInput(f, inp);
         const _nearest = nearestMap[f.playerIndex] || null;
         updateFighter(f, inp, brSections, BR_W, BR_H, _nearest);
         if (f.resonanceActive && (f.state === 'superAttack' || f._eliminated || f.stocks <= 0)) deactivateConstruct(f);
