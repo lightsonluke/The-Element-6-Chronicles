@@ -173,15 +173,17 @@ function constructWeaponPose(fighter) {
   const mountedAngle=mount[2];
   return {facing,angle:angle+mountedAngle,x:fx+mount[0]+offsetX,y:fy+mount[1]+bob+offsetY,scale,spec,action,slot,progress,active,holding};
 }
+const CONSTRUCT_ATTACK_SIZE = 2.5;
 function transformWeaponPoint(pose, lx, ly) {
   const c=Math.cos(pose.angle),s=Math.sin(pose.angle);
-  return [pose.x+pose.facing*(lx*c-ly*s),pose.y+(lx*s+ly*c)];
+  const size=CONSTRUCT_ATTACK_SIZE;
+  return [pose.x+pose.facing*((lx*size)*c-(ly*size)*s),pose.y+((lx*size)*s+(ly*size)*c)];
 }
 function localCapsule(pose, a, b, r) {
   const p1=transformWeaponPoint(pose,a[0],a[1]),p2=transformWeaponPoint(pose,b[0],b[1]);
-  return {shape:'capsule',x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1],r};
+  return {shape:'capsule',x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1],r:r*CONSTRUCT_ATTACK_SIZE};
 }
-function localCircle(pose, p, r) { const q=transformWeaponPoint(pose,p[0],p[1]);return {shape:'circle',x:q[0],y:q[1],r}; }
+function localCircle(pose, p, r) { const q=transformWeaponPoint(pose,p[0],p[1]);return {shape:'circle',x:q[0],y:q[1],r:r*CONSTRUCT_ATTACK_SIZE}; }
 
 // Collision follows the same pose and local weapon silhouette as drawConstructWeapon.
 // This deliberately avoids the old oversized, fighter-centered generic attack boxes.
@@ -247,7 +249,7 @@ export function getResonanceConstructHitboxes(fighter) {
   }
   if(geometry==='grab') {
     if(p<.28 || p>.56) return [];
-    return [{shape:'box',x:pose.x+pose.facing*10-10,y:pose.y-17,w:20,h:27,kind:'grab',throwWindow:[.56,.78]}];
+    return [{shape:'box',x:pose.x+pose.facing*25-25,y:pose.y-42.5,w:50,h:67.5,kind:'grab',throwWindow:[.56,.78]}];
   }
   if(geometry==='combo') {
     // Combo move hit windows are filtered above; each window gets a tight
@@ -260,7 +262,7 @@ export function getResonanceConstructHitboxes(fighter) {
   if(isProjectile) {
     const origin=transformWeaponPoint(pose,[30, -4]);
     const travel=String(a.resonanceGeometry||'').includes('up') || move.includes('up') ? -1 : pose.facing;
-    return [{shape:'circle',x:origin[0]+travel*(8+p*20),y:origin[1]+(move.includes('down')?p*18:move.includes('up')?-p*18:0),r:Math.max(5,r*.85)}];
+    return [{shape:'circle',x:origin[0]+travel*(20+p*50),y:origin[1]+(move.includes('down')?p*45:move.includes('up')?-p*45:0),r:Math.max(12.5,r*.85*CONSTRUCT_ATTACK_SIZE)}];
   }
   // Narrow thrusts, jabs, and spear attacks stay narrow instead of inheriting
   // the broad sweep collider used by slashing weapons.
@@ -534,7 +536,7 @@ export function drawConstructWeapon(ctx, fighter, scale=1) {
     }
     if(recovering) { angle = angle*.76; offsetX*=.45; offsetY*=.45; }
   }
-  const size=scale*(1+(active?.09*swing:0));
+  const size=scale*CONSTRUCT_ATTACK_SIZE*(1+(active?.09*swing:0));
   const mount=({
     greaves:[0,7,-.08], claws:[facing*7,-20,-.18], tonfas:[facing*8,-20,-.18],
     tether:[facing*8,-20,-.14], blasters:[facing*9,-20,-.12], cannons:[facing*10,-20,-.08],
