@@ -11,6 +11,7 @@ import { getGen3Hitboxes } from './gen3AttackAnims.js';
 import { getGen4Hitboxes } from './gen4AttackAnims.js';
 import { getGen5Hitboxes } from './gen5AttackAnims.js';
 import { getGen5RestHitboxes } from './gen5RestAttackAnims.js';
+import { getResonanceConstructHitboxes } from './resonanceConstructs.js';
 
 const TAU = Math.PI * 2;
 
@@ -112,6 +113,7 @@ function activeProgress(fighter) { return clamp01((clamp01(fighter?.attackData?.
 
 export function getActiveSpecHitboxes(attacker) {
   const data = attacker?.attackData; if (!data) return [];
+  if (data.resonanceFamily) return getResonanceConstructHitboxes(attacker);
   const t = activeProgress(attacker); if (t <= 0 || t >= 1) return [];
   if (String(attacker?.char?.id || '').startsWith('g2_')) {
     let mk = data.sigType || data.moveKey || '';

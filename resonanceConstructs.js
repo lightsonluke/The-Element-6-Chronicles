@@ -61,189 +61,103 @@ function variation(seed, key) {
   return ((Math.abs(h)%9)-4)*.012;
 }
 
-// Authored per-slot choreography metadata consumed by the weapon renderer. These
-// are real move-specific profiles (not merely renamed attacks): each profile
-// carries a distinct wind-up, active window, travel direction and impact style.
-export const RESONANCE_MOVE_PROFILES = {
-  sideSignature: { motion:'sweeping-lunge', windup:.22, active:.36, recovery:.42, hitbox:'forward-arc', travelX:1, travelY:0, impact:'wide', arc:1.25, extension:1.12, lift:0, spin:0 },
-  upSignature: { motion:'rising-spiral', windup:.18, active:.30, recovery:.52, hitbox:'vertical-arc', travelX:.12, travelY:-1, impact:'lift', arc:1.65, extension:.78, lift:-18, spin:1.2 },
-  downSignature: { motion:'overhead-slam', windup:.30, active:.28, recovery:.42, hitbox:'ground-arc', travelX:0, travelY:1, impact:'ground-burst', arc:1.75, extension:.95, lift:12, spin:0 },
-  recovery: { motion:'recovery-thrust', windup:.12, active:.34, recovery:.54, hitbox:'vertical-thrust', travelX:.08, travelY:-1, impact:'launch', arc:1.35, extension:1.28, lift:-25, spin:0 },
-  sideHeavy: { motion:'charged-cleave', windup:.36, active:.22, recovery:.42, hitbox:'long-forward-arc', travelX:1, travelY:.05, impact:'heavy-spark', arc:1.95, extension:1.32, lift:0, spin:0 },
-  upHeavy: { motion:'rising-heavy', windup:.27, active:.25, recovery:.48, hitbox:'overhead-column', travelX:.1, travelY:-1, impact:'launch-spark', arc:1.85, extension:.92, lift:-22, spin:.3 },
-  downHeavy: { motion:'crushing-drop', windup:.32, active:.25, recovery:.43, hitbox:'ground-column', travelX:0, travelY:1, impact:'ground-shockwave', arc:2.0, extension:1.05, lift:18, spin:0 },
-  light: { motion:'quick-cut', windup:.12, active:.28, recovery:.60, hitbox:'short-arc', travelX:1, travelY:0, impact:'quick-spark', arc:.85, extension:.72, lift:0, spin:0 },
-  aerial: { motion:'airborne-crosscut', windup:.16, active:.30, recovery:.54, hitbox:'air-arc', travelX:.5, travelY:-.3, impact:'air-spark', arc:1.1, extension:.86, lift:-8, spin:.4 },
-  burst: { motion:'construct-discharge', windup:.28, active:.24, recovery:.48, hitbox:'energy-burst', travelX:1, travelY:0, impact:'radial-burst', arc:2.2, extension:1.1, lift:0, spin:2.5 },
-};
+const RANGED_FAMILIES = new Set(['bow','cannons','blasters','disc','projector','shards','rings','core']);
+const GRAB_FAMILIES = new Set(['whip','flail','tether','scythe']);
+const DASH_FAMILIES = new Set(['greaves','claws','tonfas','dual','rapier','spear','trident']);
+const HEAVY_FAMILIES = new Set(['hammer','maul','greatblade','axe','scythe']);
 
-// Family-specific choreography transforms the same seven combat slots into distinct
-// physical actions. This table deliberately describes weapon mechanics, not just colors.
-const FAMILY_CHOREOGRAPHY = {
-  blade:{mode:'slash',arc:1.0,extension:1.0},katana:{mode:'draw-cut',arc:1.25,extension:1.15},greatblade:{mode:'broad-cleave',arc:1.55,extension:1.2},dual:{mode:'crosscut',arc:1.45,extension:.8},crescent:{mode:'double-arc',arc:1.6,extension:1.0},
-  scythe:{mode:'hook-sweep',arc:1.8,extension:1.2},axe:{mode:'chop',arc:1.25,extension:1.05},halberd:{mode:'hook-thrust',arc:1.4,extension:1.2},rapier:{mode:'precision-thrust',arc:.35,extension:1.55},spear:{mode:'long-thrust',arc:.22,extension:1.65},trident:{mode:'three-prong-thrust',arc:.35,extension:1.45},staff:{mode:'staff-spin',arc:1.4,extension:1.0},
-  hammer:{mode:'impact-smash',arc:1.6,extension:1.0},maul:{mode:'heavy-drop',arc:1.9,extension:1.08},flail:{mode:'lagging-orbit',arc:1.55,extension:1.28},bow:{mode:'draw-release',arc:.18,extension:1.8},cannons:{mode:'recoil-blast',arc:.15,extension:1.7},blasters:{mode:'dual-volley',arc:.3,extension:1.65},projector:{mode:'beam-charge',arc:.08,extension:1.9},disc:{mode:'disc-release',arc:.65,extension:1.65},
-  whip:{mode:'whip-crack',arc:2.1,extension:1.7},tether:{mode:'tether-snap',arc:1.5,extension:1.5},rings:{mode:'orbiting-ring',arc:1.7,extension:1.25},greaves:{mode:'kick-combo',arc:1.1,extension:.9},core:{mode:'orbit-pulse',arc:1.9,extension:1.25},claws:{mode:'raking-combo',arc:1.25,extension:.75},shield:{mode:'shield-bash',arc:1.0,extension:.95},tonfas:{mode:'rapid-twin-strike',arc:1.2,extension:.8},shards:{mode:'shard-fan',arc:1.25,extension:1.4},bastion:{mode:'guard-counter',arc:1.15,extension:1.0}
-};
-// Character-authored motion overrides for the elemental heroes and the three
-// primordial characters. These profiles are intentionally move-specific: the
-// construct's weapon remains the physical attack source, while the trajectory,
-// active region and impact are authored per character rather than shared blindly.
-const CHARACTER_MOVE_OVERRIDES = {
-  'Fire Hero': {
-    sideSignature:{motion:'fire-cleave',familyMode:'fire-cleave',arc:1.9,extension:1.24,impact:'ember-burst'},
-    upSignature:{motion:'flame-rising-cut',familyMode:'flame-rising-cut',arc:1.5,extension:.9,lift:-22,impact:'upward-flare'},
-    downSignature:{motion:'firefall-slam',familyMode:'firefall-slam',arc:1.8,extension:1.1,impact:'ground-flare'},
-    recovery:{motion:'flame-rocket',familyMode:'flame-rocket',arc:1.1,extension:1.3,lift:-30,impact:'launch-flare'},
-    sideHeavy:{motion:'inferno-cleave',familyMode:'inferno-cleave',arc:2.15,extension:1.45,impact:'inferno-burst'},
-    upHeavy:{motion:'pillar-of-fire',familyMode:'pillar-of-fire',arc:1.75,extension:1.0,lift:-27,impact:'fire-column'},
-    downHeavy:{motion:'eruption',familyMode:'eruption',arc:2.2,extension:1.2,impact:'lava-shockwave'},
-  },
-  'Water Hero': {
-    sideSignature:{motion:'tidal-thrust',familyMode:'tidal-thrust',arc:.5,extension:1.5,impact:'water-surge'},
-    upSignature:{motion:'spinning-water-ring',familyMode:'spinning-water-ring',arc:1.8,extension:1.2,lift:-17,impact:'ring-launch'},
-    downSignature:{motion:'descending-torrent',familyMode:'descending-torrent',arc:1.4,extension:1.25,impact:'splash-burst'},
-    recovery:{motion:'geyser-rise',familyMode:'geyser-rise',arc:.65,extension:1.35,lift:-31,impact:'geyser'},
-    sideHeavy:{motion:'breaker-wave',familyMode:'breaker-wave',arc:1.7,extension:1.5,impact:'wave-crash'},
-    upHeavy:{motion:'whirlpool-lift',familyMode:'whirlpool-lift',arc:1.9,extension:1.1,lift:-26,impact:'vortex-launch'},
-    downHeavy:{motion:'undertow-slam',familyMode:'undertow-slam',arc:1.7,extension:1.15,impact:'undertow'},
-  },
-  'Grass Hero': {
-    sideSignature:{motion:'thorn-fan',familyMode:'thorn-fan',arc:1.3,extension:1.25,impact:'leaf-burst'},
-    upSignature:{motion:'seed-propeller',familyMode:'seed-propeller',arc:1.55,extension:1.1,lift:-20,impact:'leaf-launch'},
-    downSignature:{motion:'root-snare',familyMode:'root-snare',arc:1.45,extension:1.05,impact:'root-burst'},
-    recovery:{motion:'vine-vault',familyMode:'vine-vault',arc:1.2,extension:1.25,lift:-30,impact:'vine-launch'},
-    sideHeavy:{motion:'bramble-sweep',familyMode:'bramble-sweep',arc:1.9,extension:1.35,impact:'bramble-burst'},
-    upHeavy:{motion:'canopy-bloom',familyMode:'canopy-bloom',arc:1.6,extension:1.1,lift:-25,impact:'canopy-launch'},
-    downHeavy:{motion:'rootquake',familyMode:'rootquake',arc:1.9,extension:1.2,impact:'root-shockwave'},
-  },
-  'Ice Hero': {
-    sideSignature:{motion:'frost-shard-thrust',familyMode:'frost-shard-thrust',arc:.35,extension:1.5,impact:'ice-splinter'},
-    upSignature:{motion:'rotating-ice-knife',familyMode:'rotating-ice-knife',arc:.4,extension:1.65,lift:-17,impact:'shard-launch'},
-    downSignature:{motion:'glacier-drop',familyMode:'glacier-drop',arc:1.4,extension:1.15,impact:'ice-spike'},
-    recovery:{motion:'ice-spike-rise',familyMode:'ice-spike-rise',arc:.45,extension:1.4,lift:-32,impact:'frost-launch'},
-    sideHeavy:{motion:'glacial-cleave',familyMode:'glacial-cleave',arc:1.8,extension:1.45,impact:'frozen-burst'},
-    upHeavy:{motion:'blizzard-column',familyMode:'blizzard-column',arc:1.2,extension:1.1,lift:-25,impact:'ice-column'},
-    downHeavy:{motion:'permafrost-slam',familyMode:'permafrost-slam',arc:1.7,extension:1.2,impact:'frost-shockwave'},
-  },
-  'Thunder Hero': {
-    sideSignature:{motion:'lightning-dash',familyMode:'lightning-dash',arc:.25,extension:1.65,impact:'electric-impact'},
-    upSignature:{motion:'forked-bolt-rise',familyMode:'forked-bolt-rise',arc:.7,extension:1.3,lift:-25,impact:'bolt-launch'},
-    downSignature:{motion:'thunderstrike',familyMode:'thunderstrike',arc:.45,extension:1.5,impact:'thunder-ring'},
-    recovery:{motion:'lightning-jet',familyMode:'lightning-jet',arc:.35,extension:1.45,lift:-33,impact:'electric-launch'},
-    sideHeavy:{motion:'rail-cannon-burst',familyMode:'rail-cannon-burst',arc:.2,extension:1.8,impact:'rail-burst'},
-    upHeavy:{motion:'storm-column',familyMode:'storm-column',arc:.5,extension:1.35,lift:-28,impact:'storm-launch'},
-    downHeavy:{motion:'grounded-thunderclap',familyMode:'grounded-thunderclap',arc:.55,extension:1.5,impact:'thunder-shockwave'},
-  },
-  'Life': {
-    sideSignature:{motion:'life-bloom',familyMode:'life-bloom',arc:1.4,extension:1.25,impact:'healing-burst'}, upSignature:{motion:'lifeline-rise',familyMode:'lifeline-rise',arc:1.2,extension:1.2,lift:-25,impact:'life-launch'}, downSignature:{motion:'renewal-pulse',familyMode:'renewal-pulse',arc:1.8,extension:1.15,impact:'renewal-ring'},
-    recovery:{motion:'lifeline-recovery',familyMode:'lifeline-rise',arc:1.1,extension:1.3,lift:-32,impact:'life-launch'}, sideHeavy:{motion:'expansion-wave',familyMode:'orbit-pulse',arc:2.0,extension:1.4,impact:'growth-wave'}, upHeavy:{motion:'worldtree-ascent',familyMode:'lifeline-rise',arc:1.5,extension:1.25,lift:-29,impact:'canopy-launch'}, downHeavy:{motion:'seed-of-worlds',familyMode:'orbit-pulse',arc:2.1,extension:1.3,impact:'root-shockwave'}
-  },
-  'Mercy': {
-    sideSignature:{motion:'aegis-counter',familyMode:'aegis-counter',arc:1.1,extension:1.05,impact:'guard-riposte'}, upSignature:{motion:'sanctuary-rise',familyMode:'sanctuary-rise',arc:1.2,extension:1.1,lift:-22,impact:'ward-launch'}, downSignature:{motion:'judgement-guard',familyMode:'judgement-guard',arc:1.5,extension:1.1,impact:'ward-burst'},
-    recovery:{motion:'sanctuary-recovery',familyMode:'sanctuary-rise',arc:1.0,extension:1.2,lift:-30,impact:'ward-launch'}, sideHeavy:{motion:'shield-of-mercy',familyMode:'shield-bash',arc:1.4,extension:1.25,impact:'judgement-impact'}, upHeavy:{motion:'guardian-ascent',familyMode:'sanctuary-rise',arc:1.3,extension:1.15,lift:-27,impact:'ward-launch'}, downHeavy:{motion:'sanctuary-break',familyMode:'guard-counter',arc:1.8,extension:1.15,impact:'ward-shockwave'}
-  },
-  'Death': {
-    sideSignature:{motion:'reaper-hook',familyMode:'reaper-hook',arc:2.0,extension:1.25,impact:'soul-rend'}, upSignature:{motion:'soul-harvest-rise',familyMode:'soul-harvest-rise',arc:1.7,extension:1.15,lift:-24,impact:'soul-launch'}, downSignature:{motion:'final-reaping',familyMode:'final-reaping',arc:2.0,extension:1.2,impact:'soul-shockwave'},
-    recovery:{motion:'soul-ascent',familyMode:'soul-harvest-rise',arc:1.3,extension:1.3,lift:-31,impact:'soul-launch'}, sideHeavy:{motion:'reaper-judgement',familyMode:'hook-sweep',arc:2.2,extension:1.4,impact:'soul-rend-heavy'}, upHeavy:{motion:'harvest-of-souls',familyMode:'soul-harvest-rise',arc:1.9,extension:1.2,lift:-28,impact:'soul-launch-heavy'}, downHeavy:{motion:'endless-reaping',familyMode:'hook-sweep',arc:2.25,extension:1.25,impact:'soul-shockwave-heavy'}
-  },
-};
-
-export function getConstructMoveProfile(family, key, characterName = '') {
-  const base = RESONANCE_MOVE_PROFILES[key] || RESONANCE_MOVE_PROFILES.light;
-  const fc = FAMILY_CHOREOGRAPHY[family] || FAMILY_CHOREOGRAPHY.blade;
-  const vertical = key === 'upSignature' || key === 'recovery' || key === 'upHeavy';
-  const downward = key === 'downSignature' || key === 'downHeavy';
-  const heavy = key === 'sideHeavy' || key === 'upHeavy' || key === 'downHeavy';
-  const authored = CHARACTER_MOVE_OVERRIDES[characterName]?.[key] || {};
-  const baseMotion = authored.motion || base.motion;
-  const familyMode = authored.familyMode || fc.mode;
-  const rangedFamilies = ['bow','cannons','blasters','projector','disc','shards','core','rings'];
-  const grabFamilies = ['tether','whip','flail','shield','bastion'];
-  const attackKind = key === 'light' ? (rangedFamilies.includes(family) ? 'projectile' : family === 'tether' ? 'grab' : 'jab')
-    : key === 'sideSignature' ? (rangedFamilies.includes(family) ? 'projectile' : grabFamilies.includes(family) ? 'grab' : 'slash')
-    : key === 'upSignature' ? 'rising-slash'
-    : key === 'downSignature' ? (family === 'tether' || family === 'whip' ? 'grab-slam' : 'slam')
-    : key === 'recovery' ? 'recovery-launch'
-    : key === 'sideHeavy' ? (rangedFamilies.includes(family) ? 'charged-projectile' : grabFamilies.includes(family) ? 'lunge-grab' : 'heavy-slash')
-    : key === 'upHeavy' ? 'rising-heavy'
-    : key === 'downHeavy' ? (family === 'tether' || family === 'whip' ? 'snare-slam' : 'heavy-slam')
-    : key === 'aerial' ? (rangedFamilies.includes(family) ? 'air-projectile' : 'air-slash') : 'energy-burst';
-  const autoMove = ['sweeping-lunge','recovery-launch','lunge-grab','rising-slash','rising-heavy'].includes(attackKind);
-  return { ...base, ...authored, family, familyMode, baseMotion, characterName, attackKind, autoMove,
-    directional: !['upSignature','upHeavy','downSignature','downHeavy','recovery'].includes(key),
-    arc: (authored.arc ?? base.arc) * (authored.familyMode ? 1 : fc.arc),
-    extension: (authored.extension ?? base.extension) * (authored.familyMode ? 1 : fc.extension),
-    motion:`${familyMode}:${baseMotion}`, windup:base.windup*(heavy?1.12:1), active:base.active*(familyMode.includes('thrust')?.92:1),
-    lift:authored.lift ?? (vertical?Math.min(base.lift,-12):downward?Math.max(base.lift,10):base.lift),
-    hitbox:authored.hitbox || (familyMode.includes('thrust')?'weapon-thrust':familyMode.includes('beam')||familyMode.includes('blast')?'projectile-lane':base.hitbox) };
+// Each move slot has an authored action class; weapon families can override the
+// default so a bow fires, gauntlets rush, a tether grabs, and heavy weapons slam.
+export function getResonanceAttackAction(family, label, sigType = '') {
+  const slot = String(label || sigType || '').toLowerCase();
+  if (slot.includes('light') || slot.includes('aerial')) return 'jab';
+  if (slot.includes('rising') || slot.includes('up heavy') || slot === 'recovery' || sigType === 'up' || sigType === 'upHeavy' || sigType === 'aerial') {
+    return RANGED_FAMILIES.has(family) ? 'projectileUp' : 'rise';
+  }
+  if (slot.includes('ground') || slot.includes('down heavy') || sigType === 'down' || sigType === 'downHeavy') {
+    if (GRAB_FAMILIES.has(family) || family === 'shield' || family === 'bastion') return 'grab';
+    return 'slam';
+  }
+  if (slot.includes('heavy') || sigType === 'heavy') {
+    if (RANGED_FAMILIES.has(family)) return 'projectile';
+    if (GRAB_FAMILIES.has(family)) return 'grab';
+    if (HEAVY_FAMILIES.has(family)) return 'slam';
+    if (DASH_FAMILIES.has(family)) return 'dashThrust';
+    return 'heavySlash';
+  }
+  if (slot.includes('burst') || sigType === 'power') return RANGED_FAMILIES.has(family) ? 'projectile' : (GRAB_FAMILIES.has(family) ? 'grab' : 'burst');
+  if (RANGED_FAMILIES.has(family)) return 'projectile';
+  if (GRAB_FAMILIES.has(family)) return 'grab';
+  if (DASH_FAMILIES.has(family)) return 'dashThrust';
+  return 'slash';
 }
 
-
-
-// One shared source of truth for construct collision and the Settings > Hitboxes overlay.
-// Geometry is deliberately tight to the visible attack shape, not a generic radius.
-export function getConstructAttackGeometry(fighter) {
-  const a = fighter?.attackData;
-  const profile = a?.resonanceAnimation;
-  if (!fighter?.resonanceActive || !a || !profile) return [];
-  const p = Math.max(0, Math.min(1, Number(a.progress) || 0));
-  const windup = Number(profile.windup ?? .18);
-  const active = Number(profile.active ?? .3);
-  if (p < windup || p > windup + active) return [];
-  const family = a.resonanceHitboxFamily || fighter.char?.resonanceFamily || 'blade';
-  const key = a.resonanceMoveKey || a.sigType || 'light';
-  const kind = String(profile.attackKind || 'slash');
-  const mode = String(profile.familyMode || '');
-  const facing = fighter.facing === -1 || fighter.facing === 'left' ? -1 : 1;
-  const x = Number(fighter.x) || 0;
-  const y = Number(fighter.y) || 0;
-  const ext = Math.max(.6, Math.min(2.1, Number(profile.extension) || 1));
-  const range = Math.max(34, Number(a.range) || 70) * ext;
-  const t = Math.max(0, Math.min(1, (p - windup) / Math.max(.001, active)));
-  const box = (cx, cy, w, h, shape='box') => [{shape, x:cx, y:cy, w, h, cx, cy, left:cx-w/2, right:cx+w/2, top:cy-h/2, bottom:cy+h/2}];
-  const polygon = (cx, cy, w, h, points) => [{shape:'polygon',x:cx,y:cy,w,h,cx,cy,left:cx-w/2,right:cx+w/2,top:cy-h/2,bottom:cy+h/2,points:points.map(([px,py])=>[cx+px*w,cy+py*h])}];
-  // Projectiles have a moving, compact hitbox centered on the visible projectile.
-  if (/projectile|volley|blast|beam|draw-release|disc-release|recoil/i.test(kind+' '+mode) || ['bow','cannons','blasters','projector','disc'].includes(family) && (key==='light'||key==='sideSignature'||key==='sideHeavy'||key==='burst')) {
-    const travel = range * (.22 + .72*t);
-    const isBeam = /beam|projector|cannon/i.test(mode) || family==='projector';
-    return box(x + facing*travel, y - 31 - (key==='aerial'?18:0), isBeam?Math.max(42,range*.48):Math.max(22,Math.min(40,range*.24)), isBeam?22:26);
-  }
-  // A grab is a narrow hand/weapon reach, not the whole side of the fighter.
-  if (/grab|snare|tether-snap|whip-crack/i.test(kind+' '+mode) || family==='tether' && key==='light') {
-    const reach = Math.max(44, range*.72);
-    return box(x + facing*(26+reach*.38), y-32, reach, 42);
-  }
-  // Vertical launch effects occupy the tall, visible smear above the fighter.
-  if (['upSignature','upHeavy','recovery'].includes(key) || /rising|column|geyser|propeller|rise|launch/i.test(kind+' '+mode)) {
-    const w = /spear|trident|rapier|katana/i.test(family) ? 42 : 62;
-    const h = Math.max(74, range*1.05);
-    const cx=x + facing*(family==='spear'||family==='trident'?10:0), cy=y-h*.54;
-    return polygon(cx,cy,w,h,[[-.32,.5],[-.5,.12],[-.18,-.5],[.12,-.43],[.5,.12],[.28,.5]]);
-  }
-  // Down attacks use a ground-hugging impact smear. The visible wave and hitbox share bounds.
-  if (['downSignature','downHeavy'].includes(key) || /slam|shockwave|eruption|quake|ground/i.test(kind+' '+mode)) {
-    const w = Math.max(72, range*(/heavy|burst|quake|eruption/i.test(kind+' '+mode)?1.28:1.02));
-    const h = /heavy|burst|quake|eruption/i.test(kind+' '+mode) ? 42 : 30;
-    const cx=x + facing*(family==='hammer'||family==='maul'?14:0), cy=y+2;
-    return polygon(cx,cy,w,h,[[-.5,0],[-.32,-.5],[.32,-.5],[.5,0],[.32,.5],[-.32,.5]]);
-  }
-  if (key==='burst' || /orbit-pulse|radial|discharge/i.test(kind+' '+mode)) {
-    const r = Math.max(52, range*.62);
-    return box(x, y-32, r*1.08, r*1.08, 'circle').map(hb=>({...hb,r:Math.min(hb.w,hb.h)*.48}));
-  }
-  if (key==='light' && kind==='jab') {
-    return box(x+facing*39, y-31, 42, 30);
-  }
-  // Side slash / heavy cleave: a broad but bounded giant smear beside the player.
-  const heavy = /heavy/i.test(key) || key==='sideHeavy';
-  const reach = Math.max(66, range*(heavy?1.12:.92));
-  const h = heavy ? 72 : 54;
-  const cy = y - (mode.includes('draw')||mode.includes('crosscut') ? 38 : 34);
-  const cx=x + facing*(22+reach*.43);
-  return polygon(cx,cy,reach,h,[[-.5,.18],[-.24,-.44],[.5,-.12],[.5,.12],[.18,.4],[-.5,.34]]);
+function clamp01(v) { return Math.max(0, Math.min(1, Number(v) || 0)); }
+function capsule(x1,y1,x2,y2,r) { return { shape:'capsule', x1,y1,x2,y2,r }; }
+function box(x,y,w,h) { return { shape:'box',x,y,w,h }; }
+function circle(x,y,r) { return { shape:'circle',x,y,r }; }
+function arcStrip(cx,cy,r,thickness,start,end,steps=8) {
+  const pts=[];
+  for(let i=0;i<=steps;i++){const a=start+(end-start)*i/steps;pts.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r]);}
+  for(let i=steps;i>=0;i--){const a=start+(end-start)*i/steps;pts.push([cx+Math.cos(a)*(r-thickness),cy+Math.sin(a)*(r-thickness)]);}
+  return {shape:'polygon',points:pts};
 }
 
+// Shared source of truth for combat collision AND Settings -> Hitboxes. The
+// shapes follow the specific animated weapon/action, not a generic range box.
+export function getResonanceConstructHitboxes(fighter) {
+  const a=fighter?.attackData;
+  if(!a?.resonanceFamily) return [];
+  const p=clamp01(a.progress);
+  if(p < .20 || p > .70) return [];
+  const active=(p-.20)/.50;
+  const f=Number(fighter.facing)||1, x=Number(fighter.x)||0, y=(Number(fighter.y)||0)-30;
+  const range=Math.max(42,Math.min(190,Number(a.range)||100));
+  const heavy=!!a.isHeavy;
+  const action=a.resonanceAction || getResonanceAttackAction(a.resonanceFamily, a.resonanceMove, a.sigType);
+  const reach=range*(heavy?1.02:.78);
+  const visualLen=(42+25*Math.max(.7,Math.min(1.55,range/125)))*(heavy?1.16:1);
+  const strike=p>=.28&&p<=.68?Math.sin(((p-.28)/.4)*Math.PI):0;
+  if(action==='jab') return [capsule(x+f*9,y-8,x+f*(Math.min(74,visualLen*(.42+strike*.18))+9),y-29,heavy?15:11)];
+  if(action==='projectile' || action==='projectileUp') {
+    const px=x+f*(action==='projectileUp'?19:9+visualLen*(.36+active*.86));
+    const py=action==='projectileUp' ? (Number(fighter.y)||0)-33-visualLen*(.18+active*.62) : y+Math.sin(active*Math.PI*2)*6;
+    const r=heavy?19:14;
+    return [circle(px,py,r), capsule(px-f*r*.7,py,px+f*r*.7,py,r*.52)];
+  }
+  if(action==='rise') {
+    const lift=visualLen*(.35+strike*.32);
+    return [capsule(x+f*4,y-2,x+f*14,y-lift,heavy?19:15), capsule(x-f*9,y-lift+7,x+f*29,y-lift+7,heavy?16:12)];
+  }
+  if(action==='slam') {
+    const groundY=(Number(fighter.y)||0)+9+active*12;
+    const radius=visualLen*(.35+strike*.20);
+    return [box(x+f*19,groundY,radius*2,heavy?36:27), arcStrip(x+f*19,groundY+3,radius,heavy?22:16,Math.PI*1.03,Math.PI*1.97,10)];
+  }
+  if(action==='grab') {
+    const reachNow=9+visualLen*(.32+active*.43);
+    const yy=(Number(fighter.y)||0)-38+Math.sin(active*Math.PI)*12;
+    return [capsule(x+f*9,(Number(fighter.y)||0)-38,x+f*reachNow,yy,heavy?15:10), circle(x+f*reachNow,yy,heavy?18:13)];
+  }
+  if(action==='dashThrust') {
+    const end=x+f*(9+visualLen*(.62+strike*.18));
+    const cy=(Number(fighter.y)||0)-32;
+    return [capsule(x+f*7,cy,end,cy,heavy?18:12), circle(end,cy,heavy?13:9)];
+  }
+  if(action==='burst') {
+    const r=25+strike*25, cx=x+f*(9+visualLen*.52), cy=(Number(fighter.y)||0)-33;
+    return [circle(cx,cy,r), arcStrip(cx,cy,r,heavy?24:16,Math.PI*1.1,Math.PI*2.9,12)];
+  }
+  // Weapon slash: a thick swept arc in front of the fighter, with radius and
+  // thickness sized to the actual weapon family and heavy/light attack slot.
+  const radius=Math.min(118,Math.max(48,visualLen*.82));
+  const width=heavy?31:22;
+  const start=-1.12+active*.05, end=.95+active*.1;
+  const points=[];
+  for(let i=0;i<=10;i++){const t=i/10,ang=start+(end-start)*t;points.push([x+f*(12+Math.cos(ang)*radius),y+Math.sin(ang)*radius]);}
+  for(let i=10;i>=0;i--){const t=i/10,ang=start+(end-start)*t;points.push([x+f*(12+Math.cos(ang)*(radius-width)),y+Math.sin(ang)*(radius-width)]);}
+  return [{shape:'polygon',points}];
+}
 export function makeConstructCharacter(baseChar, fighterId) {
   const constructName = getConstructForCharacter(baseChar);
   const spec = CONSTRUCTS[constructName] || CONSTRUCTS['Resonance Blade'];
@@ -257,80 +171,33 @@ export function makeConstructCharacter(baseChar, fighterId) {
     knockback:(old?.knockback || 1),
     range:Math.round((old?.range || 145)*spec.reach*rangeScale),
     duration:Math.max(8,Math.round((old?.duration || 18)/spec.speed)),
-    resonanceConstruct:constructName, resonanceFamily:spec.family, resonanceAccent:color,
+    resonanceConstruct:constructName, resonanceFamily:spec.family,
     resonanceMove:label, resonanceShape:spec.shape, accentColor:color, characterVariation:v,
+    resonanceAction:getResonanceAttackAction(spec.family, label, type),
   });
   const signatures = {
-    side: { ...make(baseChar?.signatures?.side,'Side Resonance',spec.power+v,'dash',1.12), sigType:'side', resonanceMoveKey:'sideSignature', resonanceAnimation:getConstructMoveProfile(spec.family,'sideSignature',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family },
-    up: { ...make(baseChar?.signatures?.up,'Rising Resonance',spec.power+v,'launch',.95), sigType:'up', resonanceMoveKey:'upSignature', resonanceAnimation:getConstructMoveProfile(spec.family,'upSignature',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family },
-    down: { ...make(baseChar?.signatures?.down,'Ground Resonance',spec.power+v,'groundSlam',1.05), sigType:'down', resonanceMoveKey:'downSignature', resonanceAnimation:getConstructMoveProfile(spec.family,'downSignature',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family },
+    side:make(baseChar?.signatures?.side,'Side Resonance',spec.power+v,'dash',1.12),
+    up:make(baseChar?.signatures?.up,'Rising Resonance',spec.power+v,'launch',.95),
+    down:make(baseChar?.signatures?.down,'Ground Resonance',spec.power+v,'groundSlam',1.05),
   };
-  const heavyAttack={ ...make(baseChar?.heavyAttack,'Side Heavy',spec.power+v,'dash',1.18), sigType:'sideHeavy', resonanceMoveKey:'sideHeavy', resonanceAnimation:getConstructMoveProfile(spec.family,'sideHeavy',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family };
-  const upHeavy={ ...make(baseChar?.upHeavy || baseChar?.heavyAttack,'Up Heavy',spec.power+v,'launch',1.02), sigType:'upHeavy', resonanceMoveKey:'upHeavy', resonanceAnimation:getConstructMoveProfile(spec.family,'upHeavy',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family };
-  const downHeavy={ ...make(baseChar?.downHeavy || baseChar?.heavyAttack,'Down Heavy',spec.power+v,'groundSlam',1.08), sigType:'downHeavy', resonanceMoveKey:'downHeavy', resonanceAnimation:getConstructMoveProfile(spec.family,'downHeavy',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family };
+  const heavyAttack=make(baseChar?.heavyAttack,'Heavy Resonance',spec.power+v,'dash',1.18);
   const lightSource = baseChar?.lightAttack || baseChar?.normalAttack;
-  const lightAttack = { ...make(lightSource, 'Light Attack', 1, 'dash', .78), damage: Number(lightSource?.damage ?? 9), knockback: Number(lightSource?.knockback ?? 1), sigType:'light', resonanceMoveKey:'light', resonanceAnimation:getConstructMoveProfile(spec.family,'light',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family };
-  const aerialAttack = { ...make(lightSource, 'Aerial Attack', 1, 'aerialNormal', .88), isNormal:true, sigType:'aerial', resonanceMoveKey:'aerial', resonanceAnimation:getConstructMoveProfile(spec.family,'aerial',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family };
-  const powerAttack = { ...make(baseChar?.powerAttack, 'Resonance Burst', 1, 'dash', .92), sigType:'burst', resonanceMoveKey:'burst', resonanceAnimation:getConstructMoveProfile(spec.family,'burst',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family };
-  const recoveryAttack = { ...make(baseChar?.signatures?.up, 'Recovery', spec.power+v, 'recovery', .9), isRecovery:true, sigType:'recovery', resonanceMoveKey:'recovery', resonanceAnimation:getConstructMoveProfile(spec.family,'recovery',baseChar?.name || baseChar?.id || ''), resonanceHitboxFamily:spec.family };
-  return { ...original, signatures, heavyAttack, upHeavy, downHeavy, lightAttack, normalAttack: lightAttack, aerialAttack, recoveryAttack, powerAttack,
-    // Constructs temporarily replace the normal moveset. The fighter engine uses these flags
-    // to suppress original power/super logic and character-authored hitbox specs.
-    _resonanceMovesetOnly: true, superMove: { name: 'Construct Dismiss', damage: 0, duration: 0, disabled: true, color: '#62eaff' },
-    resonanceFamily: spec.family, resonanceShape: spec.shape, resonanceConstruct: constructName,
+  const lightAttack = { ...make(lightSource, 'Light Resonance', 1, 'dash', .78), damage: Number(lightSource?.damage ?? 9), knockback: Number(lightSource?.knockback ?? 1) };
+  const powerAttack = make(baseChar?.powerAttack, 'Resonance Burst', 1, 'dash', .92);
+  const upHeavy = make(baseChar?.upHeavy || baseChar?.up_heavy, 'Up Heavy Resonance', spec.power + v, 'launch', 1.08);
+  const downHeavy = make(baseChar?.downHeavy || baseChar?.down_heavy, 'Down Heavy Resonance', spec.power + v, 'groundSlam', 1.12);
+  return { ...original, signatures, heavyAttack, upHeavy, downHeavy, lightAttack, normalAttack: lightAttack, powerAttack,
     _resonanceConstruct:constructName, _resonanceOriginal:baseChar };
 
 }
 export function activateConstruct(fighter) {
   if (!fighter || fighter.resonanceActive || !fighter.char) return false;
-  const previousChar = fighter.char;
-  try {
-    const originalChar = previousChar._resonanceOriginal || previousChar;
-    const constructName = getConstructForCharacter(originalChar);
-    const constructChar = makeConstructCharacter(originalChar, fighter.id);
-    // Validate the exact fields consumed by updateFighter before swapping live state.
-    if (!constructChar || !constructChar.signatures || !constructChar.signatures.side || !constructChar.signatures.up || !constructChar.signatures.down || !constructChar.heavyAttack || !constructChar.lightAttack) return false;
-    // Pickup immediately cancels the previous move's active hitbox/animation and any
-    // already-launched character-specific projectiles, so only construct attacks remain.
-    fighter.attackData = null;
-    fighter.attackTimer = 0;
-    fighter.attackHold = null;
-    // Cancel the original character's power state too. Purple's dash_slash uses
-    // vx=52 while its dash object is active; leaving that state alive at pickup
-    // can fling the fighter off-screen and make the camera appear to collapse.
-    fighter.powerActive = null;
-    fighter.powerTimer = 0;
-    fighter._dash = null;
-    fighter._powerProjectiles = [];
-    fighter.projectiles = [];
-    fighter.genProjectiles = [];
-    fighter.vx = Math.max(-12, Math.min(12, Number.isFinite(Number(fighter.vx)) ? Number(fighter.vx) : 0));
-    fighter.vy = Math.max(-14, Math.min(14, Number.isFinite(Number(fighter.vy)) ? Number(fighter.vy) : 0));
-    if (fighter.state === 'attacking' || fighter.state === 'superAttack' || fighter.state === 'attackHold') fighter.state = fighter.grounded ? 'idle' : 'jumping';
-    fighter.resonanceOriginalChar = originalChar;
-    fighter.resonanceConstruct = constructName;
-    fighter.char = constructChar;
-    fighter.resonanceActive = true;
-    fighter.resonanceActivationFrames = 36;
-    fighter.resonanceDeactivateFrames = 0;
-    return true;
-  } catch (error) {
-    // A malformed/custom roster entry must not crash the match on orb pickup.
-    fighter.char = previousChar;
-    fighter.resonanceOriginalChar = null;
-    fighter.resonanceConstruct = null;
-    fighter.resonanceActive = false;
-    console.error('[Resonance Constructs] Activation failed safely:', error);
-    return false;
-  }
-}
-export function consumeConstructSuperInput(fighter, input) {
-  if (!fighter?.resonanceActive || !input?.superMove) return false;
-  // Dismiss without consulting or modifying the super meter; do not let the
-  // shared fighter engine interpret this same button press as a super attack.
-  deactivateConstruct(fighter);
-  input.superMove = false;
-  input._resonanceDismissConsumed = true;
+  fighter.resonanceOriginalChar = fighter.char._resonanceOriginal || fighter.char;
+  fighter.resonanceConstruct = getConstructForCharacter(fighter.resonanceOriginalChar);
+  fighter.resonanceActive = true;
+  fighter.char = makeConstructCharacter(fighter.resonanceOriginalChar, fighter.id);
+  fighter.resonanceActivationFrames = 36;
+  fighter.resonanceDeactivateFrames = 0;
   return true;
 }
 export function deactivateConstruct(fighter) {
@@ -343,14 +210,6 @@ export function deactivateConstruct(fighter) {
   fighter.resonanceActivationFrames = 0;
   return true;
 }
-export function steerBotToResonanceOrb(match, fighter, input) {
-  if (!match?.orb || !fighter || !input || !(fighter.isAI || fighter.isBot || fighter._gcBot || fighter._isBot) || fighter.resonanceActive || fighter.stocks===0 || fighter.hp===0 || fighter._eliminated) return input;
-  const dx=match.orb.x-(Number(fighter.x)||0), dy=match.orb.y-((Number(fighter.y)||0)-28);
-  if (Math.hypot(dx,dy)<=92) { input.sig=true; input.left=false; input.right=false; }
-  else { input.left=dx < -20; input.right=dx > 20; if (dy < -72 && fighter.grounded) input.jump=true; if (dy > 95 && !fighter.grounded) input.down=true; }
-  return input;
-}
-
 export function tryActivateResonanceConstruct(match, fighter, input) {
   if (!match?.orb || !fighter || !input?.sig || fighter.resonanceActive || fighter.stocks === 0 || fighter.hp === 0 || fighter._eliminated) return false;
   const orb = match.orb;
@@ -372,67 +231,24 @@ export function updateResonanceMatch(match, fighters, inputs, platforms, W, H, d
     if (f.resonanceActivationFrames>0) f.resonanceActivationFrames--;
     if (f.resonanceDeactivateFrames>0) f.resonanceDeactivateFrames--;
   }
-  if (!match.orb && fighters.some(f=>f && f.stocks!==0 && f.hp!==0 && !f._eliminated) && fighters.every(f=>!f || f.stocks===0 || f.hp===0 || f._eliminated || !f.resonanceActive)) {
-    // A living player without a construct keeps the orb cycle eligible, even if
-    // another living player is already using theirs. Shorter interval = more frequent drops.
-    if (match.spawnWait == null) match.spawnWait = 300 + Math.random() * 240;
+  if (!match.orb && !fighters.some(f=>f && f.stocks!==0 && f.hp!==0 && !f._eliminated && f.resonanceActive)) {
+    if (match.spawnWait == null) match.spawnWait = 480 + Math.random() * 480;
     match.spawnWait--;
     if (match.spawnWait<=0) {
-      const ground=(platforms||[]).filter(p=>p && Number.isFinite(p.x)&&Number.isFinite(p.y)&&(p.width||p.w||0)>80 && p.y>H*.25 && p.y<H-18 && (p.h==null || p.h<=80));
-      const p=ground.length ? ground[Math.floor(Math.random()*ground.length)] : null;
-      // Pick a random landing lane along the selected platform, not its midpoint.
-      // If there are no platform records, choose any safe horizontal lane on stage.
-      const platformWidth = p ? (p.width || p.w || 0) : 0;
-      const minX=Math.max(48, p ? p.x+Math.min(24, platformWidth*.15) : 48);
-      const maxX=Math.min(W-48, p ? p.x+platformWidth-Math.min(24, platformWidth*.15) : W-48);
-      const left=maxX>minX ? minX+Math.random()*(maxX-minX) : Math.max(48,Math.min(W-48,W*.5));
-      // The orb is a physical pickup: it falls under gravity and settles on the
-      // selected platform instead of hovering at an arbitrary height in mid-air.
-      const landingY=p ? p.y-22 : H-70;
-      // Spawn on the selected arena surface. Starting at -48 made Grand Circuit
-      // constructs appear above the playfield and sometimes outside the camera.
-      match.orb={x:left,y:landingY,vy:0,landingY,landed:true,age:0,pulse:0,fallSpeed:0};
+      const ground=(platforms||[]).filter(p=>p && Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.width>100);
+      const p=ground[Math.floor(Math.random()*ground.length)];
+      const left=Math.max(100, Math.min(W-100, p ? p.x+p.width/2 : W/2));
+      const targetY=p?Math.max(70,p.y-110):Math.max(120,H*.38);
+      match.orb={x:left,y:-48,targetY,age:0,pulse:0,fallSpeed:3.2};
       match.spawnWait=null;
     }
   }
   if (match.orb) {
     match.orb.age++; match.orb.pulse+=.09;
-    // Gravity-driven fall with platform collision. Once it lands, it remains
-    // resting on that surface; the tiny visual pulse is applied only by drawing.
-    if (!match.orb.landed) {
-      const previousY=match.orb.y;
-      match.orb.vy=Math.min(9,(Number(match.orb.vy)||0)+0.34);
-      match.orb.y+=match.orb.vy;
-      let landingSurface=null;
-      for (const platform of (platforms||[])) {
-        const width=platform?.width || platform?.w || 0;
-        if (!platform || !Number.isFinite(platform.x) || !Number.isFinite(platform.y) || width<=0) continue;
-        const overlapsX=match.orb.x+20>=platform.x && match.orb.x-20<=platform.x+width;
-        if (overlapsX && previousY+22<=platform.y && match.orb.y+22>=platform.y) {
-          if (!landingSurface || platform.y<landingSurface.y) landingSurface=platform;
-        }
-      }
-      if (landingSurface) {
-        match.orb.y=landingSurface.y-22;
-        match.orb.vy=0;
-        match.orb.landed=true;
-      } else if (match.orb.y>=H-48) {
-        match.orb.y=H-48;
-        match.orb.vy=0;
-        match.orb.landed=true;
-      }
-    }
-    // Bots deliberately seek the orb instead of treating it as scenery.
-    // Clone their input object so shared NO_INPUT constants are never mutated.
-    if (match.orb && Array.isArray(inputs)) {
-      for (let i=0;i<fighters.length;i++) {
-        const f=fighters[i];
-        if (!f || !(f.isAI || f.isBot || f._gcBot)) continue;
-        const botInput=inputs[i] || {};
-        if (!inputs[i]) inputs[i]=botInput;
-        steerBotToResonanceOrb(match, f, botInput);
-      }
-    }
+    // Move the orb down gently until it reaches a stable hover above the stage.
+    const targetY=Math.max(75,Math.min(H*.65,match.orb.targetY ?? match.orb.y));
+    if (match.orb.y < targetY) match.orb.y = Math.min(targetY, match.orb.y + (match.orb.fallSpeed || 3.2));
+    else match.orb.y = targetY + Math.sin(match.orb.pulse)*.22;
     for (let i=0;i<fighters.length;i++) {
       if (tryActivateResonanceConstruct(match, fighters[i], inputs[i])) break;
     }
@@ -441,33 +257,10 @@ export function updateResonanceMatch(match, fighters, inputs, platforms, W, H, d
   for (let i=0;i<fighters.length;i++) {
     const f=fighters[i], input=inputs[i];
     if (!f) continue;
-    if (input) consumeConstructSuperInput(f, input);
+    if (input && f.resonanceActive && input.superMove && (f.superMeter == null || f.superMeter >= (f.maxSuper || 100))) deactivateConstruct(f);
     // KO, BR elimination, and CTF death/respawn cannot leave a stale construct.
     if ((f.stocks===0 || f._eliminated || f.hp===0) && f.resonanceActive) deactivateConstruct(f);
   }
-}
-
-/** Draw a subtle proximity cue while a fighter is close enough to collect the orb. */
-export function drawResonanceRangeGlow(ctx, fighter, orb, frame=0) {
-  if (!ctx || !fighter || !orb || fighter.resonanceActive || fighter.stocks===0 || fighter.hp===0 || fighter._eliminated) return;
-  const fx=Number(fighter.x), fy=Number(fighter.y)-28, ox=Number(orb.x), oy=Number(orb.y);
-  if (![fx,fy,ox,oy].every(Number.isFinite) || Math.hypot(fx-ox,fy-oy)>104) return;
-  ctx.save();
-  const pulse=0.92+Math.sin((frame||0)*0.12)*0.08;
-  const grad=ctx.createRadialGradient(fx,fy-20,5,fx,fy-20,54*pulse);
-  grad.addColorStop(0,'rgba(80,205,255,0.10)');
-  grad.addColorStop(0.62,'rgba(80,205,255,0.07)');
-  grad.addColorStop(1,'rgba(80,205,255,0)');
-  ctx.fillStyle=grad; ctx.beginPath(); ctx.ellipse(fx,fy-20,40*pulse,50*pulse,0,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='rgba(125,220,255,0.38)'; ctx.lineWidth=1.5; ctx.shadowColor='#5bd8ff'; ctx.shadowBlur=9;
-  ctx.beginPath(); ctx.ellipse(fx,fy-20,25*pulse,34*pulse,0,0,Math.PI*2); ctx.stroke();
-  // Soft silhouette-shaped blue light makes it clear which fighter is in pickup range.
-  // This is drawn behind the fighter, so it reads as a faint rim-light rather than a shield.
-  ctx.globalAlpha=0.22; ctx.strokeStyle='#83eaff'; ctx.lineWidth=5; ctx.shadowColor='#55cfff'; ctx.shadowBlur=16;
-  const headY=fy-33, shoulderY=fy-16, hipY=fy+7;
-  ctx.beginPath(); ctx.arc(fx,headY,8,0,Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(fx,headY+8); ctx.lineTo(fx,hipY); ctx.moveTo(fx-9,shoulderY); ctx.lineTo(fx+9,shoulderY); ctx.moveTo(fx-8,shoulderY); ctx.lineTo(fx-14,fy-5); ctx.moveTo(fx+8,shoulderY); ctx.lineTo(fx+14,fy-5); ctx.moveTo(fx,hipY); ctx.lineTo(fx-9,fy+1); ctx.moveTo(fx,hipY); ctx.lineTo(fx+9,fy+1); ctx.stroke();
-  ctx.restore();
 }
 export function drawResonanceOrb(ctx, orb, frame=0) {
   if (!orb) return;
@@ -481,13 +274,104 @@ export function drawResonanceOrb(ctx, orb, frame=0) {
   ctx.fillStyle=core;ctx.beginPath();ctx.arc(0,0,22,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle='rgba(185,255,255,.95)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,29+Math.sin(frame*.08)*3,frame*.025,frame*.025+Math.PI*1.55);ctx.stroke();
   for(let i=0;i<6;i++){const a=frame*.025+i*Math.PI/3;ctx.fillStyle=i%2?'#53dfff':'#eaffff';ctx.beginPath();ctx.moveTo(Math.cos(a)*33,Math.sin(a)*33);ctx.lineTo(Math.cos(a+.16)*42,Math.sin(a+.16)*42);ctx.lineTo(Math.cos(a-.12)*39,Math.sin(a-.12)*39);ctx.closePath();ctx.fill();}
-  // No floating label: the pickup is a mysterious physical Resonance artifact.
-  // Layered facets, engraved seams, and orbiting shards provide the detail instead.
-  ctx.strokeStyle='rgba(232,255,255,.92)';ctx.lineWidth=1.4;
-  ctx.beginPath();ctx.moveTo(-13,-15);ctx.lineTo(-5,-20);ctx.lineTo(7,-18);ctx.lineTo(14,-9);ctx.lineTo(13,7);ctx.lineTo(3,17);ctx.lineTo(-9,14);ctx.lineTo(-16,3);ctx.closePath();ctx.stroke();
-  ctx.strokeStyle='rgba(15,102,190,.85)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-12,-3);ctx.lineTo(-3,-10);ctx.lineTo(8,-4);ctx.lineTo(4,8);ctx.lineTo(-6,10);ctx.closePath();ctx.stroke();
-  ctx.fillStyle='rgba(255,255,255,.9)';ctx.beginPath();ctx.moveTo(-5,-8);ctx.lineTo(2,-14);ctx.lineTo(7,-6);ctx.lineTo(0,-1);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#d9ffff';ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.fillText('ELEMENT 6',0,39);
   ctx.restore();
 }
 // Detailed layered weapon illustration. Every family has a distinct silhouette, bevels,
 // inset energy channels and animated parts; the weapon is rendered continuously while active.
+export function drawConstructWeapon(ctx, fighter, scale=1) {
+  if (!fighter?.resonanceActive || !fighter.resonanceConstruct) return;
+  // The active attack renderer draws the weapon through its full animated swing.
+  // Avoid drawing a second idle copy on top of that authored attack pose.
+  if (fighter.state === 'attacking' || fighter.state === 'attackHold') return;
+  const name=fighter.resonanceConstruct, spec=CONSTRUCTS[name]||CONSTRUCTS['Resonance Blade'];
+  const facing=fighter.facing||1, frame=fighter.frame||0, attack=fighter.attackData;
+  const active=(fighter.state==='attacking' || fighter.state==='superAttack') && attack;
+  const progress=active ? Math.max(0,Math.min(1,attack.progress||0)) : 0;
+  const swing=Math.sin(progress*Math.PI), recovering=active && progress>.68;
+  const v=variation(fighter.resonanceOriginalChar?.id||fighter.char?.id||name,'pose');
+  const bob=Math.sin(frame*.13+v*20)*1.2;
+  let angle=-.38+bob*.012;
+  if(active) {
+    const familyMotion = ({ hammer:.7, maul:.62, greatblade:.82, scythe:1.15, whip:1.3, flail:1.25, spear:.42, rapier:.32, katana:.95, staff:1.4, rings:1.6, core:1.7, shards:1.2, bow:.22, projector:.18, greaves:.6 })[spec.family] ?? .9;
+    const characterPhase = variation(fighter.resonanceOriginalChar?.id || fighter.char?.id || name, 'attack-phase') * 4;
+    const arc = Math.sin(Math.max(0, Math.min(1, progress + characterPhase * .035)) * Math.PI);
+    angle += (attack.sigType==='up'?-familyMotion:attack.sigType==='down'?familyMotion:familyMotion)*(progress<.5?arc:-arc*.7) + characterPhase * .12;
+  }
+  if(recovering) angle*=.72;
+  const size=scale*(1+(active?.06*swing:0));
+  const x=fighter.x+facing*(10+v*8)*scale, y=fighter.y-23*scale+bob*scale;
+  ctx.save();ctx.translate(x,y);ctx.scale(facing*size,size);ctx.rotate(angle);
+  // Soft cyan bounce light and a narrow rim bloom, not a trailing line.
+  const glow=ctx.createRadialGradient(11,0,1,11,0,37);
+  glow.addColorStop(0,'rgba(80,245,255,.32)');glow.addColorStop(.55,'rgba(43,187,255,.13)');glow.addColorStop(1,'rgba(43,187,255,0)');
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(11,0,37,0,Math.PI*2);ctx.fill();
+  const metal=ctx.createLinearGradient(-4,-30,18,27);
+  metal.addColorStop(0,'#f5ffff');metal.addColorStop(.18,'#9cffff');metal.addColorStop(.42,'#37d9f4');metal.addColorStop(.7,'#0876b9');metal.addColorStop(1,'#073c78');
+  const dark='#073b69', edge='#d8ffff', cyan='#6ff7ff';
+  ctx.lineJoin='round';ctx.lineCap='round';ctx.lineWidth=1.5;ctx.strokeStyle=edge;ctx.fillStyle=metal;
+  const poly=(pts,fill=metal,stroke=edge)=>{ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}};
+  const line=(pts,color=cyan,w=2)=>{ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.strokeStyle=color;ctx.lineWidth=w;ctx.stroke();};
+  const grip=()=>{poly([[2,-3],[7,-4],[11,21],[6,23]],'#07518a',edge);for(let i=0;i<4;i++)line([[3+i*1.2,3+i*4],[8+i*1.2,2+i*4]],'#d8ffff',.8);poly([[0,-5],[11,-6],[13,-2],[1,0]],'#e8ffff',dark);};
+  switch(spec.family){
+    case 'hammer': case 'maul':
+      grip();poly([[-5,-22],[18,-25],[28,-17],[27,-4],[18,3],[-5,0],[-10,-8]],'#075b9d',edge);poly([[-3,-20],[17,-22],[23,-16],[19,-12],[-4,-12]],'#d9ffff',null);poly([[0,-9],[20,-10],[24,-6],[18,-2],[0,-3]],'#23cbe9',null);line([[5,-18],[16,-18]],'#ffffff',1.3);break;
+    case 'projector':
+      grip();poly([[0,-18],[17,-21],[25,-14],[25,-5],[18,1],[1,-2]],'#075b9d',edge);ctx.fillStyle='#0b315f';ctx.beginPath();ctx.ellipse(20,-10,5,7,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle=cyan;ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#eaffff';ctx.beginPath();ctx.arc(20,-10,2,0,Math.PI*2);ctx.fill();break;
+    case 'spear': case 'trident': case 'halberd': case 'staff':
+      poly([[6,-24],[10,-24],[12,27],[8,29]],'#0877b6',edge);line([[8,-18],[10,22]],'#dfffff',1.2);
+      if(spec.family==='staff'){poly([[1,-27],[15,-29],[18,-25],[14,-21],[2,-21]],'#0c6ba7',edge);poly([[2,24],[15,24],[17,28],[4,30]],'#0c6ba7',edge);for(let j=0;j<3;j++){ctx.strokeStyle=cyan;ctx.lineWidth=1.3;ctx.beginPath();ctx.ellipse(9,-7+j*12,5,2,.1,0,Math.PI*2);ctx.stroke();}}
+      else {poly([[9,-44],[1,-28],[7,-31],[9,-25],[12,-31],[18,-28]],'#e7ffff',edge);poly([[8,-29],[2,-36],[-1,-31],[5,-24]],'#20cce9',edge);if(spec.family==='trident')poly([[10,-29],[17,-37],[21,-31],[14,-24]],'#20cce9',edge);if(spec.family==='halberd')poly([[10,-28],[22,-31],[25,-23],[15,-19]],'#2dd8f1',edge);}
+      break;
+    case 'bow':
+      poly([[7,-29],[16,-24],[21,-10],[16,7],[8,25],[4,22],[11,5],[14,-10],[10,-22]],'#0877b6',edge);line([[7,-28],[10,-3],[5,23]],'#eaffff',1.2);poly([[9,-5],[23,-7],[19,-3],[9,-2]],'#eaffff',edge);break;
+    case 'whip': case 'flail': case 'tether':
+      grip();line([[8,-2],[18,2],[24,12],[31,8]],'#0876b9',4);line([[8,-2],[18,2],[24,12],[31,8]],cyan,1.2);
+      if(spec.family==='flail'){ctx.save();ctx.translate(31,8);ctx.rotate(Math.sin(frame*.12)*.18);poly([[-5,-5],[5,-5],[8,0],[4,6],[-5,5],[-8,0]],'#0b5d9b',edge);poly([[-3,-3],[3,-3],[4,1],[-3,2]],'#dfffff',null);ctx.restore();}
+      else if(spec.family==='whip'){for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(19+i*4,3+i*2,2,0,Math.PI*2);ctx.fillStyle=cyan;ctx.fill();}}
+      else poly([[28,4],[35,7],[33,13],[27,12]],'#dfffff',edge);break;
+    case 'shield': case 'bastion':
+      poly([[4,-27],[20,-22],[24,-10],[20,10],[11,25],[1,11],[-2,-9]],'#07518d',edge);poly([[5,-22],[18,-18],[20,-9],[16,8],[11,16],[5,7],[2,-8]],'#21cde8','#dfffff');poly([[7,-17],[15,-14],[16,-8],[11,-3],[6,-8]],'#efffff',null);line([[4,2],[11,13],[18,1]],'#0876b9',1.4);break;
+    case 'rings': case 'core': case 'shards': case 'disc':
+      if(spec.family==='shards'){for(let i=0;i<4;i++){ctx.save();ctx.rotate(i*Math.PI/2+Math.sin(frame*.08)*.12);poly([[13,-26],[19,-17],[15,-9],[10,-16]],i%2?'#1ebedc':'#d9ffff',edge);ctx.restore();}ctx.beginPath();ctx.arc(12,0,13,.2,Math.PI*1.7);ctx.strokeStyle='#54edff';ctx.lineWidth=2;ctx.stroke();}
+      else if(spec.family==='disc'){ctx.beginPath();ctx.ellipse(12,0,20,8,Math.sin(frame*.1)*.18,0,Math.PI*2);ctx.fillStyle=metal;ctx.fill();ctx.strokeStyle=edge;ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.ellipse(12,0,12,4,0,0,Math.PI*2);ctx.strokeStyle=cyan;ctx.stroke();ctx.beginPath();ctx.arc(12,0,3,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();}
+      else {ctx.save();ctx.rotate(frame*.025);ctx.beginPath();ctx.ellipse(12,0,14,22,.28,0,Math.PI*2);ctx.fillStyle=metal;ctx.fill();ctx.strokeStyle=edge;ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.ellipse(12,0,7,15,-.28,0,Math.PI*2);ctx.strokeStyle=cyan;ctx.lineWidth=2;ctx.stroke();ctx.restore();poly([[8,-6],[13,-13],[17,-5],[13,4]],'#eaffff',edge);}break;
+    case 'greaves': case 'claws': case 'tonfas': case 'dual': case 'blasters': case 'cannons':
+      for(let i=0;i<2;i++){ctx.save();ctx.translate(5+i*11,-10+i*17);ctx.rotate(-.25+i*.5);if(spec.family==='blasters'||spec.family==='cannons'){poly([[-2,-10],[7,-12],[11,-7],[10,7],[5,11],[-2,6]],'#075b9d',edge);ctx.fillStyle='#dfffff';ctx.beginPath();ctx.ellipse(5,-8,3,2,0,0,Math.PI*2);ctx.fill();line([[4,-5],[4,4]],cyan,1.3);}else if(spec.family==='claws'){poly([[-3,-7],[3,-10],[8,4],[5,13],[1,8]],'#0876b9',edge);for(let c=0;c<3;c++)poly([[3+c*2,-5],[8+c*2,-13],[7+c*2,-3]],'#eaffff',edge);}else{poly([[-2,-12],[6,-13],[9,8],[4,12],[-1,6]],'#0876b9',edge);line([[1,-7],[5,5]],'#eaffff',1);}ctx.restore();}break;
+    case 'greatblade': case 'katana': case 'blade':
+      grip();
+      if (spec.family==='greatblade') {
+        poly([[4,-8],[0,-24],[4,-39],[12,-48],[20,-38],[22,-22],[16,-7]],'#075b9d',edge);
+        poly([[7,-25],[10,-40],[14,-43],[18,-31],[14,-15]],'#eaffff',null);
+        line([[7,-19],[16,-28],[17,-35]],cyan,1.4);
+      } else if (spec.family==='katana') {
+        poly([[8,-7],[9,-29],[16,-47],[19,-49],[17,-28],[13,-6]],'#075b9d',edge);
+        poly([[13,-28],[17,-43],[18,-31]],'#efffff',null); line([[7,-5],[17,-8]],cyan,1.5);
+      } else {
+        poly([[6,-8],[4,-25],[8,-42],[14,-47],[18,-31],[15,-8]],'#075b9d',edge);
+        poly([[9,-26],[13,-40],[15,-27]],'#efffff',null); line([[8,-14],[15,-30]],cyan,1.4);
+      } break;
+    case 'crescent':
+      grip();
+      poly([[7,-11],[0,-25],[1,-38],[10,-45],[8,-32],[7,-22],[15,-30],[23,-31],[19,-19],[13,-11]],'#075b9d',edge);
+      poly([[5,-27],[8,-39],[12,-42],[10,-30]],'#eaffff',null);
+      poly([[14,-12],[22,-22],[28,-23],[24,-13],[18,-7]],'#20cce9',edge); break;
+    case 'scythe':
+      grip();poly([[6,-15],[12,-20],[20,-34],[30,-38],[26,-27],[18,-19],[13,-10]],'#075b9d',edge);poly([[17,-28],[26,-35],[22,-27],[14,-20]],'#eaffff',null);line([[10,-16],[16,-24],[25,-32]],cyan,1.3);break;
+    case 'axe':
+      grip();poly([[9,-15],[17,-27],[28,-24],[25,-11],[17,-4],[10,-5]],'#075b9d',edge);poly([[18,-23],[25,-21],[22,-14],[15,-10]],'#eaffff',null);break;
+    case 'rapier':
+      poly([[5,-5],[10,-5],[13,29],[9,31]],'#075b9d',edge);poly([[9,-5],[10,-43],[13,-48],[14,-5]],'#eaffff',edge);poly([[2,-6],[17,-7],[16,-3],[3,-2]],'#20cce9',edge);break;
+    case 'greaves': break;
+    default:
+      grip();poly([[7,-27],[13,-31],[18,-24],[17,8],[12,20],[6,8]],'#075b9d',edge);poly([[10,-26],[13,-30],[15,-21],[12,4]],'#eaffff',null);poly([[0,2],[20,0],[22,4],[1,7]],'#21cde8',edge);break;
+  }
+  // Individual characters get a stable, deterministic pose offset, plus their own attack cadence.
+  // Attack arcs are compact impact flashes aligned to the weapon's active frames, not permanent trails.
+  if(active && progress>=.18 && progress<=.58){
+    ctx.save();ctx.globalAlpha=.35+Math.sin(progress*Math.PI)*.3;ctx.strokeStyle='#b9ffff';ctx.lineWidth=2.4;
+    ctx.beginPath();const r=spec.reach*19;ctx.arc(9,0,r,-.72,.72);ctx.stroke();
+    ctx.globalAlpha=.8;ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(9+r*.72,r*.7,1.8,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+  ctx.restore();
+}
