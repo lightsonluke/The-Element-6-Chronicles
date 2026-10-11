@@ -1,27 +1,22 @@
-Resonance Constructs Build Import Fix
+Resonance Constructs build/import compatibility patch
 
-Fixes the mixed-version imports that caused the reported Vite/Rollup error.
-
-Files:
+Files included:
 - PlatformFighter.jsx
-  * Removes the stale getConstructAttackGeometry import and uses the same
-    getActiveSpecHitboxes path as combat for the Settings > Hitboxes overlay.
-  * Imports drawConstructWeapon from resonanceConstructs.js, where the current
-    action-specific patch defines it, rather than from renderer.js.
+- CaptureTheFlag.jsx
+- BattleRoyaleEngine.jsx
+- GCMatch.jsx
 - resonanceConstructs.js
-  * Adds the missing drawResonanceRangeGlow export required by PlatformFighter.
 
 Install:
-1. Back up these two files in the project root.
+1. Back up the five matching files in your project root.
 2. Extract this ZIP into the project root and overwrite the matching files.
-3. Run `pnpm build` in your own project environment.
+3. Run `pnpm build` again.
 
-Validation performed here:
-- 396 root-level JS/JSX source files passed TypeScript transpile syntax checks.
-- Static audit found no missing named exports among root-level source imports.
-- `node --check` passed for resonanceConstructs.js, fighter.js, and renderer.js.
+Fixes:
+- Restores exports imported by CaptureTheFlag and Battle Royale: steerBotToResonanceOrb and consumeConstructSuperInput.
+- Exposes getConstructAttackGeometry as a compatibility wrapper around the shared construct collision geometry.
+- Imports drawConstructWeapon from resonanceConstructs.js, where the action-specific patch defines it, rather than renderer.js.
+- Updates Grand Circuit's Settings > Hitboxes drawing to support circles, polygons, boxes, and capsules returned by the actual construct hitbox geometry.
+- Keeps PlatformFighter's construct weapon import consistent with the same source module.
 
-Limitations:
-- A full Vite build could not be run in this environment because pnpm/node_modules
-  are not installed and package registry access is unavailable. The checks above
-  are static validation, not a substitute for `pnpm build`.
+Validation performed here: named import/export scan across root source files, default import scan, JavaScript syntax checks, and JSX transpilation/syntax checks. This environment does not have the project's pnpm dependencies installed, so a production Vite build was not run here.

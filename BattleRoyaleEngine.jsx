@@ -14,7 +14,7 @@ import React, { useRef, useEffect, useState } from 'react';
 
 import { ALL_CHARS } from './allCharacters.js';
 import { createFighter, updateFighter, updateProjectiles, updateAI, checkHit, applyHit, loseStock, drawProjectiles, platformNavigate } from './fighter.js';
-import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles, drawBackground, drawConstructWeapon } from './renderer.js';
+import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles, drawBackground } from './renderer.js';
 import { getEquippedAccessories, drawAccessory, isBehindAccessory, resolveAccColor } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { drawShikigamiFollower } from './shikigami.js';
@@ -37,7 +37,7 @@ import { strategicBR } from './botStrategicBrain.js';
 import { drawDestructiblePlatforms, drawMovementItems, drawHazards, drawObjects } from './brRender.js';
 import PauseMenu from './PauseMenu.jsx';
 import GameIcon from './GameIcon.jsx';
-import { drawResonanceOrb, drawResonanceRangeGlow, updateResonanceMatch, tryActivateResonanceConstruct, steerBotToResonanceOrb, deactivateConstruct, consumeConstructSuperInput } from './resonanceConstructs.js';
+import { drawResonanceOrb, drawResonanceRangeGlow, updateResonanceMatch, tryActivateResonanceConstruct, steerBotToResonanceOrb, deactivateConstruct, consumeConstructSuperInput, drawConstructWeapon } from './resonanceConstructs.js';
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 const ALL = ALL_CHARS;

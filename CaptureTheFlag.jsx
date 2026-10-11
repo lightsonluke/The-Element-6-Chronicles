@@ -3,7 +3,7 @@ import { ALL_CHARS } from './sports.js';
 import { applyElement, getCharLevelData, getUnlockedElements } from './elements.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, loseStock, updateProjectiles, drawProjectiles } from './fighter.js';
 import { navigateToward, selectTarget } from './botNavigation.js';
-import { drawStickman, drawPlatforms, drawAttackEffect, drawConstructWeapon } from './renderer.js';
+import { drawStickman, drawPlatforms, drawAttackEffect } from './renderer.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import { readGamepadInput } from './controllerProfiles.js';
@@ -13,7 +13,7 @@ import GameIcon from "./GameIcon.jsx";
 import { getEmoteForKey } from './emoteSlots.js';
 import { drawEmote } from './emotes.js';
 import PauseMenu from "./PauseMenu.jsx";
-import { drawResonanceOrb, drawResonanceRangeGlow, updateResonanceMatch, tryActivateResonanceConstruct, steerBotToResonanceOrb, deactivateConstruct, consumeConstructSuperInput } from './resonanceConstructs.js';
+import { drawResonanceOrb, drawResonanceRangeGlow, updateResonanceMatch, tryActivateResonanceConstruct, steerBotToResonanceOrb, deactivateConstruct, consumeConstructSuperInput, drawConstructWeapon } from './resonanceConstructs.js';
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 const VIEW_W = 1280, VIEW_H = 720;

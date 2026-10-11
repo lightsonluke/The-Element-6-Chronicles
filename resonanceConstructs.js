@@ -262,6 +262,35 @@ export function updateResonanceMatch(match, fighters, inputs, platforms, W, H, d
     if ((f.stocks===0 || f._eliminated || f.hp===0) && f.resonanceActive) deactivateConstruct(f);
   }
 }
+/** Steer AI fighters toward an available construct orb and activate it in range. */
+export function steerBotToResonanceOrb(match, fighter, input) {
+  if (!match?.orb || !fighter || !input || !(fighter.isAI || fighter.isBot || fighter._gcBot || fighter._isBot) || fighter.resonanceActive || fighter.stocks === 0 || fighter.hp === 0 || fighter._eliminated) return input;
+  const dx = match.orb.x - (Number(fighter.x) || 0);
+  const dy = match.orb.y - ((Number(fighter.y) || 0) - 28);
+  if (Math.hypot(dx, dy) <= 92) {
+    input.sig = true; input.left = false; input.right = false;
+  } else {
+    input.left = dx < -20; input.right = dx > 20;
+    if (dy < -72 && fighter.grounded) input.jump = true;
+    if (dy > 95 && !fighter.grounded) input.down = true;
+  }
+  return input;
+}
+
+/** Consume the super button as construct dismissal, never as a super attack. */
+export function consumeConstructSuperInput(fighter, input) {
+  if (!fighter?.resonanceActive || !input?.superMove) return false;
+  deactivateConstruct(fighter);
+  input.superMove = false;
+  input._resonanceDismissConsumed = true;
+  return true;
+}
+
+/** Backwards-compatible name used by Grand Circuit's hitbox overlay. */
+export function getConstructAttackGeometry(fighter) {
+  return getResonanceConstructHitboxes(fighter);
+}
+
 /** Draw a subtle proximity cue while a fighter is close enough to collect the orb. */
 export function drawResonanceRangeGlow(ctx, fighter, orb, frame=0) {
   if (!ctx || !fighter || !orb || fighter.resonanceActive || fighter.stocks===0 || fighter.hp===0 || fighter._eliminated) return;
