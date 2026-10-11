@@ -9,6 +9,7 @@ import { drawWhip } from './whipRenderer.js';
 import { activateGenPower, updateGenProjectiles, onGenPowerExpire } from './genPowers.js';
 import { updateMovementAbilities, onMovementAbilityLanded, resetMovementAbilityState } from './movementAbilities.js';
 import { getAttackSpecForData, getActiveSpecHitboxes, hitboxIntersectsBody, specKnockbackVector } from './attackSpecs.js';
+import { getConstructAttackGeometry } from './resonanceConstructs.js';
 
 export const GRAVITY = 0.42;
 export const JUMP_FORCE = -14.5;
@@ -1718,6 +1719,21 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
   if (fighter.attackData) updateAttackProgress(fighter);
 
+  // Keep construct movement synchronized to its attack's visible active frames.
+  const resonanceAttack = fighter.resonanceActive ? fighter.attackData : null;
+  const resonanceProfile = resonanceAttack?.resonanceAnimation;
+  if (resonanceProfile && fighter.state === 'attacking') {
+    const progress=Math.max(0,Math.min(1,Number(resonanceAttack.progress)||0));
+    const wind=Number(resonanceProfile.windup??.18), active=Number(resonanceProfile.active??.3);
+    const kind=String(resonanceProfile.attackKind||''), move=String(resonanceAttack.resonanceMoveKey||resonanceAttack.sigType||'');
+    const facing=fighter.facing===-1?-1:1;
+    if(progress>=wind*.65&&progress<=wind+active){
+      if(/lunge|dash|sweeping-lunge/i.test(kind)||move==='sideSignature'&&/lightning-dash|tidal-thrust|fire-cleave/i.test(resonanceProfile.familyMode||'')){fighter.vx=facing*Math.max(Math.abs(fighter.vx||0),/heavy/i.test(move)?10.5:8.2);fighter.facing=facing;}
+      if(/rising|recovery-launch|rising-heavy/i.test(kind)||['upSignature','upHeavy','recovery'].includes(move)){fighter.grounded=false;fighter.vy=Math.min(Number(fighter.vy)||0,move==='recovery'?-13.2:-10.8);}
+      if(/slam/i.test(kind)||['downSignature','downHeavy'].includes(move)){if(!fighter.grounded)fighter.vy=Math.max(Number(fighter.vy)||0,/heavy/i.test(move)?12.5:9.5);}
+    }
+  }
+
   // Pass-through material effects (water, lava, cloud, antigravity) — overlap detection
   let _inAntiGrav = false;
   for (const p of platforms) {
@@ -2107,40 +2123,27 @@ export function checkHit(attacker, defender) {
     return Math.sqrt(sdx * sdx + sdy * sdy) < 240;
   }
 
+  // Construct collisions use the same tight geometry drawn by the visual effects
+  // and Settings > Hitboxes overlay. Original-character specs never override these.
+  if (attacker.resonanceActive && attacker.attackData.resonanceAnimation) {
+    let boxes=[]; try { boxes=getConstructAttackGeometry(attacker)||[]; } catch (err) { boxes=[]; }
+    if (!boxes.length) return false;
+    const dL=defender.x-16,dR=defender.x+16,dT=defender.y-72,dB=defender.y;
+    const pointInPoly=(px,py,points)=>{let inside=false;for(let i=0,j=points.length-1;i<points.length;j=i++){const [xi,yi]=points[i],[xj,yj]=points[j];if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/((yj-yi)||1e-9)+xi))inside=!inside;}return inside;};
+    const orient=(ax,ay,bx,by,cx,cy)=>(by-ay)*(cx-bx)-(bx-ax)*(cy-by);
+    const segmentsIntersect=(a,b,c,d)=>{const o1=orient(a[0],a[1],b[0],b[1],c[0],c[1]),o2=orient(a[0],a[1],b[0],b[1],d[0],d[1]),o3=orient(c[0],c[1],d[0],d[1],a[0],a[1]),o4=orient(c[0],c[1],d[0],d[1],b[0],b[1]);return o1*o2<=0&&o3*o4<=0;};
+    const polyHitsBody=points=>{const corners=[[dL,dT],[dR,dT],[dR,dB],[dL,dB]];if(points.some(([px,py])=>px>=dL&&px<=dR&&py>=dT&&py<=dB)||corners.some(([px,py])=>pointInPoly(px,py,points)))return true;for(let i=0;i<points.length;i++){const a=points[i],b=points[(i+1)%points.length];for(let j=0;j<4;j++)if(segmentsIntersect(a,b,corners[j],corners[(j+1)%4]))return true;}return false;};
+    return boxes.some(hb=>hb.shape==='circle'
+      ? Math.hypot(defender.x-hb.x,(defender.y-36)-hb.y)<=(hb.r||0)+18
+      : hb.shape==='polygon'&&Array.isArray(hb.points) ? polyHitsBody(hb.points)
+      : hb.left<dR&&hb.right>dL&&hb.top<dB&&hb.bottom>dT);
+  }
+
   // Hand-authored spec hitboxes take precedence for Generation I and any future
   // move that supplies a spec. This keeps collision locked to the actual visual.
   const specHitboxes = activeSpecHitboxes;
   if (specHitboxes.length) {
     try { return specHitboxes.some(hb => hitboxIntersectsBody(hb, defender)); } catch (err) { return false; }
-  }
-
-  // Construct attacks use their own move-profile geometry, never the original character's authored hitboxes.
-  if (attacker.resonanceActive && attacker.attackData.resonanceAnimation) {
-    const profile = attacker.attackData.resonanceAnimation;
-    const family = attacker.attackData.resonanceHitboxFamily || attacker.char?.resonanceFamily || 'blade';
-    const facing = attacker.facing === -1 ? -1 : 1;
-    const range = Math.max(38, Number(attacker.attackData.range) || 80) * Math.max(.55, Math.min(1.8, Number(profile.extension) || 1));
-    const mode = String(profile.hitbox || 'forward-arc');
-    const kind = String(profile.attackKind || 'slash');
-    const progress = Math.max(0, Math.min(1, Number(attacker.attackData.progress)||0));
-    // Every construct hitbox only exists during the weapon's visible active frames.
-    if (progress < (profile.windup ?? .18) * .72 || progress > Math.min(.94, (profile.windup ?? .18)+(profile.active ?? .3)+.12)) return false;
-    let hbW = range*.76, hbH = 54, hbCX = attacker.x + facing * range*.42, hbCY = attacker.y - 30;
-    if (/projectile/i.test(kind) || /projectile|lane/i.test(mode)) {
-      const travel=Math.max(.18, Math.min(.92, (progress-(profile.windup||.18)) / Math.max(.12, profile.active||.3)));
-      const projectileX=attacker.x+facing*(range*.20+range*.72*travel);
-      hbW=Math.max(28,range*.24); hbH=family==='projector'||family==='cannons'||family==='blasters'?42:30; hbCX=projectileX; hbCY=attacker.y-34;
-    } else if (/vertical|column|launch|overhead/i.test(mode) || ['upSignature','upHeavy','recovery'].includes(attacker.attackData.resonanceMoveKey)) {
-      hbW = ['spear','trident','rapier'].includes(family) ? 42 : 64; hbH = range*.82; hbCX = attacker.x + facing * (['spear','trident','rapier'].includes(family) ? 10 : 0); hbCY = attacker.y - range*.42;
-    } else if (/ground|slam|shockwave/i.test(mode) || ['downSignature','downHeavy'].includes(attacker.attackData.resonanceMoveKey)) {
-      hbW = Math.max(70, range*.92); hbH = Math.max(34, range*.34); hbCX = attacker.x + facing * (family==='maul'||family==='hammer'?18:0); hbCY = attacker.y + 7;
-    } else if (kind.includes('grab')) {
-      hbW=range*.62; hbH=76; hbCX=attacker.x+facing*range*.34; hbCY=attacker.y-30;
-    } else if (['hammer','maul','greatblade','scythe','axe','halberd','flail','whip','tether'].includes(family)) {
-      hbW=range*.92; hbH=kind.includes('heavy')?82:64; hbCX=attacker.x+facing*range*.36; hbCY=attacker.y-31;
-    }
-    const dBW=32, dBH=72, dBX=defender.x, dBY=defender.y-36;
-    return (hbCX-hbW/2)<(dBX+dBW/2) && (hbCX+hbW/2)>(dBX-dBW/2) && (hbCY-hbH/2)<(dBY+dBH/2) && (hbCY+hbH/2)>(dBY-dBH/2);
   }
 
   // ── Fallback AABB hitbox collision ──
@@ -2187,6 +2190,8 @@ export function applyHit(attacker, defender) {
     attacker.attackData.hitApplied = true;
   }
   defender.trapped = false; // getting hit frees you from tar / vines / freeze
+  const constructKind=String(attacker.attackData?.resonanceAnimation?.attackKind||'');
+  if(attacker.resonanceActive&&/grab|snare/i.test(constructKind)){defender.trapped=true;defender._resonanceGrabTimer=Math.max(defender._resonanceGrabTimer||0,10);defender.vx=(attacker.facing||1)*3.5;defender.vy=-3.5;}
   defender.reverseControls = 0; // getting hit frees you from reversed controls
   defender.slowTimer = 0; defender.speedMul = undefined; // getting hit frees you from slows / glue
   defender._controlBroken = true; // flag: expire control-effect projectiles (vines, ice, bubble, marionette, glue)

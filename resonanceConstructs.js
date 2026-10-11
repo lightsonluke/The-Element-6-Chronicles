@@ -179,6 +179,71 @@ export function getConstructMoveProfile(family, key, characterName = '') {
     hitbox:authored.hitbox || (familyMode.includes('thrust')?'weapon-thrust':familyMode.includes('beam')||familyMode.includes('blast')?'projectile-lane':base.hitbox) };
 }
 
+
+
+// One shared source of truth for construct collision and the Settings > Hitboxes overlay.
+// Geometry is deliberately tight to the visible attack shape, not a generic radius.
+export function getConstructAttackGeometry(fighter) {
+  const a = fighter?.attackData;
+  const profile = a?.resonanceAnimation;
+  if (!fighter?.resonanceActive || !a || !profile) return [];
+  const p = Math.max(0, Math.min(1, Number(a.progress) || 0));
+  const windup = Number(profile.windup ?? .18);
+  const active = Number(profile.active ?? .3);
+  if (p < windup || p > windup + active) return [];
+  const family = a.resonanceHitboxFamily || fighter.char?.resonanceFamily || 'blade';
+  const key = a.resonanceMoveKey || a.sigType || 'light';
+  const kind = String(profile.attackKind || 'slash');
+  const mode = String(profile.familyMode || '');
+  const facing = fighter.facing === -1 || fighter.facing === 'left' ? -1 : 1;
+  const x = Number(fighter.x) || 0;
+  const y = Number(fighter.y) || 0;
+  const ext = Math.max(.6, Math.min(2.1, Number(profile.extension) || 1));
+  const range = Math.max(34, Number(a.range) || 70) * ext;
+  const t = Math.max(0, Math.min(1, (p - windup) / Math.max(.001, active)));
+  const box = (cx, cy, w, h, shape='box') => [{shape, x:cx, y:cy, w, h, cx, cy, left:cx-w/2, right:cx+w/2, top:cy-h/2, bottom:cy+h/2}];
+  const polygon = (cx, cy, w, h, points) => [{shape:'polygon',x:cx,y:cy,w,h,cx,cy,left:cx-w/2,right:cx+w/2,top:cy-h/2,bottom:cy+h/2,points:points.map(([px,py])=>[cx+px*w,cy+py*h])}];
+  // Projectiles have a moving, compact hitbox centered on the visible projectile.
+  if (/projectile|volley|blast|beam|draw-release|disc-release|recoil/i.test(kind+' '+mode) || ['bow','cannons','blasters','projector','disc'].includes(family) && (key==='light'||key==='sideSignature'||key==='sideHeavy'||key==='burst')) {
+    const travel = range * (.22 + .72*t);
+    const isBeam = /beam|projector|cannon/i.test(mode) || family==='projector';
+    return box(x + facing*travel, y - 31 - (key==='aerial'?18:0), isBeam?Math.max(42,range*.48):Math.max(22,Math.min(40,range*.24)), isBeam?22:26);
+  }
+  // A grab is a narrow hand/weapon reach, not the whole side of the fighter.
+  if (/grab|snare|tether-snap|whip-crack/i.test(kind+' '+mode) || family==='tether' && key==='light') {
+    const reach = Math.max(44, range*.72);
+    return box(x + facing*(26+reach*.38), y-32, reach, 42);
+  }
+  // Vertical launch effects occupy the tall, visible smear above the fighter.
+  if (['upSignature','upHeavy','recovery'].includes(key) || /rising|column|geyser|propeller|rise|launch/i.test(kind+' '+mode)) {
+    const w = /spear|trident|rapier|katana/i.test(family) ? 42 : 62;
+    const h = Math.max(74, range*1.05);
+    const cx=x + facing*(family==='spear'||family==='trident'?10:0), cy=y-h*.54;
+    return polygon(cx,cy,w,h,[[-.32,.5],[-.5,.12],[-.18,-.5],[.12,-.43],[.5,.12],[.28,.5]]);
+  }
+  // Down attacks use a ground-hugging impact smear. The visible wave and hitbox share bounds.
+  if (['downSignature','downHeavy'].includes(key) || /slam|shockwave|eruption|quake|ground/i.test(kind+' '+mode)) {
+    const w = Math.max(72, range*(/heavy|burst|quake|eruption/i.test(kind+' '+mode)?1.28:1.02));
+    const h = /heavy|burst|quake|eruption/i.test(kind+' '+mode) ? 42 : 30;
+    const cx=x + facing*(family==='hammer'||family==='maul'?14:0), cy=y+2;
+    return polygon(cx,cy,w,h,[[-.5,0],[-.32,-.5],[.32,-.5],[.5,0],[.32,.5],[-.32,.5]]);
+  }
+  if (key==='burst' || /orbit-pulse|radial|discharge/i.test(kind+' '+mode)) {
+    const r = Math.max(52, range*.62);
+    return box(x, y-32, r*1.08, r*1.08, 'circle').map(hb=>({...hb,r:Math.min(hb.w,hb.h)*.48}));
+  }
+  if (key==='light' && kind==='jab') {
+    return box(x+facing*39, y-31, 42, 30);
+  }
+  // Side slash / heavy cleave: a broad but bounded giant smear beside the player.
+  const heavy = /heavy/i.test(key) || key==='sideHeavy';
+  const reach = Math.max(66, range*(heavy?1.12:.92));
+  const h = heavy ? 72 : 54;
+  const cy = y - (mode.includes('draw')||mode.includes('crosscut') ? 38 : 34);
+  const cx=x + facing*(22+reach*.43);
+  return polygon(cx,cy,reach,h,[[-.5,.18],[-.24,-.44],[.5,-.12],[.5,.12],[.18,.4],[-.5,.34]]);
+}
+
 export function makeConstructCharacter(baseChar, fighterId) {
   const constructName = getConstructForCharacter(baseChar);
   const spec = CONSTRUCTS[constructName] || CONSTRUCTS['Resonance Blade'];

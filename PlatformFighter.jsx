@@ -30,7 +30,7 @@ import { getCrossoverColor, getCrossoverAttackColor, getCrossover, getCrossoverP
 import { drawKillFX } from './killFX.js';
 import { drawShikigamiFollower } from './shikigami.js';
 import { applyElement } from './elements.js';
-import { updateResonanceMatch, drawResonanceOrb, drawResonanceRangeGlow } from './resonanceConstructs.js';
+import { updateResonanceMatch, drawResonanceOrb, drawResonanceRangeGlow, getConstructAttackGeometry } from './resonanceConstructs.js';
 import { EMOTES, getEmoteById, getEmoteProgress, drawEmote } from './emotes.js';
 import { getEmoteForKey } from './emoteSlots.js';
 import { getActiveEvent } from './events.js';
@@ -673,68 +673,34 @@ function drawTrainingHitbox(ctx, x, y, w, h, label) {
 
 function drawExactAttackHitboxOverlay(ctx, fighter, label) {
   if (!fighter?.attackData) return;
-  // Construct geometry mirrors the live collision branch in fighter.js. It is
-  // rendered by the existing Settings > Hitboxes toggle, not a separate debug mode.
   if (fighter.resonanceActive && fighter.attackData.resonanceAnimation) {
-    const a=fighter.attackData, profile=a.resonanceAnimation, family=a.resonanceHitboxFamily||fighter.char?.resonanceFamily||'blade';
-    const progress=Math.max(0,Math.min(1,Number(a.progress)||0));
-    const windup=Number(profile.windup??.18), active=Number(profile.active??.3);
-    if (progress < windup*.72 || progress > Math.min(.94,windup+active+.12)) return;
-    const facing=fighter.facing===-1?-1:1;
-    const range=Math.max(38,Number(a.range)||80)*Math.max(.55,Math.min(1.8,Number(profile.extension)||1));
-    const mode=String(profile.hitbox||'forward-arc'), kind=String(profile.attackKind||'slash');
-    let w=range*.76,h=54,cx=fighter.x+facing*range*.42,cy=fighter.y-30;
-    if (/projectile/i.test(kind)||/projectile|lane/i.test(mode)) { const t=Math.max(.18,Math.min(.92,(progress-(profile.windup||.18))/Math.max(.12,profile.active||.3))); cx=fighter.x+facing*(range*.20+range*.72*t); w=Math.max(28,range*.24); h=['projector','cannons','blasters'].includes(family)?42:30; cy=fighter.y-34; }
-    else if (/vertical|column|launch|overhead/i.test(mode)||['upSignature','upHeavy','recovery'].includes(a.resonanceMoveKey)) { w=['spear','trident','rapier'].includes(family)?42:64; h=range*.82; cx=fighter.x+facing*(['spear','trident','rapier'].includes(family)?10:0); cy=fighter.y-range*.42; }
-    else if (/ground|slam|shockwave/i.test(mode)||['downSignature','downHeavy'].includes(a.resonanceMoveKey)) { w=Math.max(70,range*.92); h=Math.max(34,range*.34); cx=fighter.x+facing*(family==='maul'||family==='hammer'?18:0); cy=fighter.y+7; }
-    else if (kind.includes('grab')) { w=range*.62; h=76; cx=fighter.x+facing*range*.34; cy=fighter.y-30; }
-    else if (['hammer','maul','greatblade','scythe','axe','halberd','flail','whip','tether'].includes(family)) { w=range*.92; h=kind.includes('heavy')?82:64; cx=fighter.x+facing*range*.36; cy=fighter.y-31; }
-    ctx.save(); ctx.fillStyle='rgba(255,45,90,.20)'; ctx.strokeStyle='#ff315d'; ctx.lineWidth=3; ctx.setLineDash([7,4]); ctx.fillRect(cx-w/2,cy-h/2,w,h); ctx.strokeRect(cx-w/2,cy-h/2,w,h); ctx.setLineDash([]); ctx.shadowColor='#ff315d'; ctx.shadowBlur=10; ctx.font='bold 10px monospace'; ctx.textAlign='center'; ctx.fillStyle='#ff315d'; ctx.fillText(`${label} CONSTRUCT HITBOX · ${a.resonanceMoveKey||'attack'}`,cx,cy-h/2-6); ctx.restore();
-    return;
+    let boxes=[]; try { boxes=getConstructAttackGeometry(fighter)||[]; } catch (err) { return; }
+    if (!boxes.length) return;
+    ctx.save(); ctx.lineWidth=3; ctx.strokeStyle='#ff315d'; ctx.fillStyle='rgba(255,45,90,.20)';
+    ctx.shadowColor='#ff315d'; ctx.shadowBlur=9; ctx.setLineDash([6,3]);
+    for (const hb of boxes) {
+      if (hb.shape==='circle') { ctx.beginPath(); ctx.arc(hb.x,hb.y,hb.r||0,0,Math.PI*2); ctx.fill(); ctx.stroke(); }
+      else if (hb.shape==='polygon' && hb.points?.length) { ctx.beginPath(); ctx.moveTo(hb.points[0][0],hb.points[0][1]); for(let i=1;i<hb.points.length;i++)ctx.lineTo(hb.points[i][0],hb.points[i][1]);ctx.closePath();ctx.fill();ctx.stroke(); }
+      else { ctx.fillRect(hb.left,hb.top,hb.w,hb.h); ctx.strokeRect(hb.left,hb.top,hb.w,hb.h); }
+    }
+    const hb=boxes[0]; ctx.setLineDash([]); ctx.shadowBlur=0; ctx.font='bold 10px monospace'; ctx.textAlign='center'; ctx.fillStyle='#ff315d';
+    ctx.fillText(`${label} CONSTRUCT ${fighter.attackData.resonanceMoveKey||'ATTACK'}`,hb.x,hb.top-6); ctx.restore(); return;
   }
   let boxes = [];
   try { boxes = getActiveSpecHitboxes(fighter) || []; } catch (err) { return; }
   if (!boxes.length) return;
-  ctx.save();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = '#FF3B5C';
-  ctx.fillStyle = 'rgba(255,59,92,0.10)';
-  ctx.shadowColor = '#FF3B5C';
-  ctx.shadowBlur = 8;
+  ctx.save(); ctx.lineWidth=2; ctx.strokeStyle='#FF3B5C'; ctx.fillStyle='rgba(255,59,92,0.10)'; ctx.shadowColor='#FF3B5C'; ctx.shadowBlur=8;
   for (const hb of boxes) {
     ctx.beginPath();
-    if (hb.shape === 'circle') {
-      ctx.arc(hb.x, hb.y, hb.r, 0, Math.PI * 2);
-    } else if (hb.shape === 'box') {
-      ctx.rect(hb.x - hb.w / 2, hb.y - hb.h / 2, hb.w, hb.h);
-    } else if (hb.shape === 'capsule') {
-      const dx = hb.x2 - hb.x1, dy = hb.y2 - hb.y1;
-      const len = Math.hypot(dx, dy) || 1;
-      const nx = -dy / len * hb.r, ny = dx / len * hb.r;
-      ctx.moveTo(hb.x1 + nx, hb.y1 + ny);
-      ctx.lineTo(hb.x2 + nx, hb.y2 + ny);
-      ctx.arc(hb.x2, hb.y2, hb.r, Math.atan2(ny, nx), Math.atan2(-ny, -nx));
-      ctx.lineTo(hb.x1 - nx, hb.y1 - ny);
-      ctx.arc(hb.x1, hb.y1, hb.r, Math.atan2(-ny, -nx), Math.atan2(ny, nx));
-      ctx.closePath();
-    } else if (hb.shape === 'polygon' && hb.points?.length) {
-      ctx.moveTo(hb.points[0][0], hb.points[0][1]);
-      for (let i = 1; i < hb.points.length; i++) ctx.lineTo(hb.points[i][0], hb.points[i][1]);
-      ctx.closePath();
-    } else continue;
-    ctx.fill();
-    ctx.stroke();
+    if (hb.shape === 'circle') ctx.arc(hb.x, hb.y, hb.r, 0, Math.PI * 2);
+    else if (hb.shape === 'box') ctx.rect(hb.x - hb.w / 2, hb.y - hb.h / 2, hb.w, hb.h);
+    else if (hb.shape === 'capsule') { const dx=hb.x2-hb.x1,dy=hb.y2-hb.y1,len=Math.hypot(dx,dy)||1,nx=-dy/len*hb.r,ny=dx/len*hb.r;ctx.moveTo(hb.x1+nx,hb.y1+ny);ctx.lineTo(hb.x2+nx,hb.y2+ny);ctx.arc(hb.x2,hb.y2,hb.r,Math.atan2(ny,nx),Math.atan2(-ny,-nx));ctx.lineTo(hb.x1-nx,hb.y1-ny);ctx.arc(hb.x1,hb.y1,hb.r,Math.atan2(-ny,-nx),Math.atan2(ny,nx));ctx.closePath(); }
+    else if (hb.shape === 'polygon' && hb.points?.length) { ctx.moveTo(hb.points[0][0],hb.points[0][1]); for(let i=1;i<hb.points.length;i++)ctx.lineTo(hb.points[i][0],hb.points[i][1]);ctx.closePath(); }
+    else continue;
+    ctx.fill();ctx.stroke();
   }
-  // Label is anchored beside the first actual hitbox rather than a generic range box.
-  const first = boxes[0];
-  const lx = first.x ?? first.points?.[0]?.[0] ?? first.x1 ?? fighter.x;
-  const ly = first.y ?? first.points?.[0]?.[1] ?? first.y1 ?? fighter.y - 60;
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = '#FF3B5C';
-  ctx.font = 'bold 9px Orbitron, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${label} ATTACK`, lx, ly - 10);
-  ctx.restore();
+  const first=boxes[0],lx=first.x??first.points?.[0]?.[0]??first.x1??fighter.x,ly=first.y??first.points?.[0]?.[1]??first.y1??fighter.y-60;
+  ctx.shadowBlur=0;ctx.fillStyle='#FF3B5C';ctx.font='bold 9px Orbitron, sans-serif';ctx.textAlign='center';ctx.fillText(`${label} ATTACK`,lx,ly-10);ctx.restore();
 }
 
 export default function PlatformFighter({
@@ -1834,7 +1800,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           // Hurtbox remains a body-shaped training box; attack hitboxes are the
           // exact authored circles/capsules/polygons used by collision.
           drawTrainingHitbox(ctx, f.x, f.y - 28, 44, 76, label);
-          if (f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
+          if (f.attackData && !f.resonanceActive && (f.state === 'attacking' || f.state === 'superAttack')) {
             drawExactAttackHitboxOverlay(ctx, f, label);
           }
         };

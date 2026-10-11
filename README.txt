@@ -1,29 +1,31 @@
-RESONANCE CONSTRUCTS — VISIBLE ANIMATION / HITBOX / GRAND CIRCUIT SPAWN PATCH
+RESONANCE CONSTRUCTS — ATTACK GEOMETRY / GIANT SMEARS / GAUNTLET FIX
 
-Replacement files:
-- renderer.js
+Replacement source files (copy these into the project root and overwrite matching files):
 - resonanceConstructs.js
+- fighter.js
+- renderer.js
 - PlatformFighter.jsx
+- GCMatch.jsx
 - CaptureTheFlag.jsx
 - BattleRoyaleEngine.jsx
-- GCMatch.jsx
-
-Install:
-1. Back up the six matching files in your project root.
-2. Extract these files into the project root and overwrite matching files.
-3. Restart the development server and test each mode.
 
 What this patch changes:
-- Fixes the construct attack-effect branch condition: move attacks carry resonanceAnimation/resonanceHitboxFamily metadata, so the renderer must check those fields or it can skip the construct-specific effect path. This was a concrete reason the intended animation art could fail to appear.
-- Increases the size, brightness, and readability of construct attack effects, with broad attack silhouettes that respond to vertical, ground, projectile, and sweeping move types and the character/family-authored mode.
-- Allows construct attack effects to render in Grand Circuit, Capture the Flag, and Battle Royale instead of explicitly suppressing them while a construct is active.
-- Draws the construct's active collision rectangle when the existing Settings > Hitboxes option is enabled in PlatformFighter and Grand Circuit. The collision logic itself remains in fighter.js and uses the same move profile/timing inputs.
-- Places Grand Circuit's orb on a valid arena platform at spawn instead of beginning above the arena, and filters out top-boundary/vertical wall surfaces as orb landing surfaces.
+- Each construct move's live collision uses getConstructAttackGeometry(), the same geometry drawn by the Settings > Hitboxes overlay in Platform Fighter and Grand Circuit.
+- Hitboxes only exist during the move profile's active frames. Jab, projectile, grab, rising attack, ground slam, radial burst, and slash use different geometry; slash/vertical/ground attacks use tighter polygons instead of a generic family-sized rectangle.
+- Construct attacks get large, high-contrast animated smear/effect frames. Fire, water, nature, ice, lightning, and soul/reaper family modes have different visual treatment; ranged attacks travel, and upward/downward attacks are drawn above/below the fighter.
+- Construct attacks can dash, rise, slam, or briefly snare based on their move profile.
+- Gauntlets calculate hand joints at the same 36-unit character scale used by the fighter renderer, fixing the old tiny-scale hand coordinates that placed them incorrectly.
+- Grand Circuit uses the same live construct hitbox geometry for the existing hitbox visibility setting.
 
-Validation performed:
-- Node syntax checks passed for resonanceConstructs.js, renderer.js, and fighter.js.
-- TypeScript transpile syntax checks passed for PlatformFighter.jsx, CaptureTheFlag.jsx, BattleRoyaleEngine.jsx, and GCMatch.jsx.
-- All 7 existing resonance construct test suites passed.
+Install:
+1. Back up the seven listed files.
+2. Extract this ZIP directly into the project root and overwrite matching files.
+3. Restart the dev server and test several construct families and move slots, including opposite facing directions.
+4. Turn on Settings > Hitboxes and confirm the red geometry follows the visible active smear/projectile.
 
-Limitations:
-- No production build or live browser gameplay test was run in this environment. This patch is not a claim that Purple's separate pickup/camera bug is now fixed; that needs a reproducible live symptom/stack trace to trace reliably.
+Verification performed for this patch:
+- node --check passed for fighter.js, renderer.js, and resonanceConstructs.js.
+- TypeScript transpile syntax checks passed for all four JSX files.
+- Direct geometry checks passed for jab, slash polygon, rising polygon, ground slam, moving projectile, active timing, and grab profile.
+
+Limits: this patch has not been tested in a live browser match or a full production build. The hitbox overlay/collision share one geometry helper, but gameplay still needs an in-match test in the user's project.
