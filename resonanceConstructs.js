@@ -155,7 +155,7 @@ function constructWeaponPose(fighter) {
     }
     if(t>.68){angle*=.76;offsetX*=.45;offsetY*=.45;}
   }
-  const scale=1;
+  const scale=2;
   const fx=Number(fighter?.x)||0, fy=Number(fighter?.y)||0;
   // Each weapon family has its own attachment point/orientation. Feet weapons
   // sit on the boots, arm gear sits at the fists, shields stay in front, and
@@ -170,20 +170,20 @@ function constructWeaponPose(fighter) {
     core:[facing*21,-28,0], shards:[facing*17,-26,0], disc:[facing*9,-21,-.18],
     projector:[facing*5,-35,-.08], maul:[facing*8,-22,-.2], hammer:[facing*8,-22,-.2],
   })[spec.family] || [facing*(10+v*8),-23,-.38];
+  if(spec.family==='blade') { mount[0]=facing*13; mount[1]=-24; mount[2]=-.62; }
   const mountedAngle=mount[2];
   return {facing,angle:angle+mountedAngle,x:fx+mount[0]+offsetX,y:fy+mount[1]+bob+offsetY,scale,spec,action,slot,progress,active,holding};
 }
-const CONSTRUCT_ATTACK_SIZE = 2.5;
 function transformWeaponPoint(pose, lx, ly) {
   const c=Math.cos(pose.angle),s=Math.sin(pose.angle);
-  const size=CONSTRUCT_ATTACK_SIZE;
-  return [pose.x+pose.facing*((lx*size)*c-(ly*size)*s),pose.y+((lx*size)*s+(ly*size)*c)];
+  const k=pose.scale||1;
+  return [pose.x+pose.facing*(lx*c-ly*s)*k,pose.y+(lx*s+ly*c)*k];
 }
 function localCapsule(pose, a, b, r) {
   const p1=transformWeaponPoint(pose,a[0],a[1]),p2=transformWeaponPoint(pose,b[0],b[1]);
-  return {shape:'capsule',x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1],r:r*CONSTRUCT_ATTACK_SIZE};
+  return {shape:'capsule',x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1],r:r*(pose.scale||1)};
 }
-function localCircle(pose, p, r) { const q=transformWeaponPoint(pose,p[0],p[1]);return {shape:'circle',x:q[0],y:q[1],r:r*CONSTRUCT_ATTACK_SIZE}; }
+function localCircle(pose, p, r) { const q=transformWeaponPoint(pose,p[0],p[1]);return {shape:'circle',x:q[0],y:q[1],r:r*(pose.scale||1)}; }
 
 // Collision follows the same pose and local weapon silhouette as drawConstructWeapon.
 // This deliberately avoids the old oversized, fighter-centered generic attack boxes.
@@ -210,6 +210,34 @@ export function getResonanceConstructHitboxes(fighter) {
   const cap=(a1,b1,rad=r)=>localCapsule(pose,a1,b1,rad);
   const circ=(pt,rad=r)=>localCircle(pose,pt,rad);
   const geometry=String(a.resonanceGeometry||spec?.geometry||'').toLowerCase();
+  // Resonance Blade: seven individually authored attack paths and short active windows.
+  // Coordinates describe the sword edge/tip/handle in weapon-local space; transforms mirror for left-facing attacks.
+  if(fam==='blade') {
+    const name=String(a.resonanceMove||'').toLowerCase();
+    const slotName=String(a.resonanceMoveSlot||'').toLowerCase();
+    const sideHeavy=name.includes('crosscut') || (slotName.includes('side') && a.isHeavy);
+    const upHeavy=name.includes('rising edge') || (slotName.includes('up') && a.isHeavy);
+    const downHeavy=name.includes('groundbreaker') || (slotName.includes('down') && a.isHeavy);
+    const sideSig=name.includes('resonant lunge') || (slotName.includes('side') && !a.isHeavy && !slotName.includes('recovery'));
+    const upSig=name.includes('sky splitter') || (slotName.includes('up') && !a.isHeavy);
+    const downSig=name.includes('echo counter') || (slotName.includes('down') && !a.isHeavy);
+    const recovery=slotName.includes('recovery') || name.includes('ascending cut');
+    if(sideHeavy) {
+      if(p>=.22&&p<=.34) return [cap([8,-15],[37,-20],r*.62),cap([18,-10],[40,-18],r*.52)]; // downswing edge + smear
+      if(p>=.47&&p<=.61) return [cap([8,-25],[39,-9],r*.64),cap([17,-29],[41,-13],r*.5)]; // upswing finisher
+      return [];
+    }
+    if(upHeavy) { if(p<.34||p>.48)return []; return [cap([14,-29],[17,-55],r*.48),circ([17,-55],r*.38)]; }
+    if(downHeavy) { if(p<.34||p>.49)return []; return [cap([15,-7],[43,-3],r*.45),circ([43,-3],r*.4)]; }
+    if(sideSig) { if(p<.44||p>.54)return []; return [cap([12,-26],[42,-7],r*.7),cap([17,-28],[44,-10],r*.55)]; }
+    if(upSig) {
+      if(!((p>=.23&&p<=.29)||(p>=.34&&p<=.40)||(p>=.45&&p<=.51)||(p>=.56&&p<=.62))) return [];
+      const phase=Math.floor((p-.23)/.11)%2;
+      return phase===0?[cap([10,-18],[38,-37],r*.55)]:[cap([13,-37],[35,-15],r*.55)];
+    }
+    if(downSig) { if(p<.42||p>.51)return []; return [cap([2,-4],[15,-3],r*.34),circ([3,-4],r*.36)]; } // handle pommel jab only
+    if(recovery) { if(p<.28||p>.43)return []; return [cap([12,-22],[19,-53],r*.6),cap([17,-42],[24,-58],r*.45)]; }
+  }
   // Geometry tags authored per move control timing and collider form. These
   // branches intentionally run before family fallbacks so traps, counters,
   // rifts, spins and broad sweeps are not treated as ordinary sword slashes.
@@ -249,7 +277,7 @@ export function getResonanceConstructHitboxes(fighter) {
   }
   if(geometry==='grab') {
     if(p<.28 || p>.56) return [];
-    return [{shape:'box',x:pose.x+pose.facing*25-25,y:pose.y-42.5,w:50,h:67.5,kind:'grab',throwWindow:[.56,.78]}];
+    return [{shape:'box',x:pose.x+pose.facing*10-10,y:pose.y-17,w:20,h:27,kind:'grab',throwWindow:[.56,.78]}];
   }
   if(geometry==='combo') {
     // Combo move hit windows are filtered above; each window gets a tight
@@ -262,7 +290,7 @@ export function getResonanceConstructHitboxes(fighter) {
   if(isProjectile) {
     const origin=transformWeaponPoint(pose,[30, -4]);
     const travel=String(a.resonanceGeometry||'').includes('up') || move.includes('up') ? -1 : pose.facing;
-    return [{shape:'circle',x:origin[0]+travel*(20+p*50),y:origin[1]+(move.includes('down')?p*45:move.includes('up')?-p*45:0),r:Math.max(12.5,r*.85*CONSTRUCT_ATTACK_SIZE)}];
+    return [{shape:'circle',x:origin[0]+travel*(8+p*20),y:origin[1]+(move.includes('down')?p*18:move.includes('up')?-p*18:0),r:Math.max(5,r*.85)}];
   }
   // Narrow thrusts, jabs, and spear attacks stay narrow instead of inheriting
   // the broad sweep collider used by slashing weapons.
@@ -536,7 +564,7 @@ export function drawConstructWeapon(ctx, fighter, scale=1) {
     }
     if(recovering) { angle = angle*.76; offsetX*=.45; offsetY*=.45; }
   }
-  const size=scale*CONSTRUCT_ATTACK_SIZE*(1+(active?.09*swing:0));
+  const size=scale*2*(1+(active?.09*swing:0));
   const mount=({
     greaves:[0,7,-.08], claws:[facing*7,-20,-.18], tonfas:[facing*8,-20,-.18],
     tether:[facing*8,-20,-.14], blasters:[facing*9,-20,-.12], cannons:[facing*10,-20,-.08],
@@ -547,6 +575,7 @@ export function drawConstructWeapon(ctx, fighter, scale=1) {
     shards:[facing*17,-26,0], disc:[facing*9,-21,-.18], projector:[facing*5,-35,-.08],
     maul:[facing*8,-22,-.2], hammer:[facing*8,-22,-.2],
   })[spec.family] || [facing*(10+v*8),-23,-.38];
+  if(spec.family==='blade') { mount[0]=facing*13; mount[1]=-24; mount[2]=-.62; }
   const x=fighter.x+mount[0]*scale+offsetX, y=fighter.y+mount[1]*scale+bob*scale+offsetY;
   ctx.save();ctx.translate(x,y);ctx.scale(facing*size,size);ctx.rotate(angle+mount[2]);
   // Soft cyan bounce light and a narrow rim bloom, not a trailing line.
