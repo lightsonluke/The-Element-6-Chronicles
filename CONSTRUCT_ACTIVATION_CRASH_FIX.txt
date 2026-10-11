@@ -1,0 +1,19 @@
+Resonance Construct activation crash fix
+
+Files to overwrite in the existing project root:
+- resonanceConstructs.js
+- renderer.js
+- PlatformFighter.jsx
+- CaptureTheFlag.jsx
+- BattleRoyaleEngine.jsx
+
+What changed:
+- Construct character data now includes explicit resonanceFamily, resonanceShape, and resonanceConstruct fields for renderer compatibility.
+- Orb activation validates the constructed character before replacing the live character and rolls back safely if a custom/malformed roster entry throws.
+- Weapon rendering is isolated with a defensive catch in PlatformFighter, Capture the Flag, and Battle Royale so a renderer exception does not terminate the match loop.
+- Includes regression tests for orb activation/deactivation and rendering smoke tests.
+
+Install: back up those five existing files, then extract this ZIP into the existing project root and overwrite them. Run:
+node --test resonanceConstructs.test.mjs resonanceConstructsAnimation.test.mjs resonanceConstructsAudit.test.mjs resonanceActivationCrash.test.mjs
+
+Verified in the project source tree: all four test files pass. `npm run build` was attempted but could not run because Vite is not installed in this environment. A live browser test was not possible here. If it still crashes, send the browser console's first red error and stack trace; this patch logs activation/rendering failures explicitly rather than swallowing them.

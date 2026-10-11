@@ -196,18 +196,35 @@ export function makeConstructCharacter(baseChar, fighterId) {
   const powerAttack = { ...make(baseChar?.powerAttack, 'Resonance Burst', 1, 'dash', .92), sigType:'burst', resonanceMoveKey:'burst', resonanceAnimation:getConstructMoveProfile(spec.family,'burst',baseChar?.name || baseChar?.id || '') };
   const recoveryAttack = { ...make(baseChar?.signatures?.up, 'Recovery', spec.power+v, 'recovery', .9), isRecovery:true, sigType:'recovery', resonanceMoveKey:'recovery', resonanceAnimation:getConstructMoveProfile(spec.family,'recovery',baseChar?.name || baseChar?.id || '') };
   return { ...original, signatures, heavyAttack, upHeavy, downHeavy, lightAttack, normalAttack: lightAttack, aerialAttack, recoveryAttack, powerAttack,
+    resonanceFamily: spec.family, resonanceShape: spec.shape, resonanceConstruct: constructName,
     _resonanceConstruct:constructName, _resonanceOriginal:baseChar };
 
 }
 export function activateConstruct(fighter) {
   if (!fighter || fighter.resonanceActive || !fighter.char) return false;
-  fighter.resonanceOriginalChar = fighter.char._resonanceOriginal || fighter.char;
-  fighter.resonanceConstruct = getConstructForCharacter(fighter.resonanceOriginalChar);
-  fighter.resonanceActive = true;
-  fighter.char = makeConstructCharacter(fighter.resonanceOriginalChar, fighter.id);
-  fighter.resonanceActivationFrames = 36;
-  fighter.resonanceDeactivateFrames = 0;
-  return true;
+  const previousChar = fighter.char;
+  try {
+    const originalChar = previousChar._resonanceOriginal || previousChar;
+    const constructName = getConstructForCharacter(originalChar);
+    const constructChar = makeConstructCharacter(originalChar, fighter.id);
+    // Validate the exact fields consumed by updateFighter before swapping live state.
+    if (!constructChar || !constructChar.signatures || !constructChar.signatures.side || !constructChar.signatures.up || !constructChar.signatures.down || !constructChar.heavyAttack || !constructChar.lightAttack) return false;
+    fighter.resonanceOriginalChar = originalChar;
+    fighter.resonanceConstruct = constructName;
+    fighter.char = constructChar;
+    fighter.resonanceActive = true;
+    fighter.resonanceActivationFrames = 36;
+    fighter.resonanceDeactivateFrames = 0;
+    return true;
+  } catch (error) {
+    // A malformed/custom roster entry must not crash the match on orb pickup.
+    fighter.char = previousChar;
+    fighter.resonanceOriginalChar = null;
+    fighter.resonanceConstruct = null;
+    fighter.resonanceActive = false;
+    console.error('[Resonance Constructs] Activation failed safely:', error);
+    return false;
+  }
 }
 export function consumeConstructSuperInput(fighter, input) {
   if (!fighter?.resonanceActive || !input?.superMove) return false;
