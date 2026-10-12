@@ -726,7 +726,7 @@ export function drawConstructWeapon(ctx, fighter, scale=1) {
   }
   const drawSlot=String(attack?.resonanceMoveSlot||'').toLowerCase();
   if(active) { const authored=authoredWeaponMotion(spec.family, drawSlot, progress, facing, angle); if(authored){angle=authored.angle;offsetX+=authored.x*scale;offsetY+=authored.y*scale;} }
-  const size=scale*(1+(active?.09*swing:0));
+  const size=scale*2*(1+(active?.09*swing:0));
   const mount=({
     greaves:[0,7,-.08], claws:[facing*7,-20,-.18], tonfas:[facing*8,-20,-.18],
     tether:[facing*8,-20,-.14], blasters:[facing*9,-20,-.12], cannons:[facing*10,-20,-.08],

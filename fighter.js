@@ -2,6 +2,7 @@
 // Each fighter has: heavy attacks (unique per character), signatures, super moves, and power activation
 
 import { getPowerEffect, SINGLE_RANDOM_POWER_CHARS } from './powerEffects.js';
+import { getResonanceConstructHitboxes } from './resonanceConstructs.js';
 import { applyShikigamiStat } from './shikigami.js';
 import { DOWN_HEAVIES } from './downHeavies.js';
 import { UP_HEAVIES } from './upHeavies.js';
@@ -2167,7 +2168,7 @@ export function checkHit(attacker, defender) {
   // use their exact active geometry instead. Geometry generation is isolated so
   // one malformed optional attack can never take down the whole match.
   let activeSpecHitboxes = [];
-  try { activeSpecHitboxes = getActiveSpecHitboxes(attacker) || []; } catch (err) { activeSpecHitboxes = []; }
+  try { activeSpecHitboxes = attacker.attackData?.resonanceFamily ? (getResonanceConstructHitboxes(attacker) || []) : (getActiveSpecHitboxes(attacker) || []); } catch (err) { activeSpecHitboxes = []; }
   const hasExactSuper = attacker.attackData.isSuper && activeSpecHitboxes.length > 0;
   if (attacker.attackData.isSuper && attacker.char?.id?.startsWith('g1_') && !hasExactSuper) return false;
   if (attacker.attackData.isSuper && !hasExactSuper) {
