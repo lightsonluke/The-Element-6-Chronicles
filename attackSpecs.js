@@ -367,7 +367,7 @@ function polygonHitsBody(poly, bx, by, bw, bh){
   return false;
 }
 export function hitboxIntersectsBody(hb, defender){
-  const bw=28,bh=92,bx=defender.x,by=defender.y-46;
+  const bw=32,bh=72,bx=defender.x,by=defender.y-36;
   if(hb.shape==='circle') return pointRectDistance(hb.x,hb.y,bx,by,bw,bh)<=hb.r;
   if(hb.shape==='box') return Math.abs(hb.x-bx)<=hb.w/2+bw/2 && Math.abs(hb.y-by)<=hb.h/2+bh/2;
   if(hb.shape==='polygon') return polygonHitsBody(hb.points,bx,by,bw,bh);

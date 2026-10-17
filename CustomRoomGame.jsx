@@ -524,11 +524,11 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         const acc = getAccessory(loadout?.equippedAccessories?.[charData.id]);
         const skinColor = getCharRenderColor(charData.id, loadout?.equippedSkins);
         const accColor = skinColor && acc?.type === 'soccer_kit' ? skinColor : acc?.color;
-        skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive, f.emote, f.attackData));
-        if (acc && isBehindAccessory(acc.type)) drawAccessory(ctx, f.x, f.y, acc.type, accColor, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive, f.emote, f.attackData);
+        skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive));
+        if (acc && isBehindAccessory(acc.type)) drawAccessory(ctx, f.x, f.y, acc.type, accColor, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive);
         drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame || 0, 1, charData.isSpirit, f.state || 'idle', charData, f.powerActive, false, null, f.emote, f.attackData);
-        skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive, f.emote, f.attackData));
-        if (acc && !isBehindAccessory(acc.type)) drawAccessory(ctx, f.x, f.y, acc.type, accColor, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive, f.emote, f.attackData);
+        skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive));
+        if (acc && !isBehindAccessory(acc.type)) drawAccessory(ctx, f.x, f.y, acc.type, accColor, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive);
         if (f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
           if (f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, charData.color, f.attackData.progress, charData.superMove?.name, charData.id);
           else drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || charData.color, f.attackData.isNormal, charData.id, charData.power, f.powerActive);

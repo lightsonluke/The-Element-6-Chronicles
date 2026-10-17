@@ -53,7 +53,7 @@ function mkPlayer(char, side, ms) {
   const x = side === 1 ? P1_MIN + 140 : P2_MAX - 140;
   return {
     char, side, x, y: FLOOR, vx: 0, vy: 0, onGround: true, facing: side === 1 ? 1 : -1,
-    holding: null, ds: deriveStats(char, ms), superTimer: 0, stun: 0, throwAnimTimer: 0,
+    holding: null, ds: deriveStats(char, ms), superTimer: 0, stun: 0,
     frame: 0, aiThrow: 0, aiPickup: 0, dodgeFlash: 0,
   };
 }
@@ -296,7 +296,6 @@ export default function DodgeballGame({
     const opp = side === 1 ? s.p2 : s.p1;
     p.facing = opp.x > p.x ? 1 : -1;
     if (p.dodgeFlash > 0) p.dodgeFlash--;
-    if (p.throwAnimTimer > 0) p.throwAnimTimer--;
     if (p.stun > 0) { p.stun--; p.vy += GRAV; p.y += p.vy; if (p.y >= FLOOR) { p.y = FLOOR; p.vy = 0; } p.frame++; return; }
     // horizontal
     let move = 0; if (inp.left) move -= 1; if (inp.right) move += 1;
@@ -332,7 +331,7 @@ export default function DodgeballGame({
 
   function throwBall(s, p, inp, side, isSuper) {
     const b = p.holding; if (!b) return;
-    p.holding = null; p.throwAnimTimer = isSuper ? 20 : 16; b.heldBy = null; b.lastThrower = side; b.hitCd = 10;
+    p.holding = null; b.heldBy = null; b.lastThrower = side; b.hitCd = 10;
     s.stats[side - 1].throws++; if (isSuper) s.stats[side - 1].superThrows++;
     const speed = isSuper ? p.ds.superPower : p.ds.throwPower;
     // CPU throws carry an explicit target so the throw is actually aimed at
@@ -535,13 +534,11 @@ export default function DodgeballGame({
     if (!p.onGround) state = 'jumping';
     else if (Math.abs(p.vx) > 0.5) state = 'moving';
     let stretch = 0;
-    if (p.stun > 0) { stretch = Math.sin(s.frame * 0.4) * 3; state = 'hitstun'; }
-    else if (p.throwAnimTimer > 0) state = 'dodgeball-throw';
+    if (p.stun > 0) { stretch = Math.sin(s.frame * 0.4) * 3; state = 'hurt'; }
     const sf = 1.05;
     drawSportChar(ctx, p.x, p.y + stretch, char, {
       facing: p.facing, frame: p.frame, scale: sf, jersey: true, sport: 'dodgeball', state,
-      attackData: p.throwAnimTimer > 0 ? { progress: Math.max(0, Math.min(1, 1 - p.throwAnimTimer / 16)), type: 'throw' } : null,
-      teamColor: side === 1 ? p1TeamColor : p2TeamColor, equippedSkins, equippedAccessories, noWeapon: true,
+      teamColor: side === 1 ? p1TeamColor : p2TeamColor, equippedSkins, mergedAccessories, noWeapon: true,
     });
     // stun stars
     if (p.stun > 0) {

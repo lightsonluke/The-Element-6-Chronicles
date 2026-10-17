@@ -224,8 +224,8 @@ export function resolveAccColor(acc, char) {
 // Draws a full soccer kit (jersey + shorts) on a stickman at (x, y) baseline.
 // Jersey shows H.O.C., character name, and character number. Shorts match color + number.
 // Jersey + shorts now track the character's actual animated limbs (bob, lean, arm + leg swing).
-export function drawSoccerKit(ctx, x, y, color, charId, frame = 0, scale = 1, state = 'idle', facing = 1, powerActive = null, emote = null, attackData = null) {
-  const pose = getLimbPose(frame, state, facing, scale, powerActive, emote, attackData);
+export function drawSoccerKit(ctx, x, y, color, charId, frame = 0, scale = 1, state = 'idle', facing = 1, powerActive = null, emote = null) {
+  const pose = getLimbPose(frame, state, facing, scale, powerActive, emote);
   const s = pose.s;
   const charNum = getCharNumber(charId);
   const charName = getCharName(charId);
@@ -234,19 +234,21 @@ export function drawSoccerKit(ctx, x, y, color, charId, frame = 0, scale = 1, st
 
   const torsoTopY = pose.torsoTopY;
   const hipY = pose.hipY;
-  const jW = s * 0.27;
+  const jW = s * 0.72;
 
   ctx.save();
   ctx.translate(x, y);
+  ctx.rotate(pose.lean);
 
-  // ── Jersey (torso), fitted to the slim stick-figure chest ──
+  // ── Jersey (torso) ──
   ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.moveTo(-jW/2, pose.torsoTop.y); ctx.lineTo(jW/2, pose.torsoTop.y);
-  ctx.lineTo(jW*0.39, pose.torsoBottom.y); ctx.lineTo(-jW*0.39, pose.torsoBottom.y); ctx.closePath();
+  ctx.roundRect(-jW / 2, torsoTopY, jW, hipY - torsoTopY, 5);
   ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.25)';
-  ctx.fillRect(-jW * 0.42, pose.torsoTop.y, jW * 0.84, Math.max(1, s*0.025));
+  ctx.fillRect(-jW / 2, torsoTopY, jW, 2);
+  ctx.fillRect(-jW / 2, torsoTopY, 3, hipY - torsoTopY);
+  ctx.fillRect(jW / 2 - 3, torsoTopY, 3, hipY - torsoTopY);
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
   ctx.font = `bold ${Math.max(5, Math.floor(s * 0.17))}px Orbitron, sans-serif`;
   ctx.textAlign = 'center';
@@ -262,25 +264,25 @@ export function drawSoccerKit(ctx, x, y, color, charId, frame = 0, scale = 1, st
   ctx.shadowBlur = 0;
 
   // ── Sleeves ── attached at shoulders, rotate with the arm swing
-  const drawSleeveSegment = (a, b, width) => {
-    ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = width;
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = Math.max(0.7, width * 0.12);
-    ctx.beginPath(); ctx.moveTo(a.x-width*0.15, a.y); ctx.lineTo(b.x-width*0.15, b.y); ctx.stroke();
+  const drawSleeve = (sx, sy, angle) => {
+    ctx.save(); ctx.translate(sx, sy); ctx.rotate(angle);
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.roundRect(-s * 0.12, 0, s * 0.24, s * 0.22, 4); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillRect(-s * 0.12, 0, s * 0.24, 2);
+    ctx.restore();
   };
-  drawSleeveSegment(pose.shoulders.left, pose.elbows.left, s*0.105);
-  drawSleeveSegment(pose.elbows.left, pose.hands.left, s*0.095);
-  drawSleeveSegment(pose.shoulders.right, pose.elbows.right, s*0.105);
-  drawSleeveSegment(pose.elbows.right, pose.hands.right, s*0.095);
+  drawSleeve(pose.shoulders.left.x, pose.shoulders.left.y, pose.armAngleL);
+  drawSleeve(pose.shoulders.right.x, pose.shoulders.right.y, pose.armAngleR);
 
   // ── Shorts ── split L/R, each leg swings with the thigh
   const drawShort = (hx, hy, angle) => {
     ctx.save(); ctx.translate(hx, hy); ctx.rotate(angle);
     ctx.fillStyle = color;
-    ctx.beginPath(); ctx.roundRect(-s * 0.075, 0, s * 0.15, s * 0.14, 2); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(-s * 0.14, 0, s * 0.28, s * 0.22, 3); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.fillRect(-s * 0.065, 0, 1, s * 0.14);
-    ctx.fillRect(s * 0.055, 0, 1, s * 0.14);
+    ctx.fillRect(-s * 0.14, 0, 2, s * 0.22);
+    ctx.fillRect(s * 0.12, 0, 2, s * 0.22);
     ctx.restore();
   };
   drawShort(pose.hips.left.x, pose.hips.left.y, pose.legAngleL);
@@ -307,14 +309,14 @@ function getClanBadgeImage() {
   return clanBadgeImageCache.image;
 }
 
-export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, charId = '', state = 'idle', facing = 1, powerActive = null, emote = null, attackData = null) {
+export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, charId = '', state = 'idle', facing = 1, powerActive = null, emote = null) {
   if (!type) return;
   // colorMode (universal) accessories have no fixed color; callers that don't
   // resolve against a character pass undefined here. Default to a neutral
   // shade so gradient stops like `color + '88'` never produce "undefined88".
   if (!color) color = '#CCCCCC';
   const t = frame * 0.05;
-  const pose = getLimbPose(frame, state, facing, scale, powerActive, emote, attackData);
+  const pose = getLimbPose(frame, state, facing, scale, powerActive, emote);
   const s = pose.s;
   // Body part positions — now follow the actual animated limbs (bob/lean/swing)
   const headR = pose.headR;
@@ -341,53 +343,69 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
 
   if (type === 'hoodie' || type === 'cardigan' || type === 'jacket' || type === 'tee' || type === 'vest') {
     ctx.save();
-    const top = torsoTopY - s * 0.015;
-    const bottom = hipY + s * 0.025;
-    // Fitted, narrow clothing that follows the slim stick-figure silhouette.
-    const topW = s * (type === 'vest' ? 0.235 : 0.255);
-    const botW = s * (type === 'vest' ? 0.19 : 0.215);
-    ctx.fillStyle = color; ctx.globalAlpha = 0.96;
-    ctx.beginPath();
-    ctx.moveTo(x - topW / 2, top); ctx.quadraticCurveTo(x, top - s * 0.015, x + topW / 2, top);
-    ctx.lineTo(x + botW / 2, bottom); ctx.quadraticCurveTo(x, bottom + s * 0.035, x - botW / 2, bottom); ctx.closePath(); ctx.fill();
+    const torsoW = s * 0.68;
+    const top = torsoTopY - s * 0.02;
+    const bottom = hipY + s * 0.08;
+    const armLen = Math.hypot(pose.hands.left.x - pose.shoulders.left.x, pose.hands.left.y - pose.shoulders.left.y);
+    const sleeveExtra = (type === 'hoodie' || type === 'cardigan' || type === 'jacket') ? s * 0.14 : type === 'tee' ? s * 0.02 : 0;
+    const sleeveLen = type === 'vest' ? 0 : armLen + sleeveExtra;
+    const sleeveWidth = s * 0.25;
 
-    // Sleeves are two separate capsules each: shoulder-to-elbow and elbow-to-hand.
-    // Every part follows the pose skeleton rather than rotating one sleeve around the shoulder.
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.98;
+    ctx.beginPath();
+    ctx.roundRect(x - torsoW / 2, top, torsoW, bottom - top, s * 0.08);
+    ctx.fill();
+
     if (type !== 'vest') {
-      const sleeveWidth = s * (type === 'tee' ? 0.105 : 0.135);
-      const drawCapsule = (a, b, width) => {
-        ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      const sleeve = (sx, sy, angle, sideColor = color) => {
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(angle);
+        ctx.fillStyle = sideColor;
+        ctx.beginPath();
+        ctx.roundRect(-sleeveWidth / 2, -s * 0.015, sleeveWidth, sleeveLen, sleeveWidth / 2);
+        ctx.fill();
+        ctx.restore();
       };
-      drawCapsule(shoulderL, elbowL, sleeveWidth);
-      drawCapsule(elbowL, handL, sleeveWidth * 0.92);
-      drawCapsule(shoulderR, elbowR, sleeveWidth);
-      drawCapsule(elbowR, handR, sleeveWidth * 0.92);
+      sleeve(shoulderL.x, shoulderL.y, pose.armAngleL);
+      sleeve(shoulderR.x, shoulderR.y, pose.armAngleR);
     }
+
     if (type === 'hoodie') {
       ctx.fillStyle = color;
-      ctx.beginPath(); ctx.arc(x, headY - s * 0.025, headR * 1.05, Math.PI, Math.PI * 2); ctx.lineTo(x + headR * 0.92, headY + s * 0.05); ctx.lineTo(x - headR * 0.92, headY + s * 0.05); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillRect(x - s * 0.012, bottom - s * 0.15, s * 0.024, s * 0.11);
+      ctx.beginPath();
+      ctx.arc(x, headY - s * 0.02, s * 0.39, Math.PI, Math.PI * 2);
+      ctx.lineTo(x + s * 0.29, headY + s * 0.08);
+      ctx.lineTo(x - s * 0.29, headY + s * 0.08);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.14)';
+      ctx.fillRect(x - s * 0.025, bottom - s * 0.22, s * 0.05, s * 0.16);
     } else if (type === 'cardigan' || type === 'jacket') {
-      ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(x - s * 0.009, top + s * 0.035, s * 0.018, bottom - top - s * 0.07);
+      ctx.fillStyle = 'rgba(255,255,255,0.16)';
+      ctx.fillRect(x - s * 0.018, top + s * 0.04, s * 0.036, bottom - top - s * 0.08);
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillRect(x - s * 0.03, top + s * 0.04, s * 0.02, bottom - top - s * 0.08);
     } else if (type === 'tee') {
-      ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(x - topW * 0.38, top + s * 0.07, topW * 0.76, s * 0.025);
-    } else if (type === 'vest') {
-      ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillRect(x - topW * 0.4, top + s * 0.04, topW * 0.8, s * 0.025);
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.fillRect(x - torsoW * 0.38, top + s * 0.06, torsoW * 0.76, s * 0.035);
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.14)';
+      ctx.fillRect(x - torsoW * 0.5, top + s * 0.04, torsoW, s * 0.045);
     }
     ctx.restore();
   } else if (type === 'pants' || type === 'jeans' || type === 'shorts' || type === 'sweatpants') {
     ctx.save();
-    const width = s * (type === 'shorts' ? 0.115 : 0.135);
-    const drawSegment = (a, b, w) => {
-      ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.beginPath(); ctx.moveTo(x + a.x, y + a.y); ctx.lineTo(x + b.x, y + b.y); ctx.stroke();
+    const len = type === 'shorts' ? s * 0.28 : s * 0.64;
+    const legW = type === 'jeans' ? s * 0.24 : s * 0.26;
+    const drawLeg = (hip, angle) => {
+      ctx.save(); ctx.translate(hip.x, hip.y); ctx.rotate(angle);
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.roundRect(-legW/2, 0, legW, len, legW/2); ctx.fill();
+      ctx.restore();
     };
-    const local = (pair) => ({ left: pair.left, right: pair.right });
-    ['left','right'].forEach(sideName => {
-      drawSegment(pose.hips[sideName], pose.knees[sideName], width);
-      if (type !== 'shorts') drawSegment(pose.knees[sideName], pose.feet[sideName], width * 0.94);
-    });
+    drawLeg(pose.hips.left, pose.legAngleL); drawLeg(pose.hips.right, pose.legAngleR);
     ctx.restore();
   } else if (type === 'cap' || type === 'beret' || type === 'beanie' || type === 'bucket_hat') {
     ctx.save(); ctx.fillStyle = color;
@@ -448,8 +466,8 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
     ctx.shadowBlur = 0; ctx.restore();
   } else if (type === 'shoes') {
     ctx.save(); ctx.fillStyle = color; ctx.globalAlpha = 0.85;
-    ctx.beginPath(); ctx.ellipse(footL.x, footL.y, s * 0.075, s * 0.045, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(footR.x, footR.y, s * 0.075, s * 0.045, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(footL.x - s * 0.1, footL.y - s * 0.04, s * 0.2, s * 0.1, 3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(footR.x - s * 0.1, footR.y - s * 0.04, s * 0.2, s * 0.1, 3); ctx.fill();
     ctx.restore();
   } else if (type === 'flippers') {
     ctx.save(); ctx.fillStyle = color; ctx.globalAlpha = 0.8;
@@ -461,11 +479,11 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
     ctx.save(); ctx.fillStyle = color; ctx.globalAlpha = 0.85;
     ctx.shadowColor = color; ctx.shadowBlur = 4;
     // Left lens
-    ctx.beginPath(); ctx.roundRect(x - headR * 0.80, headY - headR * 0.05, headR * 0.62, headR * 0.36, 2); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x - s * 0.28, headY - s * 0.03, s * 0.2, s * 0.12, 3); ctx.fill();
     // Right lens
-    ctx.beginPath(); ctx.roundRect(x + headR * 0.18, headY - headR * 0.05, headR * 0.62, headR * 0.36, 2); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x + s * 0.08, headY - s * 0.03, s * 0.2, s * 0.12, 3); ctx.fill();
     // Bridge
-    ctx.fillRect(x - headR * 0.18, headY + headR * 0.03, headR * 0.36, headR * 0.08);
+    ctx.fillRect(x - s * 0.08, headY - s * 0.01, s * 0.16, s * 0.04);
     // Highlight on lenses
     ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.shadowBlur = 0;
     ctx.beginPath(); ctx.roundRect(x - s * 0.25, headY - s * 0.02, s * 0.06, s * 0.04, 2); ctx.fill();
@@ -479,12 +497,12 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
     ctx.restore();
   } else if (type === 'gloves') {
     ctx.save(); ctx.fillStyle = color; ctx.globalAlpha = 0.85;
-    ctx.beginPath(); ctx.arc(handL.x, handL.y, s * 0.065, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(handR.x, handR.y, s * 0.065, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(handL.x, handL.y, s * 0.1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(handR.x, handR.y, s * 0.1, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   } else if (type === 'mask') {
     ctx.save(); ctx.fillStyle = color; ctx.globalAlpha = 0.65;
-    const mw = headR * 1.65;
+    const mw = s * 0.5;
     ctx.beginPath(); ctx.roundRect(x - mw / 2, headY - s * 0.06, mw, s * 0.2, 4); ctx.fill();
     ctx.fillStyle = color + '66';
     ctx.beginPath(); ctx.arc(x - s * 0.11, headY + s * 0.03, s * 0.04, 0, Math.PI * 2); ctx.fill();
@@ -502,14 +520,9 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
     ctx.beginPath(); ctx.ellipse(shoulderR.x, shoulderR.y, s * 0.16, s * 0.12, 0, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   } else if (type === 'armguards') {
-    ctx.save(); ctx.globalAlpha = 0.78; ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    // Forearm plates follow elbow-to-hand direction; a small elbow cap overlaps the segment.
-    ctx.lineWidth = s * 0.145;
-    ctx.beginPath(); ctx.moveTo(elbowL.x, elbowL.y); ctx.lineTo(handL.x, handL.y); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(elbowR.x, elbowR.y); ctx.lineTo(handR.x, handR.y); ctx.stroke();
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(elbowL.x, elbowL.y, s*0.075, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(elbowR.x, elbowR.y, s*0.075, 0, Math.PI*2); ctx.fill();
+    ctx.save(); ctx.fillStyle = color; ctx.globalAlpha = 0.7;
+    ctx.beginPath(); ctx.roundRect(elbowL.x - s * 0.05, elbowL.y - s * 0.09, s * 0.1, s * 0.18, 3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(elbowR.x - s * 0.05, elbowR.y - s * 0.09, s * 0.1, s * 0.18, 3); ctx.fill();
     ctx.restore();
   } else if (type === 'kneepads') {
     ctx.save(); ctx.fillStyle = color; ctx.globalAlpha = 0.75;
@@ -968,11 +981,11 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
     ctx.beginPath(); ctx.roundRect(x + headR, headY - s * 0.05, s * 0.14, s * 0.18, 3); ctx.fill();
     ctx.restore();
   } else if (type === 'soccer_kit' || type === 'jersey') {
-    drawSoccerKit(ctx, x, y, color, charId, frame, scale, state, facing, powerActive, emote, attackData);
+    drawSoccerKit(ctx, x, y, color, charId, frame, scale);
   } else if (type === 'volleyball_kit') {
-    drawSoccerKit(ctx, x, y, color, charId, frame, scale, state, facing, powerActive, emote, attackData);
+    drawSoccerKit(ctx, x, y, color, charId, frame, scale);
     // Diagonal white stripe over the jersey torso (volleyball signature look)
-    const jW = s * 0.27;
+    const jW = s * 0.72;
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(pose.lean);
@@ -987,7 +1000,7 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
     ctx.closePath(); ctx.fill();
     ctx.restore();
   } else if (type === 'baseball_kit') {
-    drawSoccerKit(ctx, x, y, color, charId, frame, scale, state, facing, powerActive, emote, attackData);
+    drawSoccerKit(ctx, x, y, color, charId, frame, scale);
     // Baseball: long WHITE pants regardless of shirt color — covers from hip to ankle
     ctx.save();
     ctx.translate(x, y);
@@ -1018,10 +1031,10 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
     }
     ctx.restore();
   } else if (type === 'basketball_kit') {
-    drawSoccerKit(ctx, x, y, color, charId, frame, scale, state, facing, powerActive, emote, attackData);
+    drawSoccerKit(ctx, x, y, color, charId, frame, scale);
     // Basketball: tank-top look — colored torso with side trim + shorts
     ctx.save(); ctx.translate(x, y); ctx.rotate(pose.lean);
-    const jW = s * 0.27;
+    const jW = s * 0.72;
     // Tank straps (narrower shoulders)
     ctx.fillStyle = color;
     ctx.fillRect(-jW * 0.3, pose.torsoTopY, jW * 0.1, s * 0.1);
@@ -1029,10 +1042,10 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
     // Number badge on shorts
     ctx.restore();
   } else if (type === 'tennis_kit') {
-    drawSoccerKit(ctx, x, y, color, charId, frame, scale, state, facing, powerActive, emote, attackData);
+    drawSoccerKit(ctx, x, y, color, charId, frame, scale);
     // Tennis: white polo with colored collar + shorts
     ctx.save(); ctx.translate(x, y); ctx.rotate(pose.lean);
-    const jW = s * 0.27;
+    const jW = s * 0.72;
     // Collar V
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.beginPath();
@@ -1042,10 +1055,10 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
     ctx.beginPath(); ctx.moveTo(0, pose.torsoTopY); ctx.lineTo(0, pose.torsoTopY + s * 0.15); ctx.stroke();
     ctx.restore();
   } else if (type === 'track_kit') {
-    drawSoccerKit(ctx, x, y, color, charId, frame, scale, state, facing, powerActive, emote, attackData);
+    drawSoccerKit(ctx, x, y, color, charId, frame, scale);
     // Track: singlet (sleeveless tank) + side stripe
     ctx.save(); ctx.translate(x, y); ctx.rotate(pose.lean);
-    const jW = s * 0.27;
+    const jW = s * 0.72;
     // Side stripe
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.fillRect(-jW / 2, pose.torsoTopY + s * 0.05, s * 0.05, pose.hipY - pose.torsoTopY - s * 0.05);

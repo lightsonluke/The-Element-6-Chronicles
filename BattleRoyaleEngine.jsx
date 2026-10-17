@@ -490,7 +490,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
       const col = skinColor || charData?.color || '#FFD700';
       // behind accessories
       if (!flashing) {
-        accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive, f.emote, f.attackData));
+        accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive));
       }
       // clone (power effect)
       if (f._clone && !flashing) {
@@ -504,7 +504,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
       if (!flashing && f.resonanceActive) drawConstructWeapon(ctx, f, 1);
       // front accessories
       if (!flashing) {
-        accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive, f.emote, f.attackData));
+        accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive));
       }
       drawShikigamiFollower(ctx, f, equippedShikigamiRef.current?.[charData?.id], f.frame || 0, 1);
       if (f.attackData && (f.state === 'attacking' || f.state === 'attackHold')) drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.holding ? (-1 - Math.max(0, Math.min(1, f.attackData.holdProgress || 0))) : f.attackData.progress, f.facing, f.attackData.color || col, f.attackData.isNormal, charData?.id, charData?.power, f.powerActive);

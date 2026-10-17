@@ -1446,17 +1446,14 @@ function drawTeamPlayer(ctx, s, team, active, ids, jersey, teamColor, side, equi
     if (!charObj) return;
     const isActive = i === active;
     let pose = 'idle';
-    if (p.actionState === 'bump' && p.actionTimer > 0) pose = 'volley-bump';
-    else if (p.actionState === 'set' && p.actionTimer > 0) pose = 'volley-set';
-    else if (p.actionState === 'spike' && p.actionTimer > 0) pose = 'volley-spike';
-    else if (p.diving || p.diveTimer > 0) pose = 'volley-dive';
-    else if (!p.onGround) pose = 'jumping';
+    if (!p.onGround) pose = 'jumping';
+    else if (p.actionState === 'bump' || p.actionState === 'spike' || p.actionState === 'set') pose = 'attacking';
     else if (Math.abs(p.vx) > 0.3) pose = 'moving';
     drawSportChar(ctx, p.x, p.y, charObj, {
       facing: side === 1 ? 1 : -1,
       frame: s.frame, scale: 1.05,
       jersey, sport: 'volleyball', teamColor,
-      state: pose, attackData: p.actionTimer > 0 ? { progress: Math.max(0, Math.min(1, 1 - p.actionTimer / 15)), type: p.actionState } : null,
+      state: pose,
       equippedSkins, equippedAccessories,
     });
     if (p.actionState === 'set' && p.actionTimer > 0) {
