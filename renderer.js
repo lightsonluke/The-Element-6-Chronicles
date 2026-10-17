@@ -10,7 +10,7 @@ import { getAttackSpecForData } from './attackSpecs.js';
 import { drawSpecAttack, drawSpecSuper } from './attackSpecRenderer.js';
 
 // ─── STAGE MAPS ─────────────────────────────────────────────────────────────
-export const STAGE_MAPS = [
+const ALL_STAGE_MAPS = [
   { id: 'splitcity',    name: 'Split City',         skyTop: '#0a0a2e', skyBot: '#1a1250', groundColor: '#2a3a6a', accentColor: '#4466FF' },
   { id: 'basic',        name: 'Basic',              skyTop: '#0a0a2e', skyBot: '#1a1250', groundColor: '#2a3a6a', accentColor: '#4466FF' },
   { id: 'silvermansion', name: "Silver's Mansion",  skyTop: '#0d0d1a', skyBot: '#1a1a2a', groundColor: '#3a3a4a', accentColor: '#C0C0C0' },
@@ -79,6 +79,11 @@ export const STAGE_MAPS = [
   { id: 'crystal_library',  name: 'Crystal Library',    skyTop: '#050518', skyBot: '#151530', groundColor: '#252545', accentColor: '#7788CC' },
   { id: 'element6_source',  name: 'Element 6 Source',   skyTop: '#050510', skyBot: '#101030', groundColor: '#202040', accentColor: '#FFFFFF' },
 ];
+
+// Split City is the sole playable stage. Keep the older entries in this source
+// only so saved data that still contains an old stage id cannot break imports;
+// no stage picker or random-stage caller receives those entries anymore.
+export const STAGE_MAPS = ALL_STAGE_MAPS.filter((stage) => stage.id === 'splitcity');
 
 // ─── Character rendering ────────────────────────────────────────────────────
 
