@@ -319,8 +319,9 @@ export function updateAI(fighter, opponent, difficultyKey = 'regular', platforms
         else if (st === 'down' || st === 'downNormal') { hbW = 70; hbH = baseRange; hbCX = opponent.x; hbCY = opponent.y + baseRange / 2 - 20; }
         else if (st === 'heavy') { hbW = baseRange * 1.1; hbH = 80; hbCX = opponent.x + of * (hbW / 2 - 10); hbCY = opponent.y - 30; }
         else { hbW = baseRange; hbH = 60; hbCX = opponent.x + of * (hbW / 2 - 10); hbCY = opponent.y - 30; }
-        const dBW = 32, dBH = 72;
-        inHitbox = (hbCX - hbW / 2) < (fighter.x + dBW / 2) && (hbCX + hbW / 2) > (fighter.x - dBW / 2) && (hbCY - hbH / 2) < (fighter.y - 36 + dBH / 2) && (hbCY + hbH / 2) > (fighter.y - 36 - dBH / 2);
+        const dBW = 28, dBH = 92;
+        const dBX = fighter.x, dBY = fighter.y - dBH / 2;
+        inHitbox = (hbCX - hbW / 2) < (dBX + dBW / 2) && (hbCX + hbW / 2) > (dBX - dBW / 2) && (hbCY - hbH / 2) < (dBY + dBH / 2) && (hbCY + hbH / 2) > (dBY - dBH / 2);
       }
       if (inHitbox) {
         const inputs = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };

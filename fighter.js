@@ -1829,7 +1829,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
   fighter._slope = 0;
   fighter._slopeDownhill = 0;
 
-  const charHalfW = 16; // half-width for platform edge tolerance
+  const charHalfW = 14; // slimmer stick-figure half-width for platform edge tolerance
   fighter.wallSide = 0;
   const prevBottom = fighter.prevY;
   const currBottom = fighter.y;
@@ -2212,15 +2212,15 @@ export function checkHit(attacker, defender) {
     hbCX = attacker.x; hbCY = attacker.y + baseRange / 2 - 20;
   } else if (st === 'heavy') {
     hbW = baseRange * 1.1; hbH = 80;
-    hbCX = attacker.x + facing * (hbW / 2 - 10); hbCY = attacker.y - 30;
+    hbCX = attacker.x + facing * (hbW / 2 - 10); hbCY = attacker.y - 48;
   } else {
-    hbW = baseRange; hbH = 60;
-    hbCX = attacker.x + facing * (hbW / 2 - 10); hbCY = attacker.y - 30;
+    hbW = baseRange; hbH = 68;
+    hbCX = attacker.x + facing * (hbW / 2 - 10); hbCY = attacker.y - 48;
   }
 
   // Defender body box — rectangle centered on body
-  const dBW = 36, dBH = 84;
-  const dBX = defender.x, dBY = defender.y - 42;
+  const dBW = 28, dBH = 92;
+  const dBX = defender.x, dBY = defender.y - 46;
 
   // AABB overlap test
   return (hbCX - hbW / 2) < (dBX + dBW / 2) &&

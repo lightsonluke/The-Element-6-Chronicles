@@ -1695,8 +1695,8 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           const accs = getEquippedAccessories(botAccessoriesRef.current, effId);
           const skinColor = getCharRenderColor(effId, equippedSkins);
           // Behind layer (wings, capes, auras, orbiting effects)
-          skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote));
-          accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote));
+          skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote, f.attackData));
+          accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote, f.attackData));
         }
         // Shikigami — purely cosmetic floating companion (behind + above the fighter)
         drawShikigamiFollower(ctx, f, botShikigamiRef.current?.[effId], f.frame, fScale);
@@ -1707,10 +1707,10 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           const accs = getEquippedAccessories(botAccessoriesRef.current, effId);
           const skinColor = getCharRenderColor(effId, equippedSkins);
           // Front layer (crowns, horns, headgear, gear)
-          skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote));
-          accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote));
+          skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote, f.attackData));
+          accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote, f.attackData));
           // Crossover custom parts (e.g. The King of Fire's crown of fire)
-          getCrossoverParts(f.char.id, equippedCrossovers).filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote));
+          getCrossoverParts(f.char.id, equippedCrossovers).filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote, f.attackData));
         }
         if (f.attackData && (f.state === 'attacking' || f.state === 'attackHold')) {
           // Negative visual progress is reserved for Gen I's authored charging stance.
@@ -1786,7 +1786,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         const drawFighterBox = (f, label) => {
           // Hurtbox remains a body-shaped training box; attack hitboxes are the
           // exact authored circles/capsules/polygons used by collision.
-          drawTrainingHitbox(ctx, f.x, f.y - 34, 48, 94, label);
+          drawTrainingHitbox(ctx, f.x, f.y - 46, 28, 92, label);
           if (f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
             drawExactAttackHitboxOverlay(ctx, f, label);
           }

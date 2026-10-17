@@ -1063,10 +1063,11 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
           ctx.translate(-f.x, -(f.y - 30));
         }
         const _jerseyOn = (f === f1 || (teamMode && f === f1b)) ? p1Jersey : (f === f2 || (teamMode && f === f2b)) ? p2Jersey : true;
+        const _characterPose = (f.state === 'attacking' || f.state === 'superAttack') ? 'soccer-kick' : f.state;
         if (_jerseyOn) {
           // Jersey on — base character only, no skins/accessories underneath.
-          drawStickman(ctx, f.x, f.y, f.char.color, f.facing, f.frame, fScale, f.char.isSpirit, f._bicycleKick > 0 ? 'kicking' : (f.attackData && f.state === 'attacking' ? 'kicking' : f.state), f.char, f.powerActive, true, null, f.emote, f.attackData);
-          drawSoccerKit(ctx, f.x, f.y, f.char.color, f.char.id, f.frame, fScale, f.state, f.facing, f.powerActive);
+          drawStickman(ctx, f.x, f.y, f.char.color, f.facing, f.frame, fScale, f.char.isSpirit, _characterPose, f.char, f.powerActive, true, null, f.emote, f.attackData);
+          drawSoccerKit(ctx, f.x, f.y, f.char.color, f.char.id, f.frame, fScale, _characterPose, f.facing, f.powerActive, f.emote, f.attackData);
         } else {
           // No jersey — render skins + accessories normally.
           const crossoverColors = getCrossoverColor(f.char.id, equippedCrossovers);
@@ -1074,11 +1075,11 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
           const skinParts = getSkinParts(f.char.id, equippedSkins);
           const accs = getEquippedAccessories(mergedAccessories, f.char.id);
           const skinColor = crossoverColors ? crossoverColors.primary : getCharRenderColor(f.char.id, equippedSkins);
-          skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, f.char.id, f.state, f.facing, f.powerActive));
-          accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, fScale, f.char.id, f.state, f.facing, f.powerActive));
-          drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, f.char.isSpirit, f._bicycleKick > 0 ? 'kicking' : (f.attackData && f.state === 'attacking' ? 'kicking' : f.state), f.char, f.powerActive, true, null, f.emote, f.attackData);
-          skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, f.char.id, f.state, f.facing, f.powerActive));
-          accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, fScale, f.char.id, f.state, f.facing, f.powerActive));
+          skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, f.char.id,  _characterPose, f.facing, f.powerActive, f.emote, f.attackData));
+          accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, fScale, f.char.id,  _characterPose, f.facing, f.powerActive, f.emote, f.attackData));
+          drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, f.char.isSpirit, _characterPose, f.char, f.powerActive, true, null, f.emote, f.attackData);
+          skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, f.char.id,  _characterPose, f.facing, f.powerActive, f.emote, f.attackData));
+          accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, fScale, f.char.id,  _characterPose, f.facing, f.powerActive, f.emote, f.attackData));
         }
         ctx.restore();
         drawShikigamiFollower(ctx, f, equippedShikigamiRef.current?.[f.char.id], f.frame, 1);

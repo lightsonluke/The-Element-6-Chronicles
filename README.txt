@@ -1,9 +1,27 @@
-CHARACTER DESIGN REPLACEMENT PACK
+CHARACTER DESIGN & ANIMATION REPLACEMENT PATCH
 
-Contains only the files changed for the shared articulated character silhouette, dedicated sports-action poses, sports rendering integration, and matching fight hurtboxes.
+Install
+1. Back up the originals.
+2. Extract this archive into the project root, preserving filenames.
+3. Run `npm install` once, then `npm run build`.
 
-Install: back up the matching files, then copy the files in this package into the same paths in the project root (preserve existing project directory structure).
+Included
+- renderer.js — reference-style blank round head; narrow rounded limb skeleton; distinct directional fight poses; emotes; running, jumping, hitstun; sports action states; shared joint locations for attachments.
+- cosmetics.js — every accessory reads the same body pose including attack data; slim fitted clothing; sleeves split between shoulder/elbow/hand; pants linked hip/knee/foot; armguards, shoes, gloves and kits anchored to limbs.
+- sportDraw.jsx — sport body, slim jersey overlay, connected sleeve geometry and sports action pass-through.
+- VolleyballGame.jsx — separate bump/set/spike/dive states.
+- DodgeballGame.jsx — timed throwing pose and hitstun priority.
+- SoccerFighter.jsx, OnlineSoccerFight.jsx — active soccer attacks drive the kick pose and propagate attack progress to gear.
+- fighter.js, attackSpecs.js, botAI.js — taller slim body collision dimensions for authored hitboxes, fallback hitboxes, and CPU evasive targeting.
+- PlatformFighter.jsx, TeamMode.jsx, StoryBattle.jsx, StoryBattle-3.jsx, RollbackOnlineFight.jsx, OnlineFight.jsx, CustomRoomGame.jsx, CustomBattle.jsx, BattleRoyaleEngine.jsx — attack progress passed to accessory rig in combat modes.
+- BangerGame.jsx — active hitter uses a volleyball spike pose.
+- PlatformFighter.jsx — training hurtbox overlay uses the same 28×92 geometry and foot-aligned center as gameplay. 
 
-Changes: taller proportions without changing character colors; added integrated elbow and knee joints; shared renderer continues to provide eyes and state-driven limb poses for idle, running, jumping, attacks, emotes and hitstun; dedicated kick, bump, set, spike and throw poses use arm/leg movement; fight hurtboxes increased to match the taller body. Sports modes use sportDraw.jsx and the shared renderer for soccer/volleyball/dodgeball player poses.
+Design
+The fighter body uses a plain solid head without eyes or head highlights, slender continuous rounded arms/legs connected through elbow/knee bends, and preserves each character's base color. Accessory/clothing colors are retained as designed. Sports jersey is kept close to the slim silhouette.
 
-Note: accessory geometry is authored per accessory in cosmetics.js and many accessories are not designed as multi-piece rigged models. This pack preserves those accessory definitions and their current color handling; a full per-accessory/per-limb rig requires each accessory's individual geometry to be converted to joint-following anchors rather than safely applying one generic transform.
+Verification performed in this environment
+- Node syntax checks for JavaScript modules.
+- TypeScript parser syntax checks for JSX files.
+- Archive integrity check.
+- Full Vite build could not be run because project dependencies are not installed in this environment (`vite` command unavailable). Visual in-game QA remains necessary after install.

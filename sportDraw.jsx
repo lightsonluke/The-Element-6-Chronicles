@@ -8,7 +8,7 @@ import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor } from 
 // visually distinct (P1 blue vs P2 red); character limbs/head still use the
 // character's own color, so identity is preserved.
 export function drawSportChar(ctx, x, y, char, opts = {}) {
-  const { facing = 1, frame = 0, scale = 1, state = 'idle', powerActive = null, jersey = true, sport = 'soccer', teamColor, equippedSkins = {}, equippedAccessories = {},   noWeapon = sport === 'volleyball' || sport === 'baseball' } = opts;
+  const { facing = 1, frame = 0, scale = 1, state = 'idle', powerActive = null, jersey = true, sport = 'soccer', teamColor, equippedSkins = {}, equippedAccessories = {}, attackData = null, emote = null, noWeapon = sport === 'volleyball' || sport === 'baseball' } = opts;
   const baseColor = char?.color || '#888';
   // Skins only apply when the jersey is OFF — jersey on = base character + jersey.
   const skinColor = !jersey ? getCharRenderColor(char?.id, equippedSkins) : null;
@@ -18,17 +18,17 @@ export function drawSportChar(ctx, x, y, char, opts = {}) {
   if (!jersey) {
     const skinParts = getSkinParts(char?.id, equippedSkins);
     const acc = getAccessory(equippedAccessories[char?.id]);
-    skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, x, y, p.type, p.color, frame, scale, char?.id, state, facing, powerActive));
-    if (acc && isBehindAccessory(acc.type)) drawAccessory(ctx, x, y, acc.type, resolveAccColor(acc, char), frame, scale, char?.id, state, facing, powerActive);
+    skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, x, y, p.type, p.color, frame, scale, char?.id, state, facing, powerActive, emote, attackData));
+    if (acc && isBehindAccessory(acc.type)) drawAccessory(ctx, x, y, acc.type, resolveAccColor(acc, char), frame, scale, char?.id, state, facing, powerActive, emote, attackData);
   }
-  drawStickman(ctx, x, y, color, facing, frame, scale, char?.isSpirit, state, char, powerActive, noWeapon);
+  drawStickman(ctx, x, y, color, facing, frame, scale, char?.isSpirit, state, char, powerActive, noWeapon, null, emote, attackData);
   if (!jersey) {
     const skinParts = getSkinParts(char?.id, equippedSkins);
     const acc = getAccessory(equippedAccessories[char?.id]);
-    skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, x, y, p.type, p.color, frame, scale, char?.id, state, facing, powerActive));
-    if (acc && !isBehindAccessory(acc.type)) drawAccessory(ctx, x, y, acc.type, resolveAccColor(acc, char), frame, scale, char?.id, state, facing, powerActive);
+    skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, x, y, p.type, p.color, frame, scale, char?.id, state, facing, powerActive, emote, attackData));
+    if (acc && !isBehindAccessory(acc.type)) drawAccessory(ctx, x, y, acc.type, resolveAccColor(acc, char), frame, scale, char?.id, state, facing, powerActive, emote, attackData);
   }
-  if (jersey) drawSportJersey(ctx, x, y, color, char?.id, sport, frame, scale, state, facing, teamColor);
+  if (jersey) drawSportJersey(ctx, x, y, color, char?.id, sport, frame, scale, state, facing, teamColor, emote, attackData);
 }
 
 const SPORT_ACCENTS = {
@@ -36,22 +36,25 @@ const SPORT_ACCENTS = {
   tennis: '#FFFFFF', track: '#FFD700', basketball: '#222222', dodgeball: '#FF6600',
 };
 
-export function drawSportJersey(ctx, x, y, color, charId, sport, frame = 0, scale = 1, state = 'idle', facing = 1, teamColor) {
-  const pose = getLimbPose(frame, state, facing, scale, null);
+export function drawSportJersey(ctx, x, y, color, charId, sport, frame = 0, scale = 1, state = 'idle', facing = 1, teamColor, emote = null, attackData = null) {
+  const pose = getLimbPose(frame, state, facing, scale, null, emote, attackData);
   const s = pose.s;
   const num = getCharNumber(charId);
   const accent = SPORT_ACCENTS[sport] || '#FFFFFF';
   const substrate = teamColor || color; // team-tone jersey substrate
   const torsoTopY = pose.torsoTopY, hipY = pose.hipY;
-  const jW = s * 0.66;
+  const jW = s * 0.28;
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate(pose.lean);
-  // Jersey torso — team color substrate
-  ctx.fillStyle = substrate; ctx.globalAlpha = 0.78;
-  ctx.beginPath(); ctx.roundRect(-jW / 2, torsoTopY, jW, hipY - torsoTopY, 5); ctx.fill();
+  // Pose points already include body lean, so do not rotate the rig a second time.
+  const topY = pose.torsoTop.y;
+  const bottomY = pose.torsoBottom.y;
+  const topW = jW, bottomW = jW * 0.78;
+  // Fitted tapered sports top, sized to the same slim torso as the character.
+  ctx.fillStyle = substrate; ctx.globalAlpha = 0.80;
+  ctx.beginPath(); ctx.moveTo(-topW/2,topY); ctx.lineTo(topW/2,topY); ctx.lineTo(bottomW/2,bottomY); ctx.lineTo(-bottomW/2,bottomY); ctx.closePath(); ctx.fill();
   ctx.globalAlpha = 0.95;
-  ctx.strokeStyle = accent; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(-jW / 2, torsoTopY, jW, hipY - torsoTopY, 5); ctx.stroke();
+  ctx.strokeStyle = accent; ctx.lineWidth = Math.max(0.7, s*0.018); ctx.beginPath(); ctx.moveTo(-topW/2,topY); ctx.lineTo(topW/2,topY); ctx.lineTo(bottomW/2,bottomY); ctx.lineTo(-bottomW/2,bottomY); ctx.closePath(); ctx.stroke();
   // Accent stripe / pinstripes
   ctx.fillStyle = accent; ctx.globalAlpha = 0.6;
   if (sport === 'basketball') {
@@ -80,31 +83,38 @@ export function drawSportJersey(ctx, x, y, color, charId, sport, frame = 0, scal
   } else {
     ctx.fillRect(-jW / 2, torsoTopY + (hipY - torsoTopY) * 0.5, jW, s * 0.06);
   }
-  // Number
-  ctx.globalAlpha = 0.9;
-  ctx.fillStyle = accent; ctx.font = `bold ${Math.max(5, Math.floor(s * 0.28))}px Orbitron, sans-serif`;
-  ctx.textAlign = 'center'; ctx.fillText(num != null ? String(num) : '6', 0, torsoTopY + s * 0.55);
+  // A tiny centered number badge stays inside the slim shirt silhouette.
+  ctx.globalAlpha = 0.94;
+  ctx.fillStyle = accent; ctx.font = `bold ${Math.max(4, Math.floor(s * 0.16))}px Orbitron, sans-serif`;
+  ctx.textAlign = 'center'; ctx.fillText(num != null ? String(num) : '6', 0, torsoTopY + s * 0.56);
   // Shorts (substrate) — baseball gets long white pants instead
   if (sport === 'baseball') {
-    // Long white pants covering hip to ankle, follow each leg's swing
-    const drawPantLeg = (hx, hy, angle) => {
-      ctx.save(); ctx.translate(hx, hy); ctx.rotate(angle);
-      ctx.fillStyle = '#FFFFFF'; ctx.globalAlpha = 0.95;
-      ctx.beginPath(); ctx.roundRect(-s * 0.14, 0, s * 0.28, s * 0.52, 4); ctx.fill();
-      ctx.strokeStyle = '#CCCCCC'; ctx.lineWidth = 1; ctx.globalAlpha = 0.8;
-      ctx.beginPath(); ctx.roundRect(-s * 0.14, 0, s * 0.28, s * 0.52, 4); ctx.stroke();
-      // Belt + stirrup stripe in team color
-      ctx.fillStyle = substrate; ctx.globalAlpha = 0.9;
-      ctx.fillRect(-s * 0.14, 0, s * 0.28, s * 0.06);
-      ctx.fillRect(-s * 0.14, s * 0.42, s * 0.28, s * 0.06);
-      ctx.globalAlpha = 1; ctx.restore();
-    };
-    drawPantLeg(pose.hips.left.x, pose.hips.left.y, pose.legAngleL);
-    drawPantLeg(pose.hips.right.x, pose.hips.right.y, pose.legAngleR);
+    // Baseball pants are rigged as separate hip→knee and knee→foot pieces so
+    // the fabric follows each joint through kicks, runs, jumps, and hitstun.
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const sideName of ['left', 'right']) {
+      const hip = pose.hips[sideName], knee = pose.knees[sideName], foot = pose.feet[sideName];
+      const drawPantSegment = (a, b, width) => {
+        ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = width; ctx.globalAlpha = 0.96;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        ctx.strokeStyle = '#CCCCCC'; ctx.lineWidth = Math.max(0.7, s * 0.012); ctx.globalAlpha = 0.8;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      };
+      drawPantSegment(hip, knee, s * 0.145);
+      drawPantSegment(knee, foot, s * 0.13);
+      ctx.fillStyle = substrate; ctx.globalAlpha = 0.95;
+      ctx.beginPath(); ctx.arc(hip.x, hip.y, s * 0.065, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(knee.x, knee.y, s * 0.068, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(foot.x, foot.y, s * 0.04, 0, Math.PI * 2); ctx.fill();
+    }
   } else {
-    ctx.fillStyle = substrate; ctx.globalAlpha = 0.85;
-    ctx.beginPath(); ctx.roundRect(-s * 0.18, hipY, s * 0.12, s * 0.2, 3); ctx.fill();
-    ctx.beginPath(); ctx.roundRect(s * 0.06, hipY, s * 0.12, s * 0.2, 3); ctx.fill();
+    // Narrow shorts panels are capsules attached to each hip/thigh, not floating boxes.
+    ctx.strokeStyle = substrate; ctx.globalAlpha = 0.86; ctx.lineCap = 'round'; ctx.lineWidth = s * 0.12;
+    for (const sideName of ['left','right']) {
+      const hip = pose.hips[sideName], knee = pose.knees[sideName];
+      const end = { x: hip.x + (knee.x - hip.x) * 0.32, y: hip.y + (knee.y - hip.y) * 0.32 };
+      ctx.beginPath(); ctx.moveTo(hip.x, hip.y); ctx.lineTo(end.x, end.y); ctx.stroke();
+    }
   }
   ctx.globalAlpha = 1; ctx.restore();
 }

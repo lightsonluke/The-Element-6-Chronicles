@@ -87,11 +87,9 @@ export function drawStickman(ctx, x, y, color, facing, frame, scale = 1, isSpiri
   ctx.save();
   ctx.translate(x, y);
 
-  if (isSpirit) {
-    drawSpirit(ctx, s, frame, color, charData);
-  } else {
-    drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActive, noWeapon, emote, attackData);
-  }
+  // All characters share the same plain stick-figure body silhouette. Spirit
+  // status may still affect powers/effects, but never changes the body design.
+  drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActive, noWeapon, emote, attackData);
 
   if (powerActive) {
     drawPowerAura(ctx, s, frame, powerAuraColor || color, powerActive, charData);
@@ -505,369 +503,303 @@ function drawWeapon(ctx, weapon, color, facing, limbW) {
 
 // Returns animated limb positions/angles (relative to baseline 0,0) so cosmetics
 // can attach to actual moving arms/legs instead of static body coords.
-export function getLimbPose(frame, state = 'idle', facing = 1, scale = 1, powerActive, emote) {
-  if (powerActive === 'range_boost') scale *= 1.35;
-  const s = 36 * scale;
-  let bob = 0, legSwing = 0, armSwingL = 0, armSwingR = 0, lean = 0;
-  let punchArmL = 0, punchArmR = 0;
-  let legLOver = null, legROver = null; // independent leg angle overrides (from emotes)
+// Shared thin-stick rig. Every renderable part and every accessory uses these
+// joints, so elbow/knee movement cannot drift away from the visible skeleton.
+const clamp01 = (v) => Math.max(0, Math.min(1, Number(v) || 0));
+const easeInOut = (t) => { const v = clamp01(t); return v * v * (3 - 2 * v); };
+const limbPoint = (origin, angle, length) => ({
+  x: origin.x - Math.sin(angle) * length,
+  y: origin.y + Math.cos(angle) * length,
+});
+
+function getPoseAngles(frame, state, facing, emote, attackData, s) {
+  const t = Number(frame || 0) * 0.23;
+  const side = facing < 0 ? -1 : 1;
+  const st = String(state || 'idle').toLowerCase();
+  let bob = 0, lean = 0;
+  // Angles use canvas-stick convention: 0 points down, -PI/2 points forward
+  // when facing right, -PI points up. For facing left, direction is mirrored.
+  let armL = 0.13, armR = -0.13;
+  let elbowL = 0.08, elbowR = -0.08;
+  let legL = 0.07, legR = -0.07;
+  let kneeL = -0.04, kneeR = 0.04;
+  const progress = clamp01(attackData?.progress ?? ((Number(frame || 0) % 24) / 24));
+
   if (emote) {
+    // emotePose.js contains 35 individually timed emotes; reuse its true angles
+    // and preserve knee/elbow articulation rather than flattening them to one limb.
     const ev = getEmotePoseVars(emote.id, emote.progress, facing);
     if (ev) {
-      bob = ev.bob; lean = ev.lean; armSwingL = ev.armSwingL; armSwingR = ev.armSwingR;
-      legSwing = ev.legSwing; punchArmL = ev.punchArmL; punchArmR = ev.punchArmR;
-      legLOver = ev.legLOver; legROver = ev.legROver;
+      bob = Number(ev.bob) || 0;
+      lean = Number(ev.lean) || 0;
+      armL = -0.28 + (Number(ev.armSwingL) || 0) + (Number(ev.punchArmL) || 0);
+      armR = 0.28 + (Number(ev.armSwingR) || 0) + (Number(ev.punchArmR) || 0);
+      if (ev.legLOver != null) legL = Number(ev.legLOver) || 0;
+      else legL += Number(ev.legSwing) || 0;
+      if (ev.legROver != null) legR = Number(ev.legROver) || 0;
+      else legR -= Number(ev.legSwing) || 0;
+      // Curl forearms slightly for expressive gestures without changing color/shape.
+      elbowL = Math.abs(armL) > 1.25 ? 0.20 : 0.06;
+      elbowR = Math.abs(armR) > 1.25 ? -0.20 : -0.06;
+      kneeL = Math.abs(legL) > 0.3 ? -0.22 : -0.04;
+      kneeR = Math.abs(legR) > 0.3 ? 0.22 : 0.04;
     }
-  } else if (state === 'idle') { bob = 0; armSwingL = 0; armSwingR = 0; }
-  else if (state === 'moving') {
-    const t = frame * 0.22;
-    bob = Math.abs(Math.sin(t)) * -4;
-    legSwing = Math.sin(t) * 0.82;
-    armSwingL = Math.sin(t + Math.PI) * 0.78;
-    armSwingR = -Math.sin(t + Math.PI) * 0.78;
-    lean = facing * 0.15;
-  } else if (state === 'jumping') { bob = -8; legSwing = -0.62; armSwingL = -1.05; armSwingR = 1.05; }
-  else if (/kick|kicking|bicycle/i.test(String(state))) { bob = -2; lean = facing * 0.18; legLOver = -facing * 1.35; legROver = facing * 0.35; armSwingL = -0.75; armSwingR = 0.65; }
-  else if (/spik|serve|smash/i.test(String(state))) { bob = -7; lean = facing * 0.12; armSwingL = -0.8; armSwingR = facing * -1.85; legSwing = 0.38; }
-  else if (/bump|receive|dig/i.test(String(state))) { bob = 5; lean = facing * 0.10; armSwingL = 1.0; armSwingR = 1.0; legSwing = 0.12; }
-  else if (/set|setting/i.test(String(state))) { bob = -2; armSwingL = -1.25; armSwingR = -1.25; legSwing = -0.1; }
-  else if (/throw|pitch/i.test(String(state))) { lean = facing * 0.25; armSwingL = 0.45; punchArmR = -1.85 * facing; legSwing = 0.28; }
-  else if (/stun|hurt|hit/i.test(String(state))) { bob = 3; lean = -facing * 0.32; armSwingL = 0.8; armSwingR = -0.8; legSwing = -0.35; }
-  else if (state === 'attacking') {
-    lean = facing * 0.22;
-    punchArmL = facing > 0 ? -1.4 : 0.2;
-    punchArmR = facing > 0 ? 0.2 : 1.4;
-    legSwing = 0.25;
-  } else if (state === 'superAttack') {
-    const t = frame * 0.22;
-    lean = Math.sin(t) * 0.3;
-    punchArmL = Math.sin(t) * 1.5;
-    punchArmR = Math.cos(t) * 1.5;
-    legSwing = Math.cos(t) * 0.6;
-  } else if (state === 'hitstun') { bob = 3; lean = -facing * 0.3; armSwingL = 0.6; armSwingR = -0.4; legSwing = -0.3; }
+  } else if (st === 'moving' || st === 'running' || st === 'run' || st === 'walking') {
+    const cycle = Math.sin(t);
+    const opposite = Math.sin(t + Math.PI);
+    bob = -Math.abs(Math.cos(t)) * s * 0.028;
+    lean = side * 0.15;
+    armL = 0.10 + opposite * 0.72;
+    armR = -0.10 + cycle * 0.72;
+    elbowL = 0.06 - Math.max(0, opposite) * 0.48;
+    elbowR = -0.06 + Math.max(0, cycle) * 0.48;
+    legL = 0.07 + cycle * 0.69;
+    legR = -0.07 + opposite * 0.69;
+    kneeL = -Math.max(0, cycle) * 0.92;
+    kneeR = Math.max(0, opposite) * 0.92;
+  } else if (st === 'jumping' || st === 'jump' || st === 'airborne') {
+    bob = -s * 0.025;
+    armL = -side * 2.60; armR = -side * 2.84;
+    elbowL = -side * 0.13; elbowR = -side * 0.07;
+    legL = 0.48; legR = -0.63;
+    kneeL = -0.77; kneeR = 0.82;
+  } else if (st === 'hitstun' || st === 'hurt' || st === 'stun' || st === 'stunned' || st === 'hit' || st === 'knockback') {
+    bob = s * 0.02;
+    lean = -side * 0.30;
+    armL = 2.05; armR = -2.05;
+    elbowL = 0.25; elbowR = -0.25;
+    legL = 0.50; legR = -0.38;
+    kneeL = -0.65; kneeR = 0.72;
+  } else if (st === 'crouching' || st === 'crouch') {
+    bob = s * 0.12;
+    armL = 0.75; armR = -0.75;
+    elbowL = -0.24; elbowR = 0.24;
+    legL = 0.45; legR = -0.45;
+    kneeL = -0.68; kneeR = 0.68;
+  } else if (st === 'attackhold' || st === 'charging') {
+    const charge = clamp01(attackData?.holdProgress ?? attackData?.holdCharge ?? 0);
+    bob = -s * (0.008 + charge * 0.025);
+    lean = side * (0.03 + charge * 0.12);
+    const pullback = 0.40 + charge * 0.55;
+    if (side > 0) { armR = pullback; armL = 0.70; }
+    else { armL = -pullback; armR = -0.70; }
+    elbowL = 0.30; elbowR = -0.30;
+    legL = 0.11; legR = -0.11;
+  } else if (st === 'attacking' || st === 'attack' || st === 'superattack' || st === 'super') {
+    const wind = 1 - easeInOut(progress / 0.25);
+    const hit = progress >= 0.22 && progress <= 0.70
+      ? Math.sin(((progress - 0.22) / 0.48) * Math.PI) : 0;
+    const recover = progress > 0.70 ? easeInOut((progress - 0.70) / 0.30) : 0;
+    const move = String(attackData?.sigType || attackData?.type || attackData?.animationKey || '').toLowerCase();
+    const up = move.includes('up') || move.includes('recovery') || move.includes('aerial') || attackData?.isRecovery;
+    const down = move.includes('down') || move.includes('groundpound') || move.includes('slam');
+    const heavy = !!attackData?.isHeavy;
+    const superMove = st === 'superattack' || st === 'super' || !!attackData?.isSuper;
+    const frontReach = 0.18 + hit * (heavy ? 1.45 : 1.2) - recover * 0.12;
+    if (up) {
+      // Both hands rise above the head; knees tuck and torso rises into the hit.
+      armL = -side * (2.48 + hit * 0.28);
+      armR = -side * (2.72 + hit * 0.18);
+      elbowL = -side * 0.18; elbowR = -side * 0.08;
+      legL = 0.38 + hit * 0.13; legR = -0.45 - hit * 0.12;
+      kneeL = -0.62; kneeR = 0.66;
+      lean = -side * 0.10 * (1 - recover);
+      bob = -s * (0.015 + hit * (superMove ? 0.09 : 0.055));
+    } else if (down) {
+      // Sink the body, fold knees, and point both forearms down-forward.
+      armL = 0.22 + side * 0.38; armR = -0.22 + side * 0.38;
+      elbowL = side * 0.15; elbowR = side * 0.15;
+      legL = 0.48; legR = -0.48; kneeL = -0.72; kneeR = 0.72;
+      lean = side * 0.16 * (1 - recover);
+      bob = s * 0.075 * (1 - recover);
+    } else {
+      // Side strikes: lead arm winds behind the torso, extends toward facing on
+      // the impact frames, then returns. Rear arm counterbalances the torso.
+      const frontAngle = side * (0.38 + wind * 0.48) - side * hit * (1.35 + (heavy ? 0.18 : 0));
+      const rearAngle = -side * (0.58 - hit * 0.24);
+      if (side > 0) { armL = rearAngle; armR = frontAngle; elbowL = 0.18; elbowR = -0.28 * hit; }
+      else { armL = frontAngle; armR = rearAngle; elbowL = 0.28 * hit; elbowR = -0.18; }
+      if (superMove) {
+        if (side > 0) { armL = -2.30 + hit * 0.15; }
+        else { armR = -2.30 - hit * 0.15; }
+      }
+      legL = 0.07 + hit * 0.26; legR = -0.07 - hit * 0.20;
+      kneeL = -hit * 0.27; kneeR = hit * 0.31;
+      lean = side * (0.035 + hit * (heavy ? 0.30 : 0.24)) * (1 - recover * 0.55);
+      bob = -s * hit * (superMove ? 0.07 : 0.025);
+    }
+  } else if (st === 'volley-bump' || st === 'bump') {
+    // Forearms joined into a platform, knees flexed to receive the ball.
+    bob = s * 0.065; lean = side * 0.075;
+    armL = -side * 1.15; armR = -side * 1.15;
+    elbowL = -side * 0.06; elbowR = side * 0.06;
+    legL = 0.36; legR = -0.36; kneeL = -0.43; kneeR = 0.43;
+  } else if (st === 'volley-set' || st === 'set') {
+    // Hands form a window above the forehead; elbows stay bent outward.
+    bob = -s * 0.025; armL = -2.25; armR = -2.48;
+    elbowL = 0.28; elbowR = -0.28;
+    legL = 0.14; legR = -0.14; kneeL = -0.16; kneeR = 0.16;
+  } else if (st === 'volley-spike' || st === 'spike') {
+    bob = -s * 0.085; lean = side * 0.16;
+    if (side > 0) { armL = -2.2; armR = -2.75; }
+    else { armL = -2.75; armR = -2.2; }
+    elbowL = -side * 0.14; elbowR = -side * 0.06;
+    legL = 0.48; legR = -0.62; kneeL = -0.68; kneeR = 0.84;
+  } else if (st === 'volley-dive' || st === 'dive') {
+    lean = side * 0.68; bob = s * 0.05;
+    armL = -side * 1.45; armR = side * 1.15;
+    elbowL = 0.06; elbowR = -0.06;
+    legL = 0.68; legR = -0.55; kneeL = -0.48; kneeR = 0.58;
+  } else if (st === 'soccer-kick' || st === 'kick' || st === 'kicking') {
+    // Directional backswing -> contact -> follow-through using game attack progress.
+    const kp = clamp01(attackData?.progress ?? ((Number(frame || 0) % 18) / 18));
+    const windBack = kp < 0.35 ? easeInOut(kp / 0.35) : 1;
+    const follow = kp > 0.55 ? easeInOut((kp - 0.55) / 0.45) : 0;
+    const kick = kp < 0.35 ? -0.35 * windBack : kp < 0.7 ? 1.35 * Math.sin(((kp - 0.35) / 0.35) * Math.PI / 2) : 1.35 * (1 - follow);
+    lean = -side * (0.07 + 0.11 * (1 - follow));
+    armL = side * (0.58 + kick * 0.18); armR = -side * (0.58 + kick * 0.18);
+    if (side > 0) { legL = 0.10 + follow * 0.12; legR = -0.25 - kick; kneeL = -0.10; kneeR = -0.12 - kick * 0.58; }
+    else { legL = 0.25 + kick; legR = -0.10 - follow * 0.12; kneeL = 0.12 + kick * 0.58; kneeR = 0.10; }
+  } else if (st === 'dodgeball-throw' || st === 'throwing' || st === 'throw') {
+    const release = attackData?.progress != null ? clamp01(attackData.progress) : (Math.sin(t * 0.75 - 0.9) + 1) / 2;
+    lean = side * (0.11 + release * 0.16);
+    if (side > 0) { armL = 0.62; armR = 0.70 - release * 2.10; elbowL = 0.30; elbowR = -0.25 - release * 0.15; }
+    else { armL = -0.70 + release * 2.10; armR = -0.62; elbowL = 0.25 + release * 0.15; elbowR = -0.30; }
+    legL = 0.32 + release * 0.12; legR = -0.42;
+    kneeL = -0.25; kneeR = 0.54;
+  }
 
-  const headR = s * 0.36;
-  const headCY = -s * 1.82 + bob;
-  const torsoW = s * 0.52;
-  const torsoH = s * 0.78;
-  const torsoX = -torsoW / 2;
-  const torsoY = headCY + headR + s * 0.05;
-  const hipY = torsoY + torsoH;
-  const armLen = s * 0.58;
-  const legLen = s * 0.70;
-  const hipLX = torsoX + torsoW * 0.25;
-  const hipRX = torsoX + torsoW * 0.75;
-  const shoulderLX = torsoX;
-  const shoulderRX = torsoX + torsoW;
-  const shoulderY = torsoY + torsoH * 0.1;
-  const finalArmL = armSwingL + punchArmL;
-  const finalArmR = armSwingR + punchArmR;
-
-  const rot = (px, py, a) => [px * Math.cos(a) - py * Math.sin(a), px * Math.sin(a) + py * Math.cos(a)];
-  const leanPt = (lx, ly) => rot(lx, ly, lean);
-
-  const legAngleL = legLOver !== null ? legLOver : -legSwing;
-  const legAngleR = legROver !== null ? legROver : legSwing;
-  const kneeBend = state === 'jumping' ? -0.72 : (/kick|kicking|bicycle/i.test(String(state)) ? 0.75 : /stun|hurt|hit/i.test(String(state)) ? 0.45 : 0.12);
-  const legPoint = (hx, angle, bend) => {
-    const upper = legLen * 0.53, lower = legLen * 0.47;
-    const kx = hx + Math.sin(angle) * upper, ky = hipY + Math.cos(angle) * upper;
-    const fx = kx + Math.sin(angle + bend) * lower, fy = ky + Math.cos(angle + bend) * lower;
-    return { knee: leanPt(kx, ky), foot: leanPt(fx, fy) };
+  // A slim, taller body: about five head diameters from top to feet. The same
+  // joint positions are the source of truth for rendering, accessories and kits.
+  const headR = s * 0.265;
+  const head = { x: 0, y: -2.35 * s + bob };
+  const torsoTop = { x: 0, y: -2.035 * s + bob };
+  const torsoBottom = { x: 0, y: -0.925 * s + bob };
+  const shoulderY = -1.895 * s + bob;
+  const shoulderDX = s * 0.07;
+  const hipY = -0.925 * s + bob;
+  const hipDX = s * 0.045;
+  const shoulders = { left: { x: -shoulderDX, y: shoulderY }, right: { x: shoulderDX, y: shoulderY } };
+  const hips = { left: { x: -hipDX, y: hipY }, right: { x: hipDX, y: hipY } };
+  const armUpper = s * 0.405, armLower = s * 0.36;
+  const legUpper = s * 0.49, legLower = s * 0.46;
+  const rotateLean = (pt) => ({
+    x: pt.x * Math.cos(lean) - pt.y * Math.sin(lean),
+    y: pt.x * Math.sin(lean) + pt.y * Math.cos(lean),
+  });
+  const elbows = {
+    left: limbPoint(shoulders.left, armL, armUpper),
+    right: limbPoint(shoulders.right, armR, armUpper),
   };
-  const legL = legPoint(hipLX, legAngleL, kneeBend);
-  const legR = legPoint(hipRX, legAngleR, -kneeBend * 0.65);
-  const footL = legL.foot, footR = legR.foot;
-  const kneeL = legL.knee, kneeR = legR.knee;
-
-  const elbowBendL = state === 'attacking' || state === 'throwing' ? -0.95 : state === 'jumping' ? 0.5 : /stun|hurt|hit/i.test(String(state)) ? 0.7 : 0.22;
-  const elbowBendR = state === 'attacking' || state === 'spiking' ? 0.95 : state === 'jumping' ? -0.5 : /stun|hurt|hit/i.test(String(state)) ? -0.65 : -0.22;
-  const armPoint = (sx, sy, angle, bend) => {
-    const upper = armLen * 0.52, lower = armLen * 0.48;
-    const ex = sx + Math.sin(angle) * upper, ey = sy + Math.cos(angle) * upper;
-    const hx = ex + Math.sin(angle + bend) * lower, hy = ey + Math.cos(angle + bend) * lower;
-    return { elbow: leanPt(ex, ey), hand: leanPt(hx, hy) };
+  const hands = {
+    left: limbPoint(elbows.left, armL + elbowL, armLower),
+    right: limbPoint(elbows.right, armR + elbowR, armLower),
   };
-  const armL = armPoint(shoulderLX, shoulderY, -0.28 + finalArmL, elbowBendL);
-  const armR = armPoint(shoulderRX, shoulderY, 0.28 + finalArmR, elbowBendR);
-  const handL = armL.hand, handR = armR.hand;
-  const elbowL = armL.elbow, elbowR = armR.elbow;
-
-  const head = leanPt(0, headCY);
-  const shL = leanPt(shoulderLX, shoulderY);
-  const shR = leanPt(shoulderRX, shoulderY);
-  const hipLP = leanPt(hipLX, hipY);
-  const hipRP = leanPt(hipRX, hipY);
-  const torsoTop = leanPt(0, torsoY);
-  const torsoC = leanPt(0, torsoY + torsoH / 2);
-
+  const knees = {
+    left: limbPoint(hips.left, legL, legUpper),
+    right: limbPoint(hips.right, legR, legUpper),
+  };
+  const feet = {
+    left: limbPoint(knees.left, legL + kneeL, legLower),
+    right: limbPoint(knees.right, legR + kneeR, legLower),
+  };
+  const mapPair = (pair) => ({ left: rotateLean(pair.left), right: rotateLean(pair.right) });
+  const rotatedShoulders = mapPair(shoulders), rotatedHips = mapPair(hips);
+  const rotatedElbows = mapPair(elbows), rotatedHands = mapPair(hands);
+  const rotatedKnees = mapPair(knees), rotatedFeet = mapPair(feet);
+  const rotatedHead = rotateLean(head), rotatedTop = rotateLean(torsoTop), rotatedBottom = rotateLean(torsoBottom);
   return {
-    s, headR, lean, torsoW,
-    head: { x: head[0], y: head[1] },
-    torsoTopY: torsoTop[1], torsoCY: torsoC[1],
-    hipY: leanPt(0, hipY)[1], shoulderY: leanPt(0, shoulderY)[1], feetY: 0,
-    shoulders: { left: { x: shL[0], y: shL[1] }, right: { x: shR[0], y: shR[1] } },
-    hips: { left: { x: hipLP[0], y: hipLP[1] }, right: { x: hipRP[0], y: hipRP[1] } },
-    hands: { left: { x: handL[0], y: handL[1] }, right: { x: handR[0], y: handR[1] } },
-    feet: { left: { x: footL[0], y: footL[1] }, right: { x: footR[0], y: footR[1] } },
-    knees: { left: { x: kneeL[0], y: kneeL[1] }, right: { x: kneeR[0], y: kneeR[1] } },
-    elbows: { left: { x: elbowL[0], y: elbowL[1] }, right: { x: elbowR[0], y: elbowR[1] } },
-    armAngleL: -0.28 + finalArmL, armAngleR: 0.28 + finalArmR,
-    legAngleL: legLOver !== null ? legLOver : -legSwing, legAngleR: legROver !== null ? legROver : legSwing,
+    s, headR, lean,
+    head: rotatedHead,
+    torsoW: s * 0.17,
+    torsoTopY: rotatedTop.y,
+    torsoCY: (rotatedTop.y + rotatedBottom.y) / 2,
+    hipY: rotatedBottom.y,
+    shoulderY: rotateLean({ x: 0, y: shoulderY }).y,
+    feetY: 0,
+    torsoTop: rotatedTop, torsoBottom: rotatedBottom,
+    shoulders: rotatedShoulders, hips: rotatedHips,
+    hands: rotatedHands, feet: rotatedFeet,
+    knees: rotatedKnees, elbows: rotatedElbows,
+    armAngleL: armL + lean, armAngleR: armR + lean,
+    forearmAngleL: armL + elbowL + lean, forearmAngleR: armR + elbowR + lean,
+    legAngleL: legL + lean, legAngleR: legR + lean,
+    lowerLegAngleL: legL + kneeL + lean, lowerLegAngleR: legR + kneeR + lean,
+    bodyLineWidth: s * 0.16,
+    armLineWidth: s * 0.112,
+    legLineWidth: s * 0.12,
   };
 }
 
+export function getLimbPose(frame, state = 'idle', facing = 1, scale = 1, powerActive, emote, attackData = null) {
+  if (powerActive === 'range_boost') scale *= 1.35;
+  const s = 36 * scale;
+  return getPoseAngles(frame, state, facing, emote, attackData, s);
+}
+
 function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActive, noWeapon = false, emote = null, attackData = null) {
-  // Yellow turns white when enhanced (power active)
-  if (powerActive && charData?.id === 'yellow' && powerActive === 'stat_boost') {
-    color = '#FFFFFF';
-  }
-  // Custom characters support per-part appearance colors
-  const ap = charData?.appearance;
-  const torsoColor = ap?.torso || color;
-  const armColor = ap?.armL ? ap.armL : shadeColor(torsoColor, -45);
-  const legColor = ap?.legL ? ap.legL : shadeColor(torsoColor, -25);
-  const headColor = ap?.head || torsoColor;
-  const hasWhiteEyes = charData?.whiteEyes || false;
-
-  let bob = 0, legSwing = 0, armSwingL = 0, armSwingR = 0, lean = 0;
-  let punchArmL = 0, punchArmR = 0; // for punch animations
-  let legLOver = null, legROver = null; // independent leg angle overrides (emotes)
-
-  if (emote) {
-    const ev = getEmotePoseVars(emote.id, emote.progress, facing);
-    if (ev) {
-      bob = ev.bob; lean = ev.lean; armSwingL = ev.armSwingL; armSwingR = ev.armSwingR;
-      legSwing = ev.legSwing; punchArmL = ev.punchArmL; punchArmR = ev.punchArmR;
-      legLOver = ev.legLOver; legROver = ev.legROver;
-    }
-  } else if (state === 'idle') {
-    // Characters stand still — no bobbing
-    bob = 0;
-    armSwingL = 0;
-    armSwingR = 0;
-  } else if (state === 'moving') {
-    const t = frame * 0.22;
-    bob = Math.abs(Math.sin(t)) * -4;
-    legSwing = Math.sin(t) * 0.82;
-    armSwingL = Math.sin(t + Math.PI) * 0.78;
-    armSwingR = -Math.sin(t + Math.PI) * 0.78;
-    lean = facing * 0.15;
-  } else if (state === 'jumping') {
-    bob = -10; legSwing = -0.62; armSwingL = -1.05; armSwingR = 1.05;
-  } else if (/kick|kicking|bicycle/i.test(String(state))) {
-    bob = -2; lean = facing * 0.18; legLOver = -facing * 1.35; legROver = facing * 0.35; armSwingL = -0.75; armSwingR = 0.65;
-  } else if (/spik|serve|smash/i.test(String(state))) {
-    bob = -7; lean = facing * 0.12; armSwingL = -0.8; armSwingR = facing * -1.85; legSwing = 0.38;
-  } else if (/bump|receive|dig/i.test(String(state))) {
-    bob = 5; lean = facing * 0.10; armSwingL = 1.0; armSwingR = 1.0; legSwing = 0.12;
-  } else if (/set|setting/i.test(String(state))) {
-    bob = -2; armSwingL = -1.25; armSwingR = -1.25; legSwing = -0.1;
-  } else if (/throw|pitch/i.test(String(state))) {
-    lean = facing * 0.25; armSwingL = 0.45; punchArmR = -1.85 * facing; legSwing = 0.28;
-  } else if (/stun|hurt|hit/i.test(String(state))) {
-    bob = 3; lean = -facing * 0.32; armSwingL = 0.8; armSwingR = -0.8; legSwing = -0.35;
-  } else if (state === 'attacking') {
-    const phase = (Math.sin(frame * 0.42) + 1) / 2;
-    lean = facing * (0.12 + phase * 0.2);
-    // Alternating lead arm and counterbalancing legs make attacks read as whole-body actions.
-    punchArmL = facing > 0 ? (-0.35 - phase * 1.35) : (0.25 + phase * 0.25);
-    punchArmR = facing > 0 ? (0.25 + phase * 0.25) : (0.35 + phase * 1.35);
-    legSwing = 0.22 + phase * 0.28;
-  } else if (state === 'superAttack') {
-    const t = frame * 0.22;
-    lean = Math.sin(t) * 0.3;
-    punchArmL = Math.sin(t) * 1.5;
-    punchArmR = Math.cos(t) * 1.5;
-    legSwing = Math.cos(t) * 0.6;
-  } else if (state === 'hitstun') {
-    // Simple limp — no dance
-    bob = 3;
-    lean = -facing * 0.3;
-    armSwingL = 0.6;
-    armSwingR = -0.4;
-    legSwing = -0.3;
-  } else if (state === 'crouching') {
-    // Crouching — lower body, arms tucked
-    bob = 10;
-    legSwing = 0;
-    armSwingL = 0.3;
-    armSwingR = -0.3;
-    lean = 0;
-  }
-
-  // Shared authored body motion for every character's attacks. The weapon/effect
-  // may differ by hero, but the fighter now visibly winds up, extends, and follows
-  // through with shoulders, elbows, hips, and knees rather than holding one punch pose.
-  if (attackData && (state === 'attacking' || state === 'superAttack') && !charData?.id?.startsWith('g1_')) {
-    const progress = Math.max(0, Math.min(1, Number(attackData.progress) || 0));
-    const hold = Math.max(0, Math.min(1, Number(attackData.holdProgress) || 0));
-    const phase = progress > 0 ? progress : hold * 0.35;
-    const kind = String(attackData.sigType || attackData.type || 'side').toLowerCase();
-    const heavy = !!attackData.isHeavy || state === 'superAttack';
-    const pulse = Math.sin(phase * Math.PI * 2 - Math.PI / 2);
-    if (kind.includes('up') || kind.includes('aerial')) {
-      lean = -facing * (0.04 + 0.12 * phase);
-      punchArmL = -0.9 - phase * 0.5; punchArmR = -1.1 - phase * 0.55;
-      legSwing = -0.25 - phase * 0.25; bob -= 2 + phase * 3;
-    } else if (kind.includes('down') || kind.includes('groundpound')) {
-      lean = facing * (0.08 + 0.2 * phase);
-      punchArmL = 0.45 + phase * 0.55; punchArmR = 0.65 + phase * 0.7;
-      legSwing = 0.35 + phase * 0.2; bob += phase * 3;
-    } else {
-      lean = facing * (0.1 + (heavy ? 0.22 : 0.14) * phase);
-      punchArmL = facing > 0 ? -0.25 - phase * (heavy ? 1.65 : 1.25) : 0.2 + phase * 0.25;
-      punchArmR = facing > 0 ? 0.2 + phase * 0.25 : 0.25 + phase * (heavy ? 1.65 : 1.25);
-      legSwing = pulse * (heavy ? 0.5 : 0.32);
-    }
-  }
-
-  // Gen I attacks have authored body motion, not just effect motion.  The
-  // attack effect and the fighter pose use the same progress value, and the
-  // existing facing system swaps the lead limb for left/right attacks.
-  if (charData?.id?.startsWith('g1_') && attackData && (state === 'attacking' || state === 'superAttack')) {
-    const st = attackData.isSuper ? 'super' : (attackData.isHeavy ?
-      ((attackData.sigType === 'upHeavy' || attackData.sigType === 'up') ? 'uh' :
-       (attackData.sigType === 'downHeavy' || attackData.isGroundPound || attackData.sigType === 'down') ? 'dh' : 'sh') :
-      (attackData.sigType === 'up' || attackData.sigType === 'aerial' ? 'us' :
-       attackData.sigType === 'down' || attackData.sigType === 'downNormal' ? 'ds' : 'ss'));
-    const held = Math.max(0, Number(attackData.holdProgress) || 0);
-    const prog = attackData.isSuper ? Math.max(0, Number(attackData.progress) || 0) :
-      (held > 0 && !(Number(attackData.progress) > 0) ? held * 0.55 : Math.max(0, Number(attackData.progress) || 0));
-    const pose = getGen1AttackPose(st, prog, facing, charData.id);
-    armSwingL += pose.punchArmL || 0;
-    armSwingR += pose.punchArmR || 0;
-    legSwing = pose.legSwing || 0;
-    lean += pose.lean || 0;
-    bob += pose.bob || 0;
-  }
-
+  // Original character colors are the base for the entire clean silhouette.
+  // Per-part custom-character colors remain supported where explicitly provided.
+  if (powerActive && charData?.id === 'yellow' && powerActive === 'stat_boost') color = '#FFFFFF';
+  const appearance = charData?.appearance;
+  const torsoColor = appearance?.torso || color;
+  const armColorL = appearance?.armL || torsoColor;
+  const armColorR = appearance?.armR || torsoColor;
+  const legColorL = appearance?.legL || torsoColor;
+  const legColorR = appearance?.legR || torsoColor;
+  const headColor = appearance?.head || torsoColor;
+  const pose = getPoseAngles(frame, state, facing, emote, attackData, s);
+  const line = (a, b, width, partColor) => {
+    ctx.strokeStyle = partColor;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  };
+  const dot = (pt, radius, partColor) => {
+    ctx.fillStyle = partColor; ctx.beginPath(); ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2); ctx.fill();
+  };
   ctx.save();
-  ctx.rotate(lean);
-
-  const headR = s * 0.36;
-  const headCY = -s * 1.82 + bob;
-  const torsoW = s * 0.52;
-  const torsoH = s * 0.78;
-  const torsoX = -torsoW / 2;
-  const torsoY = headCY + headR + s * 0.05;
-  const hipY = torsoY + torsoH;
-  const limbW = s * 0.24;
-  const armLen = s * 0.58;
-  const legLen = s * 0.70;
-
-  ctx.shadowColor = torsoColor;
-  ctx.shadowBlur = 12;
-
-  // ── Articulated legs (upper leg + visible knee + lower leg) ──
-  const hipLX = torsoX + torsoW * 0.25;
-  const hipRX = torsoX + torsoW * 0.75;
-  const legColorR = ap?.legR || legColor;
-  const drawCapsule = (x1, y1, x2, y2, width, fill) => {
-    const dx = x2 - x1, dy = y2 - y1;
-    ctx.save(); ctx.strokeStyle = fill; ctx.fillStyle = fill; ctx.lineWidth = width;
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
-    ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(x1, y1, width / 2, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x2, y2, width / 2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-  };
-  const drawLeg = (hipX, angle, fill, bend) => {
-    const upper = legLen * 0.53, lower = legLen * 0.47;
-    const kneeX = hipX + Math.sin(angle) * upper;
-    const kneeY = hipY + Math.cos(angle) * upper;
-    const footAngle = angle + bend;
-    const footX = kneeX + Math.sin(footAngle) * lower;
-    const footY = kneeY + Math.cos(footAngle) * lower;
-    drawCapsule(hipX, hipY, kneeX, kneeY, limbW, fill);
-    drawCapsule(kneeX, kneeY, footX, footY, limbW * 0.88, fill);
-    ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(kneeX, kneeY, limbW * 0.55, 0, Math.PI * 2); ctx.fill();
-  };
+  // No glow, head highlights, eyes, pupils, seams or separate limb shading:
+  // the character silhouette follows the supplied plain stick-figure reference.
   ctx.shadowBlur = 0;
-  const legAngleL = legLOver !== null ? legLOver : -legSwing;
-  const legAngleR = legROver !== null ? legROver : legSwing;
-  const kneeBend = state === 'jumping' ? -0.72 : (/kick|kicking|bicycle/i.test(String(state)) ? 0.75 : /stun|hurt|hit/i.test(String(state)) ? 0.45 : 0.12);
-  drawLeg(hipLX, legAngleL, legColor, kneeBend);
-  drawLeg(hipRX, legAngleR, legColorR, -kneeBend * 0.65);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-  // ── Torso ──
-  ctx.shadowColor = torsoColor;
-  ctx.shadowBlur = 12;
-  ctx.fillStyle = torsoColor;
-  ctx.beginPath();
-  ctx.roundRect(torsoX, torsoY, torsoW, torsoH, 5);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = 'rgba(255,255,255,0.16)';
-  ctx.beginPath();
-  ctx.roundRect(torsoX + 2, torsoY + 2, torsoW - 4, torsoH * 0.38, 4);
-  ctx.fill();
+  // Legs behind the torso; each is a continuous upper/lower limb through knee.
+  line(pose.hips.left, pose.knees.left, pose.legLineWidth, legColorL);
+  line(pose.knees.left, pose.feet.left, pose.legLineWidth, legColorL);
+  line(pose.hips.right, pose.knees.right, pose.legLineWidth, legColorR);
+  line(pose.knees.right, pose.feet.right, pose.legLineWidth, legColorR);
 
-  // ── Articulated arms (upper arm + elbow + forearm + hand) ──
-  const shoulderLX = torsoX;
-  const shoulderRX = torsoX + torsoW;
-  const shoulderY = torsoY + torsoH * 0.1;
-  const finalArmL = armSwingL + punchArmL;
-  const finalArmR = armSwingR + punchArmR;
-  const armColorR = ap?.armR || armColor;
-  const drawArm = (sx, sy, baseAngle, fill, bend) => {
-    const upper = armLen * 0.52, lower = armLen * 0.48;
-    const a1 = baseAngle;
-    const ex = sx + Math.sin(a1) * upper;
-    const ey = sy + Math.cos(a1) * upper;
-    const a2 = a1 + bend;
-    const hx = ex + Math.sin(a2) * lower;
-    const hy = ey + Math.cos(a2) * lower;
-    drawCapsule(sx, sy, ex, ey, limbW * 0.88, fill);
-    drawCapsule(ex, ey, hx, hy, limbW * 0.82, fill);
-    ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(ex, ey, limbW * 0.5, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(hx, hy, limbW * 0.58, 0, Math.PI * 2); ctx.fill();
-  };
-  const elbowBendL = state === 'attacking' || state === 'throwing' ? -0.95 : state === 'jumping' ? 0.5 : /stun|hurt|hit/i.test(String(state)) ? 0.7 : 0.22;
-  const elbowBendR = state === 'attacking' || state === 'spiking' ? 0.95 : state === 'jumping' ? -0.5 : /stun|hurt|hit/i.test(String(state)) ? -0.65 : -0.22;
-  ctx.shadowBlur = 0;
-  drawArm(shoulderLX, shoulderY, -0.28 + finalArmL, armColor, elbowBendL);
-  drawArm(shoulderRX, shoulderY, 0.28 + finalArmR, armColorR, elbowBendR);
+  // Smooth simple torso: a rounded stroke, not a box. It slightly overlaps the
+  // shoulder/hip joints so the silhouette remains connected during every pose.
+  line(pose.torsoTop, pose.torsoBottom, pose.bodyLineWidth, torsoColor);
 
-  // ── Head ──
-  ctx.shadowColor = headColor;
-  ctx.shadowBlur = 10;
+  // Arms use two connected rounded strokes per side, with a subtle rounded elbow
+  // joint. Same base color means no visible seams when the limbs bend.
+  line(pose.shoulders.left, pose.elbows.left, pose.armLineWidth, armColorL);
+  line(pose.elbows.left, pose.hands.left, pose.armLineWidth, armColorL);
+  line(pose.shoulders.right, pose.elbows.right, pose.armLineWidth, armColorR);
+  line(pose.elbows.right, pose.hands.right, pose.armLineWidth, armColorR);
+  // Cover joints with matching circles to eliminate seams between segments.
+  [pose.shoulders.left, pose.shoulders.right].forEach(pt => dot(pt, pose.armLineWidth / 2, torsoColor));
+  [pose.hips.left, pose.hips.right].forEach(pt => dot(pt, pose.legLineWidth / 2, torsoColor));
+  dot(pose.elbows.left, pose.armLineWidth / 2, armColorL);
+  dot(pose.elbows.right, pose.armLineWidth / 2, armColorR);
+  dot(pose.knees.left, pose.legLineWidth / 2, legColorL);
+  dot(pose.knees.right, pose.legLineWidth / 2, legColorR);
+  dot(pose.hands.left, pose.armLineWidth * 0.57, armColorL);
+  dot(pose.hands.right, pose.armLineWidth * 0.57, armColorR);
+
+  // Plain round solid-color head; deliberately no eyes or specular highlights.
   ctx.fillStyle = headColor;
-  ctx.beginPath();
-  ctx.arc(0, headCY, headR, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.shadowBlur = 0;
-  // Highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  ctx.beginPath();
-  ctx.arc(-headR * 0.22, headCY - headR * 0.28, headR * 0.42, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Clearly visible eyes on every normal character: white sclera, dark pupils,
-  // and tiny highlights, scaled to the round head and kept within its silhouette.
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = '#FFFFFF';
-  ctx.beginPath();
-  ctx.ellipse(-headR * 0.30, headCY - headR * 0.04, headR * 0.23, headR * 0.17, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(headR * 0.30, headCY - headR * 0.04, headR * 0.23, headR * 0.17, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#151019';
-  ctx.beginPath(); ctx.arc(-headR * 0.26, headCY - headR * 0.035, headR * 0.105, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(headR * 0.34, headCY - headR * 0.035, headR * 0.105, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#FFFFFF';
-  ctx.beginPath(); ctx.arc(-headR * 0.285, headCY - headR * 0.075, headR * 0.035, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(headR * 0.315, headCY - headR * 0.075, headR * 0.035, 0, Math.PI * 2); ctx.fill();
-
-  ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.arc(pose.head.x, pose.head.y, pose.headR, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 
 function drawSpirit(ctx, s, frame, color, charData) {
   const waveX = Math.sin(frame * 0.04) * 5;
   const waveY = Math.sin(frame * 0.06) * 3;
-  const hasWhiteEyes = charData?.whiteEyes || false;
   ctx.globalAlpha = 0.8 + Math.sin(frame * 0.05) * 0.1;
 
   const aura = ctx.createRadialGradient(waveX, -s * 0.5 + waveY, 2, waveX, -s * 0.4 + waveY, s * 1.5);
@@ -886,18 +818,7 @@ function drawSpirit(ctx, s, frame, color, charData) {
   ctx.ellipse(waveX, -s * 0.45 + waveY, s * 0.5, s * 0.85, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  const eyeColor = hasWhiteEyes ? '#FFFFFF' : '#FF00FF';
-  ctx.fillStyle = eyeColor;
-  ctx.shadowColor = eyeColor;
-  ctx.shadowBlur = 14;
-  const eyeY = -s * 0.72 + waveY;
-  ctx.beginPath();
-  ctx.ellipse(waveX - 8, eyeY, 5, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(waveX + 8, eyeY, 5, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-
+  // No eyes: character heads remain plain and consistent with the reference.
   ctx.shadowBlur = 0;
   for (let i = 0; i < 5; i++) {
     const tx = waveX + (i - 2) * 9;
@@ -1413,7 +1334,7 @@ function drawNormalAttack(ctx, x, y, attack, progress, facing, color) {
 
   const s = 36; // base scale
   const limbW = s * 0.24;
-  const armLen = s * 0.58;
+  const armLen = s * 0.52;
 
   if (attack.sigType === 'down' || attack.type === 'downNormal') {
     // Downward kick
