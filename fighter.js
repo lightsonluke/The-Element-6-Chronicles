@@ -1829,9 +1829,9 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
   fighter._slope = 0;
   fighter._slopeDownhill = 0;
 
-  // The reference-sheet fighter is taller and has separated limbs, so its
-  // collision body is wider/taller than the former compact capsule.
-  const charHalfW = 19; // half-width for platform edge tolerance
+  // Compact body matching the joint-driven reference-sheet silhouette.
+  const charHalfW = 17; // half-width for platform edge tolerance
+  const charHeight = 68;
   fighter.wallSide = 0;
   const prevBottom = fighter.prevY;
   const currBottom = fighter.y;
@@ -2016,10 +2016,10 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
       if (p.h < 18) continue;
       const overlapX = fighter.x > p.x - charHalfW && fighter.x < p.x + p.w + charHalfW;
       if (!overlapX) continue;
-      const fighterHead = fighter.y - 82;
-      const prevHead = fighter.prevY - 55;
+      const fighterHead = fighter.y - charHeight;
+      const prevHead = fighter.prevY - charHeight;
       if (prevHead >= p.y + p.h && fighterHead < p.y + p.h) {
-        fighter.y = p.y + p.h + 55;
+        fighter.y = p.y + p.h + charHeight;
         fighter.vy = 0;
         ceilingHits.add(p);
       }
@@ -2039,7 +2039,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     // Skip if fighter's feet are at or above platform top
     if (fighter.y <= p.y + 2) continue;
     // Check if fighter body vertically overlaps platform body
-    const fighterTop = fighter.y - 82;
+    const fighterTop = fighter.y - charHeight;
     if (fighterTop >= p.y + p.h) continue;
     // Check horizontal overlap
     if (fighter.x + charHalfW > p.x && fighter.x - charHalfW < p.x + p.w) {
@@ -2221,8 +2221,8 @@ export function checkHit(attacker, defender) {
   }
 
   // Defender body box — rectangle centered on body
-  const dBW = 38, dBH = 84;
-  const dBX = defender.x, dBY = defender.y - 42;
+  const dBW = 34, dBH = 68;
+  const dBX = defender.x, dBY = defender.y - 34;
 
   // AABB overlap test
   return (hbCX - hbW / 2) < (dBX + dBW / 2) &&

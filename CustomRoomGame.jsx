@@ -7,7 +7,7 @@ import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, updateProjectiles, loseStock, CPU_DIFFICULTY } from './fighter.js';
-import { drawStickman, drawAttackEffect, drawSuperEffect, drawHealthBar, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles } from './renderer.js';
+import { drawStickman, drawAttackEffect, drawSuperEffect, drawHealthBar, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawFighterGroundShadow } from './renderer.js';
 import { drawOffscreenIndicator } from './offscreenIndicator.js';
 import { getKeybinds, readPlayerInput } from './keybinds.js';
 import { readGamepadInput } from './controllerProfiles.js';
@@ -35,7 +35,7 @@ const mergeGp = (kb, gp) => gp ? {
 
 const W = 1280, H = 720;
 const DEFAULT_PLATFORMS = [
-  { x: 40, y: 620, w: 1200, h: 48 },
+  { x: 110, y: 602, w: 1060, h: 24, material: 'split_city_art' },
 ];
 const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
@@ -523,6 +523,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         const accColor = skinColor && acc?.type === 'soccer_kit' ? skinColor : acc?.color;
         skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive));
         if (acc && isBehindAccessory(acc.type)) drawAccessory(ctx, f.x, f.y, acc.type, accColor, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive);
+        drawFighterGroundShadow(ctx, f, platforms, 'splitcity');
         drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame || 0, 1, charData.isSpirit, f.state || 'idle', charData, f.powerActive, false, null, f.emote, f.attackData);
         skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive));
         if (acc && !isBehindAccessory(acc.type)) drawAccessory(ctx, f.x, f.y, acc.type, accColor, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive);

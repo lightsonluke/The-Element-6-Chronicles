@@ -11,7 +11,7 @@ import {
   drawStickman, drawAttackEffect, drawSuperEffect,
   drawHealthBar, drawTimer, drawPlatforms, drawBackground,
   drawHitSparks, drawDoubleJumpParticles, drawSuperFlash,
-  STAGE_MAPS,
+  STAGE_MAPS, drawFighterGroundShadow,
 } from './renderer.js';
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
@@ -51,7 +51,8 @@ const MAP_PLATFORMS = {
     // The supplied Split City island has one continuous, broad top surface.
     // This is deliberately the only collision surface: there are no invisible
     // legacy ledges above the painted island.
-    { x: 40,   y: 620, w: 1200, h: 48 },
+    // Collision is only the painted top lip—not the whole decorative island.
+    { x: 110,  y: 602, w: 1060, h: 24, material: 'split_city_art' },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
   basic: [
@@ -1678,9 +1679,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         const crossoverColors = getCrossoverColor(f.char.id, equippedCrossovers);
         const renderColor = crossoverColors ? crossoverColors.primary : (getCharRenderColor(effId, equippedSkins) || f.char.color);
         if (!flashing) {
-          ctx.save(); ctx.globalAlpha = 0.2 + Math.sin(f.frame * 0.07) * 0.05;
-          ctx.fillStyle = renderColor; ctx.beginPath();
-          ctx.ellipse(f.x, f.y + 3, 32, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+          drawFighterGroundShadow(ctx, f, platforms, mapId);
         }
         drawDoubleJumpParticles(ctx, f.doubleJumpParticles || []);
         const fScale = gameMode === 'brawl' ? 1.6 : 1;

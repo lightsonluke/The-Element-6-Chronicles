@@ -18,17 +18,21 @@ const referenceFrameCache = new Map();
 
 function drawSplitCityPlatformArtwork(ctx, platform) {
   if (!splitCityPlatformArt?.complete || !splitCityPlatformArt.naturalWidth) return false;
-  // Assemble the platform from the supplied left/right artwork halves. The
-  // original empty middle section is removed, and the halves overlap by 8px
-  // at the seam. Their painted top is aligned exactly to platform.y.
-  const srcY = 310, srcH = 631, srcW = 745;
-  const leftSX = 0, rightSX = 925;
-  const halfW = platform.w / 2 + 4;
-  const drawH = halfW * (srcH / srcW);
-  const paintedTopInCrop = 60;
-  const drawY = platform.y - paintedTopInCrop * (drawH / srcH);
-  ctx.drawImage(splitCityPlatformArt, leftSX, srcY, srcW, srcH, platform.x, drawY, halfW, drawH);
-  ctx.drawImage(splitCityPlatformArt, rightSX, srcY, srcW, srcH, platform.x + platform.w - halfW, drawY, halfW, drawH);
+  // Build one compact island from the actual left and right halves of the
+  // supplied artwork. Both halves are reduced equally and touch at center;
+  // there is no generic rectangle or unrelated centre insert.
+  const sw = splitCityPlatformArt.naturalWidth;
+  const sh = splitCityPlatformArt.naturalHeight;
+  const halfSourceW = Math.floor(sw / 2);
+  const joinOverlap = 3;
+  const halfDrawW = platform.w / 2 + joinOverlap;
+  const drawScale = halfDrawW / halfSourceW;
+  const drawH = sh * drawScale;
+  // The illuminated floor is at approximately 39.5% of the source art.
+  // That line is the physical collision top (`platform.y`).
+  const drawY = platform.y - sh * .395 * drawScale;
+  ctx.drawImage(splitCityPlatformArt, 0, 0, halfSourceW, sh, platform.x, drawY, halfDrawW, drawH);
+  ctx.drawImage(splitCityPlatformArt, halfSourceW, 0, sw - halfSourceW, sh, platform.x + platform.w - halfDrawW, drawY, halfDrawW, drawH);
   return true;
 }
 
@@ -111,7 +115,7 @@ export const STAGE_MAPS = ALL_STAGE_MAPS.filter((stage) => stage.id === 'splitci
 export function drawStickman(ctx, x, y, color, facing, frame, scale = 1, isSpirit = false, state = 'idle', charData = null, powerActive = null, noWeapon = false, powerAuraColor = null, emote = null, attackData = null) {
   // Growth power = visually larger; shrink powers = visually smaller
   if (powerActive === 'range_boost') scale *= 1.35;
-  const s = 36 * scale; // BIGGER characters
+  const s = 30 * scale; // compact size, matching the prior in-game scale
   ctx.save();
   ctx.translate(x, y);
 
@@ -125,6 +129,31 @@ export function drawStickman(ctx, x, y, color, facing, frame, scale = 1, isSpiri
     drawPowerAura(ctx, s, frame, powerAuraColor || color, powerActive, charData);
   }
 
+  ctx.restore();
+}
+
+// Shadows belong to the nearest real platform beneath a fighter, never to the
+// fighter itself. This also gives the Split City island a subtle embedded
+// reflection without drawing a distracting mirrored character.
+export function drawFighterGroundShadow(ctx, fighter, platforms, mapId = 'splitcity') {
+  if (!fighter || !Array.isArray(platforms)) return;
+  const halfBody = 17;
+  const candidates = platforms.filter((p) => p && !p._deleted && !p._freehandSegment &&
+    fighter.x + halfBody > p.x && fighter.x - halfBody < p.x + p.w && p.y >= fighter.y - 2);
+  if (!candidates.length) return;
+  const surface = candidates.sort((a, b) => a.y - b.y)[0];
+  const distance = Math.max(0, surface.y - fighter.y);
+  const alpha = Math.max(.035, .17 - distance / 260);
+  const width = Math.max(7, 20 - distance * .045);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#06011a';
+  ctx.beginPath(); ctx.ellipse(fighter.x, surface.y + 1, width, Math.max(2, width * .18), 0, 0, Math.PI * 2); ctx.fill();
+  if (mapId === 'splitcity' && distance < 7) {
+    ctx.globalAlpha = .055;
+    ctx.fillStyle = fighter.char?.color || '#ffffff';
+    ctx.beginPath(); ctx.ellipse(fighter.x, surface.y + 6, width * .58, 3, 0, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.restore();
 }
 
@@ -698,8 +727,10 @@ function drawReferenceSheetSprite(ctx, s, frame, color, state, facing) {
   return true;
 }
 
-function drawReferenceSheetFigure(ctx, s, frame, color, state, facing, charData) {
-  if (drawReferenceSheetSprite(ctx, s, frame, color, state, facing)) return;
+function drawReferenceSheetFigure(ctx, s, frame, color, state, facing, charData, emote = null) {
+  // This is intentionally joint-driven rather than a pasted sprite crop. The
+  // sheet is the proportion/pose reference; limbs below animate independently
+  // so attacks, emotes, wall movement, dashes, and sports can stay readable.
   const ap = charData?.appearance || {};
   const headColor = ap.head || color;
   const torsoColor = ap.torso || color;
@@ -717,7 +748,15 @@ function drawReferenceSheetFigure(ctx, s, frame, color, state, facing, charData)
   let attacking = false;
   let stunned = false;
 
-  if (state === 'moving') { stride = Math.sin(frame * .19); lean = facing * .14; bob = -Math.abs(stride) * s * .055; }
+  const emoteActive = Boolean(emote || charData?._emoteActive || state === 'emote');
+  const wallSlide = state === 'wallSlide' || state === 'wall_sliding';
+  const wallJump = state === 'wallJump' || state === 'wall_jump';
+  const dash = state === 'dashing' || state === 'dash' || state === 'airDodge' || state === 'dodging';
+  if (emoteActive) { lean = Math.sin(frame * .11) * .05; }
+  else if (dash) { stride = .72; lean = facing * .28; bob = -s * .04; }
+  else if (wallSlide) { lean = -facing * .18; bob = s * .04; }
+  else if (wallJump) { jumping = true; lean = -facing * .22; bob = -s * .08; }
+  else if (state === 'moving') { stride = Math.sin(frame * .19); lean = facing * .14; bob = -Math.abs(stride) * s * .055; }
   else if (state === 'jumping') { jumping = true; lean = facing * .08; bob = -s * .045; }
   else if (state === 'attacking' || state === 'superAttack') { attacking = true; lean = facing * .17; }
   else if (state === 'hitstun') { stunned = true; lean = -facing * .18; bob = s * .05; }
@@ -730,7 +769,10 @@ function drawReferenceSheetFigure(ctx, s, frame, color, state, facing, charData)
   // Legs are separate, bent at a visible knee only in motion. The small gap
   // between hips/feet matches the reference sheet's standing silhouette.
   let leftLeg, rightLeg;
-  if (jumping) {
+  if (wallSlide) {
+    leftLeg = [[-s*.13, hipY], [-s*.32, -s*.27], [-s*.18, -s*.05]];
+    rightLeg = [[s*.13, hipY], [s*.27, -s*.34], [s*.12, -s*.11]];
+  } else if (jumping) {
     leftLeg = [[-s*.13, hipY], [-s*.32, -s*.30], [-s*.12, -s*.06]];
     rightLeg = [[s*.13, hipY], [s*.30, -s*.34], [s*.13, -s*.10]];
   } else if (attacking) {
@@ -750,7 +792,13 @@ function drawReferenceSheetFigure(ctx, s, frame, color, state, facing, charData)
   strokeFigureLimb(ctx, torsoColor, [[0, shoulderY], [0, hipY]], s * .36);
 
   let leftArm, rightArm;
-  if (jumping) {
+  if (emoteActive) {
+    leftArm = [[-s*.15, shoulderY], [-s*.36, -s*1.48], [-s*.13, -s*1.63]];
+    rightArm = [[s*.15, shoulderY], [s*.36, -s*1.48], [s*.13, -s*1.63]];
+  } else if (wallSlide) {
+    leftArm = [[-s*.15, shoulderY], [-s*.34, -s*1.02], [-s*.48, -s*.84]];
+    rightArm = [[s*.15, shoulderY], [s*.36, -s*1.12], [s*.47, -s*1.30]];
+  } else if (jumping) {
     leftArm = [[-s*.15, shoulderY], [-s*.36, -s*.93], [-s*.24, -s*.72]];
     rightArm = [[s*.15, shoulderY], [s*.40, -s*.98], [s*.54, -s*1.13]];
   } else if (attacking) {
@@ -776,7 +824,7 @@ function drawReferenceSheetFigure(ctx, s, frame, color, state, facing, charData)
 }
 
 function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActive, noWeapon = false, emote = null, attackData = null) {
-  drawReferenceSheetFigure(ctx, s, frame, color, state, facing, charData);
+  drawReferenceSheetFigure(ctx, s, frame, color, state, facing, charData, emote);
   return;
   // Yellow turns white when enhanced (power active)
   if (powerActive && charData?.id === 'yellow' && powerActive === 'stat_boost') {
@@ -2259,7 +2307,9 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
   // the camera/world perfectly and sit visually above the playable surface.
   const main = platforms.filter(p => p && !p._freehandSegment && p.h >= 18)
     .sort((a,b) => (b.w*b.h) - (a.w*a.h))[0];
-  if (main) drawMainPlatformDecor(ctx, main, frame, mapId, accent);
+  // The supplied Split City island is complete artwork: no rooftop props,
+  // markers, lamps, or side decorations are added over it.
+  if (main && mapId !== 'splitcity') drawMainPlatformDecor(ctx, main, frame, mapId, accent);
 }
 
 export function drawBackground(ctx, w, h, frame = 0, mapId = 'splitcity', eventColor) {

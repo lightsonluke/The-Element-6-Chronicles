@@ -13,6 +13,7 @@ import {
   drawHealthBar,
   drawHitSparks,
   drawPlatforms,
+  drawFighterGroundShadow,
   drawStickman,
   drawSuperEffect,
 } from './renderer.js';
@@ -178,6 +179,7 @@ export default function RollbackOnlineFight({
 
     const drawFighter = (fighter, character, loadout, label) => {
       if (fighter.invincible > 0 && Math.floor(fighter.frame / 4) % 2 === 0) return;
+      drawFighterGroundShadow(ctx, fighter, getOnlineStagePlatforms(sharedStage) || ONLINE_PLATFORMS, sharedStage);
       drawDoubleJumpParticles(ctx, fighter.doubleJumpParticles || []);
       const renderColor = getCharRenderColor(character.id, loadout?.equippedSkins) || character.color;
       const skinParts = getSkinParts(character.id, loadout?.equippedSkins);
