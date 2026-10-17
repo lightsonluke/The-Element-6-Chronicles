@@ -3,6 +3,22 @@
 // more texture strokes, richer atmosphere — while staying 100% code-drawn.
 // No text, no character/person silhouettes anywhere in the scenery.
 
+// Supplied Split City backdrop, served from `public/` in both Vite dev and production.
+const SPLIT_CITY_ART_PATH = '/art/stages/split-city/city-backdrop.png';
+const splitCityArt = typeof Image === 'undefined' ? null : new Image();
+if (splitCityArt) splitCityArt.src = SPLIT_CITY_ART_PATH;
+
+function drawSplitCityArtwork(ctx, w, h) {
+  if (!splitCityArt?.complete || !splitCityArt.naturalWidth) return false;
+  ctx.drawImage(splitCityArt, 0, 0, w, h);
+  const shade = ctx.createLinearGradient(0, 0, 0, h);
+  shade.addColorStop(0, 'rgba(3,4,24,.08)');
+  shade.addColorStop(.62, 'rgba(9,3,48,.03)');
+  shade.addColorStop(1, 'rgba(3,2,25,.42)');
+  ctx.fillStyle = shade; ctx.fillRect(0, 0, w, h);
+  return true;
+}
+
 function hexToRgba(hex, a) {
   const n = parseInt(hex.replace('#', ''), 16);
   return `rgba(${(n >> 16) & 0xff},${(n >> 8) & 0xff},${n & 0xff},${a})`;
@@ -873,6 +889,7 @@ function drawDepthVignette(ctx, w, h, pal) {
 
 // ── MAIN ──
 export function drawStageBackground(ctx, w, h, frame, mapId, mapData, eventColor) {
+  if (mapId === 'splitcity' && drawSplitCityArtwork(ctx, w, h)) return;
   const isEventStage = mapId && mapId.startsWith && mapId.startsWith('event_stage_');
   let pal;
   if (isEventStage) {

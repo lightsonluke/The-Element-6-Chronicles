@@ -6,8 +6,20 @@ import { getMaterial } from './materials.js';
 import { getEmotePoseVars } from './emotePose.js';
 import { getGen1AttackPose } from './gen1AttackAnims.js';
 import { getResonanceAttackAction } from './resonanceConstructs.js';
-import { getAttackSpecForData } from './attackSpecs.js';
-import { drawSpecAttack, drawSpecSuper } from './attackSpecRenderer.js';
+
+const SPLIT_CITY_PLATFORM_ART_PATH = '/art/stages/split-city/floating-island.png';
+const splitCityPlatformArt = typeof Image === 'undefined' ? null : new Image();
+if (splitCityPlatformArt) splitCityPlatformArt.src = SPLIT_CITY_PLATFORM_ART_PATH;
+
+function drawSplitCityPlatformArtwork(ctx, platform) {
+  if (!splitCityPlatformArt?.complete || !splitCityPlatformArt.naturalWidth) return false;
+  // The transparent artwork's painted top sits 29% down its source image.
+  // Align it to the actual collision top so visuals and physics agree.
+  const artWidth = platform.w + 48;
+  const artHeight = artWidth * (375 / 665);
+  ctx.drawImage(splitCityPlatformArt, platform.x - 24, platform.y - artHeight * .29, artWidth, artHeight);
+  return true;
+}
 
 // ─── STAGE MAPS ─────────────────────────────────────────────────────────────
 const ALL_STAGE_MAPS = [
@@ -80,9 +92,7 @@ const ALL_STAGE_MAPS = [
   { id: 'element6_source',  name: 'Element 6 Source',   skyTop: '#050510', skyBot: '#101030', groundColor: '#202040', accentColor: '#FFFFFF' },
 ];
 
-// Split City is the sole playable stage. Keep the older entries in this source
-// only so saved data that still contains an old stage id cannot break imports;
-// no stage picker or random-stage caller receives those entries anymore.
+// Split City remains the only selectable built-in stage.
 export const STAGE_MAPS = ALL_STAGE_MAPS.filter((stage) => stage.id === 'splitcity');
 
 // ─── Character rendering ────────────────────────────────────────────────────
@@ -607,7 +617,99 @@ export function getLimbPose(frame, state = 'idle', facing = 1, scale = 1, powerA
   };
 }
 
+function strokeFigureLimb(ctx, color, points, width) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length; i += 1) ctx.lineTo(points[i][0], points[i][1]);
+  ctx.stroke();
+}
+
+// Shared no-eyes character body based on the supplied standing, running, and
+// jumping sprite reference. Every character keeps its own existing color (and
+// Gen I/custom limb colors where supplied by appearance data).
+function drawReferenceSheetFigure(ctx, s, frame, color, state, facing, charData) {
+  const ap = charData?.appearance || {};
+  const headColor = ap.head || color;
+  const torsoColor = ap.torso || color;
+  const armLColor = ap.armL || color;
+  const armRColor = ap.armR || armLColor;
+  const legLColor = ap.legL || color;
+  const legRColor = ap.legR || legLColor;
+  const limb = s * .245;
+  const hipY = -s * .56;
+  const shoulderY = -s * 1.30;
+  let lean = 0;
+  let bob = 0;
+  let stride = 0;
+  let jumping = false;
+  let attacking = false;
+  let stunned = false;
+
+  if (state === 'moving') { stride = Math.sin(frame * .19); lean = facing * .14; bob = -Math.abs(stride) * s * .055; }
+  else if (state === 'jumping') { jumping = true; lean = facing * .08; bob = -s * .045; }
+  else if (state === 'attacking' || state === 'superAttack') { attacking = true; lean = facing * .17; }
+  else if (state === 'hitstun') { stunned = true; lean = -facing * .18; bob = s * .05; }
+  else if (state === 'crouching') { bob = s * .20; }
+
+  ctx.save();
+  ctx.translate(0, bob);
+  ctx.rotate(lean);
+
+  // Legs are separate, bent at a visible knee only in motion. The small gap
+  // between hips/feet matches the reference sheet's standing silhouette.
+  let leftLeg, rightLeg;
+  if (jumping) {
+    leftLeg = [[-s*.13, hipY], [-s*.32, -s*.30], [-s*.12, -s*.06]];
+    rightLeg = [[s*.13, hipY], [s*.30, -s*.34], [s*.13, -s*.10]];
+  } else if (attacking) {
+    leftLeg = [[-s*.13, hipY], [-s*.26, -s*.26], [-s*.31, 0]];
+    rightLeg = [[s*.13, hipY], [s*.24, -s*.29], [s*.31, 0]];
+  } else if (stunned) {
+    leftLeg = [[-s*.13, hipY], [-s*.30, -s*.28], [-s*.17, 0]];
+    rightLeg = [[s*.13, hipY], [s*.35, -s*.28], [s*.42, -s*.02]];
+  } else {
+    leftLeg = [[-s*.13, hipY], [-s*.16 - stride*s*.17, -s*.29], [-s*.22 - stride*s*.32, 0]];
+    rightLeg = [[s*.13, hipY], [s*.16 + stride*s*.17, -s*.29], [s*.22 + stride*s*.32, 0]];
+  }
+  strokeFigureLimb(ctx, legLColor, leftLeg, limb);
+  strokeFigureLimb(ctx, legRColor, rightLeg, limb);
+
+  // Slim vertical torso; it stays intentionally simple like the supplied art.
+  strokeFigureLimb(ctx, torsoColor, [[0, shoulderY], [0, hipY]], s * .36);
+
+  let leftArm, rightArm;
+  if (jumping) {
+    leftArm = [[-s*.15, shoulderY], [-s*.36, -s*.93], [-s*.24, -s*.72]];
+    rightArm = [[s*.15, shoulderY], [s*.40, -s*.98], [s*.54, -s*1.13]];
+  } else if (attacking) {
+    const lead = facing >= 0 ? 'right' : 'left';
+    const punch = [[facing*s*.15, shoulderY], [facing*s*.42, -s*1.05], [facing*s*.70, -s*.98]];
+    const guard = [[-facing*s*.15, shoulderY], [-facing*s*.31, -s*.95], [-facing*s*.18, -s*.73]];
+    leftArm = lead === 'left' ? punch : guard;
+    rightArm = lead === 'right' ? punch : guard;
+  } else if (stunned) {
+    leftArm = [[-s*.15, shoulderY], [-s*.36, -s*.90], [-s*.22, -s*.67]];
+    rightArm = [[s*.15, shoulderY], [s*.33, -s*.82], [s*.45, -s*.58]];
+  } else {
+    leftArm = [[-s*.15, shoulderY], [-s*.31 + stride*s*.18, -s*.98], [-s*.39 + stride*s*.32, -s*.72]];
+    rightArm = [[s*.15, shoulderY], [s*.31 - stride*s*.18, -s*.98], [s*.39 - stride*s*.32, -s*.72]];
+  }
+  strokeFigureLimb(ctx, armLColor, leftArm, limb);
+  strokeFigureLimb(ctx, armRColor, rightArm, limb);
+
+  // No face/eyes: a clean circular head exactly like the supplied sheet.
+  ctx.fillStyle = headColor;
+  ctx.beginPath(); ctx.arc(0, -s * 1.69, s * .315, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
 function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActive, noWeapon = false, emote = null, attackData = null) {
+  drawReferenceSheetFigure(ctx, s, frame, color, state, facing, charData);
+  return;
   // Yellow turns white when enhanced (power active)
   if (powerActive && charData?.id === 'yellow' && powerActive === 'stat_boost') {
     color = '#FFFFFF';
@@ -1243,15 +1345,6 @@ export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isN
     }
     ctx.restore();
     return;
-  }
-
-  // The combat spec is the source shared by collision and visible move art.
-  // This layer adds the documented contact path over each character's existing
-  // bespoke effects, rather than replacing all moves with one generic flash.
-  const documentedSpec = attack?.spec || getAttackSpecForData(charId, attack);
-  if (documentedSpec) {
-    if (attack.isSuper || documentedSpec.kind === 'super') drawSpecSuper(ctx, x, y, color, progress, documentedSpec, facing);
-    else drawSpecAttack(ctx, x, y, color, progress, facing, documentedSpec);
   }
 
   const isGen1 = String(charId || '').startsWith('g1_');
@@ -2041,6 +2134,7 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
     // Freehand collision segments are physics-only. The original stroke is
     // rendered once by the stage/match renderer.
     if (p?._freehandSegment) return;
+    if (mapId === 'splitcity' && p.w >= 900 && drawSplitCityPlatformArtwork(ctx, p)) return;
     const isMain = p.h >= 18;
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();

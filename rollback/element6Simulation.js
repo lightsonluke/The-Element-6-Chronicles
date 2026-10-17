@@ -13,9 +13,6 @@ export const ONLINE_STAGE_WIDTH = 1280;
 export const ONLINE_STAGE_HEIGHT = 720;
 export const ONLINE_PLATFORMS = Object.freeze([
   Object.freeze({ x: 40, y: 620, w: 1200, h: 48 }),
-  Object.freeze({ x: 120, y: 440, w: 360, h: 20 }),
-  Object.freeze({ x: 800, y: 440, w: 360, h: 20 }),
-  Object.freeze({ x: 460, y: 270, w: 360, h: 20 }),
 ]);
 
 // Normal built-in layouts only. Custom player stages are intentionally never
@@ -23,16 +20,6 @@ export const ONLINE_PLATFORMS = Object.freeze([
 // clients and remains safe for rollback.
 export function getOnlineStagePlatforms(stageId) {
   return MAP_PLATFORMS[stageId] || ONLINE_PLATFORMS;
-}
-
-export function resolveOnlineStageId(stageId, matchId = '') {
-  const ids = Object.keys(MAP_PLATFORMS).filter(id => id !== 'custom');
-  if (stageId && stageId !== '__random__' && MAP_PLATFORMS[stageId]) return stageId;
-  if (!ids.length) return 'splitcity';
-  let hash = 2166136261;
-  const text = String(matchId || 'online');
-  for (let i = 0; i < text.length; i += 1) { hash ^= text.charCodeAt(i); hash = Math.imul(hash, 16777619); }
-  return ids[(hash >>> 0) % ids.length] || 'splitcity';
 }
 
 const REF_KEY = '__rollbackFighterRef';
@@ -119,7 +106,7 @@ function prepareCharacter(character, elementId, shikigamiId) {
   return prepared;
 }
 
-export function createElement6OnlineState({ matchId, mode, stageId = '__random__', host, guest, stocks = 3 }) {
+export function createElement6OnlineState({ matchId, mode, stageId = 'splitcity', host, guest }) {
   if (mode !== 'ranked' && mode !== 'unranked') throw new Error('Element 6 rollback currently supports ranked and unranked only.');
   if (!host?.character || !guest?.character) throw new Error('Both online players require character data.');
 
@@ -133,8 +120,6 @@ export function createElement6OnlineState({ matchId, mode, stageId = '__random__
   guestFighter.gameMode = mode;
   hostFighter.playerIndex = 1;
   guestFighter.playerIndex = 2;
-  hostFighter.stocks = Math.max(1, Number(stocks) || 3);
-  guestFighter.stocks = Math.max(1, Number(stocks) || 3);
 
   return {
     version: 1,
@@ -142,7 +127,7 @@ export function createElement6OnlineState({ matchId, mode, stageId = '__random__
     mode,
     // Included in rollback snapshots/checksums so both clients must agree on
     // the server-selected normal stage before the match advances.
-    stageId: resolveOnlineStageId(stageId, matchId),
+    stageId,
     seed: hashSeed(String(matchId)),
     timerFrames: 4 * 60 * 60,
     winner: null,

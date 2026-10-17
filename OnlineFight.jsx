@@ -33,9 +33,6 @@ const mergeGp = (kb, gp) => gp ? {
 const W = 1280, H = 720;
 const PLATFORMS = [
   { x: 40, y: 620, w: 1200, h: 48 },
-  { x: 120, y: 440, w: 360, h: 20 },
-  { x: 800, y: 440, w: 360, h: 20 },
-  { x: 460, y: 270, w: 360, h: 20 },
 ];
 const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];

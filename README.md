@@ -1,25 +1,15 @@
-# Element 6 — Revert Recent Vector Animation/Hitbox Work + Remove Constructs
+# Split City artwork + reference-sheet fighter update
 
-Replace these files at the repository root:
+Upload this package's contents to the repository root, preserving folders, and replace files when GitHub asks.
 
-- `renderer.js`
-- `fighter.js`
-- `resonanceConstructs.js`
+## Included changes
 
-## This reverts
+- `public/art/stages/split-city/city-backdrop.png` — supplied Split City city art, used by the shared Split City backdrop renderer.
+- `public/art/stages/split-city/floating-island.png` — supplied transparent island art, aligned to the physical ground collision top.
+- `PlatformFighter.jsx`, `OnlineFight.jsx`, `CustomRoomGame.jsx`, and `rollback/element6Simulation.js` — remove the old invisible upper platforms from Split City. The only physical platform is the painted island top at `x: 40, y: 620, w: 1200, h: 48`.
+- `renderer.js` and `stageBackgrounds.js` — render the supplied artwork instead of the procedural Split City artwork. Split City remains the only selectable built-in stage.
+- `renderer.js`, `fighter.js`, and `attackSpecs.js` — use a taller, no-eyes stick-figure silhouette based on the supplied standing/running/jumping sheet, preserve each character's existing color and configured limb colors, and update body collision geometry to match it.
 
-- The recent `vectorMoveArtwork.js` layer is no longer imported or used.
-- The recent normal-attack limb hitboxes and vector-driven knockback are removed.
-- The game returns to its existing original attack rendering and collision paths.
+`public/art/character-reference-sheet.png` is included as the unmodified design reference. It is not loaded by the game at runtime.
 
-## This removes game-wide
-
-- Resonance construct activation.
-- All falling/hovering resonance-orb drops.
-- Construct weapon art and proximity glow.
-- Bot movement toward orbs.
-- Construct hitboxes, including stale online state from a match that began before this update.
-
-The shared match update clears any active construct state, which covers the core fight, Battle Royale, Capture the Flag, Grand Circuit, LAN, rollback, and custom-room paths that use the construct module.
-
-The requested stage rule remains included: ordinary elevated 18–20px platforms are jump-through; the broad lowest floor and combat walls stay solid.
+No SQL is needed.
