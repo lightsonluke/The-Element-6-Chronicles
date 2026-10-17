@@ -10,7 +10,6 @@ import { drawWhip } from './whipRenderer.js';
 import { activateGenPower, updateGenProjectiles, onGenPowerExpire } from './genPowers.js';
 import { updateMovementAbilities, onMovementAbilityLanded, resetMovementAbilityState } from './movementAbilities.js';
 import { getAttackSpecForData, getActiveSpecHitboxes, hitboxIntersectsBody, specKnockbackVector } from './attackSpecs.js';
-import { getNormalVectorHitboxes, getNormalVectorKnockback } from './vectorMoveArtwork.js';
 
 export const GRAVITY = 0.42;
 export const JUMP_FORCE = -14.5;
@@ -1876,8 +1875,8 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
   if (fighter._allOpponents) fighter._allOpponents.forEach(collectWalls);
   if (wallPlatforms.length > 0) platforms = [...platforms, ...wallPlatforms];
 
-  // Elevated ordinary 18–20px ledges are one-way, while the broad, lowest
-  // stage floor and combat-created walls remain solid.
+  // Keep the requested stage rule: ordinary elevated 18–20px platforms are
+  // one-way, while the broad lowest stage floor and constructed walls are solid.
   const stageFloorY = Math.max(...platforms.filter(p => p && !p._forceSolid).map(p => Number(p.y) || 0), 0);
   const isJumpThroughPlatform = (p) => {
     if (!p || p._forceSolid) return false;
@@ -2208,15 +2207,6 @@ export function checkHit(attacker, defender) {
     } catch (err) { return false; }
   }
 
-  // Normal/aerial/power contacts use the exact fist, boot and palm positions
-  // from drawNormalVectorArtwork.  Do not fall through to a broad generic box.
-  if (attacker.attackData.isNormal) {
-    try {
-      const normalHitboxes = getNormalVectorHitboxes(attacker);
-      return normalHitboxes.some(hb => hitboxIntersectsBody(hb, defender));
-    } catch (err) { return false; }
-  }
-
   // ── Fallback AABB hitbox collision ──
   const baseRange = (attacker.attackData.range || 80) * (attacker.rangeBoost || 1);
   const facing = attacker.facing;
@@ -2321,11 +2311,7 @@ export function applyHit(attacker, defender) {
   }
 
   const spec = attacker.attackData.spec || getAttackSpecForData(attacker.char?.id, attacker.attackData);
-  if (attacker.attackData.isNormal && !attacker.attackData.resonanceFamily) {
-    const dir = getNormalVectorKnockback(attacker, defender);
-    defender.vx = dir.x * kb;
-    defender.vy = dir.y * kb;
-  } else if (spec?.knockback) {
+  if (spec?.knockback) {
     const dir = specKnockbackVector(attacker, defender, spec.knockback);
     const mag = kb * (spec.kind === 'super' ? 1.15 : 1);
     defender.vx = dir.x * mag;

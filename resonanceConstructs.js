@@ -269,6 +269,9 @@ function localCircle(pose, p, r) { const q=transformWeaponPoint(pose,p[0],p[1]);
 // Collision follows the same pose and local weapon silhouette as drawConstructWeapon.
 // This deliberately avoids the old oversized, fighter-centered generic attack boxes.
 export function getResonanceConstructHitboxes(fighter) {
+  // Constructs are retired: stale replicated construct states cannot produce
+  // invisible hits in a match that started before the update.
+  return [];
   const a=fighter?.attackData;
   if(!a?.resonanceFamily || !(fighter?.state==='attacking'||fighter?.state==='superAttack')) return [];
   const p=clamp01(a.progress), move=String(a.resonanceMoveSlot||'').toLowerCase();
@@ -532,6 +535,7 @@ export function makeConstructCharacter(baseChar, fighterId) {
 
 }
 export function activateConstruct(fighter) {
+  return false;
   if (!fighter || fighter.resonanceActive || !fighter.char) return false;
   fighter.resonanceOriginalChar = fighter.char._resonanceOriginal || fighter.char;
   fighter.resonanceConstruct = getConstructForCharacter(fighter.resonanceOriginalChar);
@@ -552,6 +556,7 @@ export function deactivateConstruct(fighter) {
   return true;
 }
 export function tryActivateResonanceConstruct(match, fighter, input) {
+  return false;
   if (!match?.orb || !fighter || !input?.sig || fighter.resonanceActive || fighter.stocks === 0 || fighter.hp === 0 || fighter._eliminated) return false;
   const orb = match.orb;
   const targetY = Number.isFinite(orb.y) ? orb.y : 0;
@@ -565,6 +570,14 @@ export function tryActivateResonanceConstruct(match, fighter, input) {
 }
 
 export function updateResonanceMatch(match, fighters, inputs, platforms, W, H, dt=1/60) {
+  if (!match) return;
+  // The shared update hook is called by core fights, Battle Royale, CTF and
+  // Grand Circuit. Clear drops and recover any stale activation everywhere.
+  match.orb = null;
+  match.spawnWait = null;
+  match.frame = (match.frame || 0) + 1;
+  for (const fighter of (fighters || [])) if (fighter?.resonanceActive) deactivateConstruct(fighter);
+  return;
   if (!match || !Array.isArray(fighters)) return;
   match.frame = (match.frame||0)+1;
   for (const f of fighters) {
@@ -608,6 +621,7 @@ export function updateResonanceMatch(match, fighters, inputs, platforms, W, H, d
 }
 /** Steer AI fighters toward an available construct orb and activate it in range. */
 export function steerBotToResonanceOrb(match, fighter, input) {
+  return input;
   if (!match?.orb || !fighter || !input || !(fighter.isAI || fighter.isBot || fighter._gcBot || fighter._isBot) || fighter.resonanceActive || fighter.stocks === 0 || fighter.hp === 0 || fighter._eliminated) return input;
   const dx = match.orb.x - (Number(fighter.x) || 0);
   const dy = match.orb.y - ((Number(fighter.y) || 0) - 28);
@@ -623,6 +637,7 @@ export function steerBotToResonanceOrb(match, fighter, input) {
 
 /** Consume the super button as construct dismissal, never as a super attack. */
 export function consumeConstructSuperInput(fighter, input) {
+  return false;
   if (!fighter?.resonanceActive || !input?.superMove) return false;
   deactivateConstruct(fighter);
   input.superMove = false;
@@ -637,6 +652,7 @@ export function getConstructAttackGeometry(fighter) {
 
 /** Draw a subtle proximity cue while a fighter is close enough to collect the orb. */
 export function drawResonanceRangeGlow(ctx, fighter, orb, frame=0) {
+  return;
   if (!ctx || !fighter || !orb || fighter.resonanceActive || fighter.stocks===0 || fighter.hp===0 || fighter._eliminated) return;
   const fx=Number(fighter.x), fy=Number(fighter.y)-28, ox=Number(orb.x), oy=Number(orb.y);
   if (![fx,fy,ox,oy].every(Number.isFinite) || Math.hypot(fx-ox,fy-oy)>104) return;
@@ -652,6 +668,7 @@ export function drawResonanceRangeGlow(ctx, fighter, orb, frame=0) {
   ctx.restore();
 }
 export function drawResonanceOrb(ctx, orb, frame=0) {
+  return;
   if (!orb) return;
   const x=orb.x,y=orb.y,pulse=1+Math.sin(frame*.12)*.08;
   ctx.save(); ctx.translate(x,y); ctx.scale(pulse,pulse);
@@ -669,6 +686,7 @@ export function drawResonanceOrb(ctx, orb, frame=0) {
 // Detailed layered weapon illustration. Every family has a distinct silhouette, bevels,
 // inset energy channels and animated parts; the weapon is rendered continuously while active.
 export function drawConstructWeapon(ctx, fighter, scale=1) {
+  return;
   if (!fighter?.resonanceActive || !fighter.resonanceConstruct) return;
   // Keep the actual weapon visible during every attack; the renderer adds the
   // move-specific smear/impact layer over this articulated weapon pose.
