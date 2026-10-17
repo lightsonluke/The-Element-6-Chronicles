@@ -535,6 +535,7 @@ export default function DodgeballGame({
     else if (Math.abs(p.vx) > 0.5) state = 'moving';
     let stretch = 0;
     if (p.stun > 0) { stretch = Math.sin(s.frame * 0.4) * 3; state = 'hurt'; }
+    else if ((p.throwAnimTimer || 0) > 0) state = 'throwing';
     const sf = 1.05;
     drawSportChar(ctx, p.x, p.y + stretch, char, {
       facing: p.facing, frame: p.frame, scale: sf, jersey: true, sport: 'dodgeball', state,

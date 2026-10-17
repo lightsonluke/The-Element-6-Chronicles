@@ -2219,8 +2219,8 @@ export function checkHit(attacker, defender) {
   }
 
   // Defender body box — rectangle centered on body
-  const dBW = 32, dBH = 72;
-  const dBX = defender.x, dBY = defender.y - 36;
+  const dBW = 34, dBH = 80;
+  const dBX = defender.x, dBY = defender.y - 40;
 
   // AABB overlap test
   return (hbCX - hbW / 2) < (dBX + dBW / 2) &&

@@ -1447,7 +1447,9 @@ function drawTeamPlayer(ctx, s, team, active, ids, jersey, teamColor, side, equi
     const isActive = i === active;
     let pose = 'idle';
     if (!p.onGround) pose = 'jumping';
-    else if (p.actionState === 'bump' || p.actionState === 'spike' || p.actionState === 'set') pose = 'attacking';
+    else if (p.actionState === 'bump') pose = 'bumping';
+    else if (p.actionState === 'spike') pose = 'spiking';
+    else if (p.actionState === 'set') pose = 'setting';
     else if (Math.abs(p.vx) > 0.3) pose = 'moving';
     drawSportChar(ctx, p.x, p.y, charObj, {
       facing: side === 1 ? 1 : -1,
