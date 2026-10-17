@@ -12,8 +12,23 @@ import { ERA_OPTIONS, ALIGNMENTS, getAlignment, getEraAccent, getEraLabel, getPo
 import CharacterPedestal from './CharacterPedestal.jsx';
 import { getMasteryRankForChar, getMasteryProgress } from './mastery.js';
 import GameIcon from "./GameIcon.jsx";
+import MatchSettingsOverlay from './MatchSettingsOverlay.jsx';
 
 const DIFFICULTIES = ['newcomer', 'beginner', 'easy', 'amateur', 'regular', 'pro', 'hard', 'insane', 'honored'];
+
+function inferMatchMode(label = '', title = '') {
+  const source = `${label} ${title}`.toUpperCase();
+  if (source.includes('SOCCER')) return 'Soccer';
+  if (source.includes('VOLLEYBALL')) return 'Volleyball';
+  if (source.includes('DODGEBALL')) return 'Dodgeball';
+  if (source.includes('BANGER')) return 'Banger';
+  if (source.includes('BATTLE ROYALE')) return 'Battle Royale';
+  if (source.includes('TABLE')) return 'The Table';
+  if (source.includes('LAN')) return 'LAN Play';
+  if (source.includes('PARTY')) return 'Party';
+  if (source.includes('RANKED')) return 'Ranked';
+  return 'Fight';
+}
 
 // Compact initial-circle tile
 function Tile({ char, selected, isP1, isP2, locked, favorite, equippedCX, masteryRank, onClick, onHover, onLeave, onContextMenu }) {
@@ -265,6 +280,9 @@ export default function UniversalCharacterSelect({
   charMastery = {},
   allowLocked = false,
   teamMode = false,
+  matchMode = null,
+  onMatchModeChange,
+  onMatchSettingsChange,
 }) {
   const unlockedSet = new Set(unlockedIds);
 
@@ -319,6 +337,27 @@ export default function UniversalCharacterSelect({
   const [p2IsCPU, setP2IsCPU] = useState(true);
   const [difficulty, setDifficulty] = useState(defaultCPUDifficulty);
   const [hoveredId, setHoveredId] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [matchConfig, setMatchConfig] = useState(() => ({
+    mode: matchMode || inferMatchMode(modeLabel, title),
+    fightVariant: 'Regular',
+    slotCount: playerCount,
+    slots: Array.from({ length: playerCount }, (_, i) => ({ kind: i === 0 ? 'player' : 'cpu', control: i === 0 ? 'Keyboard · WASD' : 'Keyboard · Arrows' })),
+  }));
+  const activePlayerCount = Math.max(1, Math.min(8, Number(matchConfig.slotCount) || playerCount));
+  useEffect(() => {
+    setPicks(prev => {
+      const next = prev.slice(0, activePlayerCount);
+      while (next.length < activePlayerCount) {
+        const option = ALL_CHARS.find(c => c.id !== 'evil' && !next.includes(c.id));
+        next.push(option?.id || 'blue');
+      }
+      return next;
+    });
+    setElements(prev => Array.from({ length: activePlayerCount }, (_, i) => prev[i] || 'basic'));
+    setShikigami(prev => Array.from({ length: activePlayerCount }, (_, i) => prev[i] || null));
+    setSelecting(current => Math.min(current, activePlayerCount));
+  }, [activePlayerCount]);
 
   // Backward-compatible aliases
   const p1 = picks[0];
@@ -399,7 +438,7 @@ export default function UniversalCharacterSelect({
 
   const handleSelect = (charId) => {
     sfx.click();
-    if (playerCount === 1 || rankedRandom) { setPicks(prev => { const next = [...prev]; next[0] = charId; return next; }); return; }
+    if (activePlayerCount === 1 || rankedRandom) { setPicks(prev => { const next = [...prev]; next[0] = charId; return next; }); return; }
     setPicks(prev => { const next = [...prev]; next[selecting - 1] = charId; return next; });
   };
 
@@ -415,7 +454,7 @@ export default function UniversalCharacterSelect({
   const p1Locked = !allowLocked && !unlockedSet.has(p1) && !p1Char?.isCustom;
   // CPU/bot slots are never blocked by the human account's unlock inventory.
   // Only an actual human-controlled selection can fail the unlock check.
-  const p2Locked = !allowLocked && playerCount === 2 && !p2IsCPU && !unlockedSet.has(p2) && !p2Char?.isCustom;
+  const p2Locked = !allowLocked && activePlayerCount >= 2 && !p2IsCPU && !unlockedSet.has(p2) && !p2Char?.isCustom;
   const canStart = !p1Locked && !p2Locked;
 
   const handleStart = () => {
@@ -426,44 +465,44 @@ export default function UniversalCharacterSelect({
     picks.forEach((p, i) => { if (shikigami[i]) shikigamiOverride[p] = shikigami[i]; });
     // Pass all picks; extra picks (P3+) are appended after the standard 6 args.
     // Shikigami override map is always the final argument.
-    onStart?.(p1, p2, playerCount >= 2 ? p2IsCPU : true, difficulty, p1Element, p2Element, ...picks.slice(2), shikigamiOverride);
+    onStart?.(p1, p2, activePlayerCount >= 2 ? p2IsCPU : true, difficulty, p1Element, p2Element, ...picks.slice(2), shikigamiOverride, matchConfig);
   };
   const handlePickShikigami = (id) => {
-    const idx = (playerCount === 1 || rankedRandom) ? 0 : selecting - 1;
+    const idx = (activePlayerCount === 1 || rankedRandom) ? 0 : selecting - 1;
     setShikigami(prev => { const next = [...prev]; next[idx] = id; return next; });
     sfx.click();
   };
 
-  const selectedIds = playerCount === 1 || rankedRandom ? [p1] : picks.slice(0, playerCount);
+  const handleMatchConfigChange = (next) => {
+    setMatchConfig(next);
+    // Existing lobby callers can opt into real routing/config updates without
+    // breaking their current prop contract.
+    onMatchSettingsChange?.(next);
+    if (next.mode !== matchConfig.mode) onMatchModeChange?.(next.mode, next);
+    if (next.slots?.[1]) setP2IsCPU(next.slots[1].kind === 'cpu');
+  };
+
+  const selectedIds = activePlayerCount === 1 || rankedRandom ? [p1] : picks.slice(0, activePlayerCount);
 
   return (
     <div className="el6-character-select-scroll flex flex-col gap-2 w-full max-w-6xl mx-auto h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] overflow-y-auto overflow-x-hidden overscroll-contain pr-2 pb-28" tabIndex={-1}>
+      <MatchSettingsOverlay open={settingsOpen} onClose={() => setSettingsOpen(false)} config={matchConfig} onChange={handleMatchConfigChange} />
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-heading text-foreground tracking-wider">{title}</h2>
+        <h2 className="text-xl font-heading text-foreground tracking-wider">MANAGE MATCH</h2>
         <div className="flex gap-2 items-center">
-          {playerCount === 2 && allowCPU && !cpuOnly && (
-            <>
-              <button onClick={() => setP2IsCPU(false)} className={`px-2 py-1 rounded font-heading text-[10px] ${!p2IsCPU ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>VS P2</button>
-              <button onClick={() => setP2IsCPU(true)} className={`px-2 py-1 rounded font-heading text-[10px] ${p2IsCPU ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>VS CPU</button>
-            </>
-          )}
-          {p2IsCPU && playerCount === 2 && !rankedRandom && (
-            <select value={difficulty} onChange={e => setDifficulty(e.target.value)} className="px-1.5 py-1 bg-secondary text-secondary-foreground rounded text-[10px] font-body">
-              {DIFFICULTIES.map(d => <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>)}
-            </select>
-          )}
           {rankedRandom && <span className="text-[9px] text-muted-foreground"><GameIcon emoji="🔒" size={14} /> P2: Random</span>}
           <button onClick={onBack} className="px-2 py-1 bg-muted text-muted-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={() => setSettingsOpen(true)} className="px-2 py-1 bg-primary text-primary-foreground rounded font-heading text-xs hover:opacity-80">MATCH SETTINGS</button>
         </div>
       </div>
 
       {/* Player selector toggle */}
-      {playerCount >= 2 && !rankedRandom && (
+      {activePlayerCount >= 2 && !rankedRandom && (
         <div className="flex gap-1.5 items-center flex-wrap">
-          {Array.from({ length: playerCount }).map((_, i) => (
+          {Array.from({ length: activePlayerCount }).map((_, i) => (
             <button key={i} onClick={() => setSelecting(i + 1)} className={`px-2.5 py-1 rounded font-heading text-[10px] ${selecting === i + 1 ? (i === 0 ? 'bg-accent text-accent-foreground' : 'bg-primary text-primary-foreground') : 'bg-secondary text-secondary-foreground'}`}>
-              {i === 0 ? 'P1' : i === 1 ? (p2IsCPU ? 'CPU' : 'P2') : `P${i + 1}`}
+              {matchConfig.slots?.[i]?.kind === 'cpu' ? `CPU${i || ''}` : `P${i + 1}`}
             </button>
           ))}
           <button onClick={() => {
@@ -543,12 +582,12 @@ export default function UniversalCharacterSelect({
         <div className="bg-card/50 border border-border rounded-lg p-1.5">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[9px] font-heading text-accent">🪶 SHIKIGAMI (this match)</span>
-            <span className="text-[7px] text-muted-foreground ml-auto">P{selecting}: {shikigami[(playerCount === 1 || rankedRandom) ? 0 : selecting - 1] || 'none'}</span>
+            <span className="text-[7px] text-muted-foreground ml-auto">P{selecting}: {shikigami[(activePlayerCount === 1 || rankedRandom) ? 0 : selecting - 1] || 'none'}</span>
           </div>
           <div className="flex gap-1 flex-wrap max-h-20 overflow-y-auto">
-            <button onClick={() => handlePickShikigami(null)} className={`px-1.5 py-0.5 rounded text-[8px] font-heading border-2 ${!shikigami[(playerCount === 1 || rankedRandom) ? 0 : selecting - 1] ? 'border-accent bg-accent/20' : 'border-border bg-secondary text-secondary-foreground'}`}>NONE</button>
+            <button onClick={() => handlePickShikigami(null)} className={`px-1.5 py-0.5 rounded text-[8px] font-heading border-2 ${!shikigami[(activePlayerCount === 1 || rankedRandom) ? 0 : selecting - 1] ? 'border-accent bg-accent/20' : 'border-border bg-secondary text-secondary-foreground'}`}>NONE</button>
             {SHIKIGAMI.filter(s => ownedShikigami.includes(s.id)).map(s => {
-              const cur = shikigami[(playerCount === 1 || rankedRandom) ? 0 : selecting - 1];
+              const cur = shikigami[(activePlayerCount === 1 || rankedRandom) ? 0 : selecting - 1];
               return (
                 <button key={s.id} onClick={() => handlePickShikigami(s.id)} title={s.name}
                   className={`px-1.5 py-0.5 rounded text-[8px] font-heading border-2 ${cur === s.id ? 'border-accent bg-accent/20' : 'border-border bg-secondary text-secondary-foreground'}`}>
@@ -563,7 +602,7 @@ export default function UniversalCharacterSelect({
       {/* Pedestals */}
       {!hidePedestals && (
         <div className="flex gap-2 justify-center items-end pt-1 border-t border-border flex-wrap">
-          {teamMode && playerCount > 2 ? (
+          {teamMode && activePlayerCount > 2 ? (
             <>
               {/* Team 1: picks[0], picks[2], picks[4], ... */}
               <div className="flex gap-1.5 items-end">
@@ -597,7 +636,7 @@ export default function UniversalCharacterSelect({
             <>
               <CharacterPedestal char={p1Char} playerId={1} isActive={selecting === 1} element={p1Element}
                 onEquipElement={handleEquipElement} charLevels={charLevels} equippedSkins={equippedSkins} equippedAccessories={equippedAccessories} shikigamiId={shikigami[0]} compact />
-              {playerCount >= 2 && (
+              {activePlayerCount >= 2 && (
                 <>
                   <span className="text-xl font-heading text-destructive pb-8">VS</span>
                   {rankedRandom ? (
@@ -612,7 +651,7 @@ export default function UniversalCharacterSelect({
                 </>
               )}
               {/* Additional players (P3+) for sport modes with 3+ player selection */}
-              {playerCount > 2 && picks.slice(2).map((pickId, i) => {
+              {activePlayerCount > 2 && picks.slice(2).map((pickId, i) => {
                 const playerNum = i + 3;
                 const pickChar = ALL_DISPLAY.find(c => c.id === pickId);
                 return (
@@ -633,7 +672,6 @@ export default function UniversalCharacterSelect({
 
       {/* Start button */}
       <div className="flex flex-col gap-1 items-center">
-        {modeLabel && <p className="text-[9px] font-heading text-accent">{modeLabel}</p>}
         {p1Locked && <p className="text-[9px] text-destructive font-heading"><GameIcon emoji="⚠" size={14} /> P1 character is locked — unlock in Shop to use</p>}
         {p2Locked && <p className="text-[9px] text-destructive font-heading"><GameIcon emoji="⚠" size={14} /> P2 character is locked — unlock in Shop to use</p>}
         <button onClick={handleStart} disabled={!canStart}
