@@ -540,15 +540,15 @@ export function getLimbPose(frame, state = 'idle', facing = 1, scale = 1, powerA
     legSwing = Math.cos(t) * 0.6;
   } else if (state === 'hitstun') { bob = 3; lean = -facing * 0.3; armSwingL = 0.6; armSwingR = -0.4; legSwing = -0.3; }
 
-  const headR = s * 0.34;
-  const headCY = -s * 1.78 + bob;
+  const headR = s * 0.36;
+  const headCY = -s * 1.82 + bob;
   const torsoW = s * 0.52;
-  const torsoH = s * 0.76;
+  const torsoH = s * 0.78;
   const torsoX = -torsoW / 2;
   const torsoY = headCY + headR + s * 0.05;
   const hipY = torsoY + torsoH;
-  const armLen = s * 0.56;
-  const legLen = s * 0.66;
+  const armLen = s * 0.58;
+  const legLen = s * 0.70;
   const hipLX = torsoX + torsoW * 0.25;
   const hipRX = torsoX + torsoW * 0.75;
   const shoulderLX = torsoX;
@@ -637,10 +637,19 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
     armSwingR = -Math.sin(t) * 0.55;
     lean = facing * 0.12;
   } else if (state === 'jumping') {
-    bob = -6;
-    legSwing = -0.4;
-    armSwingL = -0.7;
-    armSwingR = 0.7;
+    bob = -8; legSwing = -0.55; armSwingL = -0.9; armSwingR = 0.9;
+  } else if (/kick|kicking|bicycle/i.test(String(state))) {
+    bob = -2; lean = facing * 0.18; legLOver = -facing * 1.35; legROver = facing * 0.35; armSwingL = -0.75; armSwingR = 0.65;
+  } else if (/spik|serve|smash/i.test(String(state))) {
+    bob = -7; lean = facing * 0.12; armSwingL = -0.8; armSwingR = facing * -1.85; legSwing = 0.38;
+  } else if (/bump|receive|dig/i.test(String(state))) {
+    bob = 5; lean = facing * 0.10; armSwingL = 1.0; armSwingR = 1.0; legSwing = 0.12;
+  } else if (/set|setting/i.test(String(state))) {
+    bob = -2; armSwingL = -1.25; armSwingR = -1.25; legSwing = -0.1;
+  } else if (/throw|pitch/i.test(String(state))) {
+    lean = facing * 0.25; armSwingL = 0.45; punchArmR = -1.85 * facing; legSwing = 0.28;
+  } else if (/stun|hurt|hit/i.test(String(state))) {
+    bob = 3; lean = -facing * 0.32; armSwingL = 0.8; armSwingR = -0.8; legSwing = -0.35;
   } else if (state === 'attacking') {
     lean = facing * 0.22;
     // Punch pose — one arm swings forward hard
@@ -660,30 +669,6 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
     armSwingL = 0.6;
     armSwingR = -0.4;
     legSwing = -0.3;
-  } else if (state === 'kicking') {
-    // Soccer kick: counter-swing arms, plant leg stable, kicking leg chambers and snaps forward.
-    const t = (frame % 18) / 18;
-    const kick = Math.sin(Math.min(1, t * 1.8) * Math.PI);
-    lean = -facing * 0.16;
-    armSwingL = -0.75; armSwingR = 0.85;
-    legSwing = 0.12;
-    legROver = -facing * (0.2 + kick * 0.95);
-  } else if (state === 'bumping') {
-    // Volleyball forearm pass: knees bend, torso lowers, arms lock forward together.
-    bob = 7; lean = facing * 0.08; armSwingL = -1.12; armSwingR = -1.12; legSwing = 0.08;
-  } else if (state === 'setting') {
-    // Hands rise above the forehead and elbows flare outward.
-    bob = -2; armSwingL = -2.15; armSwingR = 2.15; legSwing = -0.08;
-  } else if (state === 'spiking') {
-    // Jump-spike: striking arm overhead, guide arm counterbalances, legs scissor.
-    bob = -7; lean = facing * 0.2; armSwingL = -1.9; armSwingR = 2.65; legSwing = 0.55;
-  } else if (state === 'throwing') {
-    // Dodgeball throw: wind-up then forward release, with shoulder and hip rotation.
-    const t = (frame % 16) / 16;
-    const release = Math.sin(t * Math.PI * 2);
-    lean = facing * (0.12 + Math.max(0, release) * 0.2);
-    armSwingL = -0.25; armSwingR = -1.25 - Math.max(0, release) * 1.6;
-    legSwing = 0.25;
   } else if (state === 'crouching') {
     // Crouching — lower body, arms tucked
     bob = 10;
@@ -716,16 +701,16 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
   ctx.save();
   ctx.rotate(lean);
 
-  const headR = s * 0.34;
-  const headCY = -s * 1.78 + bob;
+  const headR = s * 0.36;
+  const headCY = -s * 1.82 + bob;
   const torsoW = s * 0.52;
-  const torsoH = s * 0.76;
+  const torsoH = s * 0.78;
   const torsoX = -torsoW / 2;
   const torsoY = headCY + headR + s * 0.05;
   const hipY = torsoY + torsoH;
   const limbW = s * 0.24;
-  const armLen = s * 0.56;
-  const legLen = s * 0.66;
+  const armLen = s * 0.58;
+  const legLen = s * 0.70;
 
   ctx.shadowColor = torsoColor;
   ctx.shadowBlur = 12;
@@ -743,7 +728,8 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
   ctx.beginPath();
   ctx.roundRect(-limbW / 2, 0, limbW, legLen, limbW / 2);
   ctx.fill();
-  ctx.beginPath(); ctx.arc(0, legLen * 0.52, limbW * 0.43, 0, Math.PI * 2); ctx.fill(); // knee joint
+  // Rounded knee joint makes the upper/lower leg connection intentional.
+  ctx.beginPath(); ctx.arc(0, legLen * 0.50, limbW * 0.53, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 
   ctx.save();
@@ -753,7 +739,7 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
   ctx.beginPath();
   ctx.roundRect(-limbW / 2, 0, limbW, legLen, limbW / 2);
   ctx.fill();
-  ctx.beginPath(); ctx.arc(0, legLen * 0.52, limbW * 0.43, 0, Math.PI * 2); ctx.fill(); // knee joint
+  ctx.beginPath(); ctx.arc(0, legLen * 0.50, limbW * 0.53, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 
   // ── Torso ──
@@ -787,12 +773,12 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
   ctx.beginPath();
   ctx.roundRect(-limbW / 2, 0, limbW, armLen, limbW / 2);
   ctx.fill();
-  ctx.beginPath(); ctx.arc(0, armLen * 0.52, limbW * 0.43, 0, Math.PI * 2); ctx.fill(); // elbow joint
   // Fist/hand circle at end
   ctx.fillStyle = armColor;
   ctx.beginPath();
   ctx.arc(0, armLen, limbW * 0.55, 0, Math.PI * 2);
   ctx.fill();
+  ctx.beginPath(); ctx.arc(0, armLen * 0.50, limbW * 0.52, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 
   ctx.save();
@@ -802,11 +788,11 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
   ctx.beginPath();
   ctx.roundRect(-limbW / 2, 0, limbW, armLen, limbW / 2);
   ctx.fill();
-  ctx.beginPath(); ctx.arc(0, armLen * 0.52, limbW * 0.43, 0, Math.PI * 2); ctx.fill(); // elbow joint
   ctx.fillStyle = armColorR;
   ctx.beginPath();
   ctx.arc(0, armLen, limbW * 0.55, 0, Math.PI * 2);
   ctx.fill();
+  ctx.beginPath(); ctx.arc(0, armLen * 0.50, limbW * 0.52, 0, Math.PI * 2); ctx.fill();
   // Weapons removed from the game
   ctx.restore();
 
@@ -1407,7 +1393,7 @@ function drawNormalAttack(ctx, x, y, attack, progress, facing, color) {
 
   const s = 36; // base scale
   const limbW = s * 0.24;
-  const armLen = s * 0.56;
+  const armLen = s * 0.58;
 
   if (attack.sigType === 'down' || attack.type === 'downNormal') {
     // Downward kick

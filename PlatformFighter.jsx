@@ -1786,7 +1786,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         const drawFighterBox = (f, label) => {
           // Hurtbox remains a body-shaped training box; attack hitboxes are the
           // exact authored circles/capsules/polygons used by collision.
-          drawTrainingHitbox(ctx, f.x, f.y - 28, 44, 76, label);
+          drawTrainingHitbox(ctx, f.x, f.y - 34, 48, 94, label);
           if (f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
             drawExactAttackHitboxOverlay(ctx, f, label);
           }
