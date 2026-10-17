@@ -3,7 +3,9 @@
 // Array index = platform index in MAP_PLATFORMS.
 
 export const STAGE_MATERIALS = {
-  splitcity:        ['metal', 'normal', 'normal', 'normal'],
+  // Split City uses its supplied image as the platform material. No generic
+  // metal/normal overlay is permitted on top of the painted island.
+  splitcity:        ['split_city_art'],
   basic:            ['normal'],
   silvermansion:    ['metal', 'glass', 'glass', 'metal', 'glass'],
   controllerforest: ['grass', 'wood', 'wood', 'wood', 'wood', 'wood'],

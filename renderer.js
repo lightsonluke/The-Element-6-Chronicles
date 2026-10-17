@@ -7,17 +7,28 @@ import { getEmotePoseVars } from './emotePose.js';
 import { getGen1AttackPose } from './gen1AttackAnims.js';
 import { getResonanceAttackAction } from './resonanceConstructs.js';
 
-const SPLIT_CITY_PLATFORM_ART_PATH = '/art/stages/split-city/floating-island.png';
+const SPLIT_CITY_PLATFORM_ART_PATH = '/art/stages/split-city/floating-island-full.png';
 const splitCityPlatformArt = typeof Image === 'undefined' ? null : new Image();
 if (splitCityPlatformArt) splitCityPlatformArt.src = SPLIT_CITY_PLATFORM_ART_PATH;
 
+const REFERENCE_SHEET_PATH = '/art/character-reference-sheet.png';
+const referenceSheetArt = typeof Image === 'undefined' ? null : new Image();
+if (referenceSheetArt) referenceSheetArt.src = REFERENCE_SHEET_PATH;
+const referenceFrameCache = new Map();
+
 function drawSplitCityPlatformArtwork(ctx, platform) {
   if (!splitCityPlatformArt?.complete || !splitCityPlatformArt.naturalWidth) return false;
-  // The transparent artwork's painted top sits 29% down its source image.
-  // Align it to the actual collision top so visuals and physics agree.
-  const artWidth = platform.w + 48;
-  const artHeight = artWidth * (375 / 665);
-  ctx.drawImage(splitCityPlatformArt, platform.x - 24, platform.y - artHeight * .29, artWidth, artHeight);
+  // Assemble the platform from the supplied left/right artwork halves. The
+  // original empty middle section is removed, and the halves overlap by 8px
+  // at the seam. Their painted top is aligned exactly to platform.y.
+  const srcY = 310, srcH = 631, srcW = 745;
+  const leftSX = 0, rightSX = 925;
+  const halfW = platform.w / 2 + 4;
+  const drawH = halfW * (srcH / srcW);
+  const paintedTopInCrop = 60;
+  const drawY = platform.y - paintedTopInCrop * (drawH / srcH);
+  ctx.drawImage(splitCityPlatformArt, leftSX, srcY, srcW, srcH, platform.x, drawY, halfW, drawH);
+  ctx.drawImage(splitCityPlatformArt, rightSX, srcY, srcW, srcH, platform.x + platform.w - halfW, drawY, halfW, drawH);
   return true;
 }
 
@@ -631,7 +642,64 @@ function strokeFigureLimb(ctx, color, points, width) {
 // Shared no-eyes character body based on the supplied standing, running, and
 // jumping sprite reference. Every character keeps its own existing color (and
 // Gen I/custom limb colors where supplied by appearance data).
+function referenceColorRgb(color) {
+  const hex = String(color || '#ffd000').trim().replace('#', '');
+  if (/^[0-9a-f]{6}$/i.test(hex)) return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+  if (/^[0-9a-f]{3}$/i.test(hex)) return hex.split('').map(v => parseInt(v + v, 16));
+  return [255, 208, 0];
+}
+
+function getReferenceFrame(kind, index, color) {
+  if (!referenceSheetArt?.complete || !referenceSheetArt.naturalWidth || typeof document === 'undefined') return null;
+  const centers = kind === 'run'
+    ? [100, 240, 365, 485, 605, 725, 845, 965, 1085, 1205, 1325, 1450]
+    : kind === 'jump'
+      ? [110, 298, 485, 665, 850, 1040, 1200, 1370]
+      : [116, 299, 463, 645, 830, 1011, 1190, 1375];
+  const top = kind === 'run' ? 420 : kind === 'jump' ? 695 : 82;
+  const sourceHeight = kind === 'run' ? 185 : kind === 'jump' ? 245 : 210;
+  const sourceWidth = kind === 'run' ? 130 : 170;
+  const frameIndex = ((index % centers.length) + centers.length) % centers.length;
+  const key = `${kind}:${frameIndex}:${color}`;
+  if (referenceFrameCache.has(key)) return referenceFrameCache.get(key);
+  const canvas = document.createElement('canvas');
+  canvas.width = sourceWidth; canvas.height = sourceHeight;
+  const c = canvas.getContext('2d', { willReadFrequently: true });
+  c.drawImage(referenceSheetArt, centers[frameIndex] - sourceWidth / 2, top, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight);
+  const pixels = c.getImageData(0, 0, sourceWidth, sourceHeight);
+  const [tr, tg, tb] = referenceColorRgb(color);
+  for (let i = 0; i < pixels.data.length; i += 4) {
+    const r = pixels.data[i], g = pixels.data[i + 1], b = pixels.data[i + 2];
+    // The supplied art is yellow on white. Preserve anti-alias alpha while
+    // turning only the figure into the selected character color.
+    if (r > 145 && g > 75 && g < 240 && b < 150) {
+      const alpha = Math.max(0, Math.min(255, Math.round((r + g) * .57)));
+      pixels.data[i] = tr; pixels.data[i + 1] = tg; pixels.data[i + 2] = tb; pixels.data[i + 3] = alpha;
+    } else {
+      pixels.data[i + 3] = 0;
+    }
+  }
+  c.putImageData(pixels, 0, 0);
+  referenceFrameCache.set(key, canvas);
+  return canvas;
+}
+
+function drawReferenceSheetSprite(ctx, s, frame, color, state, facing) {
+  const kind = state === 'moving' ? 'run' : state === 'jumping' ? 'jump' : 'stand';
+  const speed = kind === 'run' ? 4 : kind === 'jump' ? 5 : 8;
+  const sprite = getReferenceFrame(kind, Math.floor(frame / speed), color);
+  if (!sprite) return false;
+  const h = kind === 'jump' ? s * 3.35 : s * 3.08;
+  const w = h * (sprite.width / sprite.height);
+  ctx.save();
+  if (facing < 0) { ctx.scale(-1, 1); }
+  ctx.drawImage(sprite, -w / 2, -h, w, h);
+  ctx.restore();
+  return true;
+}
+
 function drawReferenceSheetFigure(ctx, s, frame, color, state, facing, charData) {
+  if (drawReferenceSheetSprite(ctx, s, frame, color, state, facing)) return;
   const ap = charData?.appearance || {};
   const headColor = ap.head || color;
   const torsoColor = ap.torso || color;

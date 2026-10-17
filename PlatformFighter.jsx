@@ -1655,7 +1655,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       ctx.setLineDash([]); ctx.shadowBlur = 0; ctx.restore();
       }
 
-      platforms.forEach(p => { if (!p?._freehandSegment) drawMaterialOverlay(ctx, p, f1.frame); });
+      // Split City is rendered from its supplied platform artwork inside
+      // drawPlatforms. Do not paint a generic material rectangle over it.
+      if (mapId !== 'splitcity') platforms.forEach(p => { if (!p?._freehandSegment) drawMaterialOverlay(ctx, p, f1.frame); });
       drawResonanceOrb(ctx, resonanceMatch.orb, resonanceMatch.frame);
       // Visual indicator for erased platforms
       platforms.forEach(p => {
