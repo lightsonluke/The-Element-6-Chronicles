@@ -1,25 +1,35 @@
-# Element 6 — Vector Sprite Artwork Production Pack
+# Element 6 — Hitbox and Knockback Calibration Pack
 
-Copy every file in this package to the root of your current Element 6 project and let GitHub replace the matching files.
-
-Files:
+Replace these files in the root of your repository:
 
 - `renderer.js`
+- `fighter.js`
 - `resonanceConstructs.js`
-- `vectorMoveArtwork.js` (new)
+- `attackSpecs.js`
+- `vectorMoveArtwork.js`
 
-## What this is
+## What is calibrated
 
-This is an **additive Canvas-vector sprite layer**, not a random PNG generator. It is tied to the exact same `drawStickman` renderer used for your characters. Attack artwork gets the current character colour, facing direction, move progress, range, and authored move shape from the game data.
+### Normal, aerial, and power attacks
 
-It has distinct detailed motifs for fire, water, ice, grass/nature, thunder, void/portal, blade, scythe, hammer, spear, and trident attacks. The marks are made from layered polygons, curved paths, shards, highlights, and impact flecks. The existing detailed construct weapons and resonance orb remain intact.
+The visible extended limb effect and its collision now come from the same shared vector-contact data:
 
-## Safety
+- Jab: capsule attached to the visible fist.
+- Aerial: capsule attached to the visible boot.
+- Power burst: capsule through the visible palm plus a small visible burst circle.
 
-- It does **not** alter attack damage, hitboxes, knockback, timing, or movement.
-- Collision remains in `attackSpecs.js` and `resonanceConstructs.js`; visuals cannot create a hit.
-- Since fights, rollback online fights, LAN, custom rooms, and Battle Royale use the shared renderer, the art layer appears everywhere that uses normal fight rendering.
+The hit window is only frames 22%–66% of the animation. Wind-up and recovery cannot hit. Knockback now follows the actual contact direction: forward for jab/palm, up-forward for aerials, and down-diagonal for ground-pounds.
 
-## Important limitation
+### Special/heavy attacks
 
-This is real code-native vector artwork, but it is not a replacement for 50 separate hand-painted sprite sheets. If you later want hand-drawn raster frames, those need to be authored as a separate asset set using the existing character designs as reference.
+The existing `attackSpecs.js` geometry remains the authority for their visible path, contact, and knockback profile. The vector-art layer is drawn using the same move shape/range/color data.
+
+### Resonance constructs
+
+`resonanceConstructs.js` already calculates collision from the exact transformed construct-weapon pose (weapon edge, tip, or grab point) and then applies weapon/slot-specific knockback. This package preserves that exact construct system; it does not replace it with oversized fighter-centred boxes.
+
+This is shared fighter code, so the same calibrated collision is used by offline fights, LAN, custom rooms, rollback online fights, Battle Royale, and other modes that use `fighter.js`.
+
+## Included platform safeguard
+
+The replacement `fighter.js` also keeps the previous platform repair: ordinary elevated 18–20px platforms are jump-through, while the broad lowest stage floor and combat-created walls remain solid.

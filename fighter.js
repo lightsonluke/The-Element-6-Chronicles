@@ -10,6 +10,7 @@ import { drawWhip } from './whipRenderer.js';
 import { activateGenPower, updateGenProjectiles, onGenPowerExpire } from './genPowers.js';
 import { updateMovementAbilities, onMovementAbilityLanded, resetMovementAbilityState } from './movementAbilities.js';
 import { getAttackSpecForData, getActiveSpecHitboxes, hitboxIntersectsBody, specKnockbackVector } from './attackSpecs.js';
+import { getNormalVectorHitboxes, getNormalVectorKnockback } from './vectorMoveArtwork.js';
 
 export const GRAVITY = 0.42;
 export const JUMP_FORCE = -14.5;
@@ -1875,11 +1876,8 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
   if (fighter._allOpponents) fighter._allOpponents.forEach(collectWalls);
   if (wallPlatforms.length > 0) platforms = [...platforms, ...wallPlatforms];
 
-  // Normal stage platforms are commonly 18–20px tall.  Treat those elevated
-  // ledges as one-way surfaces so fighters can jump through them, while the
-  // low, wide stage floor remains a real solid.  This is derived from the
-  // platform layout rather than a map-name list, so it is shared by offline,
-  // rollback, LAN, custom-room and custom-stage matches.
+  // Elevated ordinary 18–20px ledges are one-way, while the broad, lowest
+  // stage floor and combat-created walls remain solid.
   const stageFloorY = Math.max(...platforms.filter(p => p && !p._forceSolid).map(p => Number(p.y) || 0), 0);
   const isJumpThroughPlatform = (p) => {
     if (!p || p._forceSolid) return false;
@@ -1892,7 +1890,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     const mat = p.material || 'normal';
     if (PASS_THROUGH.includes(mat)) continue;
     if (p._deleted > 0) continue;
-    const isSoft = isJumpThroughPlatform(p); // elevated 18–20px platforms are one-way
+    const isSoft = isJumpThroughPlatform(p);
 
     // One-way platform collision — only land when falling onto it from above
     if (fighter.vy >= 0) {
@@ -2043,7 +2041,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     const mat = p.material || 'normal';
     if (PASS_THROUGH.includes(mat)) continue;
     if (p._deleted > 0) continue;
-    if (isJumpThroughPlatform(p)) continue; // elevated platforms are pass-through
+    if (isJumpThroughPlatform(p)) continue;
     if (ceilingHits.has(p)) continue; // head caught on underside — fall back down, no sideways shove
     // Skip if standing on top of this platform
     if (fighter.grounded && Math.abs(fighter.y - p.y) < 3) continue;
@@ -2210,6 +2208,15 @@ export function checkHit(attacker, defender) {
     } catch (err) { return false; }
   }
 
+  // Normal/aerial/power contacts use the exact fist, boot and palm positions
+  // from drawNormalVectorArtwork.  Do not fall through to a broad generic box.
+  if (attacker.attackData.isNormal) {
+    try {
+      const normalHitboxes = getNormalVectorHitboxes(attacker);
+      return normalHitboxes.some(hb => hitboxIntersectsBody(hb, defender));
+    } catch (err) { return false; }
+  }
+
   // ── Fallback AABB hitbox collision ──
   const baseRange = (attacker.attackData.range || 80) * (attacker.rangeBoost || 1);
   const facing = attacker.facing;
@@ -2314,7 +2321,11 @@ export function applyHit(attacker, defender) {
   }
 
   const spec = attacker.attackData.spec || getAttackSpecForData(attacker.char?.id, attacker.attackData);
-  if (spec?.knockback) {
+  if (attacker.attackData.isNormal && !attacker.attackData.resonanceFamily) {
+    const dir = getNormalVectorKnockback(attacker, defender);
+    defender.vx = dir.x * kb;
+    defender.vy = dir.y * kb;
+  } else if (spec?.knockback) {
     const dir = specKnockbackVector(attacker, defender, spec.knockback);
     const mag = kb * (spec.kind === 'super' ? 1.15 : 1);
     defender.vx = dir.x * mag;

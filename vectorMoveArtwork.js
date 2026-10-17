@@ -122,3 +122,68 @@ export function drawVectorMoveArtwork(ctx, x, y, color, progress, facing, spec, 
   }
   ctx.shadowBlur=0; ctx.restore();
 }
+
+// Normal contacts are deliberately tiny and attached to a visible limb.  This
+// one definition is consumed by both the drawn sprite and fighter collision;
+// keeping it here prevents a future visual-only range change from silently
+// changing what can hit.
+export function getNormalVectorContact(attack = {}) {
+  if (attack.isGroundPound || attack.type === 'groundPound') return { kind: 'groundPound', knockback: 'downDiagonal' };
+  if (attack.isRecovery || attack.sigType === 'aerial' || attack.type === 'aerialNormal') return { kind: 'aerialKick', knockback: 'upForward' };
+  if (attack.sigType === 'power' || attack.type === 'power') return { kind: 'palmBurst', knockback: 'forward' };
+  return { kind: 'jab', knockback: 'forward' };
+}
+
+export function getNormalVectorHitboxes(attacker) {
+  const attack = attacker?.attackData;
+  if (!attack || !attack.isNormal || attack.resonanceFamily) return [];
+  const p = clamp(Number(attack.progress) || 0);
+  // Wind-up and recovery are visible but harmless.  The active slice maps to
+  // the drawn extended fist/boot/palm instead of an attacker-centred rectangle.
+  if (p < .22 || p > .66) return [];
+  const f = attacker.facing || 1, x = Number(attacker.x) || 0, y = Number(attacker.y) || 0;
+  const contact = getNormalVectorContact(attack);
+  if (contact.kind === 'aerialKick') {
+    const lift = Math.sin((p - .22) / .44 * Math.PI) * 8;
+    return [{ shape:'capsule', x1:x + f*9, y1:y - 27 - lift, x2:x + f*54, y2:y - 15 - lift, r:9 }];
+  }
+  if (contact.kind === 'palmBurst') {
+    return [
+      { shape:'capsule', x1:x + f*11, y1:y - 43, x2:x + f*40, y2:y - 43, r:9 },
+      { shape:'circle', x:x + f*49, y:y - 43, r:13 },
+    ];
+  }
+  return [{ shape:'capsule', x1:x + f*10, y1:y - 43, x2:x + f*43, y2:y - 43, r:9 }];
+}
+
+export function getNormalVectorKnockback(attacker, defender) {
+  const f = attacker?.facing || 1;
+  const contact = getNormalVectorContact(attacker?.attackData || {});
+  if (contact.knockback === 'upForward') return { x:f*.42, y:-1 };
+  if (contact.knockback === 'downDiagonal') {
+    const dx = Math.sign((defender?.x || 0) - (attacker?.x || 0)) || f;
+    return { x:dx*.58, y:.82 };
+  }
+  return { x:f, y:-.28 };
+}
+
+export function drawNormalVectorArtwork(ctx, x, y, color, progress, facing, attack = {}) {
+  const p = clamp(Number(progress) || 0); if (p < .08 || p > .84) return;
+  const contact = getNormalVectorContact(attack); const active = p >= .22 && p <= .66;
+  ctx.save(); ctx.translate(x, y - 26); ctx.scale(facing || 1, 1);
+  ctx.globalAlpha = .25 + Math.sin(p * Math.PI) * .75;
+  ctx.shadowColor = color; ctx.shadowBlur = active ? 13 : 5;
+  if (contact.kind === 'aerialKick') {
+    const lift = Math.sin((p - .22) / .44 * Math.PI) * 8;
+    poly(ctx, [[8,-4-lift],[50,-17-lift],[61,-10-lift],[48,0-lift]], alpha(color,.9), '#efffff', 1.1);
+    if (active) impact(ctx, 57, -10-lift, color, .55, .1);
+  } else if (contact.kind === 'palmBurst') {
+    poly(ctx, [[8,-17],[43,-24],[59,-17],[43,-10]], alpha(color,.9), '#efffff', 1.1);
+    ctx.strokeStyle='#efffff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(50,-17,17,0,TAU);ctx.stroke();
+    if (active) impact(ctx, 50, -17, color, .55, .6);
+  } else {
+    poly(ctx, [[7,-20],[43,-27],[52,-21],[43,-14]], alpha(color,.9), '#efffff', 1.1);
+    if (active) impact(ctx, 48, -21, color, .42, .2);
+  }
+  ctx.restore();
+}

@@ -8,7 +8,7 @@ import { getGen1AttackPose } from './gen1AttackAnims.js';
 import { getResonanceAttackAction } from './resonanceConstructs.js';
 import { getAttackSpecForData } from './attackSpecs.js';
 import { drawSpecAttack, drawSpecSuper } from './attackSpecRenderer.js';
-import { drawVectorMoveArtwork } from './vectorMoveArtwork.js';
+import { drawVectorMoveArtwork, drawNormalVectorArtwork } from './vectorMoveArtwork.js';
 
 // ─── STAGE MAPS ─────────────────────────────────────────────────────────────
 export const STAGE_MAPS = [
@@ -1233,6 +1233,7 @@ export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isN
   // For normal attacks — draw a clean kick/punch, NO circles
   if (isNormal || attack.isNormal) {
     drawNormalAttack(ctx, x, y, attack, progress, facing, color);
+    drawNormalVectorArtwork(ctx, x, y, color, progress, facing, attack);
     // Emi's sword still swings even on normal attacks
     if (charId === 'g3_emi' && powerActive === 'gen_sword_in_hand') {
       drawEmiSwordSwing(ctx, x, y, attack, progress, facing);
