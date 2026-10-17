@@ -135,7 +135,7 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto relative">
+    <div className="el6-home-menu w-full max-w-7xl mx-auto relative">
       {/* ── Desktop layout ── */}
       <div className="hidden lg:block">
         {/* Top bar: © Made by + user info + settings/howto — all on one horizontal line */}

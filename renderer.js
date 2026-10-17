@@ -6,6 +6,7 @@ import { getMaterial } from './materials.js';
 import { getEmotePoseVars } from './emotePose.js';
 import { getGen1AttackPose } from './gen1AttackAnims.js';
 import { getResonanceAttackAction } from './resonanceConstructs.js';
+import { drawElement6Rig, getCharacterRig } from './characterRig.js';
 
 // ─── STAGE MAPS ─────────────────────────────────────────────────────────────
 export const STAGE_MAPS = [
@@ -81,16 +82,16 @@ export const STAGE_MAPS = [
 // ─── Character rendering ────────────────────────────────────────────────────
 
 export function drawStickman(ctx, x, y, color, facing, frame, scale = 1, isSpirit = false, state = 'idle', charData = null, powerActive = null, noWeapon = false, powerAuraColor = null, emote = null, attackData = null) {
-  // Growth power = visually larger; shrink powers = visually smaller
-  if (powerActive === 'range_boost') scale *= 1.35;
-  const s = 36 * scale; // BIGGER characters
+  const s = 42 * scale;
   ctx.save();
   ctx.translate(x, y);
 
   if (isSpirit) {
     drawSpirit(ctx, s, frame, color, charData);
   } else {
-    drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActive, noWeapon, emote, attackData);
+    // All game modes use this single articulated rig.  It keeps eyes, hands,
+    // elbows, knees and accessory anchors identical in fights and sports.
+    drawElement6Rig(ctx, frame, color, facing, state, charData, powerActive, emote, scale);
   }
 
   if (powerActive) {
@@ -506,6 +507,19 @@ function drawWeapon(ctx, weapon, color, facing, limbW) {
 // Returns animated limb positions/angles (relative to baseline 0,0) so cosmetics
 // can attach to actual moving arms/legs instead of static body coords.
 export function getLimbPose(frame, state = 'idle', facing = 1, scale = 1, powerActive, emote) {
+  const rig = getCharacterRig(frame, state, facing, scale, powerActive, emote);
+  return {
+    s: rig.s, headR: rig.headR, lean: rig.lean,
+    torsoW: rig.s * .78, head: rig.head,
+    torsoTopY: rig.torsoTop.y, torsoCY: (rig.torsoTop.y + rig.torsoBottom.y) / 2,
+    hipY: rig.torsoBottom.y, shoulderY: (rig.shoulders.left.y + rig.shoulders.right.y) / 2, feetY: 0,
+    shoulders: rig.shoulders, hips: rig.hips, hands: rig.hands, feet: rig.feet,
+    knees: rig.knees, elbows: rig.elbows,
+    armAngleL: rig.armAngleL, armAngleR: rig.armAngleR,
+    legAngleL: rig.legAngleL, legAngleR: rig.legAngleR,
+  };
+  /* Legacy pose implementation retained below for backwards source context.
+     The return above intentionally makes the shared rig authoritative. */
   if (powerActive === 'range_boost') scale *= 1.35;
   const s = 36 * scale;
   let bob = 0, legSwing = 0, armSwingL = 0, armSwingR = 0, lean = 0;
@@ -2016,6 +2030,33 @@ function drawMainPlatformDecor(ctx, p, frame, mapId, accent) {
   ctx.restore();
 }
 
+// Visual island layer only: collision continues to use the original exact
+// rectangular platform bounds, so the new irregular silhouette cannot change
+// landings or drop-through timing.
+function drawPlatformIsland(ctx, p, material, frame, accent) {
+  const color = material?.color || accent;
+  const name = String(material?.id || p.material || 'normal');
+  const organic = /grass|wood|sand|snow|ice|crystal|water|lava|acid|tar|cloud/.test(name);
+  const depth = Math.max(10, Math.min(36, p.h * 1.7));
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 11;
+  ctx.fillStyle = 'rgba(7,9,24,.78)';
+  ctx.beginPath(); ctx.moveTo(p.x + 5, p.y + 5); ctx.lineTo(p.x + p.w - 5, p.y + 5);
+  for (let i = 6; i >= 0; i--) { const x = p.x + p.w * i / 6; const jag = organic ? Math.sin(i * 2.2 + frame*.03) * 4 : (i%2 ? 3 : -2); ctx.lineTo(x, p.y + p.h + depth + jag); }
+  ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+  const g=ctx.createLinearGradient(p.x,p.y,p.x,p.y+p.h+depth); g.addColorStop(0,color); g.addColorStop(.16,color+'DD'); g.addColorStop(1,'rgba(14,17,35,.95)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(p.x,p.y+1); ctx.lineTo(p.x+p.w,p.y+1); ctx.lineTo(p.x+p.w-5,p.y+p.h+depth);
+  for(let i=5;i>=0;i--){const x=p.x+p.w*i/5; const j=organic?Math.sin(i*3.1+frame*.025)*5:0;ctx.lineTo(x,p.y+p.h+depth+j);}ctx.lineTo(p.x+5,p.y+p.h+depth);ctx.closePath();ctx.fill();
+  // Material-specific readable surface detail, never a collision object.
+  ctx.save(); ctx.beginPath(); ctx.rect(p.x+2,p.y-4,Math.max(0,p.w-4),p.h+9);ctx.clip();
+  if (/grass|wood/.test(name)) { ctx.fillStyle='#69BD52'; for(let x=p.x+8;x<p.x+p.w-6;x+=11){const h=4+(Math.abs(Math.sin(x))*5);ctx.beginPath();ctx.moveTo(x,p.y+2);ctx.lineTo(x+3,p.y-h);ctx.lineTo(x+6,p.y+2);ctx.fill();} }
+  else if (/ice|snow|crystal|glass|diamond/.test(name)) { ctx.strokeStyle='rgba(235,255,255,.62)';ctx.lineWidth=1.3;for(let x=p.x+8;x<p.x+p.w-6;x+=19){ctx.beginPath();ctx.moveTo(x,p.y+2);ctx.lineTo(x+6,p.y+p.h-3);ctx.lineTo(x+12,p.y+4);ctx.stroke();} }
+  else if (/lava|solar|plasma|neon/.test(name)) { ctx.fillStyle='rgba(255,238,150,.56)';for(let x=p.x+8;x<p.x+p.w-4;x+=16){ctx.beginPath();ctx.arc(x,p.y+5+Math.sin(frame*.08+x)*2,2.2,0,Math.PI*2);ctx.fill();} }
+  else if (/metal|conveyor/.test(name)) { ctx.strokeStyle='rgba(255,255,255,.28)';ctx.lineWidth=1;for(let x=p.x+12;x<p.x+p.w-8;x+=24){ctx.beginPath();ctx.moveTo(x,p.y+3);ctx.lineTo(x+7,p.y+p.h-3);ctx.stroke();ctx.beginPath();ctx.arc(x,p.y+p.h*.55,1.8,0,Math.PI*2);ctx.fill();} }
+  else { ctx.fillStyle='rgba(255,255,255,.16)';for(let x=p.x+9;x<p.x+p.w-6;x+=17){ctx.beginPath();ctx.arc(x,p.y+p.h*.5,2+(x%3),0,Math.PI*2);ctx.fill();} }
+  ctx.restore(); ctx.restore();
+}
+
 export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
   const map = STAGE_MAPS.find(m => m.id === mapId) || STAGE_MAPS[0];
   const accent = map.accentColor;
@@ -2032,6 +2073,7 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
     ctx.fill();
 
     const mat = p.material && p.material !== 'normal' ? getMaterial(p.material) : null;
+    drawPlatformIsland(ctx, p, mat, frame, accent);
     const baseColor = mat ? mat.color : ground;
     const grad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + p.h);
     if (isMain) {

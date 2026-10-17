@@ -424,3 +424,88 @@ body.el6-volleyball-active {
 #el6-volleyball-canvas-host[data-match-active="true"] > canvas {
   background-color: #06040f !important;
 }
+
+/* ========================================================================
+   ELEMENT 6 VISUAL OVERHAUL
+   Semantic variables deliberately sit on top of the existing theme system:
+   changing App Theme still updates every color below immediately.
+   ======================================================================== */
+:root {
+  --el6-glass: hsl(var(--card) / .78);
+  --el6-edge: hsl(var(--primary) / .48);
+  --el6-hot: hsl(var(--accent));
+  --el6-shadow: 0 18px 52px hsl(var(--background) / .72);
+}
+
+body::before {
+  content: '';
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse 60% 48% at 50% 8%, hsl(var(--primary) / .18), transparent 72%),
+    radial-gradient(ellipse 35% 32% at 78% 68%, hsl(var(--accent) / .10), transparent 80%),
+    linear-gradient(180deg, hsl(var(--background)), hsl(var(--background) / .94));
+}
+
+/* Home only: preserves the original columns, centre branding and updates slot.
+   The city is made from soft depth layers so it adapts to every App Theme. */
+.el6-home-menu::before,
+.el6-home-menu::after {
+  content: '';
+  position: fixed;
+  pointer-events: none;
+  inset: auto 0 0;
+  height: 58dvh;
+  z-index: -1;
+}
+.el6-home-menu::before {
+  opacity: .48;
+  background:
+    linear-gradient(180deg, transparent 0 18%, hsl(var(--background) / .08) 58%, hsl(var(--background) / .86) 100%),
+    repeating-linear-gradient(90deg, transparent 0 42px, hsl(var(--primary) / .09) 43px 45px, transparent 46px 96px),
+    linear-gradient(90deg, hsl(var(--background) / .98) 0 4%, transparent 4% 8%, hsl(var(--foreground) / .16) 8% 16%, transparent 16% 24%, hsl(var(--foreground) / .14) 24% 38%, transparent 38% 47%, hsl(var(--foreground) / .18) 47% 58%, transparent 58% 72%, hsl(var(--foreground) / .13) 72% 84%, transparent 84% 92%, hsl(var(--background) / .96) 92%);
+  mask-image: linear-gradient(to bottom, transparent, #000 32%);
+}
+.el6-home-menu::after {
+  height: 30dvh;
+  opacity: .46;
+  background:
+    repeating-linear-gradient(0deg, hsl(var(--primary) / .12) 0 1px, transparent 1px 44px),
+    repeating-linear-gradient(90deg, hsl(var(--accent) / .10) 0 1px, transparent 1px 68px),
+    linear-gradient(165deg, transparent 0 44%, hsl(var(--accent) / .07) 45% 46%, transparent 47%);
+  transform: perspective(480px) rotateX(54deg) scale(1.65);
+  transform-origin: bottom;
+}
+
+/* All existing panels gain depth without requiring replacement screen logic. */
+.bg-card, [class*='bg-card/'], .bg-popover {
+  box-shadow: var(--el6-shadow);
+}
+.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border {
+  border-color: var(--el6-edge);
+  background-image: linear-gradient(145deg, hsl(var(--card) / .94), hsl(var(--card) / .72));
+  backdrop-filter: blur(14px) saturate(1.12);
+}
+button {
+  transition: transform 150ms ease, filter 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.07); }
+button:active:not(:disabled) { transform: translateY(0) scale(.985); }
+button:focus-visible, [role='button']:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid hsl(var(--accent)) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px hsl(var(--accent) / .16), 0 0 22px hsl(var(--primary) / .38);
+}
+
+/* Loading, pause, results and modal overlays stay readable above gameplay. */
+.el6-pause-overlay-layer {
+  background: radial-gradient(circle at 50% 35%, hsl(var(--primary) / .20), hsl(var(--background) / .92) 62%, hsl(var(--background) / .97)) !important;
+  backdrop-filter: blur(12px) saturate(1.2);
+}
+.el6-pause-overlay-layer > div { border-color: hsl(var(--accent) / .72) !important; box-shadow: 0 26px 80px hsl(var(--background) / .88), 0 0 42px hsl(var(--primary) / .28) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}

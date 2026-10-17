@@ -78,6 +78,11 @@ export function createFighter(charData, startX, startY, facing) {
     maxSuper: 100,
     hitstun: 0,
     invincible: 0,
+    // Per-fighter three-second KO protection.  The match renderer can use the
+    // platform metadata without adding it to normal stage collision.
+    respawnProtection: 0,
+    respawnPlatform: null,
+    finalDeathTimer: 0,
     isAI: false,
     aiTimer: 0,
     aiAction: null,
@@ -1128,6 +1133,25 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
   fighter.prevX = fighter.x;
   fighter.prevY = fighter.y;
   fighter._platforms = platforms;
+
+  // A stock respawn is an actual state, not just a transparent sprite.  It
+  // neutralizes held inputs, prevents combat on both sides, and lasts exactly
+  // three seconds at the simulation's 60 Hz update rate.
+  if (fighter.respawnProtection > 0) {
+    fighter.respawnProtection--;
+    fighter.invincible = Math.max(fighter.invincible || 0, 2);
+    fighter.vx = 0; fighter.vy = 0; fighter.state = 'respawning';
+    fighter.attackData = null; fighter.attackHold = null; fighter.attackTimer = 0;
+    if (fighter.respawnProtection <= 0) {
+      fighter.state = 'falling'; fighter.invincible = 0; fighter.respawnPlatform = null;
+    }
+    return fighter;
+  }
+  if (fighter.finalDeathTimer > 0) {
+    fighter.finalDeathTimer--;
+    fighter.state = 'finalDeath'; fighter.vx = 0; fighter.vy = 0;
+    return fighter;
+  }
 
   // Captured fighters cannot steer, jump, attack, or be repeatedly recaptured.
   // The attacker completes the authored move and then releases with a bounded
@@ -2476,9 +2500,21 @@ export function loseStock(fighter, stageWidth, stageHeight) {
   fighter.y = rp ? rp.y : 60;
   fighter.vx = 0;
   fighter.vy = 0;
-  fighter.invincible = 90;
+  if (fighter.stocks > 0) {
+    fighter.respawnProtection = 180;
+    fighter.invincible = 180;
+    fighter.state = 'respawning';
+    fighter.respawnPlatform = { x: fighter.x - 52, y: fighter.y + 22, w: 104, h: 12, expiresAtFrame: (fighter.frame || 0) + 180, material: 'respawn' };
+  } else {
+    // A named, per-character final death state lets the renderer apply the
+    // character's elemental end effect without reopening combat.
+    fighter.finalDeathTimer = 75;
+    fighter.state = 'finalDeath';
+    fighter.invincible = 0;
+  }
   fighter.hitstun = 0;
-  fighter.state = 'idle';
+  // Keep respawning/finalDeath intact; those states release themselves from
+  // updateFighter when their authoritative timer completes.
   fighter.attackHold = null;
   fighter.attackData = null;
   fighter.attackTimer = 0;
