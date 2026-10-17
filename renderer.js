@@ -8,6 +8,7 @@ import { getGen1AttackPose } from './gen1AttackAnims.js';
 import { getResonanceAttackAction } from './resonanceConstructs.js';
 import { getAttackSpecForData } from './attackSpecs.js';
 import { drawSpecAttack, drawSpecSuper } from './attackSpecRenderer.js';
+import { drawVectorMoveArtwork } from './vectorMoveArtwork.js';
 
 // ─── STAGE MAPS ─────────────────────────────────────────────────────────────
 export const STAGE_MAPS = [
@@ -1245,6 +1246,7 @@ export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isN
   // bespoke effects, rather than replacing all moves with one generic flash.
   const documentedSpec = attack?.spec || getAttackSpecForData(charId, attack);
   if (documentedSpec) {
+    drawVectorMoveArtwork(ctx, x, y, color, progress, facing, documentedSpec, charId);
     if (attack.isSuper || documentedSpec.kind === 'super') drawSpecSuper(ctx, x, y, color, progress, documentedSpec, facing);
     else drawSpecAttack(ctx, x, y, color, progress, facing, documentedSpec);
   }

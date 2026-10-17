@@ -653,17 +653,29 @@ export function drawResonanceRangeGlow(ctx, fighter, orb, frame=0) {
 }
 export function drawResonanceOrb(ctx, orb, frame=0) {
   if (!orb) return;
-  const x=orb.x,y=orb.y,pulse=1+Math.sin(frame*.12)*.08;
+  const x=orb.x,y=orb.y,pulse=1+Math.sin(frame*.12)*.055, spin=frame*.023;
   ctx.save(); ctx.translate(x,y); ctx.scale(pulse,pulse);
-  const halo=ctx.createRadialGradient(0,0,4,0,0,70);
-  halo.addColorStop(0,'rgba(82,240,255,.45)'); halo.addColorStop(.5,'rgba(45,190,255,.18)'); halo.addColorStop(1,'rgba(45,190,255,0)');
-  ctx.fillStyle=halo; ctx.beginPath(); ctx.arc(0,0,70,0,Math.PI*2); ctx.fill();
-  const core=ctx.createRadialGradient(-7,-9,2,0,0,23);
-  core.addColorStop(0,'#ffffff');core.addColorStop(.28,'#b7ffff');core.addColorStop(.62,'#39dfff');core.addColorStop(1,'#126acb');
-  ctx.fillStyle=core;ctx.beginPath();ctx.arc(0,0,22,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle='rgba(185,255,255,.95)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,29+Math.sin(frame*.08)*3,frame*.025,frame*.025+Math.PI*1.55);ctx.stroke();
-  for(let i=0;i<6;i++){const a=frame*.025+i*Math.PI/3;ctx.fillStyle=i%2?'#53dfff':'#eaffff';ctx.beginPath();ctx.moveTo(Math.cos(a)*33,Math.sin(a)*33);ctx.lineTo(Math.cos(a+.16)*42,Math.sin(a+.16)*42);ctx.lineTo(Math.cos(a-.12)*39,Math.sin(a-.12)*39);ctx.closePath();ctx.fill();}
-  ctx.fillStyle='#d9ffff';ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.fillText('ELEMENT 6',0,39);
+  // A contained aura makes the pickup readable without pretending that the
+  // entire glow is damaging. The collect range remains simulation-defined.
+  const halo=ctx.createRadialGradient(0,0,5,0,0,76);
+  halo.addColorStop(0,'rgba(190,255,255,.30)');halo.addColorStop(.42,'rgba(45,198,255,.16)');halo.addColorStop(1,'rgba(20,100,210,0)');
+  ctx.fillStyle=halo;ctx.beginPath();ctx.arc(0,0,76,0,Math.PI*2);ctx.fill();
+  // Three independently rotating containment rings, behind and in front of
+  // the metal shell, give this a real resonance-device silhouette.
+  ctx.save();ctx.rotate(spin*.82);ctx.strokeStyle='rgba(94,230,255,.52)';ctx.lineWidth=2.2;ctx.beginPath();ctx.ellipse(0,0,33,12,.32,0,Math.PI*2);ctx.stroke();ctx.restore();
+  ctx.save();ctx.rotate(-spin*1.18+.8);ctx.strokeStyle='rgba(206,255,255,.82)';ctx.lineWidth=1.6;ctx.beginPath();ctx.ellipse(0,0,17,34,-.38,0,Math.PI*2);ctx.stroke();ctx.restore();
+  // Dark machined shell with distinct cyan power core.
+  const shell=ctx.createRadialGradient(-8,-10,2,0,0,26);
+  shell.addColorStop(0,'#3a6582');shell.addColorStop(.38,'#142c46');shell.addColorStop(.76,'#071423');shell.addColorStop(1,'#02070f');
+  ctx.fillStyle=shell;ctx.strokeStyle='#8ceeff';ctx.lineWidth=1.5;ctx.shadowColor='#3bdcff';ctx.shadowBlur=12;ctx.beginPath();ctx.arc(0,0,25,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.shadowBlur=0;ctx.strokeStyle='rgba(178,247,255,.58)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(0,0,20,spin,spin+Math.PI*1.36);ctx.stroke();
+  const core=ctx.createRadialGradient(-4,-5,1,0,0,13);
+  core.addColorStop(0,'#ffffff');core.addColorStop(.25,'#c9ffff');core.addColorStop(.62,'#36e0ff');core.addColorStop(1,'#0572c4');
+  ctx.fillStyle=core;ctx.shadowColor='#63edff';ctx.shadowBlur=19;ctx.beginPath();ctx.arc(0,0,12,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  // Floating crystal tabs are decorative, each visibly attached to the orb's
+  // orbit. They do not create a separate collision surface.
+  for(let i=0;i<6;i++){const a=spin*1.45+i*Math.PI/3,r=32+Math.sin(frame*.09+i)*2;ctx.save();ctx.translate(Math.cos(a)*r,Math.sin(a)*r);ctx.rotate(a+Math.PI/2);ctx.fillStyle=i%2?'#1199d0':'#c9ffff';ctx.strokeStyle='#edffff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(5,0);ctx.lineTo(0,10);ctx.lineTo(-4,0);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
+  ctx.save();ctx.rotate(spin*.55-.5);ctx.strokeStyle='rgba(115,239,255,.82)';ctx.lineWidth=1.8;ctx.beginPath();ctx.ellipse(0,0,38,17,.18,0,Math.PI*2);ctx.stroke();ctx.restore();
   ctx.restore();
 }
 // Detailed layered weapon illustration. Every family has a distinct silhouette, bevels,

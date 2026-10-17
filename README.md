@@ -1,18 +1,25 @@
-# Element 6 — Stage-Layer and Jump-Through Repair
+# Element 6 — Vector Sprite Artwork Production Pack
 
-Replace these three files at the **root of your GitHub repository**:
+Copy every file in this package to the root of your current Element 6 project and let GitHub replace the matching files.
+
+Files:
 
 - `renderer.js`
-- `fighter.js`
-- `botNavigation.js`
+- `resonanceConstructs.js`
+- `vectorMoveArtwork.js` (new)
 
-This package does two focused things:
+## What this is
 
-1. Removes the added floating stage-island layer by restoring the normal stage renderer. The included `renderer.js` contains no `drawPlatformIsland` code.
-2. Makes normal elevated 18–20px stage platforms one-way, so fighters can jump up through a platform about the size of an ordinary random-stage platform. The wide lowest floor stays solid. The same shared `fighter.js` runs offline, LAN, custom rooms, and rollback simulations; bot jump prediction is updated too.
+This is an **additive Canvas-vector sprite layer**, not a random PNG generator. It is tied to the exact same `drawStickman` renderer used for your characters. Attack artwork gets the current character colour, facing direction, move progress, range, and authored move shape from the game data.
 
-Do not rename or nest the files. Upload the files themselves, choose **Replace**, then commit and wait for GitHub Pages to finish deploying.
+It has distinct detailed motifs for fire, water, ice, grass/nature, thunder, void/portal, blade, scythe, hammer, spear, and trident attacks. The marks are made from layered polygons, curved paths, shards, highlights, and impact flecks. The existing detailed construct weapons and resonance orb remain intact.
 
-## About the requested bespoke combat art
+## Safety
 
-This is deliberately not presented as an all-character illustrated-art replacement. The project currently renders attacks in Canvas and has no supplied character-by-character attack sprite set. A genuine replacement needs separate authored frames/assets for every character, move phase, construct, and orb state; it should be built and reviewed in batches rather than falsely claiming generic effects are unique artwork.
+- It does **not** alter attack damage, hitboxes, knockback, timing, or movement.
+- Collision remains in `attackSpecs.js` and `resonanceConstructs.js`; visuals cannot create a hit.
+- Since fights, rollback online fights, LAN, custom rooms, and Battle Royale use the shared renderer, the art layer appears everywhere that uses normal fight rendering.
+
+## Important limitation
+
+This is real code-native vector artwork, but it is not a replacement for 50 separate hand-painted sprite sheets. If you later want hand-drawn raster frames, those need to be authored as a separate asset set using the existing character designs as reference.
