@@ -67,7 +67,9 @@ function simulateJump(lx, launchY, B, useDouble, jumpCutFrame) {
   let jumpsLeft = useDouble ? 2 : 1;
   let jumped2 = false;
   let jumpCutApplied = false;
-  const isThin = B.h < 18;        // thin platforms pass through from below — no underside bonk
+  // Must match fighter.js: normal 18–20px elevated ledges are one-way.
+  // The battle engine still keeps the broad lowest stage floor solid.
+  const isThin = B.h <= 20;
   const dirX = pCx(B) > lx ? 1 : -1;
   const avx = dirX * AIR_SPEED * 0.9;
 

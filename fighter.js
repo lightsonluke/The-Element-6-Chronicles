@@ -78,11 +78,6 @@ export function createFighter(charData, startX, startY, facing) {
     maxSuper: 100,
     hitstun: 0,
     invincible: 0,
-    // Per-fighter three-second KO protection.  The match renderer can use the
-    // platform metadata without adding it to normal stage collision.
-    respawnProtection: 0,
-    respawnPlatform: null,
-    finalDeathTimer: 0,
     isAI: false,
     aiTimer: 0,
     aiAction: null,
@@ -1134,25 +1129,6 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
   fighter.prevY = fighter.y;
   fighter._platforms = platforms;
 
-  // A stock respawn is an actual state, not just a transparent sprite.  It
-  // neutralizes held inputs, prevents combat on both sides, and lasts exactly
-  // three seconds at the simulation's 60 Hz update rate.
-  if (fighter.respawnProtection > 0) {
-    fighter.respawnProtection--;
-    fighter.invincible = Math.max(fighter.invincible || 0, 2);
-    fighter.vx = 0; fighter.vy = 0; fighter.state = 'respawning';
-    fighter.attackData = null; fighter.attackHold = null; fighter.attackTimer = 0;
-    if (fighter.respawnProtection <= 0) {
-      fighter.state = 'falling'; fighter.invincible = 0; fighter.respawnPlatform = null;
-    }
-    return fighter;
-  }
-  if (fighter.finalDeathTimer > 0) {
-    fighter.finalDeathTimer--;
-    fighter.state = 'finalDeath'; fighter.vx = 0; fighter.vy = 0;
-    return fighter;
-  }
-
   // Captured fighters cannot steer, jump, attack, or be repeatedly recaptured.
   // The attacker completes the authored move and then releases with a bounded
   // directional throw; if the attacker is interrupted, the victim is released.
@@ -1868,7 +1844,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     if (f.projectiles) {
       for (const wp of f.projectiles) {
         if (wp.type === 'iron_wall' && wp.life > 0) {
-          wallPlatforms.push({ x: wp.x, y: wp.y, w: wp.w, h: wp.h, material: 'normal' });
+          wallPlatforms.push({ x: wp.x, y: wp.y, w: wp.w, h: wp.h, material: 'normal', _forceSolid: true });
         }
       }
     }
@@ -1889,6 +1865,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
             w: wp.w,
             h: wp.h,
             material: 'normal',
+            _forceSolid: true,
           });
         }
       }
@@ -1898,12 +1875,24 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
   if (fighter._allOpponents) fighter._allOpponents.forEach(collectWalls);
   if (wallPlatforms.length > 0) platforms = [...platforms, ...wallPlatforms];
 
+  // Normal stage platforms are commonly 18–20px tall.  Treat those elevated
+  // ledges as one-way surfaces so fighters can jump through them, while the
+  // low, wide stage floor remains a real solid.  This is derived from the
+  // platform layout rather than a map-name list, so it is shared by offline,
+  // rollback, LAN, custom-room and custom-stage matches.
+  const stageFloorY = Math.max(...platforms.filter(p => p && !p._forceSolid).map(p => Number(p.y) || 0), 0);
+  const isJumpThroughPlatform = (p) => {
+    if (!p || p._forceSolid) return false;
+    const isWideLowestFloor = p.y >= stageFloorY - 8 && p.w >= stageWidth * 0.18;
+    return !isWideLowestFloor && p.h <= 20;
+  };
+
   for (const p of platforms) {
     if (p._freehandSlope) continue;
     const mat = p.material || 'normal';
     if (PASS_THROUGH.includes(mat)) continue;
     if (p._deleted > 0) continue;
-    const isSoft = p.h < 18; // thin platforms are soft (pass-through from below)
+    const isSoft = isJumpThroughPlatform(p); // elevated 18–20px platforms are one-way
 
     // One-way platform collision — only land when falling onto it from above
     if (fighter.vy >= 0) {
@@ -2035,7 +2024,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
       const mat = p.material || 'normal';
       if (PASS_THROUGH.includes(mat)) continue;
       if (p._deleted > 0) continue;
-      if (p.h < 18) continue;
+      if (isJumpThroughPlatform(p)) continue;
       const overlapX = fighter.x > p.x - charHalfW && fighter.x < p.x + p.w + charHalfW;
       if (!overlapX) continue;
       const fighterHead = fighter.y - 55;
@@ -2054,7 +2043,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     const mat = p.material || 'normal';
     if (PASS_THROUGH.includes(mat)) continue;
     if (p._deleted > 0) continue;
-    if (p.h < 18) continue; // thin platforms are pass-through
+    if (isJumpThroughPlatform(p)) continue; // elevated platforms are pass-through
     if (ceilingHits.has(p)) continue; // head caught on underside — fall back down, no sideways shove
     // Skip if standing on top of this platform
     if (fighter.grounded && Math.abs(fighter.y - p.y) < 3) continue;
@@ -2500,21 +2489,9 @@ export function loseStock(fighter, stageWidth, stageHeight) {
   fighter.y = rp ? rp.y : 60;
   fighter.vx = 0;
   fighter.vy = 0;
-  if (fighter.stocks > 0) {
-    fighter.respawnProtection = 180;
-    fighter.invincible = 180;
-    fighter.state = 'respawning';
-    fighter.respawnPlatform = { x: fighter.x - 52, y: fighter.y + 22, w: 104, h: 12, expiresAtFrame: (fighter.frame || 0) + 180, material: 'respawn' };
-  } else {
-    // A named, per-character final death state lets the renderer apply the
-    // character's elemental end effect without reopening combat.
-    fighter.finalDeathTimer = 75;
-    fighter.state = 'finalDeath';
-    fighter.invincible = 0;
-  }
+  fighter.invincible = 90;
   fighter.hitstun = 0;
-  // Keep respawning/finalDeath intact; those states release themselves from
-  // updateFighter when their authoritative timer completes.
+  fighter.state = 'idle';
   fighter.attackHold = null;
   fighter.attackData = null;
   fighter.attackTimer = 0;
