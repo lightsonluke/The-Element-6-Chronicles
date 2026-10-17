@@ -367,7 +367,8 @@ function polygonHitsBody(poly, bx, by, bw, bh){
   return false;
 }
 export function hitboxIntersectsBody(hb, defender){
-  const bw=38,bh=92,bx=defender.x,by=defender.y-46;
+  // Match the taller articulated fighter silhouette: centered on the body with a 36×84 hurtbox.
+  const bw=36,bh=84,bx=defender.x,by=defender.y-42;
   if(hb.shape==='circle') return pointRectDistance(hb.x,hb.y,bx,by,bw,bh)<=hb.r;
   if(hb.shape==='box') return Math.abs(hb.x-bx)<=hb.w/2+bw/2 && Math.abs(hb.y-by)<=hb.h/2+bh/2;
   if(hb.shape==='polygon') return polygonHitsBody(hb.points,bx,by,bw,bh);

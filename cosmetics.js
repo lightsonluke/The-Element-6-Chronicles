@@ -358,18 +358,21 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
     ctx.fill();
 
     if (type !== 'vest') {
-      const sleeve = (sx, sy, angle, sideColor = color) => {
+      // Sleeves are rigged as two separate pieces so the elbow seam bends with
+      // the arm instead of leaving a rigid tube floating over the forearm.
+      const sleeve = (shoulder, elbow, hand, sideColor = color) => {
         ctx.save();
-        ctx.translate(sx, sy);
-        ctx.rotate(angle);
-        ctx.fillStyle = sideColor;
-        ctx.beginPath();
-        ctx.roundRect(-sleeveWidth / 2, -s * 0.015, sleeveWidth, sleeveLen, sleeveWidth / 2);
-        ctx.fill();
+        ctx.strokeStyle = sideColor; ctx.fillStyle = sideColor;
+        ctx.lineWidth = sleeveWidth; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(shoulder.x, shoulder.y); ctx.lineTo(elbow.x, elbow.y); ctx.stroke();
+        ctx.lineWidth = sleeveWidth * 0.92;
+        ctx.beginPath(); ctx.moveTo(elbow.x, elbow.y); ctx.lineTo(hand.x, hand.y); ctx.stroke();
+        ctx.beginPath(); ctx.arc(elbow.x, elbow.y, sleeveWidth * 0.48, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(hand.x, hand.y, sleeveWidth * 0.42, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       };
-      sleeve(shoulderL.x, shoulderL.y, pose.armAngleL);
-      sleeve(shoulderR.x, shoulderR.y, pose.armAngleR);
+      sleeve(shoulderL, elbowL, handL);
+      sleeve(shoulderR, elbowR, handR);
     }
 
     if (type === 'hoodie') {
