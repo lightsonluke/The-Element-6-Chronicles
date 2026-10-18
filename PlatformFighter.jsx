@@ -49,11 +49,14 @@ const H = 720;
 const MAP_PLATFORMS = {
   splitcity: [
     // Main platform: collision x/w match the visible PNG's horizontal bounds
-    // after rendering (visual x=75, width=1130, PNG alpha ends at source x=1518).
-    // The standing surface is intentionally at y=370 (inside the purple light strip).
-    // PNG alpha bottom is source y=1008; after the same render scale its visible wall
-    // ends at ~y=682, so the solid rectangle ends there too (h ~= 312).
-    { x: 75, y: 370, w: 1116.75, h: 312, _visualX: 75, _visualY: 370, _visualW: 1130,
+    // Collision is independent from the rendered art. Top is raised by 4/3 of
+    // a 55px character height (370 -> 296.67). Side walls begin at the visible
+    // wall face (370), and the bottom is shortened to y=586. Keep h consistent
+    // with y/bottom so ceiling collision uses the same bottom boundary.
+    // Horizontal bounds are inset from the artwork; visual coordinates stay fixed.
+    { x: 85.67, y: 296.67, w: 1105.33, h: 289.33,
+      _visualX: 75, _visualY: 370, _visualW: 1130,
+      _collisionSideTop: 370, _collisionBottom: 586,
       material: 'split_city_joined', _forceSolid: true, _splitCityMain: true },
     // Exact thin PNG, elevated well above the main deck. Its collision is one-way/top-only.
     // Each match instance selects a 30–60 second one-way travel duration.

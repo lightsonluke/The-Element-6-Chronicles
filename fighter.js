@@ -2062,13 +2062,18 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     if (p._deleted > 0) continue;
     if (isJumpThroughPlatform(p)) continue;
     if (ceilingHits.has(p)) continue; // head caught on underside — fall back down, no sideways shove
+    // Split City uses independent top/side/bottom collision boundaries. The
+    // top surface is raised, while side walls begin at the visible wall face.
+    const sideTop = p._splitCityMain ? (p._collisionSideTop ?? p.y) : p.y;
+    const sideBottom = p._splitCityMain ? (p._collisionBottom ?? p.y + p.h) : p.y + p.h;
     // Skip if standing on top of this platform
     if (fighter.grounded && Math.abs(fighter.y - p.y) < 3) continue;
-    // Skip if fighter's feet are at or above platform top
-    if (fighter.y <= p.y + 2) continue;
-    // Check if fighter body vertically overlaps platform body
+    // Skip side collision when the fighter is above the side wall.
+    if (fighter.y <= sideTop + 2) continue;
+    // Check vertical overlap against the actual side-wall extent.
     const fighterTop = fighter.y - 55;
-    if (fighterTop >= p.y + p.h) continue;
+    if (fighterTop >= sideBottom) continue;
+    if (fighter.y <= sideTop) continue;
     // Check horizontal overlap
     if (fighter.x + charHalfW > p.x && fighter.x - charHalfW < p.x + p.w) {
       // Swept side collision: also catch a fast dash that crosses a wall between
