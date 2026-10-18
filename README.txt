@@ -1,14 +1,12 @@
-Split City stage replacement — v7
+SPLIT CITY REPLACEMENT v10
 
-Included: only the stage/game source files and assets needed for this replacement.
+Changes in this package:
+- Main platform uses the attached full-height Split City Main Platform image with the large bottom wall.
+- Main platform collider top is y=370 (40 units higher than the prior y=410 setting).
+- Main solid collider is 1090x242 at x=95,y=370; its side collision extends only through that collider and its underside/bottom boundary is y=612 (height reduced to 242 from 362, about one-third shorter).
+- Main platform artwork is aligned so the front light-strip center is at the collision top (visualY=370). The full source image is scaled uniformly, not squished.
+- Moving platform texture is byte-for-byte the user-attached /mnt/data/split-city-moving-platform.png (896x177 RGBA), not the main platform or its lower base.
+- Moving platform collider is 220x16 at x=530,y=178 and marked _splitCityMoving, making it one-way with no side or underside collisions. Down+jump drop-through behavior remains in fighter.js.
+- Horizontal span is 700 units. The triangle-wave motion speed is 1/180, producing a 90-second full cycle and approximately 45 seconds per one-way trip.
 
-Changes in v7:
-- Main platform uses the newly attached full-height image with the large lower wall.
-- Main collider keeps the existing top and side alignment and ends at y=812, where the visible wall ends. Its rectangle is x=95..1185 and y=450..812.
-- Moving platform uses the newly attached thin platform image (without the large lower wall).
-- Moving platform starts at y=210 and has a 220x16 top-only/one-way collider; no solid sides or underside are added by the platform collider.
-- Horizontal travel is 700 pixels, approximately 45 seconds each way with the current movement runtime.
-
-Install by replacing the corresponding files in the project. Back up the original files first.
-
-Validation: source was edited and the JavaScript syntax was checked. The full game was not launched here, so in-game alignment and controls still require a test in the target project.
+JavaScript syntax checked. Full game runtime / visual alignment has not been tested in-game.
