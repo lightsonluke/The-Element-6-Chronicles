@@ -2064,7 +2064,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     if (ceilingHits.has(p)) continue; // head caught on underside — fall back down, no sideways shove
     // Split City uses independent top/side/bottom collision boundaries. The
     // top surface is raised, while side walls begin at the visible wall face.
-    const sideTop = p._splitCityMain ? (p._collisionSideTop ?? p.y) : p.y;
+    const sideTop = p._splitCityMain ? p.y : p.y;
     const sideBottom = p._splitCityMain ? (p._collisionBottom ?? p.y + p.h) : p.y + p.h;
     // Skip if standing on top of this platform
     if (fighter.grounded && Math.abs(fighter.y - p.y) < 3) continue;
