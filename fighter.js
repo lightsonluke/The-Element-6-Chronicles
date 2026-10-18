@@ -1831,7 +1831,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
 
   // Compact original figure: collision stays inside the drawn arms/legs so a
   // side collision occurs only once the visible body reaches the stage side.
-  const charHalfW = 15;
+  const charHalfW = 16;
   fighter.wallSide = 0;
   const prevBottom = fighter.prevY;
   const currBottom = fighter.y;
@@ -2026,10 +2026,10 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
       if (isJumpThroughPlatform(p)) continue;
       const overlapX = fighter.x > p.x - charHalfW && fighter.x < p.x + p.w + charHalfW;
       if (!overlapX) continue;
-      const fighterHead = fighter.y - 52;
-      const prevHead = fighter.prevY - 52;
+      const fighterHead = fighter.y - 55;
+      const prevHead = fighter.prevY - 55;
       if (prevHead >= p.y + p.h && fighterHead < p.y + p.h) {
-        fighter.y = p.y + p.h + 52;
+        fighter.y = p.y + p.h + 55;
         fighter.vy = 0;
         ceilingHits.add(p);
       }
@@ -2049,7 +2049,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     // Skip if fighter's feet are at or above platform top
     if (fighter.y <= p.y + 2) continue;
     // Check if fighter body vertically overlaps platform body
-    const fighterTop = fighter.y - 52;
+    const fighterTop = fighter.y - 55;
     if (fighterTop >= p.y + p.h) continue;
     // Check horizontal overlap
     if (fighter.x + charHalfW > p.x && fighter.x - charHalfW < p.x + p.w) {

@@ -50,7 +50,7 @@ const MAP_PLATFORMS = {
   splitcity: [
     // One joined stage, positioned slightly below centre. Its top edge is the
     // visible floor line in renderer.js; no elevated legacy platforms remain.
-    { x: 215, y: 590, w: 850, h: 20, material: 'split_city_joined' },
+    { x: 60, y: 550, w: 1160, h: 20, material: 'split_city_joined' },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
   basic: [

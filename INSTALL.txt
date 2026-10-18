@@ -11,10 +11,13 @@ The stage uses the two supplied platform files independently:
   platform-left.png  -> left side of the joined stage
   platform-right.png -> right side of the joined stage
 
-They are drawn directly edge-to-edge in renderer.js. The one collision
-rectangle in PlatformFighter.jsx, OnlineFight.jsx, CustomRoomGame.jsx, and
-rollback/element6Simulation.js is aligned to that single stage surface.
+They are drawn directly edge-to-edge with a 2px seam overlap in renderer.js.
+The one collision rectangle in PlatformFighter.jsx, OnlineFight.jsx,
+CustomRoomGame.jsx, and rollback/element6Simulation.js is embedded 8px below
+the visible top surface, so fighters stand visually inside the platform rather
+than floating on top of it.
 
-Character rendering is restored to the original connected-limb renderer,
-reduced to the compact gameplay scale, with no eyes. Idle pose remains still.
-The included fighter.js updates collision width/height to the compact body.
+Character rendering keeps the original full gameplay scale and silhouette,
+with no eyes. Arms and legs now use two same-colour, rounded connected segments
+with an elbow/knee bend; idle pose remains still. fighter.js uses the matching
+original-scale collision envelope.

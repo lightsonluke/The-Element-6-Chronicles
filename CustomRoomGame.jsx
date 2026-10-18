@@ -35,7 +35,7 @@ const mergeGp = (kb, gp) => gp ? {
 
 const W = 1280, H = 720;
 const DEFAULT_PLATFORMS = [
-  { x: 215, y: 590, w: 850, h: 20, material: 'split_city_joined' },
+  { x: 60, y: 550, w: 1160, h: 20, material: 'split_city_joined' },
 ];
 const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];

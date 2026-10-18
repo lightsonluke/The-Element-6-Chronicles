@@ -25,16 +25,21 @@ function imageReady(image) {
 
 function drawJoinedSplitCityPlatform(ctx, platform) {
   if (!imageReady(splitCityLeft) || !imageReady(splitCityRight)) return false;
-  const targetWidth = platform.w;
-  const targetHeight = Math.min(250, targetWidth * 0.28);
-  const leftWidth = targetWidth * 0.5;
-  const rightWidth = targetWidth - leftWidth;
-  // The visible platform top and physical collision surface share platform.y.
-  const artTop = platform.y - targetHeight * 0.33;
+  // Crop only transparent canvas around the supplied halves. The painted
+  // parts remain untouched, retain their proportions, and overlap by 2px at
+  // the centre so the flat inside edges read as one uninterrupted platform.
+  const leftSource = { x: 43, y: 140, w: 622, h: 225 };
+  const rightSource = { x: 0, y: 375, w: 1670, h: 540 };
+  const visualTop = platform.y - 8; // collision is embedded 8px in the art
+  const artHeight = 198;
+  const leftWidth = 548;
+  const rightWidth = platform.w - leftWidth + 2;
   ctx.save();
   ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(splitCityLeft, platform.x, artTop, leftWidth, targetHeight);
-  ctx.drawImage(splitCityRight, platform.x + leftWidth, artTop, rightWidth, targetHeight);
+  ctx.drawImage(splitCityLeft, leftSource.x, leftSource.y, leftSource.w, leftSource.h,
+    platform.x, visualTop, leftWidth, artHeight);
+  ctx.drawImage(splitCityRight, rightSource.x, rightSource.y, rightSource.w, rightSource.h,
+    platform.x + leftWidth - 2, visualTop, rightWidth, artHeight);
   ctx.restore();
   return true;
 }
@@ -118,8 +123,9 @@ export const STAGE_MAPS = ALL_STAGE_MAPS.filter((stage) => stage.id === 'splitci
 export function drawStickman(ctx, x, y, color, facing, frame, scale = 1, isSpirit = false, state = 'idle', charData = null, powerActive = null, noWeapon = false, powerAuraColor = null, emote = null, attackData = null) {
   // Growth power = visually larger; shrink powers = visually smaller
   if (powerActive === 'range_boost') scale *= 1.35;
-  // Original compact figure scale; collision dimensions match this silhouette.
-  const s = 30 * scale;
+  // Restore the original in-match size. The revised renderer changes only the
+  // elbow/knee articulation, not the overall character design.
+  const s = 36 * scale;
   ctx.save();
   ctx.translate(x, y);
 
@@ -661,6 +667,31 @@ export function getLimbPose(frame, state = 'idle', facing = 1, scale = 1, powerA
   };
 }
 
+// Two rounded segments keep the original silhouette, but give each limb an
+// actual bend point. The overlapping joint disc prevents visible gaps during
+// running, jumping, attacks, and emotes.
+function drawArticulatedLimb(ctx, x, y, baseAngle, length, width, color, bend) {
+  const upper = length * 0.51;
+  const lower = length - upper;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(baseAngle);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.roundRect(-width / 2, 0, width, upper + width * 0.35, width / 2);
+  ctx.fill();
+  ctx.translate(0, upper);
+  ctx.rotate(bend);
+  ctx.beginPath();
+  ctx.roundRect(-width / 2, -width * 0.35, width, lower + width * 0.35, width / 2);
+  ctx.fill();
+  // The joint is the same colour as its limb—not a new costume detail.
+  ctx.beginPath();
+  ctx.arc(0, 0, width * 0.53, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActive, noWeapon = false, emote = null, attackData = null) {
   // Yellow turns white when enhanced (power active)
   if (powerActive && charData?.id === 'yellow' && powerActive === 'stat_boost') {
@@ -771,24 +802,13 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
   const hipRX = torsoX + torsoW * 0.75;
   const legColorR = ap?.legR || legColor;
 
-  ctx.save();
-  ctx.translate(hipLX, hipY);
-  ctx.rotate(legLOver !== null ? legLOver : -legSwing);
-  ctx.fillStyle = legColor;
   ctx.shadowBlur = 0;
-  ctx.beginPath();
-  ctx.roundRect(-limbW / 2, 0, limbW, legLen, limbW / 2);
-  ctx.fill();
-  ctx.restore();
-
-  ctx.save();
-  ctx.translate(hipRX, hipY);
-  ctx.rotate(legROver !== null ? legROver : legSwing);
-  ctx.fillStyle = legColorR;
-  ctx.beginPath();
-  ctx.roundRect(-limbW / 2, 0, limbW, legLen, limbW / 2);
-  ctx.fill();
-  ctx.restore();
+  const legAngleL = (legLOver !== null ? legLOver : -legSwing) - 0.07;
+  const legAngleR = (legROver !== null ? legROver : legSwing) + 0.07;
+  const legBendL = state === 'idle' ? 0.06 : 0.14 + Math.sin(frame * 0.18) * 0.16;
+  const legBendR = state === 'idle' ? -0.06 : -0.14 - Math.sin(frame * 0.18) * 0.16;
+  drawArticulatedLimb(ctx, hipLX, hipY, legAngleL, legLen, limbW, legColor, legBendL);
+  drawArticulatedLimb(ctx, hipRX, hipY, legAngleR, legLen, limbW, legColorR, legBendR);
 
   // ── Torso ──
   ctx.shadowColor = torsoColor;
@@ -814,33 +834,10 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
   ctx.shadowColor = armColor;
   ctx.shadowBlur = 6;
 
-  ctx.save();
-  ctx.translate(shoulderLX, shoulderY);
-  ctx.rotate(-0.28 + finalArmL);
-  ctx.fillStyle = armColor;
-  ctx.beginPath();
-  ctx.roundRect(-limbW / 2, 0, limbW, armLen, limbW / 2);
-  ctx.fill();
-  // Fist/hand circle at end
-  ctx.fillStyle = armColor;
-  ctx.beginPath();
-  ctx.arc(0, armLen, limbW * 0.55, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  ctx.save();
-  ctx.translate(shoulderRX, shoulderY);
-  ctx.rotate(0.28 + finalArmR);
-  ctx.fillStyle = armColorR;
-  ctx.beginPath();
-  ctx.roundRect(-limbW / 2, 0, limbW, armLen, limbW / 2);
-  ctx.fill();
-  ctx.fillStyle = armColorR;
-  ctx.beginPath();
-  ctx.arc(0, armLen, limbW * 0.55, 0, Math.PI * 2);
-  ctx.fill();
-  // Weapons removed from the game
-  ctx.restore();
+  const armBendL = state === 'idle' ? 0.10 : 0.13 + Math.sin(frame * 0.18) * 0.13;
+  const armBendR = state === 'idle' ? -0.10 : -0.13 - Math.sin(frame * 0.18) * 0.13;
+  drawArticulatedLimb(ctx, shoulderLX, shoulderY, -0.28 + finalArmL, armLen, limbW, armColor, armBendL);
+  drawArticulatedLimb(ctx, shoulderRX, shoulderY, 0.28 + finalArmR, armLen, limbW, armColorR, armBendR);
 
   // ── Head ──
   ctx.shadowColor = headColor;

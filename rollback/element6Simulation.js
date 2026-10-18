@@ -12,7 +12,7 @@ import { decodeInput } from './inputBits.js';
 export const ONLINE_STAGE_WIDTH = 1280;
 export const ONLINE_STAGE_HEIGHT = 720;
 export const ONLINE_PLATFORMS = Object.freeze([
-  Object.freeze({ x: 215, y: 590, w: 850, h: 20, material: 'split_city_joined' }),
+  Object.freeze({ x: 60, y: 550, w: 1160, h: 20, material: 'split_city_joined' }),
 ]);
 
 // Normal built-in layouts only. Custom player stages are intentionally never
