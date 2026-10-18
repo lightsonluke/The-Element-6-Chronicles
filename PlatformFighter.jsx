@@ -48,24 +48,15 @@ const H = 720;
 
 const MAP_PLATFORMS = {
   splitcity: [
-    // Collision top matches the supplied platform deck. The renderer draws the
-    // front rim again after fighters so their feet/shins appear inside the art.
-    { x: 177, y: 570, w: 925, h: 20, material: 'split_city_joined', _forceSolid: true },
-    // Follow the supplied crystal underside silhouette with stepped side/bottom
-    // collision segments. These are physics-only and are not drawn as rectangles.
-    { x: 177, y: 590, w: 55, h: 15, _forceSolid: true, _artCollisionOnly: true },
-    { x: 205, y: 605, w: 65, h: 36, _forceSolid: true, _artCollisionOnly: true },
-    { x: 248, y: 635, w: 82, h: 58, _forceSolid: true, _artCollisionOnly: true },
-    { x: 305, y: 680, w: 92, h: 48, _forceSolid: true, _artCollisionOnly: true },
-    { x: 375, y: 705, w: 115, h: 38, _forceSolid: true, _artCollisionOnly: true },
-    { x: 465, y: 720, w: 105, h: 25, _forceSolid: true, _artCollisionOnly: true },
-    { x: 550, y: 704, w: 110, h: 42, _forceSolid: true, _artCollisionOnly: true },
-    { x: 640, y: 720, w: 105, h: 25, _forceSolid: true, _artCollisionOnly: true },
-    { x: 725, y: 700, w: 115, h: 43, _forceSolid: true, _artCollisionOnly: true },
-    { x: 820, y: 665, w: 105, h: 63, _forceSolid: true, _artCollisionOnly: true },
-    { x: 900, y: 625, w: 95, h: 72, _forceSolid: true, _artCollisionOnly: true },
-    { x: 970, y: 595, w: 80, h: 48, _forceSolid: true, _artCollisionOnly: true },
-    { x: 1028, y: 590, w: 74, h: 16, _forceSolid: true, _artCollisionOnly: true },
+    // The main platform uses a rectangular solid collider. Its top is the
+    // playable deck; the rectangle also blocks movement at the visible sides
+    // and underside, matching the supplied straight-edged stage art.
+    { x: 75, y: 500, w: 1130, h: 150, material: 'split_city_joined', _forceSolid: true, _splitCityMain: true },
+    // Small elevated platform: one-way (jump-through/drop-through) and moves
+    // from side to side. With the movement runtime's triangle wave, speed 1/180
+    // makes each left-to-right trip about 45 seconds (within requested 30–60s).
+    { x: 530, y: 365, w: 220, h: 16, material: 'split_city_moving', _splitCityMoving: true,
+      move: { type: 'horizontal', distance: 700, speed: 1 / 180, phase: 0 } },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
   basic: [

@@ -1128,6 +1128,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
   fighter.prevX = fighter.x;
   fighter.prevY = fighter.y;
   fighter._platforms = platforms;
+  if (fighter._dropThroughTimer > 0) fighter._dropThroughTimer--;
 
   // Captured fighters cannot steer, jump, attack, or be repeatedly recaptured.
   // The attacker completes the authored move and then releases with a bounded
@@ -1262,6 +1263,21 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
   // Track DI from inputs
   fighter.diX = (inputs.left ? -1 : 0) + (inputs.right ? 1 : 0);
   fighter.diY = (inputs.down ? 0.5 : 0) + (inputs.up ? -0.3 : 0);
+  // Down + jump on a one-way platform deliberately drops through it instead
+  // of triggering an upward jump. The short timer lets the fighter pass the
+  // platform plane before normal landing checks resume.
+  if (fighter.grounded && inputs.down && inputs.jump && !fighter._dropThroughInputHeld) {
+    const standingOnOneWay = (platforms || []).some(p => p && !p._forceSolid && p.h <= 20 && p._deleted <= 0 &&
+      fighter.x > p.x - 16 && fighter.x < p.x + p.w + 16 && Math.abs(fighter.y - p.y) <= 3);
+    if (standingOnOneWay) {
+      fighter._dropThroughTimer = 8;
+      fighter.grounded = false;
+      fighter.y += 4;
+      fighter.vy = Math.max(2, fighter.vy || 0);
+      fighter.jumpHeld = true;
+    }
+  }
+  fighter._dropThroughInputHeld = !!(inputs.down && inputs.jump);
 
   // ── Hitstun: smooth knockback with DI influence ──
   if (fighter.hitstun > 0) {
@@ -1892,6 +1908,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     if (PASS_THROUGH.includes(mat)) continue;
     if (p._deleted > 0) continue;
     const isSoft = isJumpThroughPlatform(p);
+    if (isSoft && fighter._dropThroughTimer > 0) continue;
 
     // One-way platform collision — only land when falling onto it from above
     if (fighter.vy >= 0) {

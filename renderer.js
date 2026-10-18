@@ -9,60 +9,40 @@ import { getResonanceAttackAction } from './resonanceConstructs.js';
 import { getAttackSpecForData } from './attackSpecs.js';
 import { drawSpecAttack, drawSpecSuper } from './attackSpecRenderer.js';
 
-// The new supplied stage is one complete platform, so there is no seam to
-// blend or artificial centre geometry to draw.
+// Split City uses the user's transparent replacement PNGs.
 const splitCityStage = typeof Image === 'undefined' ? null : new Image();
+const splitCityMovingStage = typeof Image === 'undefined' ? null : new Image();
 const splitCityBackdrop = typeof Image === 'undefined' ? null : new Image();
 if (splitCityStage) splitCityStage.src = '/art/stages/split-city/split-city-main-platform.png';
+if (splitCityMovingStage) splitCityMovingStage.src = '/art/stages/split-city/split-city-moving-platform.png';
 if (splitCityBackdrop) splitCityBackdrop.src = '/art/stages/split-city/split-city-backdrop.png';
-let cleanedSplitCityStage = null;
 
 function imageReady(image) {
   return Boolean(image && image.complete && image.naturalWidth && image.naturalHeight);
 }
 
-function getCleanSplitCityStage() {
-  if (!imageReady(splitCityStage) || typeof document === 'undefined') return null;
-  if (cleanedSplitCityStage) return cleanedSplitCityStage;
-  const canvas = document.createElement('canvas');
-  canvas.width = splitCityStage.naturalWidth;
-  canvas.height = splitCityStage.naturalHeight;
-  const stageCtx = canvas.getContext('2d', { willReadFrequently: true });
-  stageCtx.drawImage(splitCityStage, 0, 0);
-  const pixels = stageCtx.getImageData(0, 0, canvas.width, canvas.height);
-  // The supplied PNG has an opaque black background. Key only near-perfect
-  // black, leaving the intentionally dark crystal edges intact.
-  for (let i = 0; i < pixels.data.length; i += 4) {
-    if (pixels.data[i] < 7 && pixels.data[i + 1] < 7 && pixels.data[i + 2] < 7) pixels.data[i + 3] = 0;
-  }
-  stageCtx.putImageData(pixels, 0, 0);
-  cleanedSplitCityStage = canvas;
-  return canvas;
-}
-
 function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
-  const art = getCleanSplitCityStage();
-  if (!art) return false;
-  // Source crop holds the complete painted island, without its empty black
-  // margins. The collision line is 45px below its visible top.
-  const source = { x: 25, y: 450, w: 1491, h: 460 };
-  // Artwork's deck begins 26 source pixels into this crop. Scale it to the
-  // collision width so the visible top surface aligns with the collision top.
-  const scale = platform.w / source.w;
-  const visualTop = platform.y - 26 * scale;
-  const visualHeight = source.h * scale;
+  if (!imageReady(splitCityStage)) return false;
+  // Render full transparent artwork. The deck's front edge aligns with the
+  // top of the rectangular collider; the front pass hides the fighter's feet
+  // slightly so they look planted into the stage rather than perched above it.
+  const visual = { x: platform.x, y: platform.y - 185, w: platform.w, h: 340 };
   ctx.save();
   ctx.imageSmoothingEnabled = true;
   if (foreground) {
-    // Redraw the front deck after fighters. This makes the feet/lower shins
-    // disappear behind the platform instead of merely changing physics.
     ctx.beginPath();
-    ctx.rect(platform.x, platform.y - 2, platform.w, visualHeight + 2);
+    ctx.rect(platform.x, platform.y - 2, platform.w, Math.max(1, visual.y + visual.h - platform.y));
     ctx.clip();
   }
-  ctx.drawImage(art, source.x, source.y, source.w, source.h,
-    platform.x, visualTop, platform.w, visualHeight);
+  ctx.drawImage(splitCityStage, visual.x, visual.y, visual.w, visual.h);
   ctx.restore();
+  return true;
+}
+
+function drawSplitCityMovingPlatform(ctx, platform) {
+  if (!imageReady(splitCityMovingStage)) return false;
+  // Shallow artwork, with the top collision surface aligned to platform.y.
+  ctx.drawImage(splitCityMovingStage, platform.x, platform.y - 46, platform.w, 62);
   return true;
 }
 
@@ -2086,6 +2066,7 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
     // rendered once by the stage/match renderer.
     if (p?._freehandSegment || p?._artCollisionOnly) return;
     if (mapId === 'splitcity' && p.material === 'split_city_joined' && drawJoinedSplitCityPlatform(ctx, p)) return;
+    if (mapId === 'splitcity' && p.material === 'split_city_moving' && drawSplitCityMovingPlatform(ctx, p)) return;
     const isMain = p.h >= 18;
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
@@ -2149,7 +2130,7 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
 // the stage while the first drawPlatforms pass remains behind the characters.
 export function drawSplitCityPlatformForeground(ctx, platforms, mapId = 'splitcity') {
   if (mapId !== 'splitcity' || !Array.isArray(platforms)) return;
-  const main = platforms.find((p) => p?.material === 'split_city_joined');
+  const main = platforms.find((p) => p?._splitCityMain || p?.material === 'split_city_joined');
   if (main) drawJoinedSplitCityPlatform(ctx, main, true);
 }
 
