@@ -1,12 +1,18 @@
-SPLIT CITY REPLACEMENT v10
+Split City stage replacement v11
 
-Changes in this package:
-- Main platform uses the attached full-height Split City Main Platform image with the large bottom wall.
-- Main platform collider top is y=370 (40 units higher than the prior y=410 setting).
-- Main solid collider is 1090x242 at x=95,y=370; its side collision extends only through that collider and its underside/bottom boundary is y=612 (height reduced to 242 from 362, about one-third shorter).
-- Main platform artwork is aligned so the front light-strip center is at the collision top (visualY=370). The full source image is scaled uniformly, not squished.
-- Moving platform texture is byte-for-byte the user-attached /mnt/data/split-city-moving-platform.png (896x177 RGBA), not the main platform or its lower base.
-- Moving platform collider is 220x16 at x=530,y=178 and marked _splitCityMoving, making it one-way with no side or underside collisions. Down+jump drop-through behavior remains in fighter.js.
-- Horizontal span is 700 units. The triangle-wave motion speed is 1/180, producing a 90-second full cycle and approximately 45 seconds per one-way trip.
+Files to replace/copy into the project:
+- PlatformFighter.jsx
+- renderer.js
+- movingPlatforms.js
+- movementAbilities.js
+- fighter.js
+- public/art/stages/split-city/split-city-main-platform.png
+- public/art/stages/split-city/split-city-moving-platform.png
+- public/art/stages/split-city/split-city-backdrop.png
+- public/art/stages/split-city/split-city-side-platform.png
 
-JavaScript syntax checked. Full game runtime / visual alignment has not been tested in-game.
+Main platform collision: top y=370 (standing line through the purple light strip); x=75, w=1118; bottom y=682, h=312, matching the visible main image bounds after uniform rendering. Artwork is drawn at x=75 with width 1130 and preserved aspect ratio.
+
+Moving platform: renderer loads /art/stages/split-city/split-city-moving-platform.png directly. This file is the exact supplied thin-platform image (896x177; SHA-256 verified against the supplied attachment). It is rendered proportionally at platform.w. Collision is top-only/one-way at y=178 with h=16; no side/underside collision. Down+jump drop-through and jumping through from below are handled by the platform collision code. Horizontal distance is 700; speed 1/180 in the triangle-wave movement system gives about 45 seconds each way.
+
+This package is source/assets only; test in the actual game after copying.

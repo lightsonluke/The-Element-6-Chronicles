@@ -48,14 +48,17 @@ const H = 720;
 
 const MAP_PLATFORMS = {
   splitcity: [
-    // Main art is the full-height platform with the large lower wall. Keep the
-    // previously aligned top and side boundaries; end the solid rectangle exactly
-    // at the bottom edge of the visible wall (source PNG bottom ~= y=1008).
-    { x: 95, y: 370, w: 1090, h: 242, _visualX: 75, _visualY: 370, _visualW: 1130,
+    // Main platform: collision x/w match the visible PNG's horizontal bounds
+    // after rendering (visual x=75, width=1130, PNG alpha ends at source x=1518).
+    // The standing surface is intentionally at y=370 (inside the purple light strip).
+    // PNG alpha bottom is source y=1008; after the same render scale its visible wall
+    // ends at ~y=682, so the solid rectangle ends there too (h ~= 312).
+    { x: 75, y: 370, w: 1118, h: 312, _visualX: 75, _visualY: 370, _visualW: 1130,
       material: 'split_city_joined', _forceSolid: true, _splitCityMain: true },
-    // Thin mini-platform texture (without the large lower wall), raised above
-    // the main stage. Its h<=20 collider is one-way/top-only; no side or bottom
-    // collision is created. 45 seconds per one-way horizontal trip.
+    // Moving platform uses the exact thin platform PNG in public/art/stages/split-city.
+    // The collision is a 16-unit one-way top surface only; the renderer draws the
+    // complete texture at its natural aspect ratio. 1/180 yields 45 sec per direction
+    // with the horizontal triangle-wave motion in movingPlatforms.js.
     { x: 530, y: 178, w: 220, h: 16, material: 'split_city_moving', _splitCityMoving: true,
       move: { type: 'horizontal', distance: 700, speed: 1 / 180, phase: 0 } },
   ],

@@ -50,9 +50,10 @@ function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
 
 function drawSplitCityMovingPlatform(ctx, platform) {
   if (!imageReady(splitCityMovingStage)) return false;
-  // Exact thin mini-platform image (896x177) cropped from the user's moving-platform
-  // attachment. This is deliberately NOT the main platform/base image. Preserve its
-  // aspect ratio and align the top edge with the one-way collider at platform.y.
+  // Load and draw the exact thin platform image from
+  // /art/stages/split-city/split-city-moving-platform.png. This is the user's
+  // attached 896x177 texture, not the main platform/base image. Preserve its aspect
+  // ratio and align the top edge with the one-way collider at platform.y.
   const scale = platform.w / splitCityMovingStage.naturalWidth;
   const drawH = splitCityMovingStage.naturalHeight * scale;
   ctx.drawImage(splitCityMovingStage, platform.x, platform.y, platform.w, drawH);
