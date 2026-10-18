@@ -23,15 +23,21 @@ function imageReady(image) {
 
 function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
   if (!imageReady(splitCityStage)) return false;
-  // Render full transparent artwork. The deck's front edge aligns with the
-  // top of the rectangular collider; the front pass hides the fighter's feet
-  // slightly so they look planted into the stage rather than perched above it.
-  const visual = { x: platform.x, y: platform.y - 185, w: platform.w, h: 340 };
+  // Draw the complete supplied PNG at a uniform scale. Align the collision
+  // surface to the centre of the front purple light strip (source y ~= 548).
+  // Using the full image prevents cropping or non-uniformly stretching it.
+  const scale = platform.w / splitCityStage.naturalWidth;
+  const drawH = splitCityStage.naturalHeight * scale;
+  const stripCenterY = 548 * scale;
+  const visual = { x: platform.x, y: platform.y - stripCenterY, w: platform.w, h: drawH };
   ctx.save();
   ctx.imageSmoothingEnabled = true;
   if (foreground) {
+    // Only the portion below the standing line is redrawn over fighters.
+    // This makes their feet appear set into the illuminated front strip.
+    const bottom = visual.y + visual.h;
     ctx.beginPath();
-    ctx.rect(platform.x, platform.y - 2, platform.w, Math.max(1, visual.y + visual.h - platform.y));
+    ctx.rect(platform.x, platform.y, platform.w, Math.max(1, bottom - platform.y));
     ctx.clip();
   }
   ctx.drawImage(splitCityStage, visual.x, visual.y, visual.w, visual.h);
@@ -41,8 +47,12 @@ function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
 
 function drawSplitCityMovingPlatform(ctx, platform) {
   if (!imageReady(splitCityMovingStage)) return false;
-  // Shallow artwork, with the top collision surface aligned to platform.y.
-  ctx.drawImage(splitCityMovingStage, platform.x, platform.y - 46, platform.w, 62);
+  // This is the original attached mini-platform artwork without the 6 emblem.
+  // Keep its aspect ratio and align its top collision to the purple light strip.
+  const scale = platform.w / splitCityMovingStage.naturalWidth;
+  const drawH = splitCityMovingStage.naturalHeight * scale;
+  const stripCenterY = 488 * scale;
+  ctx.drawImage(splitCityMovingStage, platform.x, platform.y - stripCenterY, platform.w, drawH);
   return true;
 }
 

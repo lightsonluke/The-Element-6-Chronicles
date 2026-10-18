@@ -1898,6 +1898,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
   const stageFloorY = Math.max(...platforms.filter(p => p && !p._forceSolid).map(p => Number(p.y) || 0), 0);
   const isJumpThroughPlatform = (p) => {
     if (!p || p._forceSolid) return false;
+    if (p._splitCityMoving) return true;
     const isWideLowestFloor = p.y >= stageFloorY - 8 && p.w >= stageWidth * 0.18;
     return !isWideLowestFloor && p.h <= 20;
   };

@@ -48,15 +48,13 @@ const H = 720;
 
 const MAP_PLATFORMS = {
   splitcity: [
-    // The main platform uses a rectangular solid collider. Its top is the
-    // playable deck; the rectangle also blocks movement at the visible sides
-    // and underside, matching the supplied straight-edged stage art.
-    { x: 75, y: 500, w: 1130, h: 150, material: 'split_city_joined', _forceSolid: true, _splitCityMain: true },
-    // Small elevated platform: one-way (jump-through/drop-through) and moves
-    // from side to side. With the movement runtime's triangle wave, speed 1/180
-    // makes each left-to-right trip about 45 seconds (within requested 30–60s).
-    { x: 530, y: 365, w: 220, h: 16, material: 'split_city_moving', _splitCityMoving: true,
-      move: { type: 'horizontal', distance: 700, speed: 1 / 180, phase: 0 } },
+    // Main platform: rectangular solid collider. y is the centre of the visible
+    // purple deck strip; the front/body extends about 300px below it.
+    { x: 75, y: 500, w: 1130, h: 338, material: 'split_city_joined', _forceSolid: true, _splitCityMain: true },
+    // Floating platform uses the supplied no-emblem variant. One-way top only:
+    // no side or underside collisions; down+jump drops through it.
+    { x: 530, y: 310, w: 220, h: 16, material: 'split_city_moving', _splitCityMoving: true,
+      move: { type: 'horizontal', distance: 700, speed: 1 / 90, phase: 0 } },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
   basic: [

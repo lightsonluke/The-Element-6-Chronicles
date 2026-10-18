@@ -1,24 +1,13 @@
-SPLIT CITY STAGE REPLACEMENT — install notes
+SPLIT CITY REPLACEMENT — corrected artwork and collision alignment
 
-Included files are only the files needed for the stage art/runtime changes:
-- PlatformFighter.jsx: rectangular main collider and moving one-way mini platform
-- renderer.js: render the replacement transparent stage assets and moving platform
-- movementAbilities.js: touching a wall restores up to two jumps; wall-slide logic remains
-- fighter.js: reliable down+jump drop-through on one-way platforms
-- public/art/stages/split-city/*: replacement main platform art, the supplied moving mini-platform art, and backdrop
+Replace the included source files in the project root and copy public/art/stages/split-city/ to the same public path.
 
-Install by replacing the matching project files and copying the public art folder
-into the same location. The stage definition is keyed by `splitcity`, so it applies
-whenever Split City is selected regardless of match mode.
+Corrections in this package:
+- Main platform uses the complete supplied 1536x1024 image. It is scaled uniformly to preserve its original proportions; no short crop or squashing.
+- Main platform collision is a single rectangle: x=75, y=500, width=1130, height=338. Its standing line is aligned with the centre of the front purple light strip; the side and bottom collider edges match the rendered image bounds.
+- Mini platform image is the original attachment named “Split City Moving(L:R above main platform In intervals)Drop Through Mini Platfrom.png” (the version without the 6 emblem), not the main-platform art. It is placed higher at y=310.
+- Mini platform uses only a top collision. Its collider is 220x16, with no solid sides or underside. Jumping up through it is allowed; down+jump drops through.
+- Horizontal movement is set for approximately 45 seconds one-way (about 90 seconds for a full left-right-left cycle).
+- Wall sliding remains enabled and the two-jump wall-contact change is retained.
 
-Collision design:
-- Main stage: one rectangular solid collider (top, sides, underside).
-- Mini platform: 220x16 rectangular one-way collider; you can jump up through it
-  and land on it while falling. The existing down+jump drop-through behavior is
-  retained by the fighter collision system.
-- Mini platform moves horizontally between its limits. The movement runtime's
-  triangle wave yields approximately 45 seconds per left-to-right trip.
-
-Important: this package has not been launched inside the game, so please test
-visual alignment and the drop-through input in your actual build. Rendering and
-physics are code changes, not a claim of an in-game QA pass.
+I verified the included source edits and JavaScript syntax. I have not run the full game, so please test the visual alignment and controls in-game before publishing.
