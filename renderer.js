@@ -2080,7 +2080,10 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
     // rendered once by the stage/match renderer.
     if (p?._freehandSegment || p?._artCollisionOnly) return;
     if (mapId === 'splitcity' && p.material === 'split_city_joined' && drawJoinedSplitCityPlatform(ctx, p)) return;
-    if (mapId === 'splitcity' && p.material === 'split_city_moving' && drawSplitCityMovingPlatform(ctx, p)) return;
+    // On Split City, render every thin platform using the supplied custom platform art,
+    // even if the platform's material was overwritten by stage setup. Return before the
+    // generic rounded-rectangle renderer so the old grey platform is completely hidden.
+    if (mapId === 'splitcity' && p.h <= 20 && drawSplitCityMovingPlatform(ctx, p)) return;
     const isMain = p.h >= 18;
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
