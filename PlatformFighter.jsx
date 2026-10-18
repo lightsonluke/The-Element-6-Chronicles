@@ -53,14 +53,12 @@ const MAP_PLATFORMS = {
     // The standing surface is intentionally at y=370 (inside the purple light strip).
     // PNG alpha bottom is source y=1008; after the same render scale its visible wall
     // ends at ~y=682, so the solid rectangle ends there too (h ~= 312).
-    { x: 75, y: 370, w: 1118, h: 312, _visualX: 75, _visualY: 370, _visualW: 1130,
+    { x: 75, y: 370, w: 1116.75, h: 312, _visualX: 75, _visualY: 370, _visualW: 1130,
       material: 'split_city_joined', _forceSolid: true, _splitCityMain: true },
-    // Moving platform uses the exact thin platform PNG in public/art/stages/split-city.
-    // The collision is a 16-unit one-way top surface only; the renderer draws the
-    // complete texture at its natural aspect ratio. 1/180 yields 45 sec per direction
-    // with the horizontal triangle-wave motion in movingPlatforms.js.
+    // Exact thin PNG, elevated well above the main deck. Its collision is one-way/top-only.
+    // Each match instance selects a 30–60 second one-way travel duration.
     { x: 530, y: 178, w: 220, h: 16, material: 'split_city_moving', _splitCityMoving: true,
-      move: { type: 'horizontal', distance: 700, speed: 1 / 180, phase: 0 } },
+      move: { type: 'horizontal', distance: 520, travelDurationRange: [30, 60], speed: 1 / 180, phase: 0 } },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
   basic: [

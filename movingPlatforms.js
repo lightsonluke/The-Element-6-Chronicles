@@ -18,9 +18,29 @@ export function applyMovingPlatforms(platforms, timeMs, fighters) {
 
     if (p._moveBaseX === undefined) p._moveBaseX = p.x;
     if (p._moveBaseY === undefined) p._moveBaseY = p.y;
-    if (p._moveStartMs === undefined) p._moveStartMs = timeMs;
+    if (p._moveStartMs === undefined) {
+      p._moveStartMs = timeMs;
+      // Pick once per match/platform instance, not once per frame. One-way
+      // duration means time from either endpoint to the other endpoint.
+      if (mv.type === 'horizontal') {
+        const range = Array.isArray(mv.travelDurationRange) ? mv.travelDurationRange : null;
+        if (range && range.length >= 2) {
+          const min = Math.max(30, Number(range[0]) || 30);
+          const max = Math.min(60, Number(range[1]) || 60);
+          p._travelDurationSeconds = min + Math.random() * Math.max(0, max - min);
+        } else if (Number.isFinite(mv.travelDurationSeconds)) {
+          p._travelDurationSeconds = Math.max(30, Math.min(60, Number(mv.travelDurationSeconds)));
+        }
+      }
+    }
 
-    const baseX = p._moveBaseX + (mv.offsetX || 0);
+    // Triangle-wave motion is centered on its base; offset the center by half
+    // the travel distance so the authored x is the actual left endpoint (no
+    // first-frame teleport) and the platform remains within its path bounds.
+    const pathCenterOffsetX = p._travelDurationSeconds && mv.type === 'horizontal'
+      ? Math.max(0, Number(mv.distance) || 0) / 2
+      : 0;
+    const baseX = p._moveBaseX + (mv.offsetX || 0) + pathCenterOffsetX;
     const baseY = p._moveBaseY + (mv.offsetY || 0);
     const prevX = p.x, prevY = p.y;
 
@@ -29,7 +49,10 @@ export function applyMovingPlatforms(platforms, timeMs, fighters) {
       const sampled = sampleMotion(mv, timeMs, p._moveStartMs);
       offX = sampled.x; offY = sampled.y;
     } else {
-      const primary = movementOffset(mv, timeMs, p._moveStartMs);
+      const runtimeMotion = p._travelDurationSeconds && mv.type === 'horizontal'
+        ? { ...mv, speed: 1 / (4 * p._travelDurationSeconds) }
+        : mv;
+      const primary = movementOffset(runtimeMotion, timeMs, p._moveStartMs);
       offX = primary.x; offY = primary.y;
       if (mv.second && mv.second.type && mv.second.type !== 'static') {
         const secondary = movementOffset(mv.second, timeMs, p._moveStartMs);
