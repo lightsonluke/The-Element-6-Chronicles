@@ -6,7 +6,7 @@
 // - Airborne: all four directions become a 0.30s dodge with invulnerability.
 // - An airborne dodge consumes one dodge use. Dodge uses track remaining jumps.
 // - Solid walls at least half a fighter tall can be wall-slid while moving into them.
-// - Leaving a wall after a slide restores two jumps + two dodges, up to two wall grants
+// - Leaving a wall after a slide restores one jump + one dodge, up to two wall grants
 //   per airtime. Landing resets the normal jump/dodge pool.
 //
 // Sports modes are intentionally excluded here. The existing game uses "soccer" as
