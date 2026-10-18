@@ -23,8 +23,8 @@ function imageReady(image) {
 
 function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
   if (!imageReady(splitCityStage)) return false;
-  // Draw the complete supplied PNG at a uniform scale. Align the collision
-  // surface to the centre of the front purple light strip (source y ~= 548).
+  // Draw the complete full-height main-platform PNG at a uniform scale. Align the
+  // collision surface to the previously approved front-strip standing line.
   // Using the full image prevents cropping or non-uniformly stretching it.
   const visualX = platform._visualX ?? platform.x;
   const visualW = platform._visualW ?? platform.w;
@@ -50,7 +50,7 @@ function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
 
 function drawSplitCityMovingPlatform(ctx, platform) {
   if (!imageReady(splitCityMovingStage)) return false;
-  // This is the original attached mini-platform artwork without the 6 emblem.
+  // This is the attached thin mini-platform artwork without the large lower wall.
   // Keep its aspect ratio and align its top collision to the purple light strip.
   const scale = platform.w / splitCityMovingStage.naturalWidth;
   const drawH = splitCityMovingStage.naturalHeight * scale;
