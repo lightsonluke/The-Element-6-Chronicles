@@ -53,7 +53,7 @@ export function applyMovingPlatforms(platforms, timeMs, fighters) {
 
 function movementOffset(mv, timeMs, startMs) {
   const distance = Math.max(0, Number(mv.distance) || 0);
-  const speed = Math.max(0.05, Number(mv.speed) || 1);
+  const speed = Math.max(0.001, Number(mv.speed) || 1);
 
   if (mv.type === 'oneway') {
     // One-way movement travels once and stays at its destination.

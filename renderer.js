@@ -26,10 +26,13 @@ function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
   // Draw the complete supplied PNG at a uniform scale. Align the collision
   // surface to the centre of the front purple light strip (source y ~= 548).
   // Using the full image prevents cropping or non-uniformly stretching it.
-  const scale = platform.w / splitCityStage.naturalWidth;
+  const visualX = platform._visualX ?? platform.x;
+  const visualW = platform._visualW ?? platform.w;
+  const visualY = platform._visualY ?? platform.y;
+  const scale = visualW / splitCityStage.naturalWidth;
   const drawH = splitCityStage.naturalHeight * scale;
-  const stripCenterY = 548 * scale;
-  const visual = { x: platform.x, y: platform.y - stripCenterY, w: platform.w, h: drawH };
+  const stripCenterY = 584 * scale;
+  const visual = { x: visualX, y: visualY - stripCenterY, w: visualW, h: drawH };
   ctx.save();
   ctx.imageSmoothingEnabled = true;
   if (foreground) {
@@ -37,7 +40,7 @@ function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
     // This makes their feet appear set into the illuminated front strip.
     const bottom = visual.y + visual.h;
     ctx.beginPath();
-    ctx.rect(platform.x, platform.y, platform.w, Math.max(1, bottom - platform.y));
+    ctx.rect(visualX, visualY, visualW, Math.max(1, bottom - visualY));
     ctx.clip();
   }
   ctx.drawImage(splitCityStage, visual.x, visual.y, visual.w, visual.h);
@@ -51,7 +54,7 @@ function drawSplitCityMovingPlatform(ctx, platform) {
   // Keep its aspect ratio and align its top collision to the purple light strip.
   const scale = platform.w / splitCityMovingStage.naturalWidth;
   const drawH = splitCityMovingStage.naturalHeight * scale;
-  const stripCenterY = 488 * scale;
+  const stripCenterY = 584 * scale;
   ctx.drawImage(splitCityMovingStage, platform.x, platform.y - stripCenterY, platform.w, drawH);
   return true;
 }

@@ -48,13 +48,15 @@ const H = 720;
 
 const MAP_PLATFORMS = {
   splitcity: [
-    // Main platform: rectangular solid collider. y is the centre of the visible
-    // purple deck strip; the front/body extends about 300px below it.
-    { x: 75, y: 500, w: 1130, h: 338, material: 'split_city_joined', _forceSolid: true, _splitCityMain: true },
-    // Floating platform uses the supplied no-emblem variant. One-way top only:
-    // no side or underside collisions; down+jump drops through it.
-    { x: 530, y: 310, w: 220, h: 16, material: 'split_city_moving', _splitCityMoving: true,
-      move: { type: 'horizontal', distance: 700, speed: 1 / 90, phase: 0 } },
+    // Visual art stays at its established position and aspect ratio. The solid
+    // collider is a tighter rectangle: top raised by ~50px, sides inset 20px,
+    // and the bottom extends well below the visible front wall.
+    { x: 95, y: 450, w: 1090, h: 470, _visualX: 75, _visualY: 500, _visualW: 1130,
+      material: 'split_city_joined', _forceSolid: true, _splitCityMain: true },
+    // One-way mini platform, positioned higher. Top-only collision; its artwork
+    // now uses the latest attached texture. Travel is 700px across in ~45s each way.
+    { x: 530, y: 260, w: 220, h: 16, material: 'split_city_moving', _splitCityMoving: true,
+      move: { type: 'horizontal', distance: 700, speed: 1 / 180, phase: 0 } },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
   basic: [
