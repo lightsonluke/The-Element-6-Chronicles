@@ -13,8 +13,8 @@ import { drawSpecAttack, drawSpecSuper } from './attackSpecRenderer.js';
 // blend or artificial centre geometry to draw.
 const splitCityStage = typeof Image === 'undefined' ? null : new Image();
 const splitCityBackdrop = typeof Image === 'undefined' ? null : new Image();
-if (splitCityStage) splitCityStage.src = '/art/stages/split-city/neon-crystal-floating-stage.png';
-if (splitCityBackdrop) splitCityBackdrop.src = '/art/stages/split-city/city-backdrop.png';
+if (splitCityStage) splitCityStage.src = '/art/stages/split-city/split-city-main-platform.png';
+if (splitCityBackdrop) splitCityBackdrop.src = '/art/stages/split-city/split-city-backdrop.png';
 let cleanedSplitCityStage = null;
 
 function imageReady(image) {
@@ -45,16 +45,19 @@ function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
   if (!art) return false;
   // Source crop holds the complete painted island, without its empty black
   // margins. The collision line is 45px below its visible top.
-  const source = { x: 0, y: 205, w: 2045, h: 520 };
-  const visualTop = platform.y - 45;
-  const visualHeight = 235;
+  const source = { x: 25, y: 450, w: 1491, h: 460 };
+  // Artwork's deck begins 26 source pixels into this crop. Scale it to the
+  // collision width so the visible top surface aligns with the collision top.
+  const scale = platform.w / source.w;
+  const visualTop = platform.y - 26 * scale;
+  const visualHeight = source.h * scale;
   ctx.save();
   ctx.imageSmoothingEnabled = true;
   if (foreground) {
     // Redraw the front deck after fighters. This makes the feet/lower shins
     // disappear behind the platform instead of merely changing physics.
     ctx.beginPath();
-    ctx.rect(platform.x, platform.y - 27, platform.w, visualHeight);
+    ctx.rect(platform.x, platform.y - 2, platform.w, visualHeight + 2);
     ctx.clip();
   }
   ctx.drawImage(art, source.x, source.y, source.w, source.h,

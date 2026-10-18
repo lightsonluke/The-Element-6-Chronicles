@@ -48,24 +48,24 @@ const H = 720;
 
 const MAP_PLATFORMS = {
   splitcity: [
-    // One joined stage, positioned slightly below centre. Its top edge is the
-    // visible floor line in renderer.js; no elevated legacy platforms remain.
-    { x: 177, y: 578, w: 925, h: 20, material: 'split_city_joined', _forceSolid: true },
-    // Physics-only crystal hull profile: follows the underside points and
-    // outer corners of the supplied artwork instead of a huge invisible box.
-    { x: 177, y: 598, w: 55, h: 15, _forceSolid: true, _artCollisionOnly: true },
-    { x: 205, y: 613, w: 65, h: 36, _forceSolid: true, _artCollisionOnly: true },
-    { x: 248, y: 643, w: 82, h: 58, _forceSolid: true, _artCollisionOnly: true },
-    { x: 305, y: 688, w: 92, h: 48, _forceSolid: true, _artCollisionOnly: true },
-    { x: 375, y: 713, w: 115, h: 38, _forceSolid: true, _artCollisionOnly: true },
-    { x: 465, y: 728, w: 105, h: 25, _forceSolid: true, _artCollisionOnly: true },
-    { x: 550, y: 712, w: 110, h: 42, _forceSolid: true, _artCollisionOnly: true },
-    { x: 640, y: 728, w: 105, h: 25, _forceSolid: true, _artCollisionOnly: true },
-    { x: 725, y: 708, w: 115, h: 43, _forceSolid: true, _artCollisionOnly: true },
-    { x: 820, y: 673, w: 105, h: 63, _forceSolid: true, _artCollisionOnly: true },
-    { x: 900, y: 633, w: 95, h: 72, _forceSolid: true, _artCollisionOnly: true },
-    { x: 970, y: 603, w: 80, h: 48, _forceSolid: true, _artCollisionOnly: true },
-    { x: 1028, y: 598, w: 74, h: 16, _forceSolid: true, _artCollisionOnly: true },
+    // Collision top matches the supplied platform deck. The renderer draws the
+    // front rim again after fighters so their feet/shins appear inside the art.
+    { x: 177, y: 570, w: 925, h: 20, material: 'split_city_joined', _forceSolid: true },
+    // Follow the supplied crystal underside silhouette with stepped side/bottom
+    // collision segments. These are physics-only and are not drawn as rectangles.
+    { x: 177, y: 590, w: 55, h: 15, _forceSolid: true, _artCollisionOnly: true },
+    { x: 205, y: 605, w: 65, h: 36, _forceSolid: true, _artCollisionOnly: true },
+    { x: 248, y: 635, w: 82, h: 58, _forceSolid: true, _artCollisionOnly: true },
+    { x: 305, y: 680, w: 92, h: 48, _forceSolid: true, _artCollisionOnly: true },
+    { x: 375, y: 705, w: 115, h: 38, _forceSolid: true, _artCollisionOnly: true },
+    { x: 465, y: 720, w: 105, h: 25, _forceSolid: true, _artCollisionOnly: true },
+    { x: 550, y: 704, w: 110, h: 42, _forceSolid: true, _artCollisionOnly: true },
+    { x: 640, y: 720, w: 105, h: 25, _forceSolid: true, _artCollisionOnly: true },
+    { x: 725, y: 700, w: 115, h: 43, _forceSolid: true, _artCollisionOnly: true },
+    { x: 820, y: 665, w: 105, h: 63, _forceSolid: true, _artCollisionOnly: true },
+    { x: 900, y: 625, w: 95, h: 72, _forceSolid: true, _artCollisionOnly: true },
+    { x: 970, y: 595, w: 80, h: 48, _forceSolid: true, _artCollisionOnly: true },
+    { x: 1028, y: 590, w: 74, h: 16, _forceSolid: true, _artCollisionOnly: true },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
   basic: [
