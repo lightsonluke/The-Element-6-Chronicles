@@ -1913,8 +1913,14 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
 
     // One-way platform collision — only land when falling onto it from above
     if (fighter.vy >= 0) {
-      // Check horizontal overlap with generous edge tolerance
-      const overlapX = fighter.x > p.x - charHalfW && fighter.x < p.x + p.w + charHalfW;
+      // Normal platforms allow edge tolerance so the compact fighter can land
+      // without pixel-perfect centering. Split City’s raised top sits directly
+      // above solid side walls, though: edge tolerance lets a fighter pressed
+      // against the outside wall register a landing and refill jumps repeatedly.
+      // For that platform only, require the fighter's center to be over the top.
+      const overlapX = p._splitCityMain
+        ? (fighter.x > p.x + 0.5 && fighter.x < p.x + p.w - 0.5)
+        : (fighter.x > p.x - charHalfW && fighter.x < p.x + p.w + charHalfW);
 
       // Swept check: was above last frame, now at/below platform top
       const wasAbove = prevBottom <= p.y + 2;

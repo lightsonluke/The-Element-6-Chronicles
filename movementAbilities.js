@@ -6,8 +6,8 @@
 // - Airborne: all four directions become a 0.30s dodge with invulnerability.
 // - An airborne dodge consumes one dodge use. Dodge uses track remaining jumps.
 // - Solid walls at least half a fighter tall can be wall-slid while moving into them.
-// - Leaving a wall after a slide restores one jump + one dodge, up to two wall grants
-//   per airtime. Landing resets the normal jump/dodge pool.
+// - Wall contact slows falling but NEVER restores jumps or air-dodges. Only landing
+//   restores the normal jump/dodge pool; this prevents repeated airborne wall resets.
 //
 // Sports modes are intentionally excluded here. The existing game uses "soccer" as
 // its sports-mode identifier; other fight modes continue to share updateFighter().
@@ -22,7 +22,6 @@ export const MOVEMENT_ABILITY_CONFIG = Object.freeze({
   wallSlideMaxFallSpeed: 1,
   wallSlideAcceleration: 0.15,
   wallMinHeight: 10,          // > half of the ~55px fighter body
-  maxWallGrants: 2,
 });
 
 const DIRECTIONS = ['left', 'right', 'up', 'down'];
@@ -181,10 +180,11 @@ export function updateMovementAbilities(fighter, inputs, platforms) {
     side !== 0;
 
   if (touchingWall) {
+    // Arm exactly one wall-jump grant when a new wall contact begins.
+    // Do not re-arm it every frame while pressed against the same wall.
     fighter.wallSide = side;
     fighter.wallSlide = true;
     fighter.wallContactActive = true;
-    fighter.wallGrantPending = true;
     fighter.vx = 0;
     fighter.vy = Math.min(
       fighter.vy + MOVEMENT_ABILITY_CONFIG.wallSlideAcceleration,
@@ -214,13 +214,7 @@ export function onMovementAbilityLanded(fighter) {
     return;
   }
 
-  // We have just left a wall after actually sliding against it.
-  if (fighter.wallGrantPending && fighter.wallGrantsUsed < MOVEMENT_ABILITY_CONFIG.maxWallGrants) {
-    fighter.wallGrantsUsed++;
-    fighter.jumps = Math.min(fighter.maxJumps, fighter.jumps + 2);
-    fighter.airDodgeUses = Math.min(fighter.maxJumps, fighter.airDodgeUses + 1);
-  }
-
+  // Leaving a wall never replenishes jumps or air-dodges.
   fighter.wallGrantPending = false;
   fighter.wallContactActive = false;
 }
