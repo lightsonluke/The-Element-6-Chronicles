@@ -2068,12 +2068,12 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     const sideBottom = p._splitCityMain ? (p._collisionBottom ?? p.y + p.h) : p.y + p.h;
     // Skip if standing on top of this platform
     if (fighter.grounded && Math.abs(fighter.y - p.y) < 3) continue;
-    // Skip side collision when the fighter is above the side wall.
-    if (fighter.y <= sideTop + 2) continue;
-    // Check vertical overlap against the actual side-wall extent.
+    // Resolve side collisions whenever any part of the fighter overlaps the
+    // wall's vertical span. Do not skip based only on the feet being near the
+    // top edge: that let fighters briefly enter the upper side corners.
     const fighterTop = fighter.y - 55;
-    if (fighterTop >= sideBottom) continue;
-    if (fighter.y <= sideTop) continue;
+    const verticalOverlap = fighter.y > sideTop && fighterTop < sideBottom;
+    if (!verticalOverlap) continue;
     // Check horizontal overlap
     if (fighter.x + charHalfW > p.x && fighter.x - charHalfW < p.x + p.w) {
       // Swept side collision: also catch a fast dash that crosses a wall between
