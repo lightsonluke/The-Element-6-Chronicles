@@ -57,7 +57,7 @@ const MAP_PLATFORMS = {
       material: 'split_city_joined', _forceSolid: true, _splitCityMain: true },
     // Exact thin PNG, elevated well above the main deck. Its collision is one-way/top-only.
     // Each match instance selects a 30–60 second one-way travel duration.
-    { x: 530, y: 178, w: 220, h: 16, material: 'split_city_moving', _splitCityMoving: true,
+    { x: 530, y: 100, w: 220, h: 16, material: 'split_city_moving', _splitCityMoving: true,
       move: { type: 'horizontal', distance: 520, travelDurationRange: [30, 60], speed: 1 / 180, phase: 0 } },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
