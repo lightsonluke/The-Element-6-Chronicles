@@ -56,7 +56,8 @@ function drawSplitCityMovingPlatform(ctx, platform) {
   // ratio and align the top edge with the one-way collider at platform.y.
   const scale = platform.w / splitCityMovingStage.naturalWidth;
   const drawH = splitCityMovingStage.naturalHeight * scale;
-  ctx.drawImage(splitCityMovingStage, platform.x, platform.y, platform.w, drawH);
+  const visualY = platform.y + (platform._visualYOffset || 0);
+  ctx.drawImage(splitCityMovingStage, platform.x, visualY, platform.w, drawH);
   return true;
 }
 
