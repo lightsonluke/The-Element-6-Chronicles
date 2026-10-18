@@ -9,37 +9,56 @@ import { getResonanceAttackAction } from './resonanceConstructs.js';
 import { getAttackSpecForData } from './attackSpecs.js';
 import { drawSpecAttack, drawSpecSuper } from './attackSpecRenderer.js';
 
-// The supplied Split City art is deliberately kept as two separate pieces.
-// They are placed edge-to-edge at runtime; nothing is cropped out of either
-// one and no generic metal rectangle is drawn underneath them.
-const splitCityLeft = typeof Image === 'undefined' ? null : new Image();
-const splitCityRight = typeof Image === 'undefined' ? null : new Image();
+// The new supplied stage is one complete platform, so there is no seam to
+// blend or artificial centre geometry to draw.
+const splitCityStage = typeof Image === 'undefined' ? null : new Image();
 const splitCityBackdrop = typeof Image === 'undefined' ? null : new Image();
-if (splitCityLeft) splitCityLeft.src = '/art/stages/split-city/platform-left.png';
-if (splitCityRight) splitCityRight.src = '/art/stages/split-city/platform-right.png';
+if (splitCityStage) splitCityStage.src = '/art/stages/split-city/neon-crystal-floating-stage.png';
 if (splitCityBackdrop) splitCityBackdrop.src = '/art/stages/split-city/city-backdrop.png';
+let cleanedSplitCityStage = null;
 
 function imageReady(image) {
   return Boolean(image && image.complete && image.naturalWidth && image.naturalHeight);
 }
 
-function drawJoinedSplitCityPlatform(ctx, platform) {
-  if (!imageReady(splitCityLeft) || !imageReady(splitCityRight)) return false;
-  // Crop only transparent canvas around the supplied halves. The painted
-  // parts remain untouched, retain their proportions, and overlap by 2px at
-  // the centre so the flat inside edges read as one uninterrupted platform.
-  const leftSource = { x: 43, y: 140, w: 622, h: 225 };
-  const rightSource = { x: 0, y: 375, w: 1670, h: 540 };
-  const visualTop = platform.y - 8; // collision is embedded 8px in the art
-  const artHeight = 198;
-  const leftWidth = 548;
-  const rightWidth = platform.w - leftWidth + 2;
+function getCleanSplitCityStage() {
+  if (!imageReady(splitCityStage) || typeof document === 'undefined') return null;
+  if (cleanedSplitCityStage) return cleanedSplitCityStage;
+  const canvas = document.createElement('canvas');
+  canvas.width = splitCityStage.naturalWidth;
+  canvas.height = splitCityStage.naturalHeight;
+  const stageCtx = canvas.getContext('2d', { willReadFrequently: true });
+  stageCtx.drawImage(splitCityStage, 0, 0);
+  const pixels = stageCtx.getImageData(0, 0, canvas.width, canvas.height);
+  // The supplied PNG has an opaque black background. Key only near-perfect
+  // black, leaving the intentionally dark crystal edges intact.
+  for (let i = 0; i < pixels.data.length; i += 4) {
+    if (pixels.data[i] < 7 && pixels.data[i + 1] < 7 && pixels.data[i + 2] < 7) pixels.data[i + 3] = 0;
+  }
+  stageCtx.putImageData(pixels, 0, 0);
+  cleanedSplitCityStage = canvas;
+  return canvas;
+}
+
+function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
+  const art = getCleanSplitCityStage();
+  if (!art) return false;
+  // Source crop holds the complete painted island, without its empty black
+  // margins. The collision line is 45px below its visible top.
+  const source = { x: 0, y: 205, w: 2045, h: 520 };
+  const visualTop = platform.y - 45;
+  const visualHeight = 235;
   ctx.save();
   ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(splitCityLeft, leftSource.x, leftSource.y, leftSource.w, leftSource.h,
-    platform.x, visualTop, leftWidth, artHeight);
-  ctx.drawImage(splitCityRight, rightSource.x, rightSource.y, rightSource.w, rightSource.h,
-    platform.x + leftWidth - 2, visualTop, rightWidth, artHeight);
+  if (foreground) {
+    // Redraw the front deck after fighters. This makes the feet/lower shins
+    // disappear behind the platform instead of merely changing physics.
+    ctx.beginPath();
+    ctx.rect(platform.x, platform.y - 27, platform.w, visualHeight);
+    ctx.clip();
+  }
+  ctx.drawImage(art, source.x, source.y, source.w, source.h,
+    platform.x, visualTop, platform.w, visualHeight);
   ctx.restore();
   return true;
 }
@@ -689,6 +708,18 @@ function drawArticulatedLimb(ctx, x, y, baseAngle, length, width, color, bend) {
   ctx.beginPath();
   ctx.arc(0, 0, width * 0.53, 0, Math.PI * 2);
   ctx.fill();
+  // A very small shaded crease identifies the elbow/knee while retaining the
+  // existing limb colour and clean stick-figure look.
+  ctx.save();
+  ctx.rotate(-bend * 0.5);
+  ctx.strokeStyle = 'rgba(0,0,0,0.24)';
+  ctx.lineWidth = Math.max(1.2, width * 0.16);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-width * 0.22, 0);
+  ctx.lineTo(width * 0.22, 0);
+  ctx.stroke();
+  ctx.restore();
   ctx.restore();
 }
 
@@ -805,8 +836,8 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
   ctx.shadowBlur = 0;
   const legAngleL = (legLOver !== null ? legLOver : -legSwing) - 0.07;
   const legAngleR = (legROver !== null ? legROver : legSwing) + 0.07;
-  const legBendL = state === 'idle' ? 0.06 : 0.14 + Math.sin(frame * 0.18) * 0.16;
-  const legBendR = state === 'idle' ? -0.06 : -0.14 - Math.sin(frame * 0.18) * 0.16;
+  const legBendL = state === 'idle' ? 0.16 : 0.30 + Math.sin(frame * 0.18) * 0.22;
+  const legBendR = state === 'idle' ? -0.16 : -0.30 - Math.sin(frame * 0.18) * 0.22;
   drawArticulatedLimb(ctx, hipLX, hipY, legAngleL, legLen, limbW, legColor, legBendL);
   drawArticulatedLimb(ctx, hipRX, hipY, legAngleR, legLen, limbW, legColorR, legBendR);
 
@@ -834,8 +865,8 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
   ctx.shadowColor = armColor;
   ctx.shadowBlur = 6;
 
-  const armBendL = state === 'idle' ? 0.10 : 0.13 + Math.sin(frame * 0.18) * 0.13;
-  const armBendR = state === 'idle' ? -0.10 : -0.13 - Math.sin(frame * 0.18) * 0.13;
+  const armBendL = state === 'idle' ? 0.20 : 0.30 + Math.sin(frame * 0.18) * 0.20;
+  const armBendR = state === 'idle' ? -0.20 : -0.30 - Math.sin(frame * 0.18) * 0.20;
   drawArticulatedLimb(ctx, shoulderLX, shoulderY, -0.28 + finalArmL, armLen, limbW, armColor, armBendL);
   drawArticulatedLimb(ctx, shoulderRX, shoulderY, 0.28 + finalArmR, armLen, limbW, armColorR, armBendR);
 
@@ -2050,7 +2081,7 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
   platforms.forEach((p, idx) => {
     // Freehand collision segments are physics-only. The original stroke is
     // rendered once by the stage/match renderer.
-    if (p?._freehandSegment) return;
+    if (p?._freehandSegment || p?._artCollisionOnly) return;
     if (mapId === 'splitcity' && p.material === 'split_city_joined' && drawJoinedSplitCityPlatform(ctx, p)) return;
     const isMain = p.h >= 18;
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
@@ -2109,6 +2140,14 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
   const main = platforms.filter(p => p && !p._freehandSegment && p.h >= 18)
     .sort((a,b) => (b.w*b.h) - (a.w*a.h))[0];
   if (main && mapId !== 'splitcity') drawMainPlatformDecor(ctx, main, frame, mapId, accent);
+}
+
+// Call this after fighters: it is the front rim that visually embeds feet in
+// the stage while the first drawPlatforms pass remains behind the characters.
+export function drawSplitCityPlatformForeground(ctx, platforms, mapId = 'splitcity') {
+  if (mapId !== 'splitcity' || !Array.isArray(platforms)) return;
+  const main = platforms.find((p) => p?.material === 'split_city_joined');
+  if (main) drawJoinedSplitCityPlatform(ctx, main, true);
 }
 
 export function drawBackground(ctx, w, h, frame = 0, mapId = 'splitcity', eventColor) {

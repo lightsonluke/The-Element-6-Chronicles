@@ -13,7 +13,7 @@ import {
   drawHealthBar,
   drawHitSparks,
   drawPlatforms,
-  drawFighterGroundShadow,
+  drawSplitCityPlatformForeground,
   drawStickman,
   drawSuperEffect,
 } from './renderer.js';
@@ -179,7 +179,6 @@ export default function RollbackOnlineFight({
 
     const drawFighter = (fighter, character, loadout, label) => {
       if (fighter.invincible > 0 && Math.floor(fighter.frame / 4) % 2 === 0) return;
-      drawFighterGroundShadow(ctx, fighter, getOnlineStagePlatforms(sharedStage) || ONLINE_PLATFORMS, sharedStage);
       drawDoubleJumpParticles(ctx, fighter.doubleJumpParticles || []);
       const renderColor = getCharRenderColor(character.id, loadout?.equippedSkins) || character.color;
       const skinParts = getSkinParts(character.id, loadout?.equippedSkins);
@@ -235,6 +234,7 @@ export default function RollbackOnlineFight({
       drawPlatforms(ctx, getOnlineStagePlatforms(sharedStage) || ONLINE_PLATFORMS, state.frame, sharedStage);
       drawFighter(hostFighter, hostCharacter, hostLoadout, isHost ? myUsername : oppUsername);
       drawFighter(guestFighter, guestCharacter, guestLoadout, isHost ? oppUsername : myUsername);
+      drawSplitCityPlatformForeground(ctx, getOnlineStagePlatforms(sharedStage) || ONLINE_PLATFORMS, sharedStage);
       ctx.restore();
 
       ctx.fillStyle = 'rgba(0,0,0,0.72)';

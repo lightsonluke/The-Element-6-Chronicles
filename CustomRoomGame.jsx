@@ -7,7 +7,7 @@ import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, updateProjectiles, loseStock, CPU_DIFFICULTY } from './fighter.js';
-import { drawStickman, drawAttackEffect, drawSuperEffect, drawHealthBar, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawFighterGroundShadow } from './renderer.js';
+import { drawStickman, drawAttackEffect, drawSuperEffect, drawHealthBar, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawFighterGroundShadow, drawSplitCityPlatformForeground } from './renderer.js';
 import { drawOffscreenIndicator } from './offscreenIndicator.js';
 import { getKeybinds, readPlayerInput } from './keybinds.js';
 import { readGamepadInput } from './controllerProfiles.js';
@@ -15,6 +15,7 @@ import { getCharRenderColor, getSkinParts } from './skins.js';
 import { getAccessory, isBehindAccessory, drawAccessory } from './cosmetics.js';
 import { applyElement } from './elements.js';
 import { getEmoteForKey } from './emoteSlots.js';
+import { SPLIT_CITY_HULL_COLLIDERS } from './stageMaterials.js';
 import { drawEmote } from './emotes.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
@@ -35,7 +36,8 @@ const mergeGp = (kb, gp) => gp ? {
 
 const W = 1280, H = 720;
 const DEFAULT_PLATFORMS = [
-  { x: 60, y: 550, w: 1160, h: 20, material: 'split_city_joined' },
+  { x: 177, y: 570, w: 925, h: 20, material: 'split_city_joined', _forceSolid: true },
+  ...SPLIT_CITY_HULL_COLLIDERS,
 ];
 const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
@@ -538,6 +540,8 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         drawOnlineNameTag(ctx, f.x, f.y - 84, charData, f.playerName);
         ctx.restore();
       });
+
+      drawSplitCityPlatformForeground(ctx, platforms, 'splitcity');
 
       ctx.restore();
 

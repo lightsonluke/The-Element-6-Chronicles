@@ -7,13 +7,14 @@ import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { createFighter, updateFighter, checkHit, applyHit, loseStock } from './fighter.js';
-import { drawStickman, drawAttackEffect, drawSuperEffect, drawHealthBar, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawFighterGroundShadow } from './renderer.js';
+import { drawStickman, drawAttackEffect, drawSuperEffect, drawHealthBar, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawFighterGroundShadow, drawSplitCityPlatformForeground } from './renderer.js';
 import { getKeybinds, readPlayerInput } from './keybinds.js';
 import { readGamepadInput } from './controllerProfiles.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { getAccessory, isBehindAccessory, drawAccessory, resolveAccColor, getEquippedAccessories } from './cosmetics.js';
 import { drawShikigamiFollower } from './shikigami.js';
 import { getEmoteForKey } from './emoteSlots.js';
+import { SPLIT_CITY_HULL_COLLIDERS } from './stageMaterials.js';
 import { music } from './music.js';
 import { applyElement } from './elements.js';
 import { sfx } from './sfx.js';
@@ -32,7 +33,8 @@ const mergeGp = (kb, gp) => gp ? {
 
 const W = 1280, H = 720;
 const PLATFORMS = [
-  { x: 60, y: 550, w: 1160, h: 20, material: 'split_city_joined' },
+  { x: 177, y: 570, w: 925, h: 20, material: 'split_city_joined', _forceSolid: true },
+  ...SPLIT_CITY_HULL_COLLIDERS,
 ];
 const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
@@ -354,6 +356,7 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
 
       drawFighter(remote, oppCharData, oppLoadout, false);
       drawFighter(localF, myCharData, myLoadout, true);
+      drawSplitCityPlatformForeground(ctx, PLATFORMS, 'splitcity');
 
       ctx.restore();
 

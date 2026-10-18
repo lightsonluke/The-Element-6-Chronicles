@@ -1,23 +1,20 @@
-Element 6 — Split City rebuild replacement package
+Element 6 — single-stage Split City and articulated character package
 
-Upload every file in this archive to the matching project-root path. Keep the
-public/art/stages/split-city folder intact.
+Upload all archive contents to the matching project-root paths.
 
-This package deliberately replaces the earlier Split City/character packages.
-It does not use the old generic metal platform, elevated ledges, decorative
-side props, or a sprite-sheet crop renderer.
+This package replaces prior Split City packages. It uses only the supplied
+neon-crystal-floating-stage.png for the playable platform; platform-left.png
+and platform-right.png are not used.
 
-The stage uses the two supplied platform files independently:
-  platform-left.png  -> left side of the joined stage
-  platform-right.png -> right side of the joined stage
+The platform is drawn once behind fighters and a clipped front-lip pass is
+drawn after fighters. Collision is 45px below the visible top, so feet and
+lower shins appear embedded in the stage rather than floating over it.
 
-They are drawn directly edge-to-edge with a 2px seam overlap in renderer.js.
-The one collision rectangle in PlatformFighter.jsx, OnlineFight.jsx,
-CustomRoomGame.jsx, and rollback/element6Simulation.js is embedded 8px below
-the visible top surface, so fighters stand visually inside the platform rather
-than floating on top of it.
+The stage has one playable top surface plus invisible underside segments that
+trace the visible crystal hull and corners. These segments are physics-only;
+they never draw generic blocks on the supplied artwork.
 
-Character rendering keeps the original full gameplay scale and silhouette,
-with no eyes. Arms and legs now use two same-colour, rounded connected segments
-with an elbow/knee bend; idle pose remains still. fighter.js uses the matching
-original-scale collision envelope.
+Characters retain their existing design and full size. Arms and legs use
+continuous two-bone motion with visible elbow/knee crease lines. Running,
+jumping, attacks, hitstun, and emotes use the same continuously calculated
+limb angles—no sprite-frame swapping is used.

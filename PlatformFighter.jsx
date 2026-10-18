@@ -11,7 +11,7 @@ import {
   drawStickman, drawAttackEffect, drawSuperEffect,
   drawHealthBar, drawTimer, drawPlatforms, drawBackground,
   drawHitSparks, drawDoubleJumpParticles, drawSuperFlash,
-  STAGE_MAPS, drawFighterGroundShadow,
+  STAGE_MAPS, drawFighterGroundShadow, drawSplitCityPlatformForeground,
 } from './renderer.js';
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
@@ -50,7 +50,22 @@ const MAP_PLATFORMS = {
   splitcity: [
     // One joined stage, positioned slightly below centre. Its top edge is the
     // visible floor line in renderer.js; no elevated legacy platforms remain.
-    { x: 60, y: 550, w: 1160, h: 20, material: 'split_city_joined' },
+    { x: 177, y: 570, w: 925, h: 20, material: 'split_city_joined', _forceSolid: true },
+    // Physics-only crystal hull profile: follows the underside points and
+    // outer corners of the supplied artwork instead of a huge invisible box.
+    { x: 177, y: 590, w: 55, h: 15, _forceSolid: true, _artCollisionOnly: true },
+    { x: 205, y: 605, w: 65, h: 36, _forceSolid: true, _artCollisionOnly: true },
+    { x: 248, y: 635, w: 82, h: 58, _forceSolid: true, _artCollisionOnly: true },
+    { x: 305, y: 680, w: 92, h: 48, _forceSolid: true, _artCollisionOnly: true },
+    { x: 375, y: 705, w: 115, h: 38, _forceSolid: true, _artCollisionOnly: true },
+    { x: 465, y: 720, w: 105, h: 25, _forceSolid: true, _artCollisionOnly: true },
+    { x: 550, y: 704, w: 110, h: 42, _forceSolid: true, _artCollisionOnly: true },
+    { x: 640, y: 720, w: 105, h: 25, _forceSolid: true, _artCollisionOnly: true },
+    { x: 725, y: 700, w: 115, h: 43, _forceSolid: true, _artCollisionOnly: true },
+    { x: 820, y: 665, w: 105, h: 63, _forceSolid: true, _artCollisionOnly: true },
+    { x: 900, y: 625, w: 95, h: 72, _forceSolid: true, _artCollisionOnly: true },
+    { x: 970, y: 595, w: 80, h: 48, _forceSolid: true, _artCollisionOnly: true },
+    { x: 1028, y: 590, w: 74, h: 16, _forceSolid: true, _artCollisionOnly: true },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
   basic: [
@@ -1742,6 +1757,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       };
 
       drawFighter(f1, 1); drawFighter(f2, 2);
+      drawSplitCityPlatformForeground(ctx, platforms, mapId);
       // Shapeshift switch flash effect
       [f1, f2].forEach(f => {
         if (f._shapeshiftFlash > 0) {
