@@ -1829,9 +1829,9 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
   fighter._slope = 0;
   fighter._slopeDownhill = 0;
 
-  // Compact body matching the joint-driven reference-sheet silhouette.
-  const charHalfW = 17; // half-width for platform edge tolerance
-  const charHeight = 68;
+  // Compact original figure: collision stays inside the drawn arms/legs so a
+  // side collision occurs only once the visible body reaches the stage side.
+  const charHalfW = 15;
   fighter.wallSide = 0;
   const prevBottom = fighter.prevY;
   const currBottom = fighter.y;
@@ -1846,7 +1846,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     if (f.projectiles) {
       for (const wp of f.projectiles) {
         if (wp.type === 'iron_wall' && wp.life > 0) {
-          wallPlatforms.push({ x: wp.x, y: wp.y, w: wp.w, h: wp.h, material: 'normal' });
+          wallPlatforms.push({ x: wp.x, y: wp.y, w: wp.w, h: wp.h, material: 'normal', _forceSolid: true });
         }
       }
     }
@@ -1867,6 +1867,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
             w: wp.w,
             h: wp.h,
             material: 'normal',
+            _forceSolid: true,
           });
         }
       }
@@ -1876,12 +1877,21 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
   if (fighter._allOpponents) fighter._allOpponents.forEach(collectWalls);
   if (wallPlatforms.length > 0) platforms = [...platforms, ...wallPlatforms];
 
+  // Keep the requested stage rule: ordinary elevated 18–20px platforms are
+  // one-way, while the broad lowest stage floor and constructed walls are solid.
+  const stageFloorY = Math.max(...platforms.filter(p => p && !p._forceSolid).map(p => Number(p.y) || 0), 0);
+  const isJumpThroughPlatform = (p) => {
+    if (!p || p._forceSolid) return false;
+    const isWideLowestFloor = p.y >= stageFloorY - 8 && p.w >= stageWidth * 0.18;
+    return !isWideLowestFloor && p.h <= 20;
+  };
+
   for (const p of platforms) {
     if (p._freehandSlope) continue;
     const mat = p.material || 'normal';
     if (PASS_THROUGH.includes(mat)) continue;
     if (p._deleted > 0) continue;
-    const isSoft = p.h < 18; // thin platforms are soft (pass-through from below)
+    const isSoft = isJumpThroughPlatform(p);
 
     // One-way platform collision — only land when falling onto it from above
     if (fighter.vy >= 0) {
@@ -2013,13 +2023,13 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
       const mat = p.material || 'normal';
       if (PASS_THROUGH.includes(mat)) continue;
       if (p._deleted > 0) continue;
-      if (p.h < 18) continue;
+      if (isJumpThroughPlatform(p)) continue;
       const overlapX = fighter.x > p.x - charHalfW && fighter.x < p.x + p.w + charHalfW;
       if (!overlapX) continue;
-      const fighterHead = fighter.y - charHeight;
-      const prevHead = fighter.prevY - charHeight;
+      const fighterHead = fighter.y - 52;
+      const prevHead = fighter.prevY - 52;
       if (prevHead >= p.y + p.h && fighterHead < p.y + p.h) {
-        fighter.y = p.y + p.h + charHeight;
+        fighter.y = p.y + p.h + 52;
         fighter.vy = 0;
         ceilingHits.add(p);
       }
@@ -2032,14 +2042,14 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     const mat = p.material || 'normal';
     if (PASS_THROUGH.includes(mat)) continue;
     if (p._deleted > 0) continue;
-    if (p.h < 18) continue; // thin platforms are pass-through
+    if (isJumpThroughPlatform(p)) continue;
     if (ceilingHits.has(p)) continue; // head caught on underside — fall back down, no sideways shove
     // Skip if standing on top of this platform
     if (fighter.grounded && Math.abs(fighter.y - p.y) < 3) continue;
     // Skip if fighter's feet are at or above platform top
     if (fighter.y <= p.y + 2) continue;
     // Check if fighter body vertically overlaps platform body
-    const fighterTop = fighter.y - charHeight;
+    const fighterTop = fighter.y - 52;
     if (fighterTop >= p.y + p.h) continue;
     // Check horizontal overlap
     if (fighter.x + charHalfW > p.x && fighter.x - charHalfW < p.x + p.w) {
@@ -2221,8 +2231,8 @@ export function checkHit(attacker, defender) {
   }
 
   // Defender body box — rectangle centered on body
-  const dBW = 34, dBH = 68;
-  const dBX = defender.x, dBY = defender.y - 34;
+  const dBW = 32, dBH = 72;
+  const dBX = defender.x, dBY = defender.y - 36;
 
   // AABB overlap test
   return (hbCX - hbW / 2) < (dBX + dBW / 2) &&

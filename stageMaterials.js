@@ -5,7 +5,7 @@
 export const STAGE_MATERIALS = {
   // Split City uses its supplied image as the platform material. No generic
   // metal/normal overlay is permitted on top of the painted island.
-  splitcity:        ['split_city_art'],
+  splitcity:        ['split_city_joined'],
   basic:            ['normal'],
   silvermansion:    ['metal', 'glass', 'glass', 'metal', 'glass'],
   controllerforest: ['grass', 'wood', 'wood', 'wood', 'wood', 'wood'],

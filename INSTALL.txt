@@ -1,19 +1,20 @@
-MATCH SCREEN BACKDROP REPLACEMENT — SIDE UPDATE
+Element 6 — Split City rebuild replacement package
 
-Files included:
-- GameCanvasPortal.jsx
-- VolleyballCanvasPortal.jsx
-- index.css
+Upload every file in this archive to the matching project-root path. Keep the
+public/art/stages/split-city folder intact.
 
-Install:
-1. Back up the three matching files in your existing project.
-2. Copy these files into the project root, replacing the existing files.
-3. Restart the dev server / rebuild the game.
+This package deliberately replaces the earlier Split City/character packages.
+It does not use the old generic metal platform, elevated ledges, decorative
+side props, or a sprite-sheet crop renderer.
 
-What this changes:
-- While a normal match canvas is mounted, its full-screen host is an opaque dark gameplay surface. The menu/page backdrop no longer shows through around the 16:9 match canvas.
-- Volleyball uses the same active-match backdrop behavior through its separate canvas host.
-- The opaque surface is marked active only during a match and is cleared when the portal unmounts, so it should not stay over menus after leaving a match.
-- Pause controls and other React match UI are not moved or removed.
+The stage uses the two supplied platform files independently:
+  platform-left.png  -> left side of the joined stage
+  platform-right.png -> right side of the joined stage
 
-This is a focused source patch. It has not been verified in live browser gameplay in this environment.
+They are drawn directly edge-to-edge in renderer.js. The one collision
+rectangle in PlatformFighter.jsx, OnlineFight.jsx, CustomRoomGame.jsx, and
+rollback/element6Simulation.js is aligned to that single stage surface.
+
+Character rendering is restored to the original connected-limb renderer,
+reduced to the compact gameplay scale, with no eyes. Idle pose remains still.
+The included fighter.js updates collision width/height to the compact body.

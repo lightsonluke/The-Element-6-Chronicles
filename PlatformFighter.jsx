@@ -48,11 +48,9 @@ const H = 720;
 
 const MAP_PLATFORMS = {
   splitcity: [
-    // The supplied Split City island has one continuous, broad top surface.
-    // This is deliberately the only collision surface: there are no invisible
-    // legacy ledges above the painted island.
-    // Collision is only the painted top lip—not the whole decorative island.
-    { x: 110,  y: 602, w: 1060, h: 24, material: 'split_city_art' },
+    // One joined stage, positioned slightly below centre. Its top edge is the
+    // visible floor line in renderer.js; no elevated legacy platforms remain.
+    { x: 215, y: 590, w: 850, h: 20, material: 'split_city_joined' },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
   basic: [

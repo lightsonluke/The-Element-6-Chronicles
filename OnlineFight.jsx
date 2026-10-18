@@ -32,7 +32,7 @@ const mergeGp = (kb, gp) => gp ? {
 
 const W = 1280, H = 720;
 const PLATFORMS = [
-  { x: 110, y: 602, w: 1060, h: 24, material: 'split_city_art' },
+  { x: 215, y: 590, w: 850, h: 20, material: 'split_city_joined' },
 ];
 const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
