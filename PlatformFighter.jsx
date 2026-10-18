@@ -49,30 +49,28 @@ const H = 720;
 const MAP_PLATFORMS = {
   splitcity: [
     // Main platform: collision x/w match the visible PNG's horizontal bounds
-    // Collision is independent from the rendered art. Top is raised by 4/3 of
-    // a 55px character height (370 -> 296.67). Side walls begin at the visible
-    // wall face (370), and the bottom is shortened to y=586. Keep h consistent
-    // with y/bottom so ceiling collision uses the same bottom boundary.
-    // Horizontal bounds are inset from the artwork; visual coordinates stay fixed.
-    { x: 85.67, y: 296.67, w: 1105.33, h: 289.33,
-      _visualX: 75, _visualY: 370, _visualW: 1130,
-      _collisionSideTop: 370, _collisionBottom: 586,
+    // after rendering (visual x=75, width=1130, PNG alpha ends at source x=1518).
+    // The standing surface is intentionally at y=370 (inside the purple light strip).
+    // PNG alpha bottom is source y=1008; after the same render scale its visible wall
+    // ends at ~y=682, so the solid rectangle ends there too (h ~= 312).
+    { x: 75, y: 370, w: 1118, h: 312, _visualX: 75, _visualY: 370, _visualW: 1130,
       material: 'split_city_joined', _forceSolid: true, _splitCityMain: true },
-    // Exact thin PNG, elevated well above the main deck. Its collision is one-way/top-only.
-    // Each match instance selects a 30–60 second one-way travel duration.
-    { x: 530, y: 104, w: 220, h: 16, _visualYOffset: -4, material: 'split_city_moving', _splitCityMoving: true,
-      move: { type: 'horizontal', distance: 520, travelDurationRange: [30, 60], speed: 1 / 180, phase: 0 } },
+    // Moving platform uses the exact thin platform PNG in public/art/stages/split-city.
+    // The collision is a 16-unit one-way top surface only; the renderer draws the
+    // complete texture at its natural aspect ratio. 1/180 yields 45 sec per direction
+    // with the horizontal triangle-wave motion in movingPlatforms.js.
+    { x: 530, y: 178, w: 220, h: 16, material: 'split_city_moving', _splitCityMoving: true,
+      move: { type: 'horizontal', distance: 700, speed: 1 / 180, phase: 0 } },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
   basic: [
     { x: 40, y: 620, w: 1200, h: 48 },
   ],
   silvermansion: [
-    { x: 40,   y: 620, w: 1200, h: 48 },
-    { x: 100, y: 440, w: 300,  h: 20 },
-    { x: 880, y: 440, w: 300,  h: 20 },
-    { x: 480, y: 260, w: 320,  h: 20 },
-    { x: 570, y: 440, w: 140,  h: 20 },
+    // Silver's Mansion has exactly one platform. Its collision top is y=385;
+    // renderer.js offsets the transparent PNG padding so the visible gold top
+    // aligns to this surface. Collision width spans the visible artwork.
+    { x: 40, y: 385, w: 1200, h: 300, material: 'silver_mansion_platform', _forceSolid: true, _silverMansionMain: true },
   ],
   controllerforest: [
     { x: 40,   y: 620, w: 1200, h: 48 },

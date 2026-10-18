@@ -17,6 +17,12 @@ if (splitCityStage) splitCityStage.src = '/art/stages/split-city/split-city-main
 if (splitCityMovingStage) splitCityMovingStage.src = '/art/stages/split-city/split-city-moving-platform.png';
 if (splitCityBackdrop) splitCityBackdrop.src = '/art/stages/split-city/split-city-backdrop.png';
 
+// Silver's Mansion uses the exact supplied estate backdrop and golden platform art.
+const silverMansionBackdrop = typeof Image === 'undefined' ? null : new Image();
+const silverMansionPlatform = typeof Image === 'undefined' ? null : new Image();
+if (silverMansionBackdrop) silverMansionBackdrop.src = '/art/stages/silver-mansion/silver-mansion-backdrop.png';
+if (silverMansionPlatform) silverMansionPlatform.src = '/art/stages/silver-mansion/silver-mansion-platform.png';
+
 function imageReady(image) {
   return Boolean(image && image.complete && image.naturalWidth && image.naturalHeight);
 }
@@ -48,6 +54,24 @@ function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
   return true;
 }
 
+function drawSilverMansionPlatform(ctx, platform) {
+  if (!imageReady(silverMansionPlatform)) return false;
+  // Preserve source aspect ratio. The PNG's visible alpha bounds are x=15..2157,
+  // y=87..705 in a 2172x724 image. Scale to the visible width, then offset the
+  // transparent padding so visible left/right/top edges align with collision bounds.
+  const visibleSourceW = 2157 - 15;
+  const scale = platform.w / visibleSourceW;
+  const drawX = platform.x - 15 * scale;
+  const drawY = platform.y - 87 * scale;
+  const drawW = silverMansionPlatform.naturalWidth * scale;
+  const drawH = silverMansionPlatform.naturalHeight * scale;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(silverMansionPlatform, drawX, drawY, drawW, drawH);
+  ctx.restore();
+  return true;
+}
+
 function drawSplitCityMovingPlatform(ctx, platform) {
   if (!imageReady(splitCityMovingStage)) return false;
   // Load and draw the exact thin platform image from
@@ -56,8 +80,7 @@ function drawSplitCityMovingPlatform(ctx, platform) {
   // ratio and align the top edge with the one-way collider at platform.y.
   const scale = platform.w / splitCityMovingStage.naturalWidth;
   const drawH = splitCityMovingStage.naturalHeight * scale;
-  const visualY = platform.y + (platform._visualYOffset || 0);
-  ctx.drawImage(splitCityMovingStage, platform.x, visualY, platform.w, drawH);
+  ctx.drawImage(splitCityMovingStage, platform.x, platform.y, platform.w, drawH);
   return true;
 }
 
@@ -133,7 +156,7 @@ const ALL_STAGE_MAPS = [
 ];
 
 // Split City is the only stage intentionally kept in this replacement.
-export const STAGE_MAPS = ALL_STAGE_MAPS.filter((stage) => stage.id === 'splitcity');
+export const STAGE_MAPS = ALL_STAGE_MAPS.filter((stage) => stage.id === 'splitcity' || stage.id === 'silvermansion');
 
 // ─── Character rendering ────────────────────────────────────────────────────
 
@@ -2081,10 +2104,8 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
     // rendered once by the stage/match renderer.
     if (p?._freehandSegment || p?._artCollisionOnly) return;
     if (mapId === 'splitcity' && p.material === 'split_city_joined' && drawJoinedSplitCityPlatform(ctx, p)) return;
-    // On Split City, render every thin platform using the supplied custom platform art,
-    // even if the platform's material was overwritten by stage setup. Return before the
-    // generic rounded-rectangle renderer so the old grey platform is completely hidden.
-    if (mapId === 'splitcity' && p.h <= 20 && drawSplitCityMovingPlatform(ctx, p)) return;
+    if (mapId === 'splitcity' && p.material === 'split_city_moving' && drawSplitCityMovingPlatform(ctx, p)) return;
+    if (mapId === 'silvermansion' && p.material === 'silver_mansion_platform' && drawSilverMansionPlatform(ctx, p)) return;
     const isMain = p.h >= 18;
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
@@ -2141,7 +2162,7 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
   // the camera/world perfectly and sit visually above the playable surface.
   const main = platforms.filter(p => p && !p._freehandSegment && p.h >= 18)
     .sort((a,b) => (b.w*b.h) - (a.w*a.h))[0];
-  if (main && mapId !== 'splitcity') drawMainPlatformDecor(ctx, main, frame, mapId, accent);
+  if (main && mapId !== 'splitcity' && mapId !== 'silvermansion') drawMainPlatformDecor(ctx, main, frame, mapId, accent);
 }
 
 // Call this after fighters: it is the front rim that visually embeds feet in
@@ -2153,6 +2174,10 @@ export function drawSplitCityPlatformForeground(ctx, platforms, mapId = 'splitci
 }
 
 export function drawBackground(ctx, w, h, frame = 0, mapId = 'splitcity', eventColor) {
+  if (mapId === 'silvermansion' && imageReady(silverMansionBackdrop)) {
+    ctx.drawImage(silverMansionBackdrop, 0, 0, w, h);
+    return;
+  }
   if (mapId === 'splitcity' && imageReady(splitCityBackdrop)) {
     ctx.drawImage(splitCityBackdrop, 0, 0, w, h);
     return;

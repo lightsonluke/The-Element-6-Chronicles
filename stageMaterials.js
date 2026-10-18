@@ -26,7 +26,7 @@ export const STAGE_MATERIALS = {
   // metal/normal overlay is permitted on top of the painted island.
   splitcity:        ['split_city_joined'],
   basic:            ['normal'],
-  silvermansion:    ['metal', 'glass', 'glass', 'metal', 'glass'],
+  silvermansion:    ['silver_mansion_platform', 'silver_mansion_platform', 'silver_mansion_platform', 'silver_mansion_platform', 'silver_mansion_platform'],
   controllerforest: ['grass', 'wood', 'wood', 'wood', 'wood', 'wood'],
   traininggrounds:  ['normal', 'wood', 'wood', 'normal'],
   voidplane:        ['crystal', 'crystal', 'crystal', 'crystal', 'crystal'],
