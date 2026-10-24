@@ -57,7 +57,7 @@ const MAP_PLATFORMS = {
     // The collision is a 16-unit one-way top surface only; the renderer draws the
     // complete texture at its natural aspect ratio. 1/180 yields 45 sec per direction
     // with the horizontal triangle-wave motion in movingPlatforms.js.
-    { x: 545, y: 203, w: 195, h: 31, material: 'split_city_moving', _splitCityMoving: true,
+    { x: 570, y: 203, w: 195, h: 31, material: 'split_city_moving', _splitCityMoving: true,
       move: { type: 'horizontal', distance: 700, speed: 1 / 180, phase: 0 } },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
