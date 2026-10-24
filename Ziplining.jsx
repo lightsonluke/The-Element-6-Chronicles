@@ -420,6 +420,8 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
     const sway = Math.sin(s.animT * 0.04);
     let state = 'idle';
     if (s.switchT > 0) state = 'jumping';
+    // Keep a continuous motion cycle while suspended; cable sway should not freeze the limbs.
+    else state = 'moving';
     // speed trail
     ctx.save(); ctx.globalAlpha = 0.25;
     for (let i = 1; i <= 3; i++) { ctx.fillStyle = `rgba(255,255,255,${0.12 - i * 0.03})`; ctx.beginPath(); ctx.ellipse(PLAYER_X - i * 14, s.y, PW - i, PH * 0.4, 0, 0, Math.PI * 2); ctx.fill(); }

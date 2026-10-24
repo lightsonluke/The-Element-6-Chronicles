@@ -500,7 +500,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
         ctx.fillText(charData?.name || 'Clone', f._clone.x, f._clone.y - 72);
         ctx.restore();
       }
-      if (!flashing) drawStickman(ctx, f.x, f.y, col, f.facing, f.frame || 0, 1, (f.resonanceActive ? f.char : charData)?.isSpirit, f.state, f.resonanceActive ? f.char : charData, f.powerActive, false, null, f.emote, f.attackData);
+      if (!flashing) drawStickman(ctx, f.x, f.y, col, f.facing, f.frame || 0, 1, (f.resonanceActive ? f.char : charData)?.isSpirit, f.state, f.resonanceActive ? f.char : charData, f.powerActive, false, null, f.emote, f.attackData, { vx: f.vx || 0, vy: f.vy || 0, grounded: !!f.grounded, dashTimer: f.dashTimer || 0, dashDir: f.dashDirection || 0, wallSlide: !!f.wallSlide, wallSide: f.wallSide || 0, hitSide: f._hitSide || 0, memo: (f._rigMemo = f._rigMemo || {}) });
       if (!flashing && f.resonanceActive) drawConstructWeapon(ctx, f, 1);
       // front accessories
       if (!flashing) {

@@ -802,7 +802,7 @@ function drawScene(ctx, g, frame, camX, camY, vp) {
     ctx.save(); ctx.globalAlpha = 0.2; ctx.fillStyle = TEAM_COLORS[f.team];
     ctx.beginPath(); ctx.ellipse(f.x, f.y + 3, 28, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     // Draw stickman with character's own color (NOT team color)
-    drawStickman(ctx, f.x, f.y, charColor, f.facing, frame, 1, false, f.state, f.char, f.powerActive, false, null, f.emote, f.attackData);
+    drawStickman(ctx, f.x, f.y, charColor, f.facing, frame, 1, false, f.state, f.char, f.powerActive, false, null, f.emote, f.attackData, { vx: f.vx || 0, vy: f.vy || 0, grounded: !!f.grounded, dashTimer: f.dashTimer || 0, dashDir: f.dashDirection || 0, wallSlide: !!f.wallSlide, wallSide: f.wallSide || 0, hitSide: f._hitSide || 0, memo: (f._rigMemo = f._rigMemo || {}) });
     if (f.resonanceActive) { try { drawConstructWeapon(ctx, f, 1); } catch (error) { console.error('[Resonance Constructs] Weapon render failed safely:', error); } }
     if (f.emote) drawEmote(ctx, f.x, f.y, f.emote.id, f.emote.timer, f.emote.maxTimer, frame);
     // Team uniform overlay — colored jersey band on torso

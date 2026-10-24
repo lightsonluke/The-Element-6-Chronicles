@@ -1108,7 +1108,7 @@ function drawPlayer(ctx, s, charId, customCharsData, skins, accs) {
   const p = s.player;
   const char = resolveChar(charId, customCharsData);
   let state = 'idle';
-  if (p.state === 'climbing') state = 'jumping';
+  if (p.state === 'climbing') state = 'climbing';
   else if (p.state === 'air') state = 'jumping';
   else if (p.state === 'ledge' && (p.vx > 0.3 || p.vx < -0.3)) state = 'moving';
   // grab animation — quick pull-up bob right after latching

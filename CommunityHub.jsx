@@ -555,7 +555,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
   // Draws aura + ground pool, then the character body, then a rounded nametag
   // showing char name + level ABOVE the username, then emote as a speech bubble.
   const drawHubChar = (ctx, x, y, color, facing, frame, walking, username, charName, charLevel, opts = {}) => {
-    const { statue = false, emote = null, emoteT = 0, emoteMaxT = 0, charData = null } = opts;
+    const { statue = false, emote = null, emoteT = 0, emoteMaxT = 0, charData = null, rigMotion = null } = opts;
     const drawColor = statue ? '#b0b0b0' : color;
 
     // ── ground light pool + aura ──
@@ -578,7 +578,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
     }
 
     // ── character body (exact same as story mode / fights) ──
-    drawStickman(ctx, x, y, drawColor, facing, frame, 0.72, false, walking ? 'moving' : 'idle', charData || { color: drawColor, name: charName }, null, true);
+    drawStickman(ctx, x, y, drawColor, facing, frame, 0.72, false, walking ? 'moving' : 'idle', charData || { color: drawColor, name: charName }, null, true, null, emote, null, rigMotion || { vx: walking ? facing * 2 : 0, vy: 0, grounded: true, memo: (opts.rigMemo || (opts.rigMemo = {})) });
 
     // ── nametag: char name + level ABOVE username ──
     if (username || charName) {
@@ -719,12 +719,12 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
         const pc = ALL.find(ch => ch.id === p.charId) || customCharsData[p.charId] || { color: p.color || '#88ff88', name: p.charId };
         const pLevel = p.level || 1;
         const pFacing = (targetX - prevRX) > 0 ? 1 : (targetX - prevRX) < -0.1 ? -1 : 1;
-        drawHubChar(ctx, x, HUB_GROUND_Y, pc.color || p.color, pFacing, s.frame, walking, p.name, pc.name || p.charId, pLevel, { charData: pc, emote: p.emote, emoteT: p.emoteT, emoteMaxT: 80 });
+        drawHubChar(ctx, x, HUB_GROUND_Y, pc.color || p.color, pFacing, s.frame, walking, p.name, pc.name || p.charId, pLevel, { charData: pc, emote: p.emote, emoteT: p.emoteT, emoteMaxT: 80, rigMemo: (p._rigMemo || (p._rigMemo = {})), rigMotion: { vx: dx * 0.4, vy: 0, grounded: true, memo: (p._rigMemo || (p._rigMemo = {})) } });
       });
       // self
       const selfChar = ALL.find(c => c.id === favId) || customCharsData[favId] || { color: charColor, name: favId };
       const selfLevel = getCharLevelData(progress, favId)?.level || 1;
-      drawHubChar(ctx, s.px - s.cam, s.py, charColor, s.facing, s.frame, (left || right), username, selfChar.name || favId, selfLevel, { emote: s.emote, emoteT: s.emoteT, emoteMaxT: s.emoteMaxT, charData: selfChar });
+      drawHubChar(ctx, s.px - s.cam, s.py, charColor, s.facing, s.frame, (left || right), username, selfChar.name || favId, selfLevel, { emote: s.emote, emoteT: s.emoteT, emoteMaxT: s.emoteMaxT, charData: selfChar, rigMemo: (s.rigMemo || (s.rigMemo = {})), rigMotion: { vx: (right ? 2 : 0) - (left ? 2 : 0), vy: s.vy || 0, grounded: !!s.grounded, memo: (s.rigMemo || (s.rigMemo = {})) } });
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
