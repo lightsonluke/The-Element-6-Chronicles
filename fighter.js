@@ -2322,6 +2322,10 @@ export function applyHit(attacker, defender) {
     }
   }
   defender._lastHitBy = attacker;
+  // Impact side in the defender's facing space: +1 = struck from the front,
+  // -1 = struck from behind. The renderer can use this to select the matching
+  // directional hurt reaction independently of the eventual launch vector.
+  defender._hitSide = Math.sign((attacker.x - defender.x) * (defender.facing || 1));
 
   attacker.superMeter = Math.min(attacker.maxSuper, attacker.superMeter + dmg * 0.7);
   defender.superMeter = Math.min(defender.maxSuper, defender.superMeter + dmg * 0.25);

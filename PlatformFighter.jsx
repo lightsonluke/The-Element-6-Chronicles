@@ -1710,7 +1710,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         if (!flashing) {
           // Motion drives the rise/fall jump pose and the distance-matched run cycle; the memo
           // (one per fighter) smooths transitions between idle / run / air / attack poses.
-          const rigMotion = { vx: f.vx, vy: f.vy, grounded: f.grounded, dashTimer: f.dashTimer, dashDir: f.dashDirection, wallSlide: f.wallSlide, wallSide: f.wallSide, memo: (f._rigMemo = f._rigMemo || {}) };
+          const rigMotion = { vx: f.vx, vy: f.vy, grounded: f.grounded, dashTimer: f.dashTimer, dashDir: f.dashDirection, wallSlide: f.wallSlide, wallSide: f.wallSide, hitSide: f._hitSide || 0, memo: (f._rigMemo = f._rigMemo || {}) };
           drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote, f.attackData, rigMotion);
         }
         if (!flashing && f.resonanceActive) { try { drawConstructWeapon(ctx, f, fScale); } catch (error) { console.error('[Resonance Constructs] Weapon render failed safely:', error); } }

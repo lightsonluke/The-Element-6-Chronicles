@@ -159,7 +159,7 @@ const KB = {
 // Feet planted and skidding when the hit doesn't lift the fighter off the ground
 const SKID = { back: [0.46, -0.18], fwd: [0.52, -0.10] };
 
-function hitV(rx, ry, mag, t, grounded) {
+function hitV(rx, ry, mag, t, grounded, hitSide = 0) {
   const nx = rx / (mag || 1), ny = ry / (mag || 1);       // unit launch direction (forward-relative, up = +)
   const wt = {
     back: Math.pow(Math.max(0, -nx), 2), fwd: Math.pow(Math.max(0, nx), 2),
@@ -174,6 +174,20 @@ function hitV(rx, ry, mag, t, grounded) {
     for (let i = 0; i < N; i++) out[i] += p[i] * w;
   }
   out[LEAN] *= I; out[HEAD] *= I;
+  // A separate side-impact reaction: a hit landing on the back twists the
+  // shoulders away from the impact and tucks the arms in protectively. The
+  // sign is supplied by the hit source when available; otherwise the existing
+  // launch-vector reaction remains the backward-compatible fallback.
+  if (Math.abs(hitSide) > 0.01 && Math.abs(nx) > 0.18) {
+    const side = Math.sign(hitSide);
+    const sideWeight = clamp(Math.abs(hitSide), 0, 1) * (0.35 + 0.65 * Math.exp(-t / 10));
+    out[LEAN] += side * 0.16 * sideWeight;
+    out[HEAD] += side * 0.24 * sideWeight;
+    out[HNX] += side * 0.22 * sideWeight;
+    out[HFX] += side * 0.14 * sideWeight;
+    out[HNY] = lerp(out[HNY], 0.22, 0.30 * sideWeight);
+    out[HFY] = lerp(out[HFY], 0.28, 0.30 * sideWeight);
+  }
   if (grounded && ny < 0.65) {                              // stagger / skid instead of flying
     const gw = clamp((wt.back + wt.fwd) / sum, 0, 1);
     const sk = wt.fwd > wt.back ? SKID.fwd : SKID.back;
@@ -319,7 +333,7 @@ export function solvePose(o) {
   let wRun = tRun, wAir = tAir, wHit = tHit, wCr = tCr, dip = 0, runPh = frame * RUN_NOMEM;
   let wDash = tDash, wWall = tWall, dashP = 0, dashAir = !grounded;
   let airT = 99, launched = false;
-  let kbx = vx * facing, kby = -vy, kbm = Math.hypot(vx, vy), hitT = 8;
+  let kbx = vx * facing, kby = -vy, kbm = Math.hypot(vx, vy), hitT = 8, hitSide = Number(motion?.hitSide) || 0;
   if (memo) {
     if (memo.lastFrame !== frame) {                    // advance exactly once per sim frame (pause-safe)
       memo.lastFrame = frame;
@@ -357,7 +371,7 @@ export function solvePose(o) {
       if (tHit) {
         const m = Math.hypot(vx, vy);
         const jump = Math.hypot(vx - (memo.pvx || 0), vy - (memo.pvy || 0));   // gravity/friction change slowly; a new hit changes v abruptly
-        if (!memo.inHit || jump > 2.5) { memo.kbx = vx * facing; memo.kby = -vy; memo.kbm = m; memo.hitT = 0; }
+        if (!memo.inHit || jump > 2.5) { memo.kbx = vx * facing; memo.kby = -vy; memo.kbm = m; memo.hitT = 0; memo.hitSide = Number(motion?.hitSide) || 0; }
         else memo.hitT = (memo.hitT || 0) + 1;
         memo.inHit = true;
       } else { memo.inHit = false; memo.kbm = 0; }
@@ -366,7 +380,7 @@ export function solvePose(o) {
     wRun = memo.wRun; wAir = memo.wAir; wHit = memo.wHit; wCr = memo.wCr; dip = memo.dip || 0;
     wDash = memo.wDash; wWall = memo.wWall; dashP = memo.dashP || 0; dashAir = !!memo.dashAir;
     runPh = memo.run || 0; airT = memo.airT ?? 99; launched = !!memo.launched;
-    if (memo.inHit) { kbx = memo.kbx; kby = memo.kby; kbm = memo.kbm; hitT = memo.hitT || 0; }
+    if (memo.inHit) { kbx = memo.kbx; kby = memo.kby; kbm = memo.kbm; hitT = memo.hitT || 0; hitSide = Number(memo.hitSide) || 0; }
   }
 
   if (!memo && tDash) { const mx = grounded ? 13 : 15; dashP = clamp(1 - dashTimer / mx, 0, 1); }
@@ -380,7 +394,7 @@ export function solvePose(o) {
   if (wHit > 0.001) {
     // tiny launch speed = frozen / shocked / dazed → wobble; otherwise a directional knockback pose
     const stunW = 1 - sstep((kbm - 0.8) / 1.4);
-    let H = hitV(kbx, kby, Math.max(kbm, 1e-3), hitT, grounded);
+    let H = hitV(kbx, kby, Math.max(kbm, 1e-3), hitT, grounded, hitSide);
     if (stunW > 0.001) H = mix(H, stunV(memo ? hitT : frame), stunW);
     V = mix(V, H, wHit);
   }
