@@ -20,25 +20,27 @@ const frac = (v) => v - Math.floor(v);
 
 export const BASE_SCALE = 36;
 
-// Proportions, in units of s (s = 36 * scale).  Standing height ≈ 2.03 s ≈ 73 px.
+// Proportions, in units of s (s = 36 * scale).  Standing height ≈ 2.09 s ≈ 75 px.
 const P = {
-  headR: 0.25, neckToHead: 0.28,
+  headR: 0.26, neckToHead: 0.27,
   thigh: 0.58, shin: 0.60,
   upper: 0.30, fore: 0.28,
-  torso: 0.45,
-  stand: 1.05,
+  torso: 0.44,
+  stand: 1.12,
   // limb radii (tapered: thick at the joint nearest the body)
-  rThigh: 0.118, rKnee: 0.098, rFoot: 0.088,
-  rShoulder: 0.094, rElbow: 0.082, rHandArm: 0.076, rHand: 0.090,
-  rHip: 0.118, rChest: 0.104,
+  rThigh: 0.150, rKnee: 0.124, rFoot: 0.106,
+  rShoulder: 0.124, rElbow: 0.106, rHandArm: 0.096, rHand: 0.118,
+  rHip: 0.158, rChest: 0.140,
 };
 
 // Hurtbox that matches the new silhouette (world px at scale 1, relative to f.x / f.y = feet).
-export const FIGHTER_HURTBOX = { w: 32, h: 73, centerY: -36.5 };
+export const FIGHTER_HURTBOX = { w: 32, h: 75, centerY: -37.5 };
 
-// Run cadence: radians of leg cycle per pixel travelled (one full cycle = 76 px),
-// so the feet keep pace with the ground instead of skating.
-const STRIDE_K = TAU / 76;
+// Run cadence: a relaxed jog. The leg cycle is NOT locked to ground speed any more (that made
+// fast characters flicker like a flash); it eases between a slow and a fast cadence instead.
+const RUN_SLOW = TAU / 46;   // radians / frame at the lowest running speed  (~46 frames per stride)
+const RUN_FAST = TAU / 30;   // radians / frame at top running speed         (~30 frames per stride)
+const RUN_NOMEM = 0.15;      // fallback cadence when no animation memo is supplied
 
 // ─── Pose vector layout ─────────────────────────────────────────────────────
 // Every animation layer is a flat array so layers can be blended component-wise.
@@ -68,10 +70,13 @@ function ik(px, py, tx, ty, l1, l2, side) {
 
 // ─── Base locomotion layers ────────────────────────────────────────────────
 function idleV(frame) {
-  const b = Math.sin(frame * 0.07);
-  return [0.07 + 0.012 * b, -P.stand + 0.010 * b,
-    0.40, 0, -0.26, 0,
-    0.42, 0.02 + 0.012 * b, -0.25, 0.46 - 0.008 * b, 0];
+  // Relaxed stance: upright, feet about shoulder-width, arms hanging loose, slow breathing and a
+  // gentle weight shift. Nothing here looks like a wind-up for a sprint.
+  const br = Math.sin(frame * 0.045), sh = Math.sin(frame * 0.021 + 0.8);
+  return [0.025 + 0.006 * br, -P.stand + 0.012 * br,
+    0.15 + 0.012 * sh, 0, -0.15 + 0.012 * sh, 0,
+    0.11 + 0.012 * sh, 0.52 - 0.012 * br, -0.07 - 0.012 * sh, 0.53 - 0.012 * br,
+    0.02 * sh];
 }
 
 function legFoot(c, amp) {
@@ -95,15 +100,85 @@ function runV(u, amp) {
     fn[0], fn[1], ff[0], ff[1], hn[0], hn[1], hf[0], hf[1], 0.10 * amp];
 }
 
-const AIR_RISE = [0.10, -1.0, 0.34, -0.46, -0.34, -0.10, -0.34, 0.06, 0.34, -0.30, 0.0];
-const AIR_APEX = [0.04, -1.0, 0.30, -0.30, -0.22, -0.26, 0.30, -0.16, -0.30, -0.14, 0.0];
-const AIR_FALL = [-0.02, -1.02, 0.20, -0.03, -0.24, -0.08, 0.32, -0.34, -0.34, -0.24, 0.0];
-function airV(j) { return j < 0 ? mix(AIR_APEX, AIR_RISE, -j) : mix(AIR_APEX, AIR_FALL, j); }
+// ── Jump: takeoff stretch → rising drive → apex tuck → falling reach ──────────
+//          LEAN   HIP    FNX    FNY    FFX    FFY    HNX    HNY    HFX    HFY    HEAD
+const AIR_STRETCH = [-0.03, -1.15,  0.07,  0.00, -0.12,  0.00,  0.20, -0.50, -0.06, -0.54, -0.06];
+const AIR_RISE    = [ 0.08, -1.08,  0.30, -0.34, -0.36, -0.10,  0.22, -0.52, -0.30, -0.24, -0.04];
+const AIR_APEX    = [ 0.14, -0.96,  0.36, -0.58, -0.08, -0.54,  0.42, -0.10, -0.38, -0.14,  0.05];
+const AIR_FALL    = [ 0.00, -1.10,  0.22,  0.00, -0.26, -0.06,  0.36, -0.44, -0.38, -0.36, -0.04];
+function airV(j, airT, launched, vxRel) {
+  let V = j < 0 ? mix(AIR_APEX, AIR_RISE, -j) : mix(AIR_APEX, AIR_FALL, j);
+  if (launched) {                                         // leaving the ground: body fully extended
+    const tk = (1 - sstep(airT / 9)) * (1 - sstep((j + 0.15) / 0.5));
+    V = mix(V, AIR_STRETCH, tk);
+  }
+  V = V.slice();
+  V[LEAN] += clamp(vxRel, -6, 6) * 0.010;                // lean into the direction of travel
+  return V;
+}
 
-const CROUCH_V = [0.18, -0.68, 0.50, 0, -0.40, 0, 0.34, 0.12, 0.20, 0.20, 0];
-function hitV(frame) {
-  const jit = Math.sin(frame * 2.1) * 0.02;
-  return [-0.34 + jit, -0.90, 0.12, -0.08, -0.36, 0, -0.18, -0.34, -0.42, -0.02, -0.2];
+const CROUCH_V = [0.16, -0.70, 0.46, 0, -0.36, 0, 0.30, 0.14, 0.18, 0.22, 0];
+
+// ── Stun: dazed wobble (stands, knees buckled, head lolling, arms limp) ──
+function stunV(t) {
+  const ph = t * 0.10, a = Math.sin(ph), b = Math.sin(ph * 0.5 + 1.1), c = Math.sin(ph + 1.3);
+  return [0.10 + 0.15 * a, -1.00 + 0.012 * Math.sin(ph * 2), 0.25 + 0.04 * b, 0, -0.25 - 0.04 * b, -0.07 * Math.max(0, a),
+    0.12 + 0.13 * a, 0.50, -0.06 + 0.13 * c, 0.52, 0.22 + 0.18 * a];
+}
+
+// ── Knockback: one reaction per direction, blended by the real launch vector ──
+// PEAK = the instant of impact, HOLD = the settled pose while still flying.
+// (x is forward-relative: + = toward where the fighter is facing)
+const KB = {
+  // knocked BACKWARD (hit from the front): chest out, head snapped back, legs thrown out in front,
+  // arms flung up and back
+  back: {
+    peak: [-0.62, -0.90, 0.58, -0.30, 0.34, -0.14, -0.10, -0.54, -0.34, -0.46, -0.45],
+    hold: [-0.46, -0.92, 0.52, -0.26, 0.28, -0.12, -0.04, -0.50, -0.28, -0.44, -0.32],
+  },
+  // knocked FORWARD (hit from behind): pitched over, head up and forward, legs kicked out behind,
+  // arms thrown forward to catch the fall
+  fwd: {
+    peak: [0.62, -0.94, -0.38, -0.34, -0.56, -0.16, 0.50, 0.10, 0.36, 0.30, 0.40],
+    hold: [0.48, -0.96, -0.30, -0.30, -0.50, -0.14, 0.46, 0.14, 0.32, 0.30, 0.30],
+  },
+  // launched UP: body stretched tall, back arched, arms straight overhead, legs hanging limp
+  up: {
+    peak: [-0.22, -1.12, 0.10, 0.00, -0.12, 0.00, 0.16, -0.56, -0.18, -0.56, -0.38],
+    hold: [-0.12, -1.06, 0.26, -0.20, -0.14, -0.26, 0.24, -0.50, -0.26, -0.50, -0.24],
+  },
+  // spiked DOWN: folded over the hit, legs whipped up behind, arms up shielding the head
+  down: {
+    peak: [0.66, -0.84, -0.46, -0.72, -0.62, -0.60, 0.32, -0.44, 0.18, -0.48, 0.40],
+    hold: [0.56, -0.88, -0.38, -0.64, -0.54, -0.52, 0.30, -0.44, 0.18, -0.46, 0.34],
+  },
+};
+// Feet planted and skidding when the hit doesn't lift the fighter off the ground
+const SKID = { back: [0.46, -0.18], fwd: [0.52, -0.10] };
+
+function hitV(rx, ry, mag, t, grounded) {
+  const nx = rx / (mag || 1), ny = ry / (mag || 1);       // unit launch direction (forward-relative, up = +)
+  const wt = {
+    back: Math.pow(Math.max(0, -nx), 2), fwd: Math.pow(Math.max(0, nx), 2),
+    up: Math.pow(Math.max(0, ny), 2), down: Math.pow(Math.max(0, -ny), 2),
+  };
+  const sum = wt.back + wt.fwd + wt.up + wt.down || 1;
+  const impact = 0.35 + 0.65 * Math.exp(-t / 9);            // snap hard, then settle into the pose
+  const I = clamp(0.75 + mag / 10, 0.75, 1.25);
+  const out = new Array(N).fill(0);
+  for (const k in wt) {
+    const p = mix(KB[k].hold, KB[k].peak, impact), w = wt[k] / sum;
+    for (let i = 0; i < N; i++) out[i] += p[i] * w;
+  }
+  out[LEAN] *= I; out[HEAD] *= I;
+  if (grounded && ny < 0.65) {                              // stagger / skid instead of flying
+    const gw = clamp((wt.back + wt.fwd) / sum, 0, 1);
+    const sk = wt.fwd > wt.back ? SKID.fwd : SKID.back;
+    out[FNX] = lerp(out[FNX], sk[0], gw); out[FNY] = lerp(out[FNY], 0, gw);
+    out[FFX] = lerp(out[FFX], sk[1], gw); out[FFY] = lerp(out[FFY], 0, gw);
+    out[HIP] += 0.05 * gw;
+  }
+  return out;
 }
 
 // ─── Attack layer ───────────────────────────────────────────────────────────
@@ -196,32 +271,65 @@ export function solvePose(o) {
   const tHit = state === 'hitstun' ? 1 : 0;
   const tCr = state === 'crouching' ? 1 : 0;
 
-  let wRun = tRun, wAir = tAir, wHit = tHit, wCr = tCr, dip = 0, runPh = frame * 0.2, aSm = null;
+  let wRun = tRun, wAir = tAir, wHit = tHit, wCr = tCr, dip = 0, runPh = frame * RUN_NOMEM;
+  let airT = 99, launched = false;
+  let kbx = vx * facing, kby = -vy, kbm = Math.hypot(vx, vy), hitT = 8;
   if (memo) {
     if (memo.lastFrame !== frame) {                    // advance exactly once per sim frame (pause-safe)
       memo.lastFrame = frame;
       const first = memo.wRun === undefined;
-      memo.wRun = first ? tRun : lerp(memo.wRun, tRun, 0.30);
-      memo.wAir = first ? tAir : lerp(memo.wAir, tAir, 0.35);
+      memo.wRun = first ? tRun : lerp(memo.wRun, tRun, 0.18);   // slower blend = smoother idle <-> run
+      memo.wAir = first ? tAir : lerp(memo.wAir, tAir, 0.40);
       memo.wHit = first ? tHit : lerp(memo.wHit, tHit, 0.50);
       memo.wCr = first ? tCr : lerp(memo.wCr, tCr, 0.35);
       if (memo.prevAir && !tAir) memo.dip = 1;         // landing squash
-      memo.prevAir = !!tAir;
-      memo.dip = (memo.dip || 0) * 0.84;
-      if (tRun) memo.run = (memo.run || 0) + (motion.vx === undefined ? 4 : Math.max(Math.abs(vx), 1.2)) * STRIDE_K;
+      memo.dip = (memo.dip || 0) * 0.88;
+      // run cadence: eased toward a speed-dependent rate, capped so it never "flashes"
+      if (tRun) {
+        const sp = motion.vx === undefined ? 4 : Math.abs(vx);
+        const target = lerp(RUN_SLOW, RUN_FAST, clamp((sp - 1.2) / 4.5, 0, 1));
+        memo.rate = lerp(memo.rate || RUN_SLOW, target, 0.08);
+        memo.run = (memo.run || 0) + memo.rate;
+      }
+      // jump phase: frames since leaving the ground; a sudden upward kick (double jump) restarts it
+      if (tAir) {
+        if (!memo.prevAir) { memo.airT = 0; memo.launched = vy < -3; }
+        else {
+          memo.airT = (memo.airT || 0) + 1;
+          if (vy < (memo.prevVy ?? vy) - 4) { memo.airT = 0; memo.launched = true; }
+        }
+      } else { memo.airT = 99; memo.launched = false; }
+      memo.prevAir = !!tAir; memo.prevVy = vy;
+      // knockback: remember the launch direction at the moment of impact
+      if (tHit) {
+        const m = Math.hypot(vx, vy);
+        const jump = Math.hypot(vx - (memo.pvx || 0), vy - (memo.pvy || 0));   // gravity/friction change slowly; a new hit changes v abruptly
+        if (!memo.inHit || jump > 2.5) { memo.kbx = vx * facing; memo.kby = -vy; memo.kbm = m; memo.hitT = 0; }
+        else memo.hitT = (memo.hitT || 0) + 1;
+        memo.inHit = true;
+      } else { memo.inHit = false; memo.kbm = 0; }
+      memo.pvx = vx; memo.pvy = vy;
     }
-    wRun = memo.wRun; wAir = memo.wAir; wHit = memo.wHit; wCr = memo.wCr; dip = memo.dip || 0; runPh = memo.run || 0;
+    wRun = memo.wRun; wAir = memo.wAir; wHit = memo.wHit; wCr = memo.wCr; dip = memo.dip || 0;
+    runPh = memo.run || 0; airT = memo.airT ?? 99; launched = !!memo.launched;
+    if (memo.inHit) { kbx = memo.kbx; kby = memo.kby; kbm = memo.kbm; hitT = memo.hitT || 0; }
   }
 
-  const amp = motion && motion.vx !== undefined ? lerp(0.62, 1, clamp((Math.abs(vx) - 1) / 4, 0, 1)) : 1;
+  const amp = motion && motion.vx !== undefined ? lerp(0.70, 1, clamp((Math.abs(vx) - 1) / 4, 0, 1)) : 1;
 
   // Base pose = idle blended with run / air / crouch / hit
   let V = idleV(frame);
   if (wRun > 0.001) V = mix(V, runV(runPh / TAU, amp), wRun);
-  if (wAir > 0.001) V = mix(V, airV(clamp(vy / 12, -1, 1)), wAir);
+  if (wAir > 0.001) V = mix(V, airV(clamp(vy / 12, -1, 1), airT, launched, vx * facing), wAir);
   if (wCr > 0.001) V = mix(V, CROUCH_V, wCr);
-  if (wHit > 0.001) V = mix(V, hitV(frame), wHit);
-  if (dip > 0.01) { V = V.slice(); V[HIP] += dip * 0.13; V[LEAN] += dip * 0.10; }
+  if (wHit > 0.001) {
+    // tiny launch speed = frozen / shocked / dazed → wobble; otherwise a directional knockback pose
+    const stunW = 1 - sstep((kbm - 0.8) / 1.4);
+    let H = hitV(kbx, kby, Math.max(kbm, 1e-3), hitT, grounded);
+    if (stunW > 0.001) H = mix(H, stunV(memo ? hitT : frame), stunW);
+    V = mix(V, H, wHit);
+  }
+  if (dip > 0.01) { V = V.slice(); V[HIP] += dip * 0.17; V[LEAN] += dip * 0.12; V[FNX] += dip * 0.06; V[FFX] -= dip * 0.06; }
 
   // Attack layer (skipped while an emote plays)
   if (!ev && attackState && o.attack) {
@@ -274,8 +382,8 @@ export function solvePose(o) {
   const lam = V[LEAN];
   const hip = [0, V[HIP]];
   const sh = [Math.sin(lam) * P.torso, hip[1] - Math.cos(lam) * P.torso];
-  const shN = [sh[0] + 0.03, sh[1]], shF = [sh[0] - 0.02, sh[1]];
-  const hpN = [0.02, hip[1]], hpF = [-0.02, hip[1]];
+  const shN = [sh[0] + 0.035, sh[1]], shF = [sh[0] - 0.025, sh[1]];
+  const hpN = [0.025, hip[1]], hpF = [-0.025, hip[1]];
 
   const armTarget = (shoulder, hx, hy, ang) => {
     if (ang == null) return [shoulder[0] + hx, shoulder[1] + hy];
@@ -292,7 +400,7 @@ export function solvePose(o) {
 
   const dir = lam * 0.55 + V[HEAD];
   const head = [sh[0] + Math.sin(dir) * P.neckToHead, sh[1] - Math.cos(dir) * P.neckToHead];
-  const arch = 0.012 + lam * 0.015;
+  const arch = 0.004;
   const torsoMid = [(hip[0] + sh[0]) / 2 - Math.cos(lam) * arch, (hip[1] + sh[1]) / 2 - Math.sin(lam) * arch];
 
   const T = (p) => [p[0] * facing * s, p[1] * s];       // mirror + scale to px
