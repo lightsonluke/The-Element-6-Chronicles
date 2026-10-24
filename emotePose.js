@@ -52,7 +52,11 @@ function mirror(pose, facing) {
 export function getEmotePoseVars(emoteId, progress, facing) {
   const fn = EMOTE_POSES[emoteId];
   if (!fn) return null;
-  const raw = fn(progress, facing);
+  // Keep every named emote on the same 0→1 timeline in matches and previews.
+  // A timer can briefly overshoot at the end of a frame; clamp it so poses
+  // never jump into extrapolated, unintended limb positions.
+  const t = Math.max(0, Math.min(1, Number(progress) || 0));
+  const raw = fn(t, facing);
   const p = mirror(raw, facing);
   // Convert absolute arm angles to punchArm values
   // armAngleL = -0.28 + finalArmL = -0.28 + armSwingL + punchArmL

@@ -12,6 +12,63 @@ import GameIcon from "./GameIcon.jsx";
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 // ── Dodgeball court (2D side-view, eye-level) ──
+
+function drawSportActionPose(ctx, x, y, facing, action, progress, color = '#FFFFFF') {
+  if (!action || progress <= 0) return;
+  const d = facing < 0 ? -1 : 1;
+  const t = Math.max(0, Math.min(1, progress));
+  const ease = t * t * (3 - 2 * t);
+  ctx.save();
+  ctx.translate(x, y - 44);
+  ctx.scale(d, 1);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = color;
+  const limb = (pts, width = 5) => {
+    ctx.lineWidth = width; ctx.beginPath();
+    pts.forEach((pt, i) => i ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]));
+    ctx.stroke();
+  };
+  if (action === 'kick') {
+    // Planting leg stays vertical; kicking leg chambers, extends, then follows through.
+    const swing = Math.sin(ease * Math.PI * 0.92);
+    limb([[-5, 8], [-8, 28], [-10, 48]], 5);
+    limb([[4, 8], [8 + 17 * swing, 24 - 15 * swing], [24 + 35 * swing, 30 - 20 * swing]], 6);
+    limb([[-5, -17], [-15, -3], [-19, 7]], 4);
+    limb([[4, -17], [14, -7], [20, -1]], 4);
+  } else if (action === 'bump') {
+    // Low, joined forearms form a flat platform in front of the body.
+    limb([[-6, -17], [-15, -2], [2, 9 + 3 * Math.sin(ease * Math.PI)]], 5);
+    limb([[5, -17], [15, -2], [2, 9 + 3 * Math.sin(ease * Math.PI)]], 5);
+    limb([[-5, 8], [-7, 28], [-10, 48]], 5);
+    limb([[4, 8], [7, 28], [10, 48]], 5);
+  } else if (action === 'set') {
+    // Both hands rise above the forehead with fingers open in a setting triangle.
+    limb([[-6, -17], [-14, -30], [-9, -42]], 4);
+    limb([[5, -17], [13, -30], [8, -42]], 4);
+    limb([[-9, -42], [-5, -47], [0, -42], [5, -47], [8, -42]], 3);
+    limb([[-5, 8], [-7, 28], [-10, 48]], 5);
+    limb([[4, 8], [7, 28], [10, 48]], 5);
+  } else if (action === 'spike') {
+    // Hitting arm loads behind the head and whips down across the front.
+    const swing = Math.sin(ease * Math.PI);
+    limb([[-6, -17], [-15, -6], [-19, 6]], 4);
+    limb([[5, -17], [13, -32 - 9 * swing], [21, -39 + 47 * ease]], 5);
+    limb([[-5, 8], [-7, 28], [-10, 48]], 5);
+    limb([[4, 8], [7, 28 - 10 * swing], [10, 48 - 8 * swing]], 5);
+  } else if (action === 'throw') {
+    // Shoulder rotation and full arm extension give the throw a clear release.
+    const wind = Math.sin(ease * Math.PI);
+    limb([[-6, -17], [-14, -5], [-18, 7]], 4);
+    limb([[5, -17], [13, -30 + 24 * ease], [20 + 10 * wind, -21 + 15 * ease]], 5);
+    limb([[-5, 8], [-7, 28], [-10, 48]], 5);
+    limb([[4, 8], [7, 28], [10, 48]], 5);
+  }
+  ctx.restore();
+}
+
+
 const W = 1100, H = 600;
 const FLOOR = 524, CEIL = 48, LEFT = 44, RIGHT = 1056, CENTER = 550;
 const P1_MIN = LEFT + 36, P1_MAX = CENTER - 30;
@@ -296,7 +353,8 @@ export default function DodgeballGame({
     const opp = side === 1 ? s.p2 : s.p1;
     p.facing = opp.x > p.x ? 1 : -1;
     if (p.dodgeFlash > 0) p.dodgeFlash--;
-    if (p.stun > 0) { p.stun--; p.vy += GRAV; p.y += p.vy; if (p.y >= FLOOR) { p.y = FLOOR; p.vy = 0; } p.frame++; return; }
+    if (p.stun > 0) { p.stun--; p.vy += GRAV; p.y += p.vy; if (p.y >= FLOOR) { p.y = FLOOR; p.vy = 0; } p.frame++;
+    if (p._throwAnim > 0) p._throwAnim--; return; }
     // horizontal
     let move = 0; if (inp.left) move -= 1; if (inp.right) move += 1;
     const spd = p.holding ? p.ds.move : p.ds.run;
@@ -327,11 +385,13 @@ export default function DodgeballGame({
     // carry
     if (p.holding) { p.holding.x = p.x + p.facing * (P_W * 0.7); p.holding.y = p.y - P_H * 0.55; p.holding.spin += 0.15; }
     p.frame++;
+    if (p._throwAnim > 0) p._throwAnim--;
   }
 
   function throwBall(s, p, inp, side, isSuper) {
     const b = p.holding; if (!b) return;
     p.holding = null; b.heldBy = null; b.lastThrower = side; b.hitCd = 10;
+    p._throwAnim = 14;
     s.stats[side - 1].throws++; if (isSuper) s.stats[side - 1].superThrows++;
     const speed = isSuper ? p.ds.superPower : p.ds.throwPower;
     // CPU throws carry an explicit target so the throw is actually aimed at
@@ -540,6 +600,10 @@ export default function DodgeballGame({
       facing: p.facing, frame: p.frame, scale: sf, jersey: true, sport: 'dodgeball', state,
       teamColor: side === 1 ? p1TeamColor : p2TeamColor, equippedSkins, mergedAccessories, noWeapon: true,
     });
+    if (p._throwAnim > 0) {
+      drawSportActionPose(ctx, p.x, p.y + stretch, p.facing, 'throw',
+        1 - p._throwAnim / 14, side === 1 ? p1TeamColor : p2TeamColor);
+    }
     // stun stars
     if (p.stun > 0) {
       ctx.fillStyle = '#FFD700'; ctx.font = '12px Orbitron';

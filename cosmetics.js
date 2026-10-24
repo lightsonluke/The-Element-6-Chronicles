@@ -320,15 +320,32 @@ function drawRedesignedAccessory(ctx, p) {
   const drawCrown = (style) => {const yy=headTopY-s*.03;ctx.save();glow(C,style==='lightning'?10:4);poly([[x-s*.32,yy],[x-s*.28,yy-s*.19],[x-s*.12,yy-s*.08],[x,yy-s*.25],[x+s*.13,yy-s*.08],[x+s*.29,yy-s*.2],[x+s*.32,yy],[x+s*.24,yy+s*.045],[x-s*.24,yy+s*.045]],C,'rgba(255,255,255,.75)',s*.018);round(x-s*.27,yy-s*.01,s*.54,s*.07,s*.02,'#F8FAFC');gem(x,yy-s*.08,s*.075,accent);noGlow();ctx.restore();};
   const drawFaceMask = (style) => {ctx.save();const yy=headY+s*.015;glow(style.includes('oni')?C:0,style.includes('oni')?5:0);if(style==='blindfold'){round(x-headR*.9,yy-s*.08,headR*1.8,s*.12,s*.04,C,'rgba(255,255,255,.65)',s*.015);poly([[x-headR*.5,yy+s*.015],[x-headR*.9,yy+s*.27],[x-headR*.56,yy+s*.21]],C);poly([[x+headR*.5,yy+s*.015],[x+headR*.9,yy+s*.25],[x+headR*.56,yy+s*.21]],C);}else{ellipse(x,yy,headR*.78,headR*.83,style==='kitsune_mask'?'#F6F1E8':style==='oni_mask_hannya'?'#F4E8CF':C,0,'rgba(17,24,39,.7)',s*.025);if(style==='kitsune_mask'){poly([[x-headR*.5,yy-headR*.45],[x-headR*.95,yy-headR*1.25],[x-headR*.18,yy-headR*.68]],'#F6F1E8','#B91C1C',s*.02);poly([[x+headR*.5,yy-headR*.45],[x+headR*.95,yy-headR*1.25],[x+headR*.18,yy-headR*.68]],'#F6F1E8','#B91C1C',s*.02);}if(style.includes('oni')){poly([[x-headR*.55,yy-headR*.55],[x-headR*.9,yy-headR*1.22],[x-headR*.18,yy-headR*.68]],style==='oni_mask_hannya'?'#D4AF37':C);poly([[x+headR*.55,yy-headR*.55],[x+headR*.9,yy-headR*1.22],[x+headR*.18,yy-headR*.68]],style==='oni_mask_hannya'?'#D4AF37':C); }ellipse(x-headR*.3,yy-s*.05,headR*.14,s*.045,'#171923',-.2);ellipse(x+headR*.3,yy-s*.05,headR*.14,s*.045,'#171923',.2);line(x-headR*.25,yy+s*.22,x+headR*.25,yy+s*.22,'#7F1D1D',s*.025);if(style.includes('oni')){poly([[x-headR*.18,yy+s*.16],[x-headR*.1,yy+s*.31],[x-headR*.04,yy+s*.16]],'#FFF7ED');poly([[x+headR*.18,yy+s*.16],[x+headR*.1,yy+s*.31],[x+headR*.04,yy+s*.16]],'#FFF7ED');}}noGlow();ctx.restore();};
   const drawCloth = (kind) => {ctx.save();const top=torsoTopY-s*.015,bottom=hipY+s*.09,w=s*.68;const cloth=kind==='tee'?C:C;const arm=(sh,hand,ang,short=false)=>{ctx.save();ctx.translate(sh.x,sh.y);ctx.rotate(ang);round(-s*.085,-s*.025,s*.17,Math.hypot(hand.x-sh.x,hand.y-sh.y)+(short?s*.01:s*.12),s*.07,cloth,'rgba(255,255,255,.45)',s*.014);ctx.restore();};
-    if(kind!=='vest'){arm(shoulderL,handL,pose.armAngleL,kind==='tee');arm(shoulderR,handR,pose.armAngleR,kind==='tee');}
+    // Side-view depth: far sleeve behind torso, near sleeve in front.
+    const nearKey = facing < 0 ? 'left' : 'right';
+    const farKey = nearKey === 'left' ? 'right' : 'left';
+    const armData = {
+      left: { sh: shoulderL, hand: handL, angle: pose.armAngleL },
+      right: { sh: shoulderR, hand: handR, angle: pose.armAngleR },
+    };
+    if(kind!=='vest') {
+      const far = armData[farKey];
+      arm(far.sh, far.hand, far.angle, kind==='tee');
+    }
     round(x-w/2,top,w,bottom-top,s*.09,cloth,'rgba(15,23,42,.7)',s*.02);
+    if(kind!=='vest') {
+      const near = armData[nearKey];
+      arm(near.sh, near.hand, near.angle, kind==='tee');
+    }
     // Tailored paneling and seams make the garment read as clothing, not a flat block.
     if(kind==='jacket'||kind==='cardigan'){poly([[x,top+s*.02],[x-s*.045,top+s*.18],[x-s*.015,bottom-s*.02],[x, bottom]],'rgba(255,255,255,.17)');poly([[x,top+s*.02],[x+s*.045,top+s*.18],[x+s*.015,bottom-s*.02],[x,bottom]],'rgba(0,0,0,.17)');for(let i=0;i<3;i++)circle(x,top+s*(.18+i*.14),s*.018,'#E5E7EB');}
     else if(kind==='hoodie'){ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=s*.025;ctx.beginPath();ctx.arc(x,headY+s*.05,s*.31,Math.PI*.12,Math.PI*.88);ctx.stroke();line(x-s*.08,top+s*.22,x-s*.06,top+s*.48,'rgba(255,255,255,.65)',s*.018);line(x+s*.08,top+s*.22,x+s*.06,top+s*.48,'rgba(255,255,255,.65)',s*.018);round(x-s*.17,bottom-s*.2,s*.34,s*.12,s*.035,'rgba(15,23,42,.22)','rgba(255,255,255,.32)',s*.012);}
     else if(kind==='tee'){round(x-s*.17,top+s*.18,s*.34,s*.18,s*.025,'rgba(255,255,255,.16)');star(x,top+s*.27,s*.07,accent);}
     else{line(x-w*.45,top+s*.08,x+w*.45,top+s*.08,'rgba(255,255,255,.45)',s*.018);if(kind==='vest')line(x,top+s*.04,x,bottom-s*.02,'rgba(255,255,255,.5)',s*.018);}
     ctx.restore();};
-  const drawPants = (kind) => {ctx.save();const len=kind==='shorts'?s*.31:s*.65,w=s*.25;[[pose.hips.left,pose.legAngleL], [pose.hips.right,pose.legAngleR]].forEach(([hip,ang],i)=>{ctx.save();ctx.translate(hip.x,hip.y);ctx.rotate(ang);round(-w/2,0,w,len,w*.28,C,'rgba(15,23,42,.7)',s*.018);line(0,s*.05,0,len*.82,'rgba(255,255,255,.25)',s*.012);if(kind==='jeans'){line(-w*.35,len*.12,w*.35,len*.12,'rgba(255,255,255,.5)',s*.012);line(-w*.28,len*.78,w*.28,len*.78,'rgba(15,23,42,.45)',s*.018);}if(kind==='sweatpants')round(-w*.48,len*.82,w*.96,s*.06,s*.025,'rgba(15,23,42,.28)');ctx.restore();});ctx.restore();};
+  const drawPants = (kind) => {ctx.save();const len=kind==='shorts'?s*.31:s*.65,w=s*.25;(facing < 0
+      ? [[pose.hips.right,pose.legAngleR], [pose.hips.left,pose.legAngleL]]
+      : [[pose.hips.left,pose.legAngleL], [pose.hips.right,pose.legAngleR]]
+    ).forEach(([hip,ang],i)=>{ctx.save();ctx.translate(hip.x,hip.y);ctx.rotate(ang);round(-w/2,0,w,len,w*.28,C,'rgba(15,23,42,.7)',s*.018);line(0,s*.05,0,len*.82,'rgba(255,255,255,.25)',s*.012);if(kind==='jeans'){line(-w*.35,len*.12,w*.35,len*.12,'rgba(255,255,255,.5)',s*.012);line(-w*.28,len*.78,w*.28,len*.78,'rgba(15,23,42,.45)',s*.018);}if(kind==='sweatpants')round(-w*.48,len*.82,w*.96,s*.06,s*.025,'rgba(15,23,42,.28)');ctx.restore();});ctx.restore();};
   const drawSportsKit = (kind) => {
     drawCloth(kind==='soccer_kit'||kind==='jersey'?'tee':'jacket');
     ctx.save();

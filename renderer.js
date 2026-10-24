@@ -1022,29 +1022,12 @@ export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isN
     return;
   }
 
-  // The combat spec is the source shared by collision and visible move art.
-  // This layer adds the documented contact path over each character's existing
-  // bespoke effects, rather than replacing all moves with one generic flash.
-  const documentedSpec = attack?.spec || getAttackSpecForData(charId, attack);
-  if (documentedSpec) {
-    if (attack.isSuper || documentedSpec.kind === 'super') drawSpecSuper(ctx, x, y, color, progress, documentedSpec, facing);
-    else drawSpecAttack(ctx, x, y, color, progress, facing, documentedSpec);
-  }
-
+  // Keep the per-character authored attack art clean. The former combat-spec
+  // visualization painted an unwanted generic line and half-circle over moves.
   const isGen1 = String(charId || '').startsWith('g1_');
   const isGen2 = String(charId || '').startsWith('g2_');
   const isGen3 = String(charId || '').startsWith('g3_');
-  // Generic glow is intentionally disabled for Gen I: every visible attack
-  // shape is authored directly, so there is no misleading extra hitbox-looking ring.
-  if (!isGen1 && !isGen2 && !isGen3) {
-    if (attack.isHeavy) {
-      ctx.globalAlpha = (1 - progress) * 0.3;
-      drawSigGlowRing(ctx, x, y - 15, color, 35 + progress * 10);
-      ctx.globalAlpha = 1;
-    }
-    ctx.globalAlpha = (1 - progress) * 0.2;
-    drawSigGlowRing(ctx, x, y - 15, color, attack.isHeavy ? 30 + progress * 10 : 25 + progress * 8);
-  }
+  // Do not add generic circular glows over authored attacks.
   ctx.globalAlpha = Math.max(0, 1 - progress * 1.2);
 
   const p = progress;

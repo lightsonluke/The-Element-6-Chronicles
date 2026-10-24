@@ -33,6 +33,63 @@ import PauseMenu from './PauseMenu.jsx';
 import { useClipRecorder } from './useClipRecorder.js';
 import GameIcon from "./GameIcon.jsx";
 
+
+function drawSportActionPose(ctx, x, y, facing, action, progress, color = '#FFFFFF') {
+  if (!action || progress <= 0) return;
+  const d = facing < 0 ? -1 : 1;
+  const t = Math.max(0, Math.min(1, progress));
+  const ease = t * t * (3 - 2 * t);
+  ctx.save();
+  ctx.translate(x, y - 44);
+  ctx.scale(d, 1);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = color;
+  const limb = (pts, width = 5) => {
+    ctx.lineWidth = width; ctx.beginPath();
+    pts.forEach((pt, i) => i ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]));
+    ctx.stroke();
+  };
+  if (action === 'kick') {
+    // Planting leg stays vertical; kicking leg chambers, extends, then follows through.
+    const swing = Math.sin(ease * Math.PI * 0.92);
+    limb([[-5, 8], [-8, 28], [-10, 48]], 5);
+    limb([[4, 8], [8 + 17 * swing, 24 - 15 * swing], [24 + 35 * swing, 30 - 20 * swing]], 6);
+    limb([[-5, -17], [-15, -3], [-19, 7]], 4);
+    limb([[4, -17], [14, -7], [20, -1]], 4);
+  } else if (action === 'bump') {
+    // Low, joined forearms form a flat platform in front of the body.
+    limb([[-6, -17], [-15, -2], [2, 9 + 3 * Math.sin(ease * Math.PI)]], 5);
+    limb([[5, -17], [15, -2], [2, 9 + 3 * Math.sin(ease * Math.PI)]], 5);
+    limb([[-5, 8], [-7, 28], [-10, 48]], 5);
+    limb([[4, 8], [7, 28], [10, 48]], 5);
+  } else if (action === 'set') {
+    // Both hands rise above the forehead with fingers open in a setting triangle.
+    limb([[-6, -17], [-14, -30], [-9, -42]], 4);
+    limb([[5, -17], [13, -30], [8, -42]], 4);
+    limb([[-9, -42], [-5, -47], [0, -42], [5, -47], [8, -42]], 3);
+    limb([[-5, 8], [-7, 28], [-10, 48]], 5);
+    limb([[4, 8], [7, 28], [10, 48]], 5);
+  } else if (action === 'spike') {
+    // Hitting arm loads behind the head and whips down across the front.
+    const swing = Math.sin(ease * Math.PI);
+    limb([[-6, -17], [-15, -6], [-19, 6]], 4);
+    limb([[5, -17], [13, -32 - 9 * swing], [21, -39 + 47 * ease]], 5);
+    limb([[-5, 8], [-7, 28], [-10, 48]], 5);
+    limb([[4, 8], [7, 28 - 10 * swing], [10, 48 - 8 * swing]], 5);
+  } else if (action === 'throw') {
+    // Shoulder rotation and full arm extension give the throw a clear release.
+    const wind = Math.sin(ease * Math.PI);
+    limb([[-6, -17], [-14, -5], [-18, 7]], 4);
+    limb([[5, -17], [13, -30 + 24 * ease], [20 + 10 * wind, -21 + 15 * ease]], 5);
+    limb([[-5, 8], [-7, 28], [-10, 48]], 5);
+    limb([[4, 8], [7, 28], [10, 48]], 5);
+  }
+  ctx.restore();
+}
+
+
 const W = 1280;
 const H = 720;
 
@@ -724,6 +781,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
           ball.damage = 3.0;
           ball.lastTeam = team;
           ball.lastTouch = f;
+          f._kickAnim = 16;
           if (!f.grounded) {
             // BICYCLE KICK — airborne power shot aims at top corner of net; triggers slow-mo
             f._bicycleKick = 28;
@@ -775,7 +833,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
       });
 
       // Tick down bicycle-kick animation timers
-      allFighters.forEach(f => { if (f._bicycleKick > 0) f._bicycleKick--; });
+      allFighters.forEach(f => { if (f._bicycleKick > 0) f._bicycleKick--; if (f._kickAnim > 0) f._kickAnim--; });
 
       // Ball physics — lighter drag so shots fly truer (more natural flight)
       ball.prevX = ball.x;
@@ -890,6 +948,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
           // Body bounces only transfer ownership — they never increase ball.damage
           ball.lastTeam = team;
           ball.lastTouch = f;
+          f._kickAnim = 16;
           const force = (3 + Math.abs(f.vx) * 0.2) * ball.damage * (f.statPowerMul || 1);
           ball.vx = (dx / dist) * force + f.vx * 0.8;
           ball.vy = (dy / dist) * force - 3;
@@ -1081,17 +1140,15 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
           accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, fScale, f.char.id, f.state, f.facing, f.powerActive));
         }
         ctx.restore();
+        if (f._kickAnim > 0 && f._bicycleKick <= 0) {
+          drawSportActionPose(ctx, f.x, f.y, f.facing, 'kick', 1 - f._kickAnim / 16, f.char.color);
+        }
         drawShikigamiFollower(ctx, f, equippedShikigamiRef.current?.[f.char.id], f.frame, 1);
         if (f._bicycleKick > 0) {
-          // Swinging legs + follow-through arc over the ball (the "bicycle")
-          const prog = Math.min(1, f._bicycleKick / 28);
-          ctx.save();
-          ctx.strokeStyle = f.char.color; ctx.lineWidth = 4; ctx.globalAlpha = 0.65;
-          const a0 = -Math.PI * 0.95 + prog * Math.PI * 1.5;
-          ctx.beginPath(); ctx.arc(f.x, f.y - 30, 44, a0, a0 + Math.PI * 0.75); ctx.stroke();
-          ctx.globalAlpha = 0.4; ctx.lineWidth = 2;
-          ctx.beginPath(); ctx.arc(f.x, f.y - 30, 44, a0 + Math.PI * 0.5, a0 + Math.PI * 1.1); ctx.stroke();
-          ctx.restore();
+          // The body rotation already sells the bicycle kick. Avoid the old
+          // decorative half-circle slash that looked like an unrelated attack.
+          drawSportActionPose(ctx, f.x, f.y, f.facing, 'kick',
+            1 - f._bicycleKick / 28, f.char.color);
         }
         if (headSoccer) {
           const s = 36 * fScale;

@@ -15,7 +15,8 @@ export default function EmotePreview({ emoteId, char, size = 64 }) {
       if (!r) return; f++;
       ctx.clearRect(0, 0, size, size);
       ctx.fillStyle = '#111128'; ctx.fillRect(0, 0, size, size);
-      const cyclePos = (f % totalFrames) / totalFrames;
+      const cycleFrame = f % totalFrames;
+      const cyclePos = Math.min(1, cycleFrame / Math.max(1, emote.duration));
       const emoteData = { id: emoteId, progress: cyclePos, timer: 0, maxTimer: emote.duration };
       drawStickman(ctx, size / 2, size * 0.78, char.color, 1, f, 0.75, char.isSpirit, 'idle', char, null, false, null, emoteData);
       requestAnimationFrame(loop);

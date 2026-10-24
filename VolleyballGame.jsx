@@ -14,6 +14,63 @@ import { getKeybinds, getSoloKeybinds } from './keybinds.js';
 import VolleyballCanvasPortal from './VolleyballCanvasPortal.jsx';
 const charFor = (id, element) => { const c = ALL_CHARS.find(c => c.id === id); if (!c) return null; if (element && element !== 'basic') return { ...c, stats: applyElement(c.stats || {}, element) }; return c; };
 
+
+function drawSportActionPose(ctx, x, y, facing, action, progress, color = '#FFFFFF') {
+  if (!action || progress <= 0) return;
+  const d = facing < 0 ? -1 : 1;
+  const t = Math.max(0, Math.min(1, progress));
+  const ease = t * t * (3 - 2 * t);
+  ctx.save();
+  ctx.translate(x, y - 44);
+  ctx.scale(d, 1);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = color;
+  const limb = (pts, width = 5) => {
+    ctx.lineWidth = width; ctx.beginPath();
+    pts.forEach((pt, i) => i ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]));
+    ctx.stroke();
+  };
+  if (action === 'kick') {
+    // Planting leg stays vertical; kicking leg chambers, extends, then follows through.
+    const swing = Math.sin(ease * Math.PI * 0.92);
+    limb([[-5, 8], [-8, 28], [-10, 48]], 5);
+    limb([[4, 8], [8 + 17 * swing, 24 - 15 * swing], [24 + 35 * swing, 30 - 20 * swing]], 6);
+    limb([[-5, -17], [-15, -3], [-19, 7]], 4);
+    limb([[4, -17], [14, -7], [20, -1]], 4);
+  } else if (action === 'bump') {
+    // Low, joined forearms form a flat platform in front of the body.
+    limb([[-6, -17], [-15, -2], [2, 9 + 3 * Math.sin(ease * Math.PI)]], 5);
+    limb([[5, -17], [15, -2], [2, 9 + 3 * Math.sin(ease * Math.PI)]], 5);
+    limb([[-5, 8], [-7, 28], [-10, 48]], 5);
+    limb([[4, 8], [7, 28], [10, 48]], 5);
+  } else if (action === 'set') {
+    // Both hands rise above the forehead with fingers open in a setting triangle.
+    limb([[-6, -17], [-14, -30], [-9, -42]], 4);
+    limb([[5, -17], [13, -30], [8, -42]], 4);
+    limb([[-9, -42], [-5, -47], [0, -42], [5, -47], [8, -42]], 3);
+    limb([[-5, 8], [-7, 28], [-10, 48]], 5);
+    limb([[4, 8], [7, 28], [10, 48]], 5);
+  } else if (action === 'spike') {
+    // Hitting arm loads behind the head and whips down across the front.
+    const swing = Math.sin(ease * Math.PI);
+    limb([[-6, -17], [-15, -6], [-19, 6]], 4);
+    limb([[5, -17], [13, -32 - 9 * swing], [21, -39 + 47 * ease]], 5);
+    limb([[-5, 8], [-7, 28], [-10, 48]], 5);
+    limb([[4, 8], [7, 28 - 10 * swing], [10, 48 - 8 * swing]], 5);
+  } else if (action === 'throw') {
+    // Shoulder rotation and full arm extension give the throw a clear release.
+    const wind = Math.sin(ease * Math.PI);
+    limb([[-6, -17], [-14, -5], [-18, 7]], 4);
+    limb([[5, -17], [13, -30 + 24 * ease], [20 + 10 * wind, -21 + 15 * ease]], 5);
+    limb([[-5, 8], [-7, 28], [-10, 48]], 5);
+    limb([[4, 8], [7, 28], [10, 48]], 5);
+  }
+  ctx.restore();
+}
+
+
 const W = 1100, H = 660;
 const CANVAS_W = 1200, CANVAS_H = 675;
 const FLOOR = 540;
@@ -1456,6 +1513,12 @@ function drawTeamPlayer(ctx, s, team, active, ids, jersey, teamColor, side, equi
       state: pose,
       equippedSkins, equippedAccessories,
     });
+    if (p.actionTimer > 0 && ['bump','set','spike'].includes(p.actionState)) {
+      const action = p.actionState;
+      const duration = action === 'bump' ? 22 : 15;
+      drawSportActionPose(ctx, p.x, p.y, side === 1 ? 1 : -1, action,
+        1 - p.actionTimer / duration, teamColor);
+    }
     if (p.actionState === 'set' && p.actionTimer > 0) {
       ctx.save(); ctx.globalAlpha = 0.5;
       ctx.fillStyle = '#FFD700'; ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 8;
