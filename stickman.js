@@ -550,14 +550,21 @@ function armColors(color) {
   return [rgbStr(tint(0.45)), rgbStr(tint(0.30))];
 }
 
-function paintLimbSet(ctx, L, r, legColor, armColor) {
-  ctx.fillStyle = legColor;
-  capsule(ctx, L.hip[0], L.hip[1], r.hip, L.knee[0], L.knee[1], r.knee);
-  capsule(ctx, L.knee[0], L.knee[1], r.knee, L.foot[0], L.foot[1], r.foot);
-  ctx.fillStyle = armColor;
-  capsule(ctx, L.shoulder[0], L.shoulder[1], r.shoulder, L.elbow[0], L.elbow[1], r.elbow);
-  capsule(ctx, L.elbow[0], L.elbow[1], r.elbow, L.hand[0], L.hand[1], r.handArm);
-  disc(ctx, L.hand[0], L.hand[1], r.hand);
+function paintLimbSet(ctx, L, r, legColor, armColor, armBehindLeg = false) {
+  // On the far side, paint the arm first so the rear leg stays visibly in front of it.
+  const drawArm = () => {
+    ctx.fillStyle = armColor;
+    capsule(ctx, L.shoulder[0], L.shoulder[1], r.shoulder, L.elbow[0], L.elbow[1], r.elbow);
+    capsule(ctx, L.elbow[0], L.elbow[1], r.elbow, L.hand[0], L.hand[1], r.handArm);
+    disc(ctx, L.hand[0], L.hand[1], r.hand);
+  };
+  const drawLeg = () => {
+    ctx.fillStyle = legColor;
+    capsule(ctx, L.hip[0], L.hip[1], r.hip, L.knee[0], L.knee[1], r.knee);
+    capsule(ctx, L.knee[0], L.knee[1], r.knee, L.foot[0], L.foot[1], r.foot);
+  };
+  if (armBehindLeg) { drawArm(); drawLeg(); }
+  else { drawLeg(); drawArm(); }
 }
 
 function paintBody(ctx, J, color) {
@@ -566,7 +573,7 @@ function paintBody(ctx, J, color) {
   const [armNear, armFar] = armColors(color);
 
   // Far (rear) limbs: darker legs, dimmer arm
-  paintLimbSet(ctx, J.far, r, far, armFar);
+  paintLimbSet(ctx, J.far, r, far, armFar, true);
 
   // Torso: a tapered spine from pelvis to neck
   ctx.fillStyle = color;
