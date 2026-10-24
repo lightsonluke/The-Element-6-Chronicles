@@ -2260,8 +2260,8 @@ export function checkHit(attacker, defender) {
   }
 
   // Defender body box — rectangle centered on body
-  const dBW = 32, dBH = 75; // matches FIGHTER_HURTBOX in stickman.js
-  const dBX = defender.x, dBY = defender.y - 37.5;
+  const dBW = 30, dBH = 70; // matches FIGHTER_HURTBOX in stickman.js
+  const dBX = defender.x, dBY = defender.y - 35;
 
   // AABB overlap test
   return (hbCX - hbW / 2) < (dBX + dBW / 2) &&

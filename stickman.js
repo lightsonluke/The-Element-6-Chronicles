@@ -20,7 +20,7 @@ const frac = (v) => v - Math.floor(v);
 
 export const BASE_SCALE = 36;
 
-// Proportions, in units of s (s = 36 * scale).  Standing height ≈ 2.09 s ≈ 75 px.
+// Proportions, in units of s (s = 36 * scale).  Standing height ≈ 70 px after BODY_K.
 const P = {
   headR: 0.26, neckToHead: 0.27,
   thigh: 0.58, shin: 0.60,
@@ -28,13 +28,16 @@ const P = {
   torso: 0.44,
   stand: 1.12,
   // limb radii (tapered: thick at the joint nearest the body)
-  rThigh: 0.150, rKnee: 0.124, rFoot: 0.106,
-  rShoulder: 0.124, rElbow: 0.106, rHandArm: 0.096, rHand: 0.118,
-  rHip: 0.158, rChest: 0.140,
+  rThigh: 0.185, rKnee: 0.152, rFoot: 0.128,
+  rShoulder: 0.152, rElbow: 0.130, rHandArm: 0.118, rHand: 0.142,
+  rHip: 0.195, rChest: 0.172,
 };
 
 // Hurtbox that matches the new silhouette (world px at scale 1, relative to f.x / f.y = feet).
-export const FIGHTER_HURTBOX = { w: 32, h: 75, centerY: -37.5 };
+// Overall body size. Every pose is authored at full size, then the skeleton is scaled by BODY_K
+// (limb thickness is NOT scaled), which makes the fighter shorter and stockier without changing any pose.
+export const BODY_K = 0.92;
+export const FIGHTER_HURTBOX = { w: 30, h: 70, centerY: -35 };
 
 // Run cadence: a relaxed jog. The leg cycle is NOT locked to ground speed any more (that made
 // fast characters flicker like a flash); it eases between a slow and a fast cadence instead.
@@ -181,6 +184,42 @@ function hitV(rx, ry, mag, t, grounded) {
   return out;
 }
 
+// ── Dash: ground burst + 4-direction air dash ───────────────────────────────
+//          LEAN   HIP    FNX    FNY    FFX    FFY    HNX    HNY    HFX    HFY    HEAD
+const DASH_GROUND = [
+  [0.00, [0.26, -0.86, 0.34,  0.00, -0.34,  0.00,  0.28,  0.22,  0.06,  0.30,  0.06]],  // coil
+  [0.18, [0.58, -0.96, 0.66, -0.28, -0.68, -0.08, -0.42,  0.30, -0.52,  0.12,  0.10]],  // drive, lead knee up
+  [0.50, [0.54, -0.96, 0.56, -0.05, -0.70, -0.32, -0.46,  0.26, -0.50,  0.16,  0.10]],  // stride, trailing heel up
+  [0.78, [0.30, -0.98, 0.58,  0.00, -0.30,  0.00, -0.06,  0.34, -0.20,  0.38,  0.04]],  // brake, lead foot out
+  [1.00, [0.06, -1.04, 0.30,  0.00, -0.22,  0.00,  0.12,  0.50, -0.06,  0.52,  0.00]],  // settle
+];
+
+// Air dash: the whole body lines up with the dash direction. (ux,uy) = unit direction, screen space,
+// x forward / y down.  Legs trail behind, arms sweep back for sideways dashes and lead for up/down.
+function airDashV(ux, uy, p) {
+  const lam = Math.atan2(ux, -uy);
+  const vert = sstep((Math.abs(uy) - 0.45) / 0.45);          // 0 = sideways, 1 = straight up / down
+  const px = -uy, py = ux;                                    // perpendicular to the dash direction
+  const hipY = -1.0;
+  const wob = Math.sin(p * Math.PI * 3) * 0.05;               // slight scissor of the legs in flight
+  const L1 = 1.04, L2 = 0.80;
+  const foot = (L, side) => [-ux * L + px * (side + wob), hipY - uy * L + py * (side + wob)];
+  const fn = foot(L1, 0.10), ff = foot(L2, -0.16);
+  const A = lerp(-1, 1, vert), la = 0.52;                     // -1 = arms trail, +1 = arms lead
+  const hn = [ux * A * la + px * 0.10, uy * A * la + py * 0.10];
+  const hf = [ux * A * la * 0.92 - px * 0.12, uy * A * la * 0.92 - py * 0.12];
+  return [lam, hipY, fn[0], fn[1], ff[0], ff[1], hn[0], hn[1], hf[0], hf[1], lam * 0.42];
+}
+
+// ── Wall slide: pressed to the wall, hands gripping high, legs dangling, slow friction shudder ──
+function wallV(frame) {
+  const sl = Math.sin(frame * 0.55), sl2 = Math.sin(frame * 0.55 + 1.6);
+  return [-0.10, -1.10,
+    0.07, -0.02, -0.30, -0.10,
+    0.35, -0.54 + 0.012 * sl, 0.34, -0.26 + 0.012 * sl2,
+    0.10];
+}
+
 // ─── Attack layer ───────────────────────────────────────────────────────────
 function keyframes(p, frames) {
   p = clamp(p, 0, 1);
@@ -258,20 +297,27 @@ function attackV(a, frame, h) {
 // o: { s, frame, state, facing, motion:{vx,vy,grounded,memo}, emoteVars, attack, gen1 }
 export function solvePose(o) {
   const s = o.s, frame = o.frame || 0, state = o.state || 'idle';
-  const facing = o.facing < 0 ? -1 : 1;
+  let facing = o.facing < 0 ? -1 : 1;
   const motion = o.motion || null, memo = motion?.memo || null;
   const vx = Number(motion?.vx) || 0, vy = Number(motion?.vy) || 0;
   const grounded = motion && motion.grounded !== undefined ? !!motion.grounded : state !== 'jumping';
   const attackState = state === 'attacking' || state === 'attackHold' || state === 'superAttack';
   const ev = o.emoteVars || null;
+  const dashTimer = Number(motion?.dashTimer) || 0;
+  const dashDir = motion?.dashDir || null;               // world-space {x,y}, y < 0 = up
+  const wallSide = Number(motion?.wallSide) || 0;        // fighter.js convention: -1 = wall on the right, +1 = on the left
+  const tDash = dashTimer > 0 && dashDir && (dashDir.x || dashDir.y) ? 1 : 0;
+  const tWall = motion?.wallSlide && wallSide && !grounded && !attackState && !ev && !tDash ? 1 : 0;
+  if (tWall) facing = -wallSide;                         // turn to face the wall you are gripping
 
   // Layer targets
-  const tRun = state === 'moving' && grounded ? 1 : 0;
+  const tRun = state === 'moving' && grounded && !tDash ? 1 : 0;
   const tAir = grounded ? 0 : 1;
   const tHit = state === 'hitstun' ? 1 : 0;
   const tCr = state === 'crouching' ? 1 : 0;
 
   let wRun = tRun, wAir = tAir, wHit = tHit, wCr = tCr, dip = 0, runPh = frame * RUN_NOMEM;
+  let wDash = tDash, wWall = tWall, dashP = 0, dashAir = !grounded;
   let airT = 99, launched = false;
   let kbx = vx * facing, kby = -vy, kbm = Math.hypot(vx, vy), hitT = 8;
   if (memo) {
@@ -282,6 +328,13 @@ export function solvePose(o) {
       memo.wAir = first ? tAir : lerp(memo.wAir, tAir, 0.40);
       memo.wHit = first ? tHit : lerp(memo.wHit, tHit, 0.50);
       memo.wCr = first ? tCr : lerp(memo.wCr, tCr, 0.35);
+      memo.wDash = first ? tDash : lerp(memo.wDash, tDash, tDash ? 0.55 : 0.30);
+      memo.wWall = first ? tWall : lerp(memo.wWall, tWall, tWall ? 0.35 : 0.30);
+      if (tDash) {                                       // dash progress from the game's own countdown timer
+        if (dashTimer > (memo.prevDash || 0)) { memo.dashMax = dashTimer; memo.dashAir = !grounded; }
+        memo.dashP = clamp(1 - dashTimer / (memo.dashMax || dashTimer), 0, 1);
+      }
+      memo.prevDash = dashTimer;
       if (memo.prevAir && !tAir) memo.dip = 1;         // landing squash
       memo.dip = (memo.dip || 0) * 0.88;
       // run cadence: eased toward a speed-dependent rate, capped so it never "flashes"
@@ -311,10 +364,12 @@ export function solvePose(o) {
       memo.pvx = vx; memo.pvy = vy;
     }
     wRun = memo.wRun; wAir = memo.wAir; wHit = memo.wHit; wCr = memo.wCr; dip = memo.dip || 0;
+    wDash = memo.wDash; wWall = memo.wWall; dashP = memo.dashP || 0; dashAir = !!memo.dashAir;
     runPh = memo.run || 0; airT = memo.airT ?? 99; launched = !!memo.launched;
     if (memo.inHit) { kbx = memo.kbx; kby = memo.kby; kbm = memo.kbm; hitT = memo.hitT || 0; }
   }
 
+  if (!memo && tDash) { const mx = grounded ? 13 : 15; dashP = clamp(1 - dashTimer / mx, 0, 1); }
   const amp = motion && motion.vx !== undefined ? lerp(0.70, 1, clamp((Math.abs(vx) - 1) / 4, 0, 1)) : 1;
 
   // Base pose = idle blended with run / air / crouch / hit
@@ -330,6 +385,23 @@ export function solvePose(o) {
     V = mix(V, H, wHit);
   }
   if (dip > 0.01) { V = V.slice(); V[HIP] += dip * 0.17; V[LEAN] += dip * 0.12; V[FNX] += dip * 0.06; V[FFX] -= dip * 0.06; }
+
+  // Dash layer
+  let dashEnv = 0, dux = 1, duy = 0;
+  if (wDash > 0.001 && dashDir) {
+    const dxr = (Number(dashDir.x) || 0) * facing, dyr = Number(dashDir.y) || 0;
+    const dl = Math.hypot(dxr, dyr) || 1;
+    dux = dxr / dl; duy = dyr / dl;
+    if (dashAir) {
+      dashEnv = sstep(dashP / 0.12) * (1 - sstep((dashP - 0.78) / 0.22));
+      V = mix(V, airDashV(dux, duy, dashP), clamp(wDash * dashEnv, 0, 1));
+    } else {
+      dashEnv = sstep(dashP / 0.2) * (1 - sstep((dashP - 0.85) / 0.15));
+      V = mix(V, keyframes(dashP, DASH_GROUND), wDash);
+    }
+  }
+  // Wall-slide layer
+  if (wWall > 0.001) V = mix(V, wallV(frame), wWall);
 
   // Attack layer (skipped while an emote plays)
   if (!ev && attackState && o.attack) {
@@ -403,10 +475,14 @@ export function solvePose(o) {
   const arch = 0.004;
   const torsoMid = [(hip[0] + sh[0]) / 2 - Math.cos(lam) * arch, (hip[1] + sh[1]) / 2 - Math.sin(lam) * arch];
 
-  const T = (p) => [p[0] * facing * s, p[1] * s];       // mirror + scale to px
+  const T = (p) => [p[0] * facing * s * BODY_K, p[1] * s * BODY_K];   // mirror + scale to px
   const joints = {
     s, facing, lean: lam * facing,
     hip: T(hip), shoulder: T(sh), torsoMid: T(torsoMid), head: T(head), headR: P.headR * s,
+    wall: wWall > 0.5 ? facing : 0,
+    ghosts: (dashEnv * wDash > 0.08) ? [0.30, 0.60].map((k, i) => ({
+      x: -dux * facing * k * s, y: -duy * k * s, a: (i ? 0.10 : 0.20) * clamp(dashEnv * wDash, 0, 1) * (dashAir ? 1 : 0.9),
+    })) : null,
     near: { shoulder: T(shN), elbow: T(armN.mid), hand: T(armN.end), hip: T(hpN), knee: T(legN.mid), foot: T(legN.end) },
     far: { shoulder: T(shF), elbow: T(armF.mid), hand: T(armF.end), hip: T(hpF), knee: T(legF.mid), foot: T(legF.end) },
     r: {
@@ -433,36 +509,52 @@ function capsule(ctx, ax, ay, ar, bx, by, br) {
 
 function disc(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
 
+function parseColor(color) {
+  const str = String(color || '');
+  let m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(str);
+  if (m) { let h = m[1]; if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
+  m = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i.exec(str);
+  return m ? [+m[1], +m[2], +m[3]] : null;
+}
+const rgbStr = (c) => `rgb(${c.map(v => clamp(Math.round(v), 0, 255)).join(',')})`;
+
 export function shade(color, amt) {
-  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(color || ''));
-  if (!m) return color;
-  let h = m[1]; if (h.length === 3) h = h.split('').map(c => c + c).join('');
-  const n = parseInt(h, 16);
-  const f = (v) => clamp(Math.round(v + amt), 0, 255);
-  return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
+  const c = parseColor(color);
+  return c ? rgbStr(c.map(v => v + amt)) : color;
 }
 
-function paintLimbSet(ctx, L, r) {
-  // leg
+// Arms get their own colour so they read clearly against the torso: a lighter tint of the body
+// colour (or a deeper one when the body is already very light). The rear arm is a touch dimmer than
+// the front arm, and both stay well away from the darker rear-leg shade.
+function armColors(color) {
+  const c = parseColor(color);
+  if (!c) return [color, color];
+  const lum = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+  const tint = lum < 185
+    ? (k) => c.map(v => v + (255 - v) * k)                  // blend toward white
+    : (k) => c.map(v => v * (1 - k * 0.8));                 // very light body: go deeper instead
+  return [rgbStr(tint(0.45)), rgbStr(tint(0.30))];
+}
+
+function paintLimbSet(ctx, L, r, legColor, armColor) {
+  ctx.fillStyle = legColor;
   capsule(ctx, L.hip[0], L.hip[1], r.hip, L.knee[0], L.knee[1], r.knee);
   capsule(ctx, L.knee[0], L.knee[1], r.knee, L.foot[0], L.foot[1], r.foot);
-  // arm
+  ctx.fillStyle = armColor;
   capsule(ctx, L.shoulder[0], L.shoulder[1], r.shoulder, L.elbow[0], L.elbow[1], r.elbow);
   capsule(ctx, L.elbow[0], L.elbow[1], r.elbow, L.hand[0], L.hand[1], r.handArm);
   disc(ctx, L.hand[0], L.hand[1], r.hand);
 }
 
-export function paintStickman(ctx, J, color) {
+function paintBody(ctx, J, color) {
   const r = J.r;
-  ctx.save();
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   const far = shade(color, -22);
+  const [armNear, armFar] = armColors(color);
 
-  // Far (rear) limbs sit slightly darker so overlapping poses stay readable
-  ctx.fillStyle = far;
-  paintLimbSet(ctx, J.far, r);
+  // Far (rear) limbs: darker legs, dimmer arm
+  paintLimbSet(ctx, J.far, r, far, armFar);
 
-  // Torso: a gently arched, tapered spine from pelvis to neck
+  // Torso: a tapered spine from pelvis to neck
   ctx.fillStyle = color;
   const a = J.hip, m = J.torsoMid, b = J.shoulder;
   let px = a[0], py = a[1], pr = r.hip;
@@ -474,11 +566,25 @@ export function paintStickman(ctx, J, color) {
     capsule(ctx, px, py, pr, x, y, rr);
     px = x; py = y; pr = rr;
   }
-  // Head
   disc(ctx, J.head[0], J.head[1], J.headR);
 
   // Near (lead) limbs
-  ctx.fillStyle = color;
-  paintLimbSet(ctx, J.near, r);
+  paintLimbSet(ctx, J.near, r, color, armNear);
+}
+
+export function paintStickman(ctx, J, color) {
+  ctx.save();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (J.ghosts) {                                          // dash afterimages, oldest first
+    for (let i = J.ghosts.length - 1; i >= 0; i--) {
+      const g = J.ghosts[i];
+      ctx.save();
+      ctx.globalAlpha *= g.a;
+      ctx.translate(g.x, g.y);
+      paintBody(ctx, J, color);
+      ctx.restore();
+    }
+  }
+  paintBody(ctx, J, color);
   ctx.restore();
 }
