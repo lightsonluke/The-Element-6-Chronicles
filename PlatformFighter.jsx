@@ -11,7 +11,7 @@ import {
   drawStickman, drawAttackEffect, drawSuperEffect,
   drawHealthBar, drawTimer, drawPlatforms, drawBackground,
   drawHitSparks, drawDoubleJumpParticles, drawSuperFlash,
-  STAGE_MAPS, drawFighterGroundShadow, drawSplitCityPlatformForeground, FIGHTER_HURTBOX,
+  STAGE_MAPS, drawFighterGroundShadow, FIGHTER_HURTBOX,
 } from './renderer.js';
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
@@ -1637,7 +1637,12 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       ctx.scale(g.camZoom, g.camZoom);
       ctx.translate(-W / 2 - g.camX, -H / 2 - g.camY);
 
-      drawPlatforms(ctx, platforms, f1.frame, mapId);
+      // Render-only offset for Split City's moving platform. Keep the original
+      // platform objects untouched so physics, collision, and landing height stay the same.
+      const visualPlatforms = mapId === 'splitcity'
+        ? platforms.map(p => p?._splitCityMoving ? { ...p, y: p.y - 15 } : p)
+        : platforms;
+      drawPlatforms(ctx, visualPlatforms, f1.frame, mapId);
       if (Array.isArray(stageConfig.freehandStrokes)) {
         stageConfig.freehandStrokes.slice(0, 64).forEach(stroke => {
           const safe = sanitizeFreehandStroke(stroke);
@@ -1762,9 +1767,8 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         if (f.heavyCooldown > 0) { const cdPct = 1 - f.heavyCooldown / 32; ctx.fillStyle = '#222'; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 16, 40, 3, 2); ctx.fill(); ctx.fillStyle = '#FFD700'; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 16, 40 * cdPct, 3, 2); ctx.fill(); }
       };
 
-      // Keep the entire stage behind the fighters. Do not render any stage foreground
-      // pass after the fighters, since it can paint platform artwork over their sprites.
-      drawFighter(f1, 1); drawFighter(f2, 2);
+      // Fighters are rendered at the end of the world pass below so stage/platform
+      // artwork can never be painted over them.
       // Shapeshift switch flash effect
       [f1, f2].forEach(f => {
         if (f._shapeshiftFlash > 0) {
@@ -1886,6 +1890,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           ctx.fillText('◆', c.x, c.y + 3);
         });
       }
+      // Final world-space draw: fighters go on top of every stage/platform layer.
+      drawFighter(f1, 1);
+      drawFighter(f2, 2);
       ctx.restore();
 
       [f1, f2].forEach(f => {
