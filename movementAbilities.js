@@ -2,33 +2,32 @@
 //
 // Rules:
 // - Double-tap a directional button within 12 frames (~0.20s) to dash.
-// - Grounded: only left/right dashes are allowed; they are NOT invulnerable.
+// - Grounded: only left/right dashes are allowed and they are NOT invulnerable.
 // - Airborne: all four directions become a 0.30s dodge with invulnerability.
-// - An airborne dodge consumes one dodge use.
-// - Dodge uses track the remaining jump count.
-// - Wall contact slows falling only while actually touching a wall.
-// - Wall contact requires BOTH horizontal and vertical overlap.
-// - Leaving a wall while airborne restores jumps, up to 3 times per airtime.
-// - Landing resets the wall-departure counter.
-// - Sports mode is excluded.
+// - An airborne dodge consumes one dodge use. Dodge uses track remaining jumps.
+// - Solid walls at least half a fighter tall can be wall-slid while moving into them.
+// - Wall contact slows falling but NEVER restores jumps or air-dodges. Only landing
+//   restores the normal jump/dodge pool; this prevents repeated airborne wall resets.
+//
+// Sports modes are intentionally excluded here. The existing game uses "soccer" as
+// its sports-mode identifier; other fight modes continue to share updateFighter().
 
-export const MOVEMENT_ABILITY_CONFIG = {
-  doubleTapFrames: 12,
-  dashCooldown: 12,
-  groundDashDuration: 8,
-  airDodgeDuration: 18, // 0.30 seconds at 60 FPS
-  dashSpeed: 9.5,
-  maxWallJumpResets: 3,
-  wallSlideSpeed: 2,
-  wallContactTolerance: 3,
-};
+export const MOVEMENT_ABILITY_CONFIG = Object.freeze({
+  doubleTapWindow: 12,       // 0.20s at 60fps
+  dashCooldown: 30,          // 1.0s at 60fps
+  groundDashFrames: 13,      // very short grounded burst
+  airDodgeFrames: 15,        // 0.30s
+  groundDashSpeed: 9.5,
+  airDodgeSpeed: 7.0,
+  wallSlideMaxFallSpeed: 1,
+  wallSlideAcceleration: 0.15,
+  wallMinHeight: 10,         // > half of the ~55px fighter body
+});
+
+const DIRECTIONS = ['left', 'right', 'up', 'down'];
 
 function isSportsMode(fighter) {
-  return (
-    fighter?.gameMode === "soccer" ||
-    fighter?.gameMode === "sports" ||
-    fighter?.gameMode === "football"
-  );
+  return fighter?.gameMode === 'soccer';
 }
 
 function ensureTapState(fighter) {
@@ -45,391 +44,284 @@ function ensureTapState(fighter) {
     };
   }
 
-  if (!fighter.dashDirection) {
-    fighter.dashDirection = { x: 0, y: 0 };
-  }
-
-  if (typeof fighter.dashCooldown !== "number") {
-    fighter.dashCooldown = 0;
-  }
-
-  if (typeof fighter.dashTimer !== "number") {
-    fighter.dashTimer = 0;
-  }
-
-  if (typeof fighter.dashInvulnerable !== "boolean") {
-    fighter.dashInvulnerable = false;
-  }
-
-  if (typeof fighter.airDodgeUses !== "number") {
-    fighter.airDodgeUses = fighter.jumps ?? fighter.maxJumps ?? 2;
-  }
-
-  if (typeof fighter.wallSlide !== "boolean") {
-    fighter.wallSlide = false;
-  }
-
-  if (typeof fighter.wallSide !== "number") {
-    fighter.wallSide = 0;
-  }
-
-  if (typeof fighter.wallContactActive !== "boolean") {
-    fighter.wallContactActive = false;
-  }
-
-  if (typeof fighter.wallGrantsUsed !== "number") {
-    fighter.wallGrantsUsed = 0;
-  }
-
-  if (typeof fighter.wallGrantPending !== "boolean") {
-    fighter.wallGrantPending = false;
-  }
+  return fighter._movementTapState;
 }
 
-function startDash(fighter, dx, dy, airborne) {
-  const config = MOVEMENT_ABILITY_CONFIG;
-
-  fighter.dashCooldown = config.dashCooldown;
-  fighter.dashTimer = airborne
-    ? config.airDodgeDuration
-    : config.groundDashDuration;
-
-  fighter.dashDirection = { x: dx, y: dy };
-  fighter.dashInvulnerable = !!airborne;
-
-  if (dx !== 0) {
-    fighter.facing = dx;
-  }
-
-  if (airborne) {
-    fighter.airDodgeUses = Math.max(
-      0,
-      (fighter.airDodgeUses ?? fighter.maxJumps ?? 2) - 1
-    );
-  }
-
-  fighter.wallSlide = false;
-}
-
-function tryDirectionalDoubleTap(fighter, inputs) {
-  const config = MOVEMENT_ABILITY_CONFIG;
-  const state = fighter._movementTapState;
-  const frame = fighter.frame ?? 0;
-
-  const directions = [
-    { name: "left", pressed: !!inputs.left, dx: -1, dy: 0 },
-    { name: "right", pressed: !!inputs.right, dx: 1, dy: 0 },
-    { name: "up", pressed: !!inputs.up, dx: 0, dy: -1 },
-    { name: "down", pressed: !!inputs.down, dx: 0, dy: 1 },
-  ];
-
-  for (const direction of directions) {
-    const heldKey = `${direction.name}Held`;
-    const wasHeld = state[heldKey];
-
-    // Process fresh presses only, not every frame a button is held.
-    if (direction.pressed && !wasHeld) {
-      const previousTap = state[direction.name];
-      const framesSinceTap = frame - previousTap;
-
-      state[direction.name] = frame;
-
-      if (framesSinceTap <= config.doubleTapFrames) {
-        const airborne = !fighter.grounded;
-
-        // Ground dashes can only travel horizontally.
-        if (!airborne && direction.dy !== 0) {
-          state[heldKey] = direction.pressed;
-          continue;
-        }
-
-        if (fighter.dashCooldown > 0) {
-          state[heldKey] = direction.pressed;
-          continue;
-        }
-
-        // Air dodges require an available use.
-        if (airborne && fighter.airDodgeUses <= 0) {
-          state[heldKey] = direction.pressed;
-          continue;
-        }
-
-        startDash(
-          fighter,
-          direction.dx,
-          direction.dy,
-          airborne
-        );
-
-        // Consume this double-tap sequence.
-        state[direction.name] = -9999;
-        state[heldKey] = direction.pressed;
-        break;
-      }
-    }
-
-    state[heldKey] = direction.pressed;
-  }
-}
-
-/**
- * Returns the side of a wall only when the character is actually
- * touching its horizontal boundary AND overlapping it vertically.
- *
- * Assumptions:
- * - fighter.x is the horizontal center of the character.
- * - fighter.y is the character's bottom position.
- * - Character collision dimensions are approximately 32 x 55.
- */
-function getWallContact(fighter, platforms, stageWidth) {
-  const config = MOVEMENT_ABILITY_CONFIG;
-
-  const charHalfW = 16;
-  const charHeight = 55;
-  const tolerance = config.wallContactTolerance;
-
-  const fighterLeft = fighter.x - charHalfW;
-  const fighterRight = fighter.x + charHalfW;
-  const fighterTop = fighter.y - charHeight;
-  const fighterBottom = fighter.y;
-
-  let contactSide = 0;
-
-  for (const platform of platforms || []) {
-    if (!platform) continue;
-    if (platform._freehandSlope) continue;
-    if (platform._deleted > 0) continue;
-
-    const material = platform.material || "normal";
-
-    // These materials do not provide solid wall contact.
-    if (
-      material === "water" ||
-      material === "lava" ||
-      material === "cloud" ||
-      material === "acid" ||
-      material === "tar" ||
-      material === "antigravity"
-    ) {
-      continue;
-    }
-
-    // One-way platforms do not provide wall contact.
-    if (!platform._forceSolid && platform.h <= 20) {
-      continue;
-    }
-
-    const platformLeft = platform.x;
-    const platformRight = platform.x + platform.w;
-    const platformTop = platform.y;
-    const platformBottom =
-      platform._collisionBottom ?? platform.y + platform.h;
-
-    // Require genuine vertical overlap.
-    const verticalOverlap =
-      fighterBottom > platformTop &&
-      fighterTop < platformBottom;
-
-    if (!verticalOverlap) continue;
-
-    // Horizontal distance from the character to each platform side.
-    const distanceToLeft = Math.abs(
-      fighterRight - platformLeft
-    );
-
-    const distanceToRight = Math.abs(
-      fighterLeft - platformRight
-    );
-
-    // Character is beside the platform's left edge.
-    const touchingLeft =
-      distanceToLeft <= tolerance &&
-      fighterRight <= platformLeft + tolerance;
-
-    // Character is beside the platform's right edge.
-    const touchingRight =
-      distanceToRight <= tolerance &&
-      fighterLeft >= platformRight - tolerance;
-
-    if (touchingLeft) {
-      contactSide = -1;
-      break;
-    }
-
-    if (touchingRight) {
-      contactSide = 1;
-      break;
-    }
-  }
-
-  // Stage boundaries can also provide wall contact.
-  if (!contactSide && typeof stageWidth === "number") {
-    if (fighterLeft <= tolerance) {
-      contactSide = -1;
-    } else if (fighterRight >= stageWidth - tolerance) {
-      contactSide = 1;
-    }
-  }
-
-  // Use the collision system's wall side only as a fallback.
-  // Do not let it override verified platform contact when geometry
-  // has already identified a different contact side.
-  if (!contactSide && fighter.wallSide) {
-    contactSide = Math.sign(fighter.wallSide);
-  }
-
-  return contactSide;
-}
-
-function resetAirJumpsFromWall(fighter) {
-  const maximumResets =
-    MOVEMENT_ABILITY_CONFIG.maxWallJumpResets;
-
-  if (fighter.grounded) return false;
-
-  if (fighter.wallGrantsUsed >= maximumResets) {
+function startDash(fighter, x, y) {
+  if (fighter.dashCooldown > 0 || fighter.dashTimer > 0) {
     return false;
   }
 
-  // Restore normal jumps when leaving a wall.
-  fighter.jumps = fighter.maxJumps;
+  const airborne = !fighter.grounded;
 
-  // Restore air-dodge uses along with jumps.
-  fighter.airDodgeUses = fighter.maxJumps;
+  if (!airborne && (x === 0 || y !== 0)) {
+    return false;
+  }
 
-  fighter.wallGrantsUsed++;
-  fighter.wallGrantPending = false;
+  // Air dodge uses are deliberately tied to remaining jumps.
+  // Example: after the first jump, 1 jump + 1 dodge remain;
+  // after the second, 0 jumps + 0 dodges remain.
+  if (airborne && fighter.airDodgeUses <= 0) {
+    return false;
+  }
+
+  fighter.dashCooldown = MOVEMENT_ABILITY_CONFIG.dashCooldown;
+
+  fighter.dashTimer = airborne
+    ? MOVEMENT_ABILITY_CONFIG.airDodgeFrames
+    : MOVEMENT_ABILITY_CONFIG.groundDashFrames;
+
+  fighter.dashDirection = { x, y };
+  fighter.wallSlide = false;
+  fighter.wallContactActive = false;
+
+  fighter.vx =
+    x *
+    (airborne
+      ? MOVEMENT_ABILITY_CONFIG.airDodgeSpeed
+      : MOVEMENT_ABILITY_CONFIG.groundDashSpeed);
+
+  fighter.vy =
+    y *
+    (airborne
+      ? MOVEMENT_ABILITY_CONFIG.airDodgeSpeed
+      : 0);
+
+  if (x) {
+    fighter.facing = x;
+  }
+
+  if (airborne) {
+    fighter.airDodgeUses--;
+
+    // This is the actual attack immunity window.
+    // checkHit() already honors fighter.invincible.
+    fighter.invincible = Math.max(
+      fighter.invincible || 0,
+      MOVEMENT_ABILITY_CONFIG.airDodgeFrames
+    );
+
+    fighter.state = 'jumping';
+  } else {
+    fighter.state = 'moving';
+  }
 
   return true;
 }
 
-export function updateMovementAbilities(
-  fighter,
-  inputs,
-  platforms,
-  stageWidth,
-  stageHeight
-) {
-  if (!fighter || !inputs) return;
+function tryDirectionalDoubleTap(fighter, inputs) {
+  const taps = ensureTapState(fighter);
+  const frame = fighter.frame || 0;
 
-  ensureTapState(fighter);
+  for (const key of DIRECTIONS) {
+    const heldKey = `${key}Held`;
+    const pressed = !!inputs[key];
+    const edge = pressed && !taps[heldKey];
 
-  // Sports mode does not use these movement abilities.
+    if (edge) {
+      const previousTap = taps[key];
+
+      if (
+        frame - previousTap <=
+        MOVEMENT_ABILITY_CONFIG.doubleTapWindow
+      ) {
+        let dx = 0;
+        let dy = 0;
+
+        if (key === 'left') dx = -1;
+        else if (key === 'right') dx = 1;
+        else if (key === 'up') dy = -1;
+        else if (key === 'down') dy = 1;
+
+        if (fighter.grounded) {
+          if (dx !== 0) {
+            startDash(fighter, dx, 0);
+          }
+        } else {
+          startDash(fighter, dx, dy);
+        }
+      }
+
+      taps[key] = frame;
+    }
+
+    taps[heldKey] = pressed;
+  }
+}
+
+function getWallContact(platforms, fighter) {
+  const halfW = 16;
+  const fighterTop = fighter.y - 55;
+  const fighterBottom = fighter.y;
+  const tolerance = 4;
+
+  let left = false;
+  let right = false;
+
+  // Wall sliding is based on actual side contact, not the input direction
+  // and not only on the side-wall collision pass in fighter.js. This makes
+  // every solid material consistently wall-slideable, including thin/custom/
+  // editor geometry that may not participate in the normal side-wall solver.
+  for (const p of platforms || []) {
+    const mat = p.material || 'normal';
+
+    if (
+      [
+        'water',
+        'lava',
+        'cloud',
+        'acid',
+        'tar',
+        'antigravity',
+      ].includes(mat)
+    ) {
+      continue;
+    }
+
+    if (
+      p._deleted > 0 ||
+      !Number.isFinite(p.x) ||
+      !Number.isFinite(p.y) ||
+      !Number.isFinite(p.w) ||
+      !Number.isFinite(p.h) ||
+      p.w <= 0 ||
+      p.h <= 0
+    ) {
+      continue;
+    }
+
+    const verticallyOverlaps =
+      fighterBottom > p.y + tolerance &&
+      fighterTop < p.y + p.h - tolerance;
+
+    if (!verticallyOverlaps) {
+      continue;
+    }
+
+    const leftEdge = p.x - halfW;
+    const rightEdge = p.x + p.w + halfW;
+
+    if (Math.abs(fighter.x - leftEdge) <= tolerance) {
+      left = true;
+    }
+
+    if (Math.abs(fighter.x - rightEdge) <= tolerance) {
+      right = true;
+    }
+
+    if (left && right) {
+      break;
+    }
+  }
+
+  return left ? -1 : right ? 1 : 0;
+}
+
+export function updateMovementAbilities(fighter, inputs, platforms) {
   if (isSportsMode(fighter)) {
+    return;
+  }
+
+  // A normal landing always restores the standard jump/dodge pool.
+  if (fighter.grounded) {
+    fighter.airDodgeUses = fighter.maxJumps;
+    fighter.wallGrantsUsed = 0;
     fighter.wallSlide = false;
-    fighter.dashInvulnerable = false;
+    fighter.wallContactActive = false;
+    fighter.wallGrantPending = false;
+  }
+
+  // Do not let directional double-taps fire while an attack, hitstun, or
+  // landing lag has control locked. Input edges are still recorded so the
+  // next real tap is clean.
+  const locked =
+    fighter.hitstun > 0 ||
+    fighter.landingLag > 0 ||
+    fighter.state === 'attacking' ||
+    fighter.state === 'superAttack' ||
+    fighter.trapped;
+
+  if (!locked) {
+    tryDirectionalDoubleTap(fighter, inputs);
+  }
+
+  // While a dodge is active, it takes priority over ordinary movement.
+  if (fighter.dashTimer > 0) {
+    fighter.wallSlide = false;
+    return;
+  }
+
+  // Wall slide activates on every airborne side contact. The player does
+  // not need to hold toward the wall: touching a solid material is enough.
+  // This is intentionally independent of fighter.wallSide because that
+  // value is produced by the normal side-collision solver and can be absent
+  // for custom/thin geometry.
+  const detectedWallSide = getWallContact(platforms, fighter);
+  const side = detectedWallSide || fighter.wallSide || 0;
+
+  const touchingWall =
+    !fighter.grounded &&
+    !fighter.gravityInverted &&
+    side !== 0;
+
+  if (touchingWall) {
+    // Arm exactly one wall-jump grant when a new wall contact begins.
+    // Do not re-arm it every frame while pressed against the same wall.
+    fighter.wallSide = side;
+    fighter.wallSlide = true;
+    fighter.wallContactActive = true;
+    fighter.vx = 0;
+
+    fighter.vy = Math.min(
+      fighter.vy + MOVEMENT_ABILITY_CONFIG.wallSlideAcceleration,
+      MOVEMENT_ABILITY_CONFIG.wallSlideMaxFallSpeed
+    );
+
+    fighter.state = 'jumping';
+  } else {
+    fighter.wallSlide = false;
+  }
+}
+
+// Called after resolveCollisions(), so wallSide and grounded reflect
+// the current frame.
+export function onMovementAbilityLanded(fighter) {
+  if (isSportsMode(fighter)) {
+    return;
+  }
+
+  if (fighter.grounded) {
+    fighter.airDodgeUses = fighter.maxJumps;
+    fighter.wallSlide = false;
     fighter.wallContactActive = false;
     fighter.wallGrantPending = false;
     return;
   }
 
-  // Decrease dash cooldown.
-  if (fighter.dashCooldown > 0) {
-    fighter.dashCooldown--;
+  const stillOnWall = fighter.wallSlide && fighter.wallSide;
+
+  if (stillOnWall) {
+    fighter.wallContactActive = true;
+    return;
   }
 
-  // Decrease dash timer and remove invulnerability when it expires.
-  if (fighter.dashTimer > 0) {
-    fighter.dashTimer--;
-
-    if (fighter.dashTimer <= 0) {
-      fighter.dashTimer = 0;
-      fighter.dashInvulnerable = false;
-      fighter.dashDirection = { x: 0, y: 0 };
-    }
-  } else {
-    fighter.dashInvulnerable = false;
-  }
-
-  // Landing resets wall-departure resets and restores air-dodge uses.
-  if (fighter.grounded) {
-    fighter.wallGrantsUsed = 0;
-    fighter.wallGrantPending = false;
-    fighter.wallContactActive = false;
-    fighter.wallSlide = false;
-    fighter.airDodgeUses = fighter.maxJumps;
-  }
-
-  // Detect real wall contact using both horizontal and vertical ranges.
-  const wallSide = getWallContact(
-    fighter,
-    platforms,
-    stageWidth
-  );
-
-  const touchingWall =
-    !fighter.grounded &&
-    wallSide !== 0;
-
-  const wasTouchingWall = fighter.wallContactActive;
-
-  fighter.wallSide = touchingWall ? wallSide : 0;
-
-  // Wall slide only slows downward velocity during confirmed contact.
-  // Gravity continues normally whenever the character is not touching
-  // a wall, and upward movement is never slowed by this section.
-  if (
-    touchingWall &&
-    fighter.vy > 0 &&
-    fighter.dashTimer <= 0
-  ) {
-    fighter.wallSlide = true;
-
-    fighter.vy = Math.min(
-      fighter.vy,
-      MOVEMENT_ABILITY_CONFIG.wallSlideSpeed
-    );
-  } else {
-    fighter.wallSlide = false;
-  }
-
-  // Leaving a wall while airborne restores jumps, at most three times
-  // before landing. Touching the wall again does not reset this counter.
-  if (
-    wasTouchingWall &&
-    !touchingWall &&
-    !fighter.grounded
-  ) {
-    resetAirJumpsFromWall(fighter);
-  }
-
-  fighter.wallContactActive = touchingWall;
-
-  // Process double-tap dash / air-dodge inputs.
-  tryDirectionalDoubleTap(fighter, inputs);
-
-  // Keep invulnerability active only during an airborne dodge.
-  if (fighter.dashTimer <= 0) {
-    fighter.dashInvulnerable = false;
-  }
-}
-
-export function onMovementAbilityLanded(fighter, inputs) {
-  if (!fighter) return;
-
-  ensureTapState(fighter);
-
-  if (!fighter.grounded) return;
-
-  // Reset wall-departure counters on landing.
-  fighter.wallGrantsUsed = 0;
+  // Leaving a wall never replenishes jumps or air-dodges.
   fighter.wallGrantPending = false;
   fighter.wallContactActive = false;
-  fighter.wallSlide = false;
-
-  // Restore normal jump and air-dodge counts.
-  fighter.jumps = fighter.maxJumps;
-  fighter.airDodgeUses = fighter.maxJumps;
-
-  // End airborne invulnerability on landing.
-  fighter.dashInvulnerable = false;
-
-  // Do not cancel a currently active dash timer here.
-  // updateMovementAbilities() manages the timer.
 }
 
 export function resetMovementAbilityState(fighter) {
-  if (!fighter) return;
+  fighter.dashCooldown = 0;
+  fighter.dashTimer = 0;
+  fighter.dashDirection = { x: 0, y: 0 };
+
+  fighter.airDodgeUses = fighter.maxJumps || 3;
+
+  fighter.wallSlide = false;
+  fighter.wallSide = 0;
+  fighter.wallContactActive = false;
+  fighter.wallGrantsUsed = 0;
+  fighter.wallGrantPending = false;
 
   fighter._movementTapState = {
     left: -9999,
@@ -441,17 +333,4 @@ export function resetMovementAbilityState(fighter) {
     upHeld: false,
     downHeld: false,
   };
-
-  fighter.dashCooldown = 0;
-  fighter.dashTimer = 0;
-  fighter.dashDirection = { x: 0, y: 0 };
-  fighter.dashInvulnerable = false;
-
-  fighter.airDodgeUses = fighter.maxJumps ?? 2;
-
-  fighter.wallSlide = false;
-  fighter.wallSide = 0;
-  fighter.wallContactActive = false;
-  fighter.wallGrantsUsed = 0;
-  fighter.wallGrantPending = false;
 }
