@@ -59,7 +59,7 @@ const MAP_PLATFORMS = {
     // The collision is a 16-unit one-way top surface only; the renderer draws the
     // complete texture at its natural aspect ratio. 1/180 yields 45 sec per direction
     // with the horizontal triangle-wave motion in movingPlatforms.js.
-    { x: 530, y: 178, w: 220, h: 16, material: 'split_city_moving', _splitCityMoving: true,
+    { x: 530, y: 182, w: 220, h: 16, _visualYOffset: -4, material: 'split_city_moving', _splitCityMoving: true,
       move: { type: 'horizontal', distance: 700, speed: 1 / 180, phase: 0 } },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
@@ -67,10 +67,11 @@ const MAP_PLATFORMS = {
     { x: 40, y: 620, w: 1200, h: 48 },
   ],
   silvermansion: [
-    // Silver's Mansion has exactly one platform. Its collision top is y=385;
-    // renderer.js offsets the transparent PNG padding so the visible gold top
-    // aligns to this surface. Collision width spans the visible artwork.
-    { x: 40, y: 385, w: 1200, h: 300, material: 'silver_mansion_platform', _forceSolid: true, _silverMansionMain: true },
+    { x: 40,   y: 620, w: 1200, h: 48 },
+    { x: 100, y: 440, w: 300,  h: 20 },
+    { x: 880, y: 440, w: 300,  h: 20 },
+    { x: 480, y: 260, w: 320,  h: 20 },
+    { x: 570, y: 440, w: 140,  h: 20 },
   ],
   controllerforest: [
     { x: 40,   y: 620, w: 1200, h: 48 },
