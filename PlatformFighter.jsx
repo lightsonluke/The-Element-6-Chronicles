@@ -51,13 +51,13 @@ const MAP_PLATFORMS = {
     // Main platform: visual artwork remains fixed at its original position.
     // Collision top is 8px higher; side boundaries are inset 6px from the artwork
     // edges, and the bottom follows the rendered PNG bottom (~y=694).
-    { x: 81, y: 362, w: 1118, h: 332, _visualX: 75, _visualY: 370, _visualW: 1130,
+    { x: 129, y: 327, w: 1022, h: 282, _visualX: 75, _visualY: 370, _visualW: 1130,
       material: 'split_city_joined', _forceSolid: true, _splitCityMain: true },
     // Moving platform uses the exact thin platform PNG in public/art/stages/split-city.
     // The collision is a 16-unit one-way top surface only; the renderer draws the
     // complete texture at its natural aspect ratio. 1/180 yields 45 sec per direction
     // with the horizontal triangle-wave motion in movingPlatforms.js.
-    { x: 530, y: 178, w: 220, h: 16, material: 'split_city_moving', _splitCityMoving: true,
+    { x: 545, y: 203, w: 195, h: 31, material: 'split_city_moving', _splitCityMoving: true,
       move: { type: 'horizontal', distance: 700, speed: 1 / 180, phase: 0 } },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
