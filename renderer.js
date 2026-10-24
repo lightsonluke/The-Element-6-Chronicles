@@ -146,11 +146,7 @@ export function drawStickman(ctx, x, y, color, facing, frame, scale = 1, isSpiri
   ctx.save();
   ctx.translate(x, y);
 
-  if (isSpirit) {
-    drawSpirit(ctx, s, frame, color, charData);
-  } else {
-    drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActive, noWeapon, emote, attackData);
-  }
+  drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActive, noWeapon, emote, attackData);
 
   if (powerActive) {
     drawPowerAura(ctx, s, frame, powerAuraColor || color, powerActive, charData);
@@ -722,76 +718,60 @@ function drawArticulatedLimb(ctx, x, y, baseAngle, length, width, color, bend) {
 }
 
 function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActive, noWeapon = false, emote = null, attackData = null) {
-  // Yellow turns white when enhanced (power active)
-  if (powerActive && charData?.id === 'yellow' && powerActive === 'stat_boost') {
-    color = '#FFFFFF';
-  }
-  // Custom characters support per-part appearance colors
-  const ap = charData?.appearance;
-  const torsoColor = ap?.torso || color;
-  const armColor = ap?.armL ? ap.armL : shadeColor(torsoColor, -45);
-  const legColor = ap?.legL ? ap.legL : shadeColor(torsoColor, -25);
-  const headColor = ap?.head || torsoColor;
+  // One consistent, clean stick-figure silhouette for every playable character.
+  // Character identity is communicated by color and effects, never by changing
+  // the underlying body proportions or limb design.
+  if (powerActive && charData?.id === 'yellow' && powerActive === 'stat_boost') color = '#FFFFFF';
 
-  let bob = 0, legSwing = 0, armSwingL = 0, armSwingR = 0, lean = 0;
-  let punchArmL = 0, punchArmR = 0; // for punch animations
-  let legLOver = null, legROver = null; // independent leg angle overrides (emotes)
-
+  let bob = 0, lean = 0, legSwing = 0, armSwingL = 0, armSwingR = 0;
+  let punchArmL = 0, punchArmR = 0;
+  let kneeL = 0, kneeR = 0;
   if (emote) {
     const ev = getEmotePoseVars(emote.id, emote.progress, facing);
     if (ev) {
-      bob = ev.bob; lean = ev.lean; armSwingL = ev.armSwingL; armSwingR = ev.armSwingR;
-      legSwing = ev.legSwing; punchArmL = ev.punchArmL; punchArmR = ev.punchArmR;
-      legLOver = ev.legLOver; legROver = ev.legROver;
+      bob = ev.bob || 0; lean = ev.lean || 0;
+      legSwing = ev.legSwing || 0;
+      armSwingL = ev.armSwingL || 0; armSwingR = ev.armSwingR || 0;
+      punchArmL = ev.punchArmL || 0; punchArmR = ev.punchArmR || 0;
     }
-  } else if (state === 'idle') {
-    // Characters stand still — no bobbing
-    bob = 0;
-    armSwingL = 0;
-    armSwingR = 0;
   } else if (state === 'moving') {
-    const t = frame * 0.18;
-    bob = Math.abs(Math.sin(t)) * -3;
-    legSwing = Math.sin(t) * 0.65;
-    armSwingL = Math.sin(t) * 0.55;
-    armSwingR = -Math.sin(t) * 0.55;
-    lean = facing * 0.12;
+    const t = frame * 0.22;
+    legSwing = Math.sin(t) * 0.72;
+    armSwingL = -Math.sin(t) * 0.64;
+    armSwingR = Math.sin(t) * 0.64;
+    kneeL = Math.max(0, Math.sin(t + 0.8)) * 0.72;
+    kneeR = Math.max(0, Math.sin(t + Math.PI + 0.8)) * 0.72;
+    bob = -Math.abs(Math.sin(t * 2)) * s * 0.055;
+    lean = facing * 0.10;
   } else if (state === 'jumping') {
-    bob = -6;
-    legSwing = -0.4;
-    armSwingL = -0.7;
-    armSwingR = 0.7;
+    legSwing = -0.30;
+    kneeL = 0.48; kneeR = 0.34;
+    armSwingL = -0.72; armSwingR = -0.82;
+    bob = -s * 0.08;
   } else if (state === 'attacking') {
-    lean = facing * 0.22;
-    // Punch pose — one arm swings forward hard
-    punchArmL = facing > 0 ? -1.4 : 0.2;
-    punchArmR = facing > 0 ? 0.2 : 1.4;
-    legSwing = 0.25;
+    lean = facing * 0.14;
+    punchArmL = facing > 0 ? -1.05 : 0.12;
+    punchArmR = facing > 0 ? 0.12 : 1.05;
+    legSwing = 0.16; kneeR = 0.16;
   } else if (state === 'superAttack') {
     const t = frame * 0.22;
-    lean = Math.sin(t) * 0.3;
-    punchArmL = Math.sin(t) * 1.5;
-    punchArmR = Math.cos(t) * 1.5;
-    legSwing = Math.cos(t) * 0.6;
+    lean = Math.sin(t) * 0.22;
+    punchArmL = Math.sin(t) * 1.15;
+    punchArmR = Math.cos(t) * 1.15;
+    legSwing = Math.cos(t) * 0.48;
+    kneeL = Math.max(0, Math.sin(t)) * 0.45;
+    kneeR = Math.max(0, Math.cos(t)) * 0.45;
   } else if (state === 'hitstun') {
-    // Simple limp — no dance
-    bob = 3;
-    lean = -facing * 0.3;
-    armSwingL = 0.6;
-    armSwingR = -0.4;
-    legSwing = -0.3;
+    lean = -facing * 0.25;
+    armSwingL = 0.72; armSwingR = -0.55;
+    legSwing = -0.28; kneeL = 0.25; kneeR = 0.12;
+    bob = s * 0.035;
   } else if (state === 'crouching') {
-    // Crouching — lower body, arms tucked
-    bob = 10;
-    legSwing = 0;
-    armSwingL = 0.3;
-    armSwingR = -0.3;
-    lean = 0;
+    bob = s * 0.18;
+    armSwingL = 0.30; armSwingR = -0.30;
+    legSwing = 0.02;
   }
 
-  // Gen I attacks have authored body motion, not just effect motion.  The
-  // attack effect and the fighter pose use the same progress value, and the
-  // existing facing system swaps the lead limb for left/right attacks.
   if (charData?.id?.startsWith('g1_') && attackData && (state === 'attacking' || state === 'superAttack')) {
     const st = attackData.isSuper ? 'super' : (attackData.isHeavy ?
       ((attackData.sigType === 'upHeavy' || attackData.sigType === 'up') ? 'uh' :
@@ -802,93 +782,94 @@ function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActi
     const prog = attackData.isSuper ? Math.max(0, Number(attackData.progress) || 0) :
       (held > 0 && !(Number(attackData.progress) > 0) ? held * 0.55 : Math.max(0, Number(attackData.progress) || 0));
     const pose = getGen1AttackPose(st, prog, facing, charData.id);
-    armSwingL += pose.punchArmL || 0;
-    armSwingR += pose.punchArmR || 0;
-    legSwing = pose.legSwing || 0;
+    punchArmL += pose.punchArmL || 0;
+    punchArmR += pose.punchArmR || 0;
+    legSwing = pose.legSwing || legSwing;
     lean += pose.lean || 0;
     bob += pose.bob || 0;
   }
 
+  const headR = s * 0.34;
+  const headCY = -s * 1.70 + bob;
+  const neckY = headCY + headR * 0.88;
+  const shoulderY = headCY + headR + s * 0.12;
+  const hipY = -s * 0.60 + bob * 0.45;
+  const shoulderHalf = s * 0.10;
+  const hipHalf = s * 0.075;
+  const armLen = s * 0.78;
+  const legLen = s * 0.80;
+  const armWidth = Math.max(4, s * 0.25);
+  const legWidth = Math.max(4.5, s * 0.28);
+  const bodyWidth = Math.max(5, s * 0.27);
+
+  const strokeLimb = (points, width) => {
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  };
+
   ctx.save();
   ctx.rotate(lean);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
 
-  const headR = s * 0.34;
-  const headCY = -s * 1.7 + bob;
-  const torsoW = s * 0.52;
-  const torsoH = s * 0.72;
-  const torsoX = -torsoW / 2;
-  const torsoY = headCY + headR + s * 0.05;
-  const hipY = torsoY + torsoH;
-  const limbW = s * 0.24;
-  const armLen = s * 0.52;
-  const legLen = s * 0.58;
+  // Legs are continuous rounded strokes with a moving knee joint. This avoids
+  // visible gaps between sprite frames and keeps the silhouette uniform.
+  const runT = frame * 0.22;
+  const hipL = [-hipHalf, hipY], hipR = [hipHalf, hipY];
+  const footL = [Math.sin(legSwing) * legLen * 0.82, 0];
+  const footR = [-Math.sin(legSwing) * legLen * 0.82, 0];
+  const kneeLX = (hipL[0] + footL[0]) * 0.50 - kneeL * s * 0.22;
+  const kneeRX = (hipR[0] + footR[0]) * 0.50 + kneeR * s * 0.22;
+  const kneeLY = hipY + legLen * (0.48 - kneeL * 0.18);
+  const kneeRY = hipY + legLen * (0.48 - kneeR * 0.18);
+  strokeLimb([hipL, [kneeLX, kneeLY], footL], legWidth);
+  strokeLimb([hipR, [kneeRX, kneeRY], footR], legWidth);
 
-  ctx.shadowColor = torsoColor;
-  ctx.shadowBlur = 12;
+  // The torso is a single tapered-feeling rounded stroke, not a block or jersey.
+  strokeLimb([[0, neckY], [0, hipY]], bodyWidth);
 
-  // ── Legs (drawn behind torso) ──
-  const hipLX = torsoX + torsoW * 0.25;
-  const hipRX = torsoX + torsoW * 0.75;
-  const legColorR = ap?.legR || legColor;
+  // Arms swing opposite the legs. Elbows bend naturally during locomotion and
+  // attacks; the round joins keep every pose visually connected.
+  const leadL = (state === 'idle' ? 1.82 : -0.34) + armSwingL + punchArmL;
+  const leadR = 0.34 + armSwingR + punchArmR;
+  const shoulderL = [-shoulderHalf, shoulderY];
+  const shoulderR = [shoulderHalf, shoulderY];
+  const handL = [shoulderL[0] + Math.sin(leadL) * armLen, shoulderY + Math.cos(leadL) * armLen];
+  const handR = [shoulderR[0] + Math.sin(leadR) * armLen, shoulderY + Math.cos(leadR) * armLen];
+  const elbowL = [(shoulderL[0] + handL[0]) * 0.5 - Math.sin(leadL) * s * 0.12,
+                  (shoulderY + handL[1]) * 0.5 - s * (state === 'moving' ? 0.04 : 0)];
+  const elbowR = [(shoulderR[0] + handR[0]) * 0.5 - Math.sin(leadR) * s * 0.12,
+                  (shoulderY + handR[1]) * 0.5 - s * (state === 'moving' ? 0.04 : 0)];
+  strokeLimb([shoulderL, elbowL, handL], armWidth);
+  strokeLimb([shoulderR, elbowR, handR], armWidth);
 
-  ctx.shadowBlur = 0;
-  const legAngleL = (legLOver !== null ? legLOver : -legSwing) - 0.07;
-  const legAngleR = (legROver !== null ? legROver : legSwing) + 0.07;
-  const legBendL = state === 'idle' ? 0.16 : 0.30 + Math.sin(frame * 0.18) * 0.22;
-  const legBendR = state === 'idle' ? -0.16 : -0.30 - Math.sin(frame * 0.18) * 0.22;
-  drawArticulatedLimb(ctx, hipLX, hipY, legAngleL, legLen, limbW, legColor, legBendL);
-  drawArticulatedLimb(ctx, hipRX, hipY, legAngleR, legLen, limbW, legColorR, legBendR);
-
-  // ── Torso ──
-  ctx.shadowColor = torsoColor;
-  ctx.shadowBlur = 12;
-  ctx.fillStyle = torsoColor;
-  ctx.beginPath();
-  ctx.roundRect(torsoX, torsoY, torsoW, torsoH, 5);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = 'rgba(255,255,255,0.16)';
-  ctx.beginPath();
-  ctx.roundRect(torsoX + 2, torsoY + 2, torsoW - 4, torsoH * 0.38, 4);
-  ctx.fill();
-
-  // ── Arms (different shade, drawn over torso) ──
-  const shoulderLX = torsoX;
-  const shoulderRX = torsoX + torsoW;
-  const shoulderY = torsoY + torsoH * 0.1;
-  const finalArmL = armSwingL + punchArmL;
-  const finalArmR = armSwingR + punchArmR;
-  const armColorR = ap?.armR || armColor;
-
-  ctx.shadowColor = armColor;
-  ctx.shadowBlur = 6;
-
-  const armBendL = state === 'idle' ? 0.20 : 0.30 + Math.sin(frame * 0.18) * 0.20;
-  const armBendR = state === 'idle' ? -0.20 : -0.30 - Math.sin(frame * 0.18) * 0.20;
-  drawArticulatedLimb(ctx, shoulderLX, shoulderY, -0.28 + finalArmL, armLen, limbW, armColor, armBendL);
-  drawArticulatedLimb(ctx, shoulderRX, shoulderY, 0.28 + finalArmR, armLen, limbW, armColorR, armBendR);
-
-  // ── Head ──
-  ctx.shadowColor = headColor;
-  ctx.shadowBlur = 10;
-  ctx.fillStyle = headColor;
+  // A clean circular head and small overlapping joint fills create a seamless
+  // solid silhouette, matching the reference without copying its sprite sheet.
   ctx.beginPath();
   ctx.arc(0, headCY, headR, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.shadowBlur = 0;
-  // Highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  ctx.beginPath();
-  ctx.arc(-headR * 0.22, headCY - headR * 0.28, headR * 0.42, 0, Math.PI * 2);
-  ctx.fill();
-
-  // No eyes: character faces stay clean, as in the supplied reference art.
-
-  ctx.shadowBlur = 0;
+  // Hide any tiny line joins at the shoulder and hip so the figure reads as one
+  // cohesive, soft-edged shape at every animation scale.
+  for (const [jx, jy, jr] of [
+    [0, neckY, bodyWidth * 0.53],
+    [shoulderL[0], shoulderY, armWidth * 0.52],
+    [shoulderR[0], shoulderY, armWidth * 0.52],
+    [hipL[0], hipY, legWidth * 0.52],
+    [hipR[0], hipY, legWidth * 0.52],
+  ]) {
+    ctx.beginPath(); ctx.arc(jx, jy, jr, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.restore();
 }
-
 function drawSpirit(ctx, s, frame, color, charData) {
   const waveX = Math.sin(frame * 0.04) * 5;
   const waveY = Math.sin(frame * 0.06) * 3;
