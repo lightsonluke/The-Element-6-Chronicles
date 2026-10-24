@@ -57,7 +57,7 @@ const MAP_PLATFORMS = {
     // The collision is a 16-unit one-way top surface only; the renderer draws the
     // complete texture at its natural aspect ratio. 1/180 yields 45 sec per direction
     // with the horizontal triangle-wave motion in movingPlatforms.js.
-    { x: 570, y: 203, w: 195, h: 31, material: 'split_city_moving', _splitCityMoving: true,
+    { x: 570, y: 218, w: 195, h: 31, material: 'split_city_moving', _splitCityMoving: true,
       move: { type: 'horizontal', distance: 700, speed: 1 / 180, phase: 0 } },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
@@ -1610,9 +1610,17 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       ctx.clearRect(0, 0, W, H);
       ctx.restore();
 
-      // Backdrop fills the full canvas in screen space. Custom stages use the exact backdrop selected in Stage Editor.
+      // Parallax backdrop: it follows camera movement more slowly than the stage.
+      // Overscan prevents empty edges from appearing as the camera moves.
+      // This applies to built-in stages and custom-stage backdrops alike.
+      ctx.save();
+      ctx.translate(-g.camX * 0.18 * g.camZoom, -g.camY * 0.18 * g.camZoom);
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(1.35, 1.35);
+      ctx.translate(-W / 2, -H / 2);
       if (activeBackdrop) drawStageBackground(ctx, W, H, f1.frame, activeBackdrop, activeEvent?.color, null);
       else drawBackground(ctx, W, H, f1.frame, mapId, activeEvent?.color);
+      ctx.restore();
       drawModeTint(ctx, W, H, gameMode);
 
       if (superImpactFlash > 0) {
