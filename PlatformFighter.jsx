@@ -1762,8 +1762,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         if (f.heavyCooldown > 0) { const cdPct = 1 - f.heavyCooldown / 32; ctx.fillStyle = '#222'; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 16, 40, 3, 2); ctx.fill(); ctx.fillStyle = '#FFD700'; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 16, 40 * cdPct, 3, 2); ctx.fill(); }
       };
 
+      // Keep the entire stage behind the fighters. Do not render any stage foreground
+      // pass after the fighters, since it can paint platform artwork over their sprites.
       drawFighter(f1, 1); drawFighter(f2, 2);
-      drawSplitCityPlatformForeground(ctx, platforms, mapId);
       // Shapeshift switch flash effect
       [f1, f2].forEach(f => {
         if (f._shapeshiftFlash > 0) {
