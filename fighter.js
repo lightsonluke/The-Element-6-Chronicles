@@ -1392,8 +1392,8 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     // jump/movement processing. This prevents Up+Signature from becoming a
     // jump first, and guarantees the held move cannot be changed mid-charge.
     if (isGen1Fighter(fighter) && !fighter.attackHold) {
-      if (inputs.heavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
-        let holdType = (inputs.up || inputs.jump) ? 'upHeavy' : (inputs.down ? 'downHeavy' : 'heavy');
+      if (inputs.heavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && !(inputs.down && !fighter.grounded)) {
+        let holdType = inputs.down ? 'downHeavy' : ((inputs.left || inputs.right) ? 'heavy' : 'upHeavy');
         const hasAttack = holdType === 'upHeavy' ? !!(fighter.resonanceActive ? fighter.char?.upHeavy : UP_HEAVIES[fighter.char.id]) : holdType === 'downHeavy' ? !!(fighter.resonanceActive ? fighter.char?.downHeavy : DOWN_HEAVIES[fighter.char.id]) : !!fighter.char.heavyAttack;
         if (hasAttack) {
           inputs._heavyConsumed = true;
@@ -1540,10 +1540,9 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
     // ── Heavy Attack ──
     // Gen I heavies use the same captured-button hold behavior as signatures.
-    if (isGen1Fighter(fighter) && inputs.heavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
-      let holdType = 'heavy';
-      if (inputs.up || inputs.jump) holdType = 'upHeavy';
-      else if (inputs.down) holdType = 'downHeavy';
+    if (isGen1Fighter(fighter) && inputs.heavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && !(inputs.down && !fighter.grounded)) {
+      let holdType = (inputs.left || inputs.right) ? 'heavy' : 'upHeavy';
+      if (inputs.down) holdType = 'downHeavy';
       const hasAttack = holdType === 'upHeavy' ? !!(fighter.resonanceActive ? fighter.char?.upHeavy : UP_HEAVIES[fighter.char.id]) : holdType === 'downHeavy' ? !!(fighter.resonanceActive ? fighter.char?.downHeavy : DOWN_HEAVIES[fighter.char.id]) : !!fighter.char.heavyAttack;
       if (hasAttack) {
         inputs._heavyConsumed = true;
@@ -1552,10 +1551,10 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         return fighter;
       }
     }
-    // Up + heavy = character-specific Up Heavy. `up` is the same directional
-    // input as jump in the fight controls, so test both fields explicitly and
-    // consume the heavy before the jump logic can turn the input into a jump.
-    const wantsUpHeavy = !!inputs.heavy && (!!inputs.up || !!inputs.jump);
+    // Heavy alone or Up + Heavy = character-specific Up Heavy. Horizontal + Heavy
+    // remains the side heavy, while Down + Heavy is down heavy on ground and a
+    // distinct ground pound in the air.
+    const wantsUpHeavy = !!inputs.heavy && !inputs.down && !(inputs.left || inputs.right);
     const availableUpHeavy = fighter.resonanceActive ? fighter.char?.upHeavy : UP_HEAVIES[fighter.char.id];
     if (wantsUpHeavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && availableUpHeavy) {
       inputs._heavyConsumed = true;
@@ -1599,8 +1598,8 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         fighter.moveStats.downHeavy++;
       }
     }
-    // No down + heavy = Side Heavy (existing heavyAttack)
-    else if (inputs.heavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
+    // Horizontal + heavy = Side Heavy (existing heavyAttack)
+    else if (inputs.heavy && (inputs.left || inputs.right) && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
       inputs._heavyConsumed = true;
       const heavy = fighter.char.heavyAttack;
       if (heavy) {
@@ -1629,23 +1628,10 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       }
       inputs._sigConsumed = true;
 
-      // Aerial attack: sig in air without up
-      if (!fighter.grounded) {
-        if (fighter.normalCooldown <= 0) {
-          fighter.state = 'attacking';
-          fighter.attackTimer = 18;
-          fighter.attackData = fighter.resonanceActive && fighter.char?.lightAttack
-            ? { ...fighter.char.lightAttack, name: `${fighter.resonanceConstruct || 'Resonance'} Aerial`, type: 'aerialNormal', duration: fighter.char.lightAttack.duration || 18, sigType: 'aerial', resonanceAction: ['bow','cannons','blasters','disc','projector','shards','rings','core'].includes(fighter.char.lightAttack.resonanceFamily) ? 'projectileUp' : 'rise', hitApplied: false, progress: 0, isNormal: true }
-            : {
-                name: 'Aerial', type: 'aerialNormal',
-                duration: 18, damage: 7 + Math.random() * 4,
-                range: 55, color: fighter.char.color,
-                sigType: 'aerial', hitApplied: false, progress: 0, isNormal: true,
-              };
-          fighter.normalCooldown = NORMAL_COOLDOWN * (fighter.statControlRecoveryMul || 1);
-          fighter.moveStats.aerial++;
-        }
-      } else if (fighter.sigCooldown <= 0) {
+      // Signature alone or Up + Signature = Up Signature. The airborne
+      // Up + Signature recovery was handled above; horizontal/down still select
+      // their directional signatures, including while airborne.
+      if (fighter.sigCooldown <= 0) {
         let sigType = 'up';
         if (inputs.left || inputs.right) sigType = 'side';
         else if (inputs.down) sigType = 'down';
@@ -1659,7 +1645,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
           fighter.attackData = { ...sig, duration: dur, sigType, hitApplied: false, progress: 0 };
           fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
           fighter.sigCooldown = SIG_COOLDOWN * (fighter.statControlRecoveryMul || 1);
-          fighter.vy = 0;
+          if (fighter.grounded) fighter.vy = 0;
           if (sigType === 'side') fighter.moveStats.sigSide++;
           else if (sigType === 'up') fighter.moveStats.sigUp++;
           else if (sigType === 'down') fighter.moveStats.sigDown++;
