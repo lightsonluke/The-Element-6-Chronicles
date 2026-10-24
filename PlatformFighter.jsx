@@ -1640,7 +1640,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       // Render-only offset for Split City's moving platform. Keep the original
       // platform objects untouched so physics, collision, and landing height stay the same.
       const visualPlatforms = mapId === 'splitcity'
-        ? platforms.map(p => p?._splitCityMoving ? { ...p, y: p.y - 15 } : p)
+        ? platforms.map(p => p?._splitCityMoving ? { ...p, y: p.y - 19 } : p)
         : platforms;
       drawPlatforms(ctx, visualPlatforms, f1.frame, mapId);
       if (Array.isArray(stageConfig.freehandStrokes)) {
