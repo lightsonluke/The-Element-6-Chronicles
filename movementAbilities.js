@@ -244,8 +244,11 @@ export function updateMovementAbilities(fighter, inputs, platforms) {
     return;
   }
 
+  // Use actual contact only. Falling back to the previous wallSide would
+  // keep the fighter in wall-slide state after moving away, preventing the
+  // wall-departure jump reset from triggering.
   const detectedWallSide = getWallContact(platforms, fighter);
-  const side = detectedWallSide || fighter.wallSide || 0;
+  const side = detectedWallSide;
 
   const touchingWall =
     !fighter.grounded &&
