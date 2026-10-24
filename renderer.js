@@ -8,6 +8,10 @@ import { getGen1AttackPose } from './gen1AttackAnims.js';
 import { getResonanceAttackAction } from './resonanceConstructs.js';
 import { getAttackSpecForData } from './attackSpecs.js';
 import { drawSpecAttack, drawSpecSuper } from './attackSpecRenderer.js';
+import { solvePose, paintStickman, FIGHTER_HURTBOX, BASE_SCALE } from './stickman.js';
+
+// Body hurtbox that matches the stickman silhouette (shared with PlatformFighter.jsx).
+export { FIGHTER_HURTBOX };
 
 // Split City uses the user's transparent replacement PNGs.
 const splitCityStage = typeof Image === 'undefined' ? null : new Image();
@@ -137,22 +141,44 @@ export const STAGE_MAPS = ALL_STAGE_MAPS.filter((stage) => stage.id === 'splitci
 
 // ─── Character rendering ────────────────────────────────────────────────────
 
-export function drawStickman(ctx, x, y, color, facing, frame, scale = 1, isSpirit = false, state = 'idle', charData = null, powerActive = null, noWeapon = false, powerAuraColor = null, emote = null, attackData = null) {
+export function drawStickman(ctx, x, y, color, facing, frame, scale = 1, isSpirit = false, state = 'idle', charData = null, powerActive = null, noWeapon = false, powerAuraColor = null, emote = null, attackData = null, motion = null) {
   // Growth power = visually larger; shrink powers = visually smaller
   if (powerActive === 'range_boost') scale *= 1.35;
-  // Restore the original in-match size. The revised renderer changes only the
-  // elbow/knee articulation, not the overall character design.
-  const s = 36 * scale;
+  const s = BASE_SCALE * scale;
+  // One shared rig for every fighter: identity is colour + effects, never body shape.
+  const bodyColor = (powerActive === 'stat_boost' && charData?.id === 'yellow') ? '#FFFFFF' : color;
   ctx.save();
   ctx.translate(x, y);
 
-  drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActive, noWeapon, emote, attackData);
+  const pose = solveFighterPose(s, frame, state, facing, emote, attackData, charData, motion);
+  paintStickman(ctx, pose, bodyColor);
 
   if (powerActive) {
     drawPowerAura(ctx, s, frame, powerAuraColor || color, powerActive, charData);
   }
 
   ctx.restore();
+}
+
+// Gathers the optional emote / authored-attack inputs and runs the shared rig solver.
+function solveFighterPose(s, frame, state, facing, emote, attackData, charData, motion) {
+  let emoteVars = null;
+  if (emote) { try { emoteVars = getEmotePoseVars(emote.id, emote.progress, facing) || null; } catch (e) { emoteVars = null; } }
+  let gen1 = null;
+  if (charData?.id?.startsWith('g1_') && attackData && (state === 'attacking' || state === 'superAttack')) {
+    try {
+      const st = attackData.isSuper ? 'super' : (attackData.isHeavy ?
+        ((attackData.sigType === 'upHeavy' || attackData.sigType === 'up') ? 'uh' :
+         (attackData.sigType === 'downHeavy' || attackData.isGroundPound || attackData.sigType === 'down') ? 'dh' : 'sh') :
+        (attackData.sigType === 'up' || attackData.sigType === 'aerial' ? 'us' :
+         attackData.sigType === 'down' || attackData.sigType === 'downNormal' ? 'ds' : 'ss'));
+      const held = Math.max(0, Number(attackData.holdProgress) || 0);
+      const prog = attackData.isSuper ? Math.max(0, Number(attackData.progress) || 0) :
+        (held > 0 && !(Number(attackData.progress) > 0) ? held * 0.55 : Math.max(0, Number(attackData.progress) || 0));
+      gen1 = getGen1AttackPose(st, prog, facing, charData.id) || null;
+    } catch (e) { gen1 = null; }
+  }
+  return solvePose({ s, frame, state, facing, motion, emoteVars, attack: attackData, gen1 });
 }
 
 // A shadow belongs to a real platform under the fighter, not to the sprite.
@@ -399,15 +425,6 @@ function drawPowerAura(ctx, s, frame, color, powerActive, charData) {
   ctx.shadowBlur = 0; ctx.globalAlpha = 1; ctx.restore();
 }
 
-// Shade a hex color darker or lighter
-function shadeColor(hex, amount) {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const r = Math.min(255, Math.max(0, (num >> 16) + amount));
-  const g = Math.min(255, Math.max(0, ((num >> 8) & 0xff) + amount));
-  const b = Math.min(255, Math.max(0, (num & 0xff) + amount));
-  return `rgb(${r},${g},${b})`;
-}
-
 function drawWeapon(ctx, weapon, color, facing, limbW) {
   const w = (weapon || '').toLowerCase();
   ctx.save();
@@ -583,293 +600,33 @@ function drawWeapon(ctx, weapon, color, facing, limbW) {
   ctx.restore();
 }
 
-// Returns animated limb positions/angles (relative to baseline 0,0) so cosmetics
-// can attach to actual moving arms/legs instead of static body coords.
-export function getLimbPose(frame, state = 'idle', facing = 1, scale = 1, powerActive, emote) {
+// Animated limb positions (relative to the fighter's feet at 0,0) so cosmetics can attach to
+// the real moving arms/legs. Reads the same rig the renderer paints, so they never disagree.
+// "left"/"right" are screen sides; the lead (guard-side) limbs are on the side the fighter faces.
+export function getLimbPose(frame, state = 'idle', facing = 1, scale = 1, powerActive, emote, motion = null, attackData = null) {
   if (powerActive === 'range_boost') scale *= 1.35;
-  const s = 36 * scale;
-  let bob = 0, legSwing = 0, armSwingL = 0, armSwingR = 0, lean = 0;
-  let punchArmL = 0, punchArmR = 0;
-  let legLOver = null, legROver = null; // independent leg angle overrides (from emotes)
-  if (emote) {
-    const ev = getEmotePoseVars(emote.id, emote.progress, facing);
-    if (ev) {
-      bob = ev.bob; lean = ev.lean; armSwingL = ev.armSwingL; armSwingR = ev.armSwingR;
-      legSwing = ev.legSwing; punchArmL = ev.punchArmL; punchArmR = ev.punchArmR;
-      legLOver = ev.legLOver; legROver = ev.legROver;
-    }
-  } else if (state === 'idle') { bob = 0; armSwingL = 0; armSwingR = 0; }
-  else if (state === 'moving') {
-    const t = frame * 0.18;
-    bob = Math.abs(Math.sin(t)) * -3;
-    legSwing = Math.sin(t) * 0.65;
-    armSwingL = Math.sin(t) * 0.55;
-    armSwingR = -Math.sin(t) * 0.55;
-    lean = facing * 0.12;
-  } else if (state === 'jumping') { bob = -6; legSwing = -0.4; armSwingL = -0.7; armSwingR = 0.7; }
-  else if (state === 'attacking') {
-    lean = facing * 0.22;
-    punchArmL = facing > 0 ? -1.4 : 0.2;
-    punchArmR = facing > 0 ? 0.2 : 1.4;
-    legSwing = 0.25;
-  } else if (state === 'superAttack') {
-    const t = frame * 0.22;
-    lean = Math.sin(t) * 0.3;
-    punchArmL = Math.sin(t) * 1.5;
-    punchArmR = Math.cos(t) * 1.5;
-    legSwing = Math.cos(t) * 0.6;
-  } else if (state === 'hitstun') { bob = 3; lean = -facing * 0.3; armSwingL = 0.6; armSwingR = -0.4; legSwing = -0.3; }
-
-  const headR = s * 0.34;
-  const headCY = -s * 1.7 + bob;
-  const torsoW = s * 0.52;
-  const torsoH = s * 0.72;
-  const torsoX = -torsoW / 2;
-  const torsoY = headCY + headR + s * 0.05;
-  const hipY = torsoY + torsoH;
-  const armLen = s * 0.52;
-  const legLen = s * 0.58;
-  const hipLX = torsoX + torsoW * 0.25;
-  const hipRX = torsoX + torsoW * 0.75;
-  const shoulderLX = torsoX;
-  const shoulderRX = torsoX + torsoW;
-  const shoulderY = torsoY + torsoH * 0.1;
-  const finalArmL = armSwingL + punchArmL;
-  const finalArmR = armSwingR + punchArmR;
-
-  const rot = (px, py, a) => [px * Math.cos(a) - py * Math.sin(a), px * Math.sin(a) + py * Math.cos(a)];
-  const leanPt = (lx, ly) => rot(lx, ly, lean);
-
-  const legAngleL = legLOver !== null ? legLOver : -legSwing;
-  const legAngleR = legROver !== null ? legROver : legSwing;
-  const footLocalL = rot(0, legLen, legAngleL);
-  const footLocalR = rot(0, legLen, legAngleR);
-  const footL = leanPt(hipLX + footLocalL[0], hipY + footLocalL[1]);
-  const footR = leanPt(hipRX + footLocalR[0], hipY + footLocalR[1]);
-  const kneeL = leanPt(hipLX + footLocalL[0] * 0.5, hipY + footLocalL[1] * 0.5);
-  const kneeR = leanPt(hipRX + footLocalR[0] * 0.5, hipY + footLocalR[1] * 0.5);
-
-  const handLocalL = rot(0, armLen, -0.28 + finalArmL);
-  const handLocalR = rot(0, armLen, 0.28 + finalArmR);
-  const handL = leanPt(shoulderLX + handLocalL[0], shoulderY + handLocalL[1]);
-  const handR = leanPt(shoulderRX + handLocalR[0], shoulderY + handLocalR[1]);
-  const elbowL = leanPt(shoulderLX + handLocalL[0] * 0.5, shoulderY + handLocalL[1] * 0.5);
-  const elbowR = leanPt(shoulderRX + handLocalR[0] * 0.5, shoulderY + handLocalR[1] * 0.5);
-
-  const head = leanPt(0, headCY);
-  const shL = leanPt(shoulderLX, shoulderY);
-  const shR = leanPt(shoulderRX, shoulderY);
-  const hipLP = leanPt(hipLX, hipY);
-  const hipRP = leanPt(hipRX, hipY);
-  const torsoTop = leanPt(0, torsoY);
-  const torsoC = leanPt(0, torsoY + torsoH / 2);
-
+  const s = BASE_SCALE * scale;
+  const J = solveFighterPose(s, frame, state, facing, emote, attackData, null, motion);
+  const nearIsRight = (facing < 0 ? -1 : 1) > 0;
+  const Lm = nearIsRight ? J.far : J.near, Rm = nearIsRight ? J.near : J.far;
+  const pt = (p) => ({ x: p[0], y: p[1] });
+  const ang = (a, b) => Math.atan2(-(b[0] - a[0]), b[1] - a[1]);
   return {
-    s, headR, lean, torsoW,
-    head: { x: head[0], y: head[1] },
-    torsoTopY: torsoTop[1], torsoCY: torsoC[1],
-    hipY: leanPt(0, hipY)[1], shoulderY: leanPt(0, shoulderY)[1], feetY: 0,
-    shoulders: { left: { x: shL[0], y: shL[1] }, right: { x: shR[0], y: shR[1] } },
-    hips: { left: { x: hipLP[0], y: hipLP[1] }, right: { x: hipRP[0], y: hipRP[1] } },
-    hands: { left: { x: handL[0], y: handL[1] }, right: { x: handR[0], y: handR[1] } },
-    feet: { left: { x: footL[0], y: footL[1] }, right: { x: footR[0], y: footR[1] } },
-    knees: { left: { x: kneeL[0], y: kneeL[1] }, right: { x: kneeR[0], y: kneeR[1] } },
-    elbows: { left: { x: elbowL[0], y: elbowL[1] }, right: { x: elbowR[0], y: elbowR[1] } },
-    armAngleL: -0.28 + finalArmL, armAngleR: 0.28 + finalArmR,
-    legAngleL: legLOver !== null ? legLOver : -legSwing, legAngleR: legROver !== null ? legROver : legSwing,
+    s, headR: J.headR, lean: J.lean, torsoW: J.r.chest * 2,
+    head: pt(J.head),
+    torsoTopY: J.shoulder[1], torsoCY: (J.hip[1] + J.shoulder[1]) / 2,
+    hipY: J.hip[1], shoulderY: J.shoulder[1], feetY: 0,
+    shoulders: { left: pt(Lm.shoulder), right: pt(Rm.shoulder) },
+    hips: { left: pt(Lm.hip), right: pt(Rm.hip) },
+    hands: { left: pt(Lm.hand), right: pt(Rm.hand) },
+    feet: { left: pt(Lm.foot), right: pt(Rm.foot) },
+    knees: { left: pt(Lm.knee), right: pt(Rm.knee) },
+    elbows: { left: pt(Lm.elbow), right: pt(Rm.elbow) },
+    armAngleL: ang(Lm.shoulder, Lm.hand), armAngleR: ang(Rm.shoulder, Rm.hand),
+    legAngleL: ang(Lm.hip, Lm.foot), legAngleR: ang(Rm.hip, Rm.foot),
   };
 }
 
-// Two rounded segments keep the original silhouette, but give each limb an
-// actual bend point. The overlapping joint disc prevents visible gaps during
-// running, jumping, attacks, and emotes.
-function drawArticulatedLimb(ctx, x, y, baseAngle, length, width, color, bend) {
-  const upper = length * 0.51;
-  const lower = length - upper;
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(baseAngle);
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.roundRect(-width / 2, 0, width, upper + width * 0.35, width / 2);
-  ctx.fill();
-  ctx.translate(0, upper);
-  ctx.rotate(bend);
-  ctx.beginPath();
-  ctx.roundRect(-width / 2, -width * 0.35, width, lower + width * 0.35, width / 2);
-  ctx.fill();
-  // The joint is the same colour as its limb—not a new costume detail.
-  ctx.beginPath();
-  ctx.arc(0, 0, width * 0.53, 0, Math.PI * 2);
-  ctx.fill();
-  // A very small shaded crease identifies the elbow/knee while retaining the
-  // existing limb colour and clean stick-figure look.
-  ctx.save();
-  ctx.rotate(-bend * 0.5);
-  ctx.strokeStyle = 'rgba(0,0,0,0.24)';
-  ctx.lineWidth = Math.max(1.2, width * 0.16);
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(-width * 0.22, 0);
-  ctx.lineTo(width * 0.22, 0);
-  ctx.stroke();
-  ctx.restore();
-  ctx.restore();
-}
-
-function drawBrawlhalla(ctx, s, frame, color, state, facing, charData, powerActive, noWeapon = false, emote = null, attackData = null) {
-  // One consistent, clean stick-figure silhouette for every playable character.
-  // Character identity is communicated by color and effects, never by changing
-  // the underlying body proportions or limb design.
-  if (powerActive && charData?.id === 'yellow' && powerActive === 'stat_boost') color = '#FFFFFF';
-
-  let bob = 0, lean = 0, legSwing = 0, armSwingL = 0, armSwingR = 0;
-  let punchArmL = 0, punchArmR = 0;
-  let kneeL = 0, kneeR = 0;
-  if (emote) {
-    const ev = getEmotePoseVars(emote.id, emote.progress, facing);
-    if (ev) {
-      bob = ev.bob || 0; lean = ev.lean || 0;
-      legSwing = ev.legSwing || 0;
-      armSwingL = ev.armSwingL || 0; armSwingR = ev.armSwingR || 0;
-      punchArmL = ev.punchArmL || 0; punchArmR = ev.punchArmR || 0;
-    }
-  } else if (state === 'moving') {
-    const t = frame * 0.22;
-    legSwing = Math.sin(t) * 0.72;
-    armSwingL = -Math.sin(t) * 0.64;
-    armSwingR = Math.sin(t) * 0.64;
-    kneeL = Math.max(0, Math.sin(t + 0.8)) * 0.72;
-    kneeR = Math.max(0, Math.sin(t + Math.PI + 0.8)) * 0.72;
-    bob = -Math.abs(Math.sin(t * 2)) * s * 0.055;
-    lean = facing * 0.10;
-  } else if (state === 'jumping') {
-    legSwing = -0.30;
-    kneeL = 0.48; kneeR = 0.34;
-    armSwingL = -0.72; armSwingR = -0.82;
-    bob = -s * 0.08;
-  } else if (state === 'attacking') {
-    lean = facing * 0.14;
-    punchArmL = facing > 0 ? -1.05 : 0.12;
-    punchArmR = facing > 0 ? 0.12 : 1.05;
-    legSwing = 0.16; kneeR = 0.16;
-  } else if (state === 'superAttack') {
-    const t = frame * 0.22;
-    lean = Math.sin(t) * 0.22;
-    punchArmL = Math.sin(t) * 1.15;
-    punchArmR = Math.cos(t) * 1.15;
-    legSwing = Math.cos(t) * 0.48;
-    kneeL = Math.max(0, Math.sin(t)) * 0.45;
-    kneeR = Math.max(0, Math.cos(t)) * 0.45;
-  } else if (state === 'hitstun') {
-    lean = -facing * 0.25;
-    armSwingL = 0.72; armSwingR = -0.55;
-    legSwing = -0.28; kneeL = 0.25; kneeR = 0.12;
-    bob = s * 0.035;
-  } else if (state === 'crouching') {
-    bob = s * 0.18;
-    armSwingL = 0.30; armSwingR = -0.30;
-    legSwing = 0.02;
-  }
-
-  if (charData?.id?.startsWith('g1_') && attackData && (state === 'attacking' || state === 'superAttack')) {
-    const st = attackData.isSuper ? 'super' : (attackData.isHeavy ?
-      ((attackData.sigType === 'upHeavy' || attackData.sigType === 'up') ? 'uh' :
-       (attackData.sigType === 'downHeavy' || attackData.isGroundPound || attackData.sigType === 'down') ? 'dh' : 'sh') :
-      (attackData.sigType === 'up' || attackData.sigType === 'aerial' ? 'us' :
-       attackData.sigType === 'down' || attackData.sigType === 'downNormal' ? 'ds' : 'ss'));
-    const held = Math.max(0, Number(attackData.holdProgress) || 0);
-    const prog = attackData.isSuper ? Math.max(0, Number(attackData.progress) || 0) :
-      (held > 0 && !(Number(attackData.progress) > 0) ? held * 0.55 : Math.max(0, Number(attackData.progress) || 0));
-    const pose = getGen1AttackPose(st, prog, facing, charData.id);
-    punchArmL += pose.punchArmL || 0;
-    punchArmR += pose.punchArmR || 0;
-    legSwing = pose.legSwing || legSwing;
-    lean += pose.lean || 0;
-    bob += pose.bob || 0;
-  }
-
-  const headR = s * 0.34;
-  const headCY = -s * 1.70 + bob;
-  const neckY = headCY + headR * 0.88;
-  const shoulderY = headCY + headR + s * 0.12;
-  const hipY = -s * 0.60 + bob * 0.45;
-  const shoulderHalf = s * 0.10;
-  const hipHalf = s * 0.075;
-  const armLen = s * 0.78;
-  const legLen = s * 0.80;
-  const armWidth = Math.max(4, s * 0.25);
-  const legWidth = Math.max(4.5, s * 0.28);
-  const bodyWidth = Math.max(5, s * 0.27);
-
-  const strokeLimb = (points, width) => {
-    ctx.beginPath();
-    ctx.moveTo(points[0][0], points[0][1]);
-    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
-    ctx.lineWidth = width;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = color;
-    ctx.stroke();
-  };
-
-  ctx.save();
-  ctx.rotate(lean);
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.fillStyle = color;
-  ctx.strokeStyle = color;
-
-  // Legs are continuous rounded strokes with a moving knee joint. This avoids
-  // visible gaps between sprite frames and keeps the silhouette uniform.
-  const runT = frame * 0.22;
-  const hipL = [-hipHalf, hipY], hipR = [hipHalf, hipY];
-  const footL = [Math.sin(legSwing) * legLen * 0.82, 0];
-  const footR = [-Math.sin(legSwing) * legLen * 0.82, 0];
-  const kneeLX = (hipL[0] + footL[0]) * 0.50 - kneeL * s * 0.22;
-  const kneeRX = (hipR[0] + footR[0]) * 0.50 + kneeR * s * 0.22;
-  const kneeLY = hipY + legLen * (0.48 - kneeL * 0.18);
-  const kneeRY = hipY + legLen * (0.48 - kneeR * 0.18);
-  strokeLimb([hipL, [kneeLX, kneeLY], footL], legWidth);
-  strokeLimb([hipR, [kneeRX, kneeRY], footR], legWidth);
-
-  // The torso is a single tapered-feeling rounded stroke, not a block or jersey.
-  strokeLimb([[0, neckY], [0, hipY]], bodyWidth);
-
-  // Arms swing opposite the legs. Elbows bend naturally during locomotion and
-  // attacks; the round joins keep every pose visually connected.
-  const leadL = (state === 'idle' ? 1.82 : -0.34) + armSwingL + punchArmL;
-  const leadR = 0.34 + armSwingR + punchArmR;
-  const shoulderL = [-shoulderHalf, shoulderY];
-  const shoulderR = [shoulderHalf, shoulderY];
-  const handL = [shoulderL[0] + Math.sin(leadL) * armLen, shoulderY + Math.cos(leadL) * armLen];
-  const handR = [shoulderR[0] + Math.sin(leadR) * armLen, shoulderY + Math.cos(leadR) * armLen];
-  const elbowL = [(shoulderL[0] + handL[0]) * 0.5 - Math.sin(leadL) * s * 0.12,
-                  (shoulderY + handL[1]) * 0.5 - s * (state === 'moving' ? 0.04 : 0)];
-  const elbowR = [(shoulderR[0] + handR[0]) * 0.5 - Math.sin(leadR) * s * 0.12,
-                  (shoulderY + handR[1]) * 0.5 - s * (state === 'moving' ? 0.04 : 0)];
-  strokeLimb([shoulderL, elbowL, handL], armWidth);
-  strokeLimb([shoulderR, elbowR, handR], armWidth);
-
-  // A clean circular head and small overlapping joint fills create a seamless
-  // solid silhouette, matching the reference without copying its sprite sheet.
-  ctx.beginPath();
-  ctx.arc(0, headCY, headR, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Hide any tiny line joins at the shoulder and hip so the figure reads as one
-  // cohesive, soft-edged shape at every animation scale.
-  for (const [jx, jy, jr] of [
-    [0, neckY, bodyWidth * 0.53],
-    [shoulderL[0], shoulderY, armWidth * 0.52],
-    [shoulderR[0], shoulderY, armWidth * 0.52],
-    [hipL[0], hipY, legWidth * 0.52],
-    [hipR[0], hipY, legWidth * 0.52],
-  ]) {
-    ctx.beginPath(); ctx.arc(jx, jy, jr, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.restore();
-}
 function drawSpirit(ctx, s, frame, color, charData) {
   const waveX = Math.sin(frame * 0.04) * 5;
   const waveY = Math.sin(frame * 0.06) * 3;
@@ -1402,60 +1159,40 @@ function drawEmiSwordSwing(ctx, x, y, attack, progress, facing) {
   ctx.restore();
 }
 
-// Clean punch/kick animation — NO circles, just limb extension
+// Normal attacks: the fighter's own animated arm/leg throws the strike (see stickman.js).
+// This only adds a short speed-streak that shows the strike path and reach.
 function drawNormalAttack(ctx, x, y, attack, progress, facing, color) {
-  const armColor = shadeColor(color, -45);
-  const p = progress;
-  const alpha = Math.sin(p * Math.PI); // in-out fade
-
-  ctx.globalAlpha = alpha;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 8;
-  ctx.fillStyle = armColor;
-
-  const s = 36; // base scale
-  const limbW = s * 0.24;
-  const armLen = s * 0.52;
-
-  if (attack.sigType === 'down' || attack.type === 'downNormal') {
-    // Downward kick
-    const kickExt = p * 40;
-    ctx.save();
-    ctx.translate(x + facing * 8, -30 + kickExt * 0.5);
-    ctx.rotate(facing * (0.8 + p * 0.4));
-    ctx.beginPath();
-    ctx.roundRect(-limbW / 2, 0, limbW, armLen + kickExt, limbW / 2);
-    ctx.fill();
-    ctx.restore();
+  const p = Math.max(0, Math.min(1, progress));
+  const alpha = Math.sin(p * Math.PI);
+  if (alpha <= 0.02) return;
+  const reach = Math.min(70, Math.max(28, (attack.range || 60) * 0.55));
+  const head = reach * (1 - Math.pow(1 - p, 2));          // streak head eases out
+  const tail = reach * Math.max(0, p - 0.35) * 0.9;        // tail trails behind
+  let lines;
+  if (attack.sigType === 'down' || attack.sigType === 'downNormal' || attack.type === 'downNormal') {
+    lines = [[22, -22, 1, 0.12], [20, -14, 1, 0.05], [18, -7, 1, 0]];
   } else if (attack.sigType === 'aerial' || attack.type === 'aerialNormal') {
-    // Aerial kick — leg extends outward
-    const kickExt = p * 35;
-    ctx.save();
-    ctx.translate(x + facing * 6, -24);
-    ctx.rotate(facing * (-0.3 - p * 0.8));
-    ctx.beginPath();
-    ctx.roundRect(-limbW / 2, 0, limbW, armLen + kickExt, limbW / 2);
-    ctx.fill();
-    ctx.restore();
+    lines = [[16, -40, 1, 0.45], [14, -32, 1, 0.45], [12, -24, 1, 0.45]];
+  } else if (attack.sigType === 'up') {
+    lines = [[8, -52, 0, -1], [14, -50, 0, -1], [2, -50, 0, -1]];
   } else {
-    // Side punch — arm extends forward
-    const punchExt = p * 42;
-    ctx.save();
-    ctx.translate(x + facing * (18 + punchExt * 0.4), -38);
-    ctx.rotate(facing === 1 ? -0.2 : 0.2);
-    ctx.beginPath();
-    ctx.roundRect(-limbW / 2, 0, limbW, armLen * 0.7 + punchExt * 0.6, limbW / 2);
-    ctx.fill();
-    // Fist
-    ctx.fillStyle = armColor;
-    ctx.beginPath();
-    ctx.arc(0, armLen * 0.7 + punchExt * 0.6, limbW * 0.65, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    lines = [[26, -58, 1, 0], [24, -51, 1, 0], [22, -44, 1, 0]];
   }
-
-  ctx.shadowBlur = 0;
-  ctx.globalAlpha = 1;
+  ctx.save();
+  ctx.globalAlpha = alpha * 0.55;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 6;
+  for (const [ox, oy, dx, dy] of lines) {
+    const bx = x + facing * ox;
+    ctx.beginPath();
+    ctx.moveTo(bx + facing * dx * tail, y + oy + dy * tail);
+    ctx.lineTo(bx + facing * dx * head, y + oy + dy * head);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 export function drawSuperEffect(ctx, x, y, color, progress, charName = '', charId = '', facing = 1) {

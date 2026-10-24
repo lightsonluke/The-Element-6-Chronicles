@@ -11,7 +11,7 @@ import {
   drawStickman, drawAttackEffect, drawSuperEffect,
   drawHealthBar, drawTimer, drawPlatforms, drawBackground,
   drawHitSparks, drawDoubleJumpParticles, drawSuperFlash,
-  STAGE_MAPS, drawFighterGroundShadow, drawSplitCityPlatformForeground,
+  STAGE_MAPS, drawFighterGroundShadow, drawSplitCityPlatformForeground, FIGHTER_HURTBOX,
 } from './renderer.js';
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
@@ -1707,7 +1707,12 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         }
         // Shikigami — purely cosmetic floating companion (behind + above the fighter)
         drawShikigamiFollower(ctx, f, botShikigamiRef.current?.[effId], f.frame, fScale);
-        if (!flashing) drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote, f.attackData);
+        if (!flashing) {
+          // Motion drives the rise/fall jump pose and the distance-matched run cycle; the memo
+          // (one per fighter) smooths transitions between idle / run / air / attack poses.
+          const rigMotion = { vx: f.vx, vy: f.vy, grounded: f.grounded, memo: (f._rigMemo = f._rigMemo || {}) };
+          drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote, f.attackData, rigMotion);
+        }
         if (!flashing && f.resonanceActive) { try { drawConstructWeapon(ctx, f, fScale); } catch (error) { console.error('[Resonance Constructs] Weapon render failed safely:', error); } }
         if (!flashing) {
           const skinParts = getSkinParts(effId, equippedSkins);
@@ -1792,9 +1797,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       };
       if (settings.hitboxes === true) {
         const drawFighterBox = (f, label) => {
-          // Hurtbox remains a body-shaped training box; attack hitboxes are the
+          // Hurtbox is sized to the stickman silhouette (FIGHTER_HURTBOX); attack hitboxes are the
           // exact authored circles/capsules/polygons used by collision.
-          drawTrainingHitbox(ctx, f.x, f.y - 36.5, 48, 73, label);
+          drawTrainingHitbox(ctx, f.x, f.y + FIGHTER_HURTBOX.centerY, FIGHTER_HURTBOX.w, FIGHTER_HURTBOX.h, label);
           if (f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
             drawExactAttackHitboxOverlay(ctx, f, label);
           }
