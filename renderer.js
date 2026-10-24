@@ -49,15 +49,15 @@ function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
 }
 
 function drawSplitCityMovingPlatform(ctx, platform) {
-  if (!imageReady(splitCityMovingStage)) return false;
-  // Load and draw the exact thin platform image from
-  // /art/stages/split-city/split-city-moving-platform.png. This is the user's
-  // attached 896x177 texture, not the main platform/base image. Preserve its aspect
-  // ratio and align the top edge with the one-way collider at platform.y.
+  // Claim the platform's render slot even while its image is loading, so the
+  // generic grey collision rectangle is never shown as a substitute texture.
+  if (!imageReady(splitCityMovingStage)) return true;
+  // Use the supplied thin platform texture only. Preserve its aspect ratio and
+  // compensate for its 7px transparent top padding so visible artwork meets y.
   const scale = platform.w / splitCityMovingStage.naturalWidth;
   const drawH = splitCityMovingStage.naturalHeight * scale;
-  const visualY = platform.y + (platform._visualYOffset || 0);
-  ctx.drawImage(splitCityMovingStage, platform.x, visualY, platform.w, drawH);
+  const alphaTop = 7 * scale;
+  ctx.drawImage(splitCityMovingStage, platform.x, platform.y - alphaTop, platform.w, drawH);
   return true;
 }
 
@@ -2080,8 +2080,10 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
     // Freehand collision segments are physics-only. The original stroke is
     // rendered once by the stage/match renderer.
     if (p?._freehandSegment || p?._artCollisionOnly) return;
-    if (mapId === 'splitcity' && p.material === 'split_city_joined' && drawJoinedSplitCityPlatform(ctx, p)) return;
-    if (mapId === 'splitcity' && p.material === 'split_city_moving' && drawSplitCityMovingPlatform(ctx, p)) return;
+    if (mapId === 'splitcity' && (p?._splitCityMain || p.material === 'split_city_joined') && drawJoinedSplitCityPlatform(ctx, p)) return;
+    if (p?._splitCityMoving || (mapId === 'splitcity' && p.material === 'split_city_moving')) {
+      if (drawSplitCityMovingPlatform(ctx, p)) return;
+    }
     const isMain = p.h >= 18;
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
