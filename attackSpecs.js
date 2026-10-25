@@ -32,10 +32,10 @@ const GEN1_MOVE_SPECS = {
   g1_fire: {
     us:{name:"Fire Hero's Rising",shape:'fireRise',range:95,knockback:'upContact',duration:34,damage:6,startupFrames:14,activeFrames:4,endlagFrames:16},
     ds:{name:"Fire Hero's Quake",shape:'fireQuake',range:120,knockback:'radialContact',duration:50,damage:8,startupFrames:15,activeFrames:4,endlagFrames:31},
-    ss:{name:"Fire Hero's Wave",shape:'fireWave',range:95,knockback:'forwardContact',duration:44,damage:8,startupFrames:10,activeFrames:8,endlagFrames:26},
+    ss:{name:"Fire Hero's Wave",shape:'fireWave',range:95,knockback:'forwardContact',duration:54,damage:8,startupFrames:20,activeFrames:12,endlagFrames:22},
     upHeavy:{name:'Ascendant Breaker',shape:'fireAscendant',range:125,knockback:'upContact',duration:68,damage:14,startupFrames:18,activeFrames:7,endlagFrames:43},
     dh:{name:'Sunder Slam',shape:'fireSunder',range:140,knockback:'radialContact',duration:62,damage:17,startupFrames:24,activeFrames:8,endlagFrames:30},
-    sh:{name:'Rend Strike',shape:'fireRend',range:135,knockback:'forwardContact',duration:72,damage:15,startupFrames:28,activeFrames:10,endlagFrames:34},
+    sh:{name:'Rend Strike',shape:'fireRend',range:135,knockback:'forwardContact',duration:90,damage:15,startupFrames:36,activeFrames:14,endlagFrames:40},
     recovery:{name:'Return Return',shape:'fireReturn',range:85,knockback:'upContact',duration:42,damage:5,startupFrames:7,activeFrames:6,endlagFrames:29},
     groundPound:{name:'Meteor Pound',shape:'fireMeteor',range:150,knockback:'radialContact',duration:62,damage:9,startupFrames:20,activeFrames:8,endlagFrames:34},
     super:{name:'Ultimate: Flame Unleashed',shape:'fireUltimate',range:1200,knockback:'radialContact',duration:120,damage:28,startupFrames:45,activeFrames:24,endlagFrames:51},

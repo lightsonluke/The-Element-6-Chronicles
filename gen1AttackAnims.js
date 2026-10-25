@@ -263,16 +263,16 @@ function spark(ctx, x, y, r, c, a=1) {
 }
 function glowStroke(ctx, pts, c, w, a=1) {
   ctx.save(); ctx.globalAlpha=a; ctx.strokeStyle=c; ctx.lineWidth=w; ctx.lineCap='round'; ctx.lineJoin='round';
-  ctx.shadowColor=c; ctx.shadowBlur=Math.max(8,w*2.5); ctx.beginPath();
+  if (!FIRE_PERF_MODE && !WATER_PERF_MODE) { ctx.shadowColor=c; ctx.shadowBlur=Math.max(8,w*2.5); } else { ctx.shadowBlur=0; } ctx.beginPath();
   pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.stroke(); ctx.restore();
 }
 function glowArc(ctx, x,y,rx,ry,a0,a1,c,w,a=1,rot=0) {
-  ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.globalAlpha=a; ctx.strokeStyle=c; ctx.lineWidth=w; ctx.lineCap='round'; ctx.shadowColor=c; ctx.shadowBlur=Math.max(10,w*2.5);
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.globalAlpha=a; ctx.strokeStyle=c; ctx.lineWidth=w; ctx.lineCap='round'; if (!FIRE_PERF_MODE && !WATER_PERF_MODE) { ctx.shadowColor=c; ctx.shadowBlur=Math.max(10,w*2.5); } else { ctx.shadowBlur=0; }
   ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,a0,a1); ctx.stroke(); ctx.restore();
 }
 function core(ctx,x,y,r,c,a=1){ spark(ctx,x,y,r,'#fff',a*.85); spark(ctx,x,y,r*.58,c,a); }
 function flameShape(ctx,x,y,r,c,a=1,rot=0){
-  ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.globalAlpha=a; ctx.fillStyle=c; ctx.shadowColor=c; ctx.shadowBlur=18;
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.globalAlpha=a; ctx.fillStyle=c; if (!FIRE_PERF_MODE && !WATER_PERF_MODE) { ctx.shadowColor=c; ctx.shadowBlur=18; } else { ctx.shadowBlur=0; }
   ctx.beginPath(); ctx.moveTo(0,-r); ctx.bezierCurveTo(r*.75,-r*.15,r*.65,r*.55,0,r); ctx.bezierCurveTo(-r*.75,r*.5,-r*.5,-r*.05,0,-r); ctx.fill();
   ctx.fillStyle='#FFF3B0'; ctx.globalAlpha*=.75; ctx.beginPath(); ctx.moveTo(0,-r*.55); ctx.bezierCurveTo(r*.28,-r*.05,r*.25,r*.35,0,r*.52); ctx.bezierCurveTo(-r*.25,r*.3,-r*.18,-r*.05,0,-r*.55); ctx.fill(); ctx.restore();
 }
@@ -305,15 +305,16 @@ function fireRefPhase(p, count){
 function smoothFire(u){ return u*u*(3-2*u); }
 function fireRing(ctx,cx,cy,rx,ry,c,a=1,rot=0,seed=0){
   // Irregular, broken fire wheel/ring: deliberately NOT a smooth ellipse.
-  const n=18, pts=[];
+  const n=FIRE_PERF_MODE ? 12 : 18, pts=[];
   for(let i=0;i<=n;i++){
     const t=i/n*REF_TAU;
     const wob=1 + .09*Math.sin(i*2.71+seed) + .045*Math.sin(i*5.17-seed*.6);
     pts.push([cx+Math.cos(t)*rx*wob, cy+Math.sin(t)*ry*wob]);
   }
   glowStroke(ctx,pts,c,4.5,a);
-  for(let i=0;i<10;i++){
-    const t=(i+.18*Math.sin(i*3.1+seed))/10*REF_TAU;
+  for(let i=0;i<(FIRE_PERF_MODE ? 4 : 10);i++){
+    const count=FIRE_PERF_MODE ? 4 : 10;
+    const t=(i+.18*Math.sin(i*3.1+seed))/count*REF_TAU;
     const rr=1+.08*Math.sin(i*2.3+seed);
     const fx=cx+Math.cos(t)*rx*rr, fy=cy+Math.sin(t)*ry*rr;
     flameShape(ctx,fx,fy,5.5+.8*Math.sin(i+seed),i%2?'#FF9A22':'#FF6A18',a*.9,t+Math.PI/2);
@@ -321,7 +322,7 @@ function fireRing(ctx,cx,cy,rx,ry,c,a=1,rot=0,seed=0){
 }
 function fireBlob(ctx,cx,cy,r,c='#FF5A16',a=1,seed=0){
   // Lopsided fireball with flame lobes, matching the reference rather than a circle.
-  const n=14, pts=[];
+  const n=FIRE_PERF_MODE ? 10 : 14, pts=[];
   for(let i=0;i<n;i++){
     const t=i/n*REF_TAU;
     const wob=1+.14*Math.sin(i*2.13+seed)+.07*Math.sin(i*4.7-seed);
@@ -331,8 +332,9 @@ function fireBlob(ctx,cx,cy,r,c='#FF5A16',a=1,seed=0){
   pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.fill();ctx.restore();
   const inner=Math.max(4,r*.45);
   ctx.save();ctx.globalAlpha=a*.72;ctx.fillStyle='#FFF0A0';if(!FIRE_PERF_MODE){ctx.shadowColor='#FFB12B';ctx.shadowBlur=18;}else ctx.shadowBlur=0;ctx.beginPath();ctx.arc(cx-r*.08,cy-r*.08,inner,0,REF_TAU);ctx.fill();ctx.restore();
-  for(let i=0;i<7;i++){
-    const t=-2.7+i*.22;
+  for(let i=0;i<(FIRE_PERF_MODE ? 4 : 7);i++){
+    const count=FIRE_PERF_MODE ? 4 : 7;
+    const t=-2.7+i*(FIRE_PERF_MODE ? .42 : .22);
     flameShape(ctx,cx+Math.cos(t)*r*.8,cy+Math.sin(t)*r*.62,r*(.18+.03*(i%3)), '#FF9A22',a*.8,t+Math.PI/2);
   }
 }
@@ -463,7 +465,7 @@ function fireDownReference(ctx,x,y,p){
 function fireWheelFast(ctx,cx,cy,rx,ry,c,a=1,rot=0,seed=0){
   // Same irregular wheel silhouette, but render the whole glow once and use
   // lightweight flame tips instead of ten independent shadow-blurred shapes.
-  const n=18, pts=[];
+  const n=FIRE_PERF_MODE ? 12 : 18, pts=[];
   for(let i=0;i<=n;i++){
     const t=i/n*REF_TAU;
     const wob=1 + .09*Math.sin(i*2.71+seed) + .045*Math.sin(i*5.17-seed*.6);
@@ -584,8 +586,8 @@ function fireAttack(ctx,x,y,p,move,attack=null){
   try {
     const duration=Math.max(1, Number(attack?.duration)||1);
     const elapsed=p<0 ? 0 : clamp01(p)*duration;
-    const start=Number(attack?.startupFrames ?? ({us:10,ds:11,ss:4,uh:14,dh:14,sh:17,recovery:5,groundPound:15,super:30}[move]||10));
-    const active=Number(attack?.activeFrames ?? ({us:2,ds:4,ss:5,uh:5,dh:4,sh:7,recovery:4,groundPound:6,super:15}[move]||4));
+    const start=Number(attack?.startupFrames ?? ({us:14,ds:15,ss:20,uh:18,dh:24,sh:36,recovery:7,groundPound:20,super:30}[move]||10));
+    const active=Number(attack?.activeFrames ?? ({us:4,ds:4,ss:12,uh:7,dh:8,sh:14,recovery:6,groundPound:8,super:15}[move]||4));
     const hold=p<0, q=hold ? Math.max(0,Math.min(1,-p-1)) : clamp01(elapsed/Math.max(1,duration));
     const wind=hold ? q : ease(clamp01(elapsed/Math.max(1,start)));
     const contact=hold ? 0 : clamp01((elapsed-start)/Math.max(1,active));
@@ -615,9 +617,21 @@ function fireAttack(ctx,x,y,p,move,attack=null){
     } else if(move==='ss'){
       // Wave: low forward roll, then close pop-up strike; fire follows the limb path.
       if(hold){fireRing(ctx,30,-36,9+q*5,6+q*3,hot,.25+q*.25,-q);return;}
-      if(elapsed<start){const t=wind;ctx.save();ctx.translate(18+18*t,-16+8*t);ctx.rotate(-t*1.6);fireRing(ctx,0,0,13,8,hot,.45+t*.3,t*3);flameAt(0,-7,7,.7,-t);ctx.restore();}
-      else if(elapsed<start+active){const t=contact;const hx=28+45*t,hy=-36-24*Math.sin(t*Math.PI);slash([[17,-20],[24,-28],[hx,hy]],9,.65);slash([[18,-20],[24,-28],[hx,hy]],3,.95,white);fireBlob(ctx,hx,hy,12+5*Math.sin(t*Math.PI),core,.95,t*5);for(let i=0;i<5;i++)flameAt(24+(hx-24)*t*.8,hy+i*3,5,.8,(i-2)*.2);}
-      else {const t=recovery;slash([[58,-60],[50,-48],[42,-37]],5,.3*(1-t));sparks(52,-46,6,20,.55*(1-t),t*2);}
+      if(elapsed<start){
+        // Readable crouch-and-roll windup: the body/fire coil travels gradually, not in a snap.
+        const t=ease(elapsed/Math.max(1,start));
+        ctx.save();ctx.translate(8+22*t,-10+8*t);ctx.rotate(-t*1.15);
+        fireRing(ctx,0,0,11+5*t,7+3*t,hot,.35+t*.35,t*2);flameAt(0,-7,6+3*t,.65,-t);ctx.restore();
+        slash([[12,-13],[19,-20],[25,-24]],3,.25+t*.35,hot);
+      }
+      else if(elapsed<start+active){
+        // The pop-up strike visibly sweeps through a long, smooth arc over 12 frames.
+        const t=contact, hx=22+53*ease(t), hy=-22-39*Math.sin(t*Math.PI*.82);
+        slash([[12,-14],[21,-24],[hx*.62,hy*.72],[hx,hy]],10,.72,core);
+        slash([[12,-14],[21,-24],[hx*.62,hy*.72],[hx,hy]],3,1,white);
+        fireBlob(ctx,hx,hy,11+7*Math.sin(t*Math.PI),core,.98,t*4);
+        for(let i=0;i<4;i++)flameAt(20+(hx-20)*(i+1)/5,hy*(i+1)/5,5,.8,(i-1.5)*.2);
+      } else {const t=recovery;slash([[72,-56],[62,-49],[52,-40]],4,.28*(1-t));sparks(58,-45,4,17,.42*(1-t),t*2);}
     } else if(move==='uh'||move==='upHeavy'){
       // Ascendant Breaker: crouch-vault, shoulder through centerline, fire trails behind.
       if(hold){fireRing(ctx,2,-48,20+q*8,7+q*4,hot,.22+q*.3,0);return;}
@@ -635,9 +649,21 @@ function fireAttack(ctx,x,y,p,move,attack=null){
       // Rend Strike: visible retreat, sudden palm thrust, trace snaps off at contact.
       const hx=48,hy=-45;
       if(hold){fireBlob(ctx,hx,hy,8+q*12,hot,.3+q*.3,q);return;}
-      if(elapsed<start){const t=wind;slash([[hx-6,-42],[hx-18-9*t,-39],[hx-23-9*t,-32]],4,.45+t*.25);fireBlob(ctx,hx-10-12*t,hy,6+3*t,hot,.45+t*.25,t);}
-      else if(elapsed<start+active){const t=contact,tx=hx+40+28*t;slash([[hx-6,hy],[hx+12,hy-2],[tx,hy-4]],15,.75,core);slash([[hx-2,hy],[hx+12,hy-2],[tx,hy-4]],5,1,white);fireBlob(ctx,tx,hy-4,16+5*Math.sin(t*Math.PI),hot,1,t*5);for(let i=0;i<7;i++)flameAt(hx+12+(tx-hx)*t*.72,hy+(i-3)*4,4,.9,(i-3)*.16);}
-      else {const t=recovery;slash([[hx+52,-48],[hx+37,-47],[hx+22,-43]],7,.45*(1-t),hot);sparks(hx+40,-48,6,24,.45*(1-t),t);}
+      if(elapsed<start){
+        // A clear, held-back palm: gradual recoil and visible fire gathering at the hand.
+        const t=ease(elapsed/Math.max(1,start));
+        slash([[hx-4,-42],[hx-13-13*t,-39],[hx-20-15*t,-31]],4,.42+t*.25,hot);
+        fireBlob(ctx,hx-8-16*t,hy,6+5*t,hot,.48+t*.3,t);
+        fireRing(ctx,hx-13-11*t,hy,8+5*t,5+3*t,hot,.25+t*.22,-t);
+      }
+      else if(elapsed<start+active){
+        // Slow, readable palm extension: flame core advances in measured steps over 14 frames.
+        const t=contact, extension= ease(t), tx=hx+20+48*extension;
+        slash([[hx-5,hy],[hx+5,hy-1],[hx+20+18*extension,hy-2],[tx,hy-4]],14,.78,core);
+        slash([[hx-2,hy],[hx+8,hy-1],[hx+24+18*extension,hy-2],[tx,hy-4]],4.5,1,white);
+        fireBlob(ctx,tx,hy-4,13+8*Math.sin(t*Math.PI),hot,1,t*4);
+        for(let i=0;i<5;i++){const along=(i+1)/6;flameAt(hx+12+(tx-hx-12)*along,hy-4+(i-2)*3,4.5,.82,(i-2)*.14);}
+      } else {const t=recovery;slash([[hx+60,-48],[hx+43,-47],[hx+25,-43]],6,.38*(1-t),hot);sparks(hx+40,-48,4,19,.4*(1-t),t);}
     } else if(move==='recovery'){
       // Return Return: roll through, two uneven pulses, upward rebound.
       if(hold){fireRing(ctx,0,-45,12+q*6,8+q*4,hot,.2+q*.25,q);return;}
@@ -1350,7 +1376,7 @@ function fireSuper(ctx,x,y,p){
         const a=(1-launch)*.75+travel*.45;
         glowStroke(ctx,[[x+26,yLane],[x+48,yLane-lane*5],[endX,endY]],c,5+launch*7,a);
         glowStroke(ctx,[[x+26,yLane],[x+48,yLane-lane*5],[endX,endY]],hot,2.2+launch*3,a*.9);
-        for(let i=0;i<3;i++) fireRay(ctx,x+45+i*14,yLane,-.1+lane*.08,11+i*2,a*.55,hot);
+        for(let i=0;i<2;i++) fireRay(ctx,x+45+i*18,yLane,-.1+lane*.08,10+i*2,a*.5,hot);
         if(q>.18){const cx=x+35+travel*990,cy=yLane;fireBlob(ctx,cx,cy,10+launch*18,hot,.7+launch*.25,q*6+lane);}
       }
     }
@@ -1362,13 +1388,13 @@ function fireSuper(ctx,x,y,p){
       fireRing(ctx,cx,cy,radius+8,radius*.42,hot,.9*(1-impact),q*5);
       glowStroke(ctx,[[x+24,y-58],[cx-radius*1.6,cy-3],[cx-radius*.55,cy]],hot,13*(1-impact),.75);
       glowStroke(ctx,[[x+24,y-58],[cx-radius*1.6,cy-3],[cx-radius*.55,cy]],white,3.2*(1-impact),.9);
-      for(let i=0;i<5;i++) fireRay(ctx,cx-radius*.5,cy,-.18+i*.09,12+i*3,.65*(1-impact),hot);
+      for(let i=0;i<3;i++) fireRay(ctx,cx-radius*.5,cy,-.14+i*.14,12+i*3,.55*(1-impact),hot);
     }
     if(impact>0){
       const cx=x+1120, cy=y-58, r=22+impact*72;
       fireLineBurstLite(ctx,cx,cy,r,impact,impact*8);
       fireBlob(ctx,cx,cy,14+impact*18,c,impact,q*9);
-      for(let i=0;i<8;i++){const a=i/8*REF_TAU;flameShape(ctx,cx+Math.cos(a)*r,cy+Math.sin(a)*r*.58,5+impact*3,hot,impact*.75,a+Math.PI/2);}
+      for(let i=0;i<5;i++){const a=i/5*REF_TAU;flameShape(ctx,cx+Math.cos(a)*r,cy+Math.sin(a)*r*.58,5+impact*3,hot,impact*.65,a+Math.PI/2);}
     }
   } finally { FIRE_PERF_MODE=prev; }
 }

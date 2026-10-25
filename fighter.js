@@ -1012,8 +1012,8 @@ function gen1ReferenceDuration(charId, sigType, isHeavy=false, isSuper=false) {
     if (sigType === 'recovery') return 42;          // 7f startup + 6f active + 29f endlag
     if (sigType === 'downHeavy') return 62;         // Sunder Slam: 24f startup + 8f active + 30f endlag
     if (sigType === 'upHeavy') return 68;           // Ascendant Breaker: 18f startup + 7f active + 43f endlag
-    if (sigType === 'heavy') return 72;             // Rend Strike: 28f startup + 10f active + 34f endlag
-    if (sigType === 'side') return 44;              // Wave: 10f startup + 8f active + 26f endlag
+    if (sigType === 'heavy') return 90;             // Rend Strike: 36f startup + 14f active + 40f endlag
+    if (sigType === 'side') return 54;              // Wave: 20f startup + 12f active + 22f endlag
     if (sigType === 'up') return 34;                // Rising: 14f startup + 4f active + 16f endlag
     if (sigType === 'down') return 50;              // Quake: 15f startup + 4f active + 31f endlag
   }
