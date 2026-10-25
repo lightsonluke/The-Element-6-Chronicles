@@ -1,4 +1,3 @@
-import { GEN1_TIMINGS, gen1MoveKey, getGen1AttackGeometry } from './gen1AttackGeometry.js';
 // Frame-accurate attack specifications and collision geometry.
 // Generation I moves are hand-authored to match the animation shapes exactly.
 
@@ -21,62 +20,55 @@ const CHAR_MAP = new Map([
 ]);
 
 const GEN1_MOVE_SPECS = {
- g1_fire:{
-  us:{name:"Fire Hero's Rising",shape:'gen1Motion',range:95,knockback:'upContact',damage:6},
-  ds:{name:"Fire Hero's Quake",shape:'gen1Motion',range:120,knockback:'downAway',damage:8},
-  ss:{name:"Fire Hero's Wave",shape:'gen1Motion',range:95,knockback:'forwardContact',damage:8},
-  uh:{name:'Ascendant Breaker',shape:'gen1Motion',range:125,knockback:'upContact',damage:14},
-  dh:{name:'Sunder Slam',shape:'gen1Motion',range:140,knockback:'downAway',damage:17},
-  sh:{name:'Rend Strike',shape:'gen1Motion',range:135,knockback:'forwardContact',damage:15},
-  recovery:{name:'Return Return',shape:'gen1Motion',range:85,knockback:'upContact',damage:5},
-  super:{name:'Ultimate: Flame Unleashed',shape:'gen1Motion',range:560,knockback:'radialUp',damage:28},
-  groundPound:{name:'Meteor Pound',shape:'gen1Motion',range:150,knockback:'downAway',damage:9}
- },
- g1_grass:{
-  us:{name:"Grass Hero's Rising",shape:'gen1Motion',range:95,knockback:'upContact',damage:8},
-  ds:{name:"Grass Hero's Quake",shape:'gen1Motion',range:120,knockback:'downAway',damage:8},
-  ss:{name:"Grass Hero's Wave",shape:'gen1Motion',range:95,knockback:'forwardContact',damage:6},
-  uh:{name:'Ascendant Breaker',shape:'gen1Motion',range:125,knockback:'upContact',damage:15},
-  dh:{name:'Sunder Slam',shape:'gen1Motion',range:140,knockback:'downAway',damage:16},
-  sh:{name:'Rend Strike',shape:'gen1Motion',range:135,knockback:'forwardContact',damage:12},
-  recovery:{name:'Return Return',shape:'gen1Motion',range:85,knockback:'upContact',damage:6},
-  super:{name:'Ultimate: Growth Unleashed',shape:'gen1Motion',range:560,knockback:'radialUp',damage:28},
-  groundPound:{name:'Meteor Pound',shape:'gen1Motion',range:150,knockback:'downAway',damage:9}
- },
- g1_ice:{
-  us:{name:"Ice Hero's Rising",shape:'gen1Motion',range:95,knockback:'upContact',damage:7},
-  ds:{name:"Ice Hero's Quake",shape:'gen1Motion',range:120,knockback:'downAway',damage:9},
-  ss:{name:"Ice Hero's Wave",shape:'gen1Motion',range:95,knockback:'forwardContact',damage:7},
-  uh:{name:'Ascendant Breaker',shape:'gen1Motion',range:125,knockback:'upContact',damage:15},
-  dh:{name:'Sunder Slam',shape:'gen1Motion',range:140,knockback:'downAway',damage:12},
-  sh:{name:'Rend Strike',shape:'gen1Motion',range:135,knockback:'forwardContact',damage:18},
-  recovery:{name:'Return Return',shape:'gen1Motion',range:85,knockback:'upContact',damage:7},
-  super:{name:'Ultimate: Frost Unleashed',shape:'gen1Motion',range:900,knockback:'radialUp',damage:27},
-  groundPound:{name:'Meteor Pound',shape:'gen1Motion',range:150,knockback:'downAway',damage:10}
- },
- g1_thunder:{
-  us:{name:"Thunder Hero's Rising",shape:'gen1Motion',range:95,knockback:'upContact',damage:8},
-  ds:{name:"Thunder Hero's Quake",shape:'gen1Motion',range:120,knockback:'downAway',damage:5},
-  ss:{name:"Thunder Hero's Wave",shape:'gen1Motion',range:95,knockback:'forwardContact',damage:7},
-  uh:{name:'Ascendant Breaker',shape:'gen1Motion',range:125,knockback:'upContact',damage:12},
-  dh:{name:'Sunder Slam',shape:'gen1Motion',range:140,knockback:'downAway',damage:15},
-  sh:{name:'Rend Strike',shape:'gen1Motion',range:135,knockback:'forwardContact',damage:10},
-  recovery:{name:'Return Return',shape:'gen1Motion',range:85,knockback:'upContact',damage:5},
-  super:{name:'Ultimate: Lightning Unleashed',shape:'gen1Motion',range:900,knockback:'radialUp',damage:35},
-  groundPound:{name:'Meteor Pound',shape:'gen1Motion',range:150,knockback:'downAway',damage:10}
- },
- g1_water:{
-  us:{name:"Water Hero's Rising",shape:'gen1Motion',range:95,knockback:'upContact',damage:6},
-  ds:{name:"Water Hero's Quake",shape:'gen1Motion',range:120,knockback:'downAway',damage:9},
-  ss:{name:"Water Hero's Wave",shape:'gen1Motion',range:95,knockback:'forwardContact',damage:5},
-  uh:{name:'Ascendant Breaker',shape:'gen1Motion',range:125,knockback:'upContact',damage:10},
-  dh:{name:'Sunder Slam',shape:'gen1Motion',range:140,knockback:'downAway',damage:11},
-  sh:{name:'Rend Strike',shape:'gen1Motion',range:135,knockback:'forwardContact',damage:11},
-  recovery:{name:'Return Return',shape:'gen1Motion',range:85,knockback:'upContact',damage:7},
-  super:{name:'Ultimate: Tide Unleashed',shape:'gen1Motion',range:900,knockback:'radialUp',damage:33},
-  groundPound:{name:'Meteor Pound',shape:'gen1Motion',range:150,knockback:'downAway',damage:9}
- }
+  g1_thunder: {
+    us:{name:'Lightning Circle',shape:'orbitPoint',range:92,knockback:'upContact',duration:28,damage:16,holdMaxFrames:18},
+    ds:{name:'Lightning Dome',shape:'smallDome',range:58,knockback:'radialContact',duration:22,damage:17,holdMaxFrames:18},
+    ss:{name:'Lightning Bolt',shape:'forwardBolt',range:82,knockback:'forwardContact',duration:14,damage:15,holdMaxFrames:18},
+    upHeavy:{name:'Rising Lightning Trio',shape:'threeBolts',range:190,knockback:'upContact',duration:24,damage:23,holdMaxFrames:20},
+    dh:{name:'Orbiting Lightning Ball',shape:'orbitBall',range:100,knockback:'forwardContact',duration:24,damage:22,holdMaxFrames:20},
+    sh:{name:'Large Lightning Bolt',shape:'forwardBoltHeavy',range:105,knockback:'forwardContact',duration:18,damage:23,holdMaxFrames:20},
+    super:{name:'Thunder Strike',shape:'bottomBolt',range:90,knockback:'radialUp',duration:42,damage:38},
+  },
+  g1_fire: {
+    us:{name:"Fire Hero's Rising",shape:'fireRise',range:95,knockback:'upContact',duration:34,damage:6,startupFrames:14,activeFrames:4,endlagFrames:16},
+    ds:{name:"Fire Hero's Quake",shape:'fireQuake',range:120,knockback:'radialContact',duration:50,damage:8,startupFrames:15,activeFrames:4,endlagFrames:31},
+    ss:{name:"Fire Hero's Wave",shape:'fireWave',range:95,knockback:'forwardContact',duration:54,damage:8,startupFrames:20,activeFrames:12,endlagFrames:22},
+    upHeavy:{name:'Ascendant Breaker',shape:'fireAscendant',range:125,knockback:'upContact',duration:68,damage:14,startupFrames:18,activeFrames:7,endlagFrames:43},
+    dh:{name:'Sunder Slam',shape:'fireSunder',range:140,knockback:'radialContact',duration:62,damage:17,startupFrames:24,activeFrames:8,endlagFrames:30},
+    sh:{name:'Rend Strike',shape:'fireRend',range:135,knockback:'forwardContact',duration:90,damage:15,startupFrames:36,activeFrames:14,endlagFrames:40},
+    recovery:{name:'Return Return',shape:'fireReturn',range:85,knockback:'upContact',duration:42,damage:5,startupFrames:7,activeFrames:6,endlagFrames:29},
+    groundPound:{name:'Meteor Pound',shape:'fireMeteor',range:150,knockback:'radialContact',duration:62,damage:9,startupFrames:20,activeFrames:8,endlagFrames:34},
+    super:{name:'Ultimate: Flame Unleashed',shape:'fireUltimate',range:1200,knockback:'radialContact',duration:120,damage:28,startupFrames:45,activeFrames:24,endlagFrames:51},
+  },
+  g1_water: {
+    us:{name:'Water Ring',shape:'waterRing',range:150,knockback:'velocity',duration:28,damage:16,holdMaxFrames:18},
+    ds:{name:'Twin Splashes',shape:'twinSplashes',range:105,knockback:'splitSplash',duration:22,damage:17,holdMaxFrames:18},
+    ss:{name:'Water Whip Tip',shape:'whipTip',range:130,knockback:'forwardContact',duration:14,damage:16,holdMaxFrames:18},
+    upHeavy:{name:'Spiral Water Ribbon',shape:'waterRibbon',range:165,knockback:'upContact',duration:24,damage:25,holdMaxFrames:20},
+    dh:{name:'Bouncing Water Sphere',shape:'waterBounce',range:125,knockback:'bounceTwoStage',duration:24,damage:22,holdMaxFrames:20},
+    sh:{name:'Water Crescent',shape:'crescent',range:150,knockback:'crescentContact',duration:18,damage:25,holdMaxFrames:20},
+    super:{name:'Collapse Ring',shape:'collapseRing',range:190,knockback:'waterSuper',duration:42,damage:40},
+  },
+  g1_grass: {
+    us:{name:'Leaf Propeller',shape:'propellerLeaves',range:78,knockback:'up',duration:28,damage:16,holdMaxFrames:18,referenceFrames:4},
+    ds:{name:'Thorn Snap',shape:'thornTips',range:82,knockback:'inward',duration:22,damage:15,holdMaxFrames:18,referenceFrames:4},
+    ss:{name:'Wooden Branch Jab',shape:'branchEnd',range:112,knockback:'forwardContact',duration:14,damage:16,holdMaxFrames:18,referenceFrames:4},
+    upHeavy:{name:'Petal Bloom',shape:'flowerPetals',range:132,knockback:'upContact',duration:24,damage:25,holdMaxFrames:20,referenceFrames:4},
+    dh:{name:'Branch Follow-Through',shape:'grassDownHeavyBranch',range:130,knockback:'grassbehind',duration:24,damage:22,holdMaxFrames:20,referenceFrames:4},
+    sh:{name:'Branch Spear Split',shape:'branchSplit',range:136,knockback:'forwardContact',duration:18,damage:25,holdMaxFrames:20,referenceFrames:4},
+    super:{name:'Flower Snap',shape:'flowerSnap',range:158,knockback:'radialContact',duration:42,damage:41},
+  },
+  g1_ice: {
+    us:{name:'Throwing Ice Shard',shape:'throwingShard',range:130,knockback:'velocity',duration:28,damage:17,holdMaxFrames:18},
+    ds:{name:'Crashing Icicle',shape:'plateShards',range:96,knockback:'radialContact',duration:22,damage:18,holdMaxFrames:18},
+    ss:{name:'Ice Forearm Blade',shape:'forearmBlade',range:98,knockback:'forwardContact',duration:14,damage:17,holdMaxFrames:18},
+    upHeavy:{name:'Tri-Shard Launch',shape:'shardBurst',range:142,knockback:'velocity',duration:24,damage:25,holdMaxFrames:20},
+    dh:{name:'Shattered Ice Block',shape:'iceBlock',range:140,knockback:'forwardContact',duration:24,damage:23,holdMaxFrames:20},
+    sh:{name:'Overhead Ice Hammer',shape:'hammerArc',range:126,knockback:'forwardContact',duration:18,damage:26,holdMaxFrames:20},
+    super:{name:'Crystal Explosion',shape:'crystalShards',range:170,knockback:'radialContact',duration:42,damage:42},
+  },
 };
+
 function normalizeProfile(value, fallback = 'forward') { const v = String(value || '').toLowerCase(); return v || fallback; }
 function moveFromKey(char, key) {
   if (!char) return null;
@@ -107,9 +99,10 @@ export function getAttackSpec(charId, moveKey) {
 export function getAttackSpecForData(charId, attackData) {
   if (!attackData) return null;
   if (GEN1_MOVE_SPECS[charId]) {
-    const key = gen1MoveKey(charId, attackData);
+    const raw = attackData.sigType;
+    const key = charId === 'g1_fire' && attackData.isGroundPound ? 'groundPound' : charId === 'g1_fire' && attackData.isRecovery ? 'recovery' : attackData.isSuper ? 'super' : attackData.isHeavy ? (raw === 'downHeavy' ? 'dh' : raw === 'upHeavy' ? 'upHeavy' : 'sh') : raw === 'up' ? 'us' : raw === 'down' || raw === 'downNormal' ? 'ds' : 'ss';
     const override = GEN1_MOVE_SPECS[charId][key];
-    if (override) { const frames=GEN1_TIMINGS[charId]?.[key] || [8,3,18]; return { charId, kind:key==='super'?'super':(['uh','dh','sh'].includes(key)?'heavy':'signature'), moveKey:key, color:attackData.color, startupFrames:frames[0], activeFrames:frames[1], endlagFrames:frames[2], duration:frames.reduce((a,b)=>a+b,0), ...override }; }
+    if (override) return { charId, kind:attackData.isSuper ? 'super' : attackData.isHeavy ? 'heavy' : 'signature', moveKey:key, color:attackData.color, ...override };
   }
   const char = CHAR_MAP.get(charId);
   if (!char) return null;
@@ -119,31 +112,24 @@ export function getAttackSpecForData(charId, attackData) {
 }
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 function activeProgress(fighter) {
-  const d=fighter?.attackData, id=fighter?.char?.id;
-  if (String(id||'').startsWith('g1_') && d && d.type!=='attackHold' && !d.holding) {
-    const key=gen1MoveKey(id,d), frames=GEN1_TIMINGS[id]?.[key];
-    if(frames){
-      const elapsed=Math.max(0,(Number(d.duration)||1)-(Number(fighter.attackTimer)||0));
-      const [startup,active]=frames;
-      // Collision uses the full normalized animation time so the shape and artwork
-      // share the exact same per-frame coordinates.
-      if(key==='ds' && id==='g1_fire'){
-        if(elapsed>=startup&&elapsed<startup+2)return clamp01(d.progress||0);
-        if(elapsed>=startup+8&&elapsed<startup+10)return clamp01(d.progress||0);
-        return 0;
-      }
-      if(key==='groundPound'){
-        const total=Number(d.duration)||frames.reduce((a,b)=>a+b,0);
-        const directEnd=startup+Math.max(1,Math.floor(active*.45));
-        const landingStart=Math.max(directEnd+1,Math.floor(total*.58));
-        const landingEnd=landingStart+Math.max(1,active-(directEnd-startup));
-        if((elapsed>=startup&&elapsed<directEnd)||(elapsed>=landingStart&&elapsed<landingEnd))return clamp01(d.progress||0);
-        return 0;
-      }
-      if(elapsed<startup || elapsed>=startup+active) return 0;
-      return clamp01(d.progress||0);
+  const d = fighter?.attackData;
+  if (fighter?.char?.id === 'g1_fire' && d && Number.isFinite(d.startupFrames) && Number.isFinite(d.activeFrames)) {
+    const elapsed = Math.max(0, (Number(d.duration) || 1) - (Number(fighter.attackTimer) || 0));
+    const start = d.startupFrames, active = d.activeFrames;
+    // Quake spends two active frames on the initial stamp and two on the delayed
+    // eruption at the original position after Flame has hopped back.
+    if (d.spec?.shape === 'fireQuake' || d.name === "Fire Hero's Quake") {
+      if (elapsed >= start && elapsed < start + 2) return (elapsed - start + .5) / 4;
+      if (elapsed >= start + 8 && elapsed < start + 10) return (elapsed - start - 8 + 2.5) / 4;
+      return 0;
     }
+    const end = start + active;
+    if (elapsed < start || elapsed >= end) return 0;
+    return clamp01((elapsed - start + 0.5) / Math.max(1, active));
   }
+  // These non-Fire authored hitbox paths use the same normalized timeline as the
+  // renderer. Do not remap .08-.85 to 0-1: that makes the collision geometry
+  // race ahead of (or lag behind) the visible weapon/limb every frame.
   return clamp01(d?.progress ?? 0);
 }
 
@@ -266,16 +252,6 @@ export function getActiveSpecHitboxes(attacker) {
   const K = (x1,y1,x2,y2,r) => out.push({shape:'capsule', x1:x + x1*f, y1:y + y1, x2:x + x2*f, y2:y + y2, r});
   const P = pts => out.push({shape:'polygon', points:pts.map(([px,py]) => [x + px*f, y + py])});
   const q = t;
-  if (String(attacker?.char?.id||'').startsWith('g1_') && spec.shape==='gen1Motion') {
-    const key=gen1MoveKey(attacker.char.id,data);
-    const local=getGen1AttackGeometry(attacker.char.id,key,clamp01(data.progress||0));
-    for(const h of local){
-      if(h.shape==='circle') out.push({...h,x:x+(f>0?h.x:-h.x),y:y+h.y});
-      else if(h.shape==='box') out.push({...h,x:x+(f>0?h.x:-h.x-h.w),y:y+h.y});
-      else if(h.shape==='capsule') out.push({...h,x1:x+h.x1*f,y1:y+h.y1,x2:x+h.x2*f,y2:y+h.y2});
-    }
-    return out;
-  }
   switch (spec.shape) {
     // Fire Hero hitboxes are measured to the authored move silhouettes and only
     // exist during the exact startup/active window stored on attackData.
@@ -484,7 +460,6 @@ export function specKnockbackVector(attacker, defender, profile){
   const p=String(profile||'forward').toLowerCase(),f=attacker.facing||1;
   if(p==='up') return {x:f*.18,y:-1};
   if(p==='upcontact'){const dx=defender.x-attacker.x;return{x:Math.max(-.55,Math.min(.55,dx/90)),y:-1};}
-  if(p==='downaway'){const dx=defender.x-attacker.x;const side=Math.sign(dx||f);return defender.grounded?{x:side*.95,y:-.28}:{x:side*.62,y:.92};}
   if(p==='radial'||p==='radialcontact') return radialVector(attacker,defender);
   if(p==='splitsplash'){ const dx=defender.x-attacker.x; return {x:Math.sign(dx||f),y:-.42}; }
   if(p==='waterbouncestage'){ const q=clamp01(attacker?.attackData?.progress||0); return q<.58 ? {x:f*.80,y:-.42} : {x:f*.20,y:-1}; }

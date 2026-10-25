@@ -1,4 +1,3 @@
-import { GEN1_TIMINGS, gen1MoveKey } from './gen1AttackGeometry.js';
 // Fighter physics, state management, and combat logic — Brawlhalla-style smooth collisions
 // Each fighter has: heavy attacks (unique per character), signatures, super moves, and power activation
 
@@ -2172,24 +2171,35 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
   }
 }
 
-function applyGen1MoveData(fighter) {
-  const d=fighter?.attackData, id=fighter?.char?.id;
-  if(!String(id||'').startsWith('g1_') || !d || d._gen1FrameApplied || d.isNormal || d.type==='attackHold' || d.holding) return;
-  if(!(d.isHeavy || d.isSuper || d.isRecovery || d.isGroundPound || ['up','down','side','upHeavy','downHeavy'].includes(d.sigType))) return;
-  const key=gen1MoveKey(id,d), frames=GEN1_TIMINGS[id]?.[key]; if(!frames) return;
-  const [startup,active,endlag]=frames, total=startup+active+endlag;
-  const oldDuration=Math.max(1,Number(d.duration)||total), elapsed=Math.max(0,oldDuration-(Number(fighter.attackTimer)||0));
-  d.duration=total; fighter.attackTimer=Math.max(0,total-Math.min(elapsed,total));
-  d.startupFrames=startup; d.activeFrames=active; d.endlagFrames=endlag;
-  const spec=d.spec || getAttackSpecForData(id,d);
-  if(spec){d.spec=spec;d.name=spec.name||d.name;d.damage=spec.damage??d.damage;d.range=spec.range??d.range;}
-  if(key==='ds' && id==='g1_fire') d.multiHitStages=true;
-  if(key==='super') d.multiHitStages=true;
-  d._gen1FrameApplied=true;
+function applyFireHeroMoveData(fighter) {
+  const d = fighter?.attackData;
+  if (fighter?.char?.id !== 'g1_fire' || !d || d._fireAuthoredApplied || d.isNormal || d.type === 'attackHold' || d.holding) return;
+  const key = d.isSuper ? 'super' : d.isGroundPound ? 'groundPound' : d.isRecovery ? 'recovery' : d.isHeavy ? (d.sigType === 'upHeavy' ? 'upHeavy' : d.sigType === 'downHeavy' ? 'downHeavy' : 'heavy') : d.sigType === 'up' ? 'up' : d.sigType === 'down' ? 'down' : 'side';
+  const authored = {
+    up: { name: "Fire Hero's Rising", damage: 6, startup: 14, active: 4, endlag: 16 },
+    down: { name: "Fire Hero's Quake", damage: 8, startup: 15, active: 4, endlag: 31 },
+    side: { name: "Fire Hero's Wave", damage: 8, startup: 10, active: 8, endlag: 26 },
+    upHeavy: { name: 'Ascendant Breaker', damage: 14, startup: 18, active: 7, endlag: 43 },
+    downHeavy: { name: 'Sunder Slam', damage: 17, startup: 24, active: 8, endlag: 30 },
+    heavy: { name: 'Rend Strike', damage: 15, startup: 28, active: 10, endlag: 34 },
+    recovery: { name: 'Return Return', damage: 5, startup: 7, active: 6, endlag: 29 },
+    groundPound: { name: 'Meteor Pound', damage: 9, startup: 20, active: 8, endlag: 34 },
+    super: { name: 'Ultimate: Flame Unleashed', damage: 28, startup: 45, active: 24, endlag: 51 },
+  }[key];
+  if (!authored) return;
+  d.name = authored.name;
+  d.damage = authored.damage;
+  d.startupFrames = authored.startup;
+  d.activeFrames = authored.active;
+  d.endlagFrames = authored.endlag;
+  if (key === 'down') d.multiHitStages = true;
+  d._fireAuthoredApplied = true;
+  d.spec = getAttackSpecForData('g1_fire', d);
 }
+
 function updateAttackProgress(fighter) {
   if (!fighter?.attackData) return;
-  applyGen1MoveData(fighter);
+  applyFireHeroMoveData(fighter);
   const elapsed = fighter.attackData.duration - fighter.attackTimer;
   fighter.attackData.progress = Math.min(elapsed / fighter.attackData.duration, 1);
 }
@@ -2197,10 +2207,6 @@ function updateAttackProgress(fighter) {
 function gen1HitStage(attacker){
   const d=attacker?.attackData; if(!d?.multiHitStages) return 0;
   const q=Number(d.progress)||0;
-  if (d.isSuper) {
-    const elapsed=Math.max(0,(Number(d.duration)||1)-(Number(attacker.attackTimer)||0));
-    return elapsed < (Number(d.startupFrames)||0) + (Number(d.activeFrames)||0)*.5 ? 0 : 1;
-  }
   if (attacker?.char?.id === 'g1_fire' && d.name === "Fire Hero's Quake") return q < .40 ? 0 : 1;
   return q<.58 ? 0 : 1;
 }
