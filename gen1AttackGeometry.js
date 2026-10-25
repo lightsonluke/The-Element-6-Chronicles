@@ -1,3 +1,4 @@
+const TAU = Math.PI * 2;
 // Shared Generation-I attack silhouettes. Coordinates are fighter-local (origin at feet/center),
 // facing right. The renderer and collision system consume the same geometry every frame.
 export const GEN1_TIMINGS = {
@@ -70,19 +71,56 @@ export function getGen1AttackGeometry(charId,move,p=0){
   else if(water){shapes.push(line(-24,-38,16,-50,8),line(16,-50,sx,sy,11),circle(sx,sy,12));}
   else {shapes.push(line(start[0],start[1],18,-48,9),line(18,-48,sx,sy,12),circle(sx,sy,13));}
  } else if(move==='recovery'){
-  const u=ease((q-.12)/.5), sx=42*Math.sin(q*Math.PI*1.25), sy=-42-42*u;
-  shapes.push(line(-14,-26,sx,sy,10),circle(sx,sy,18),line(sx,sy,sx+10,sy-25,7));
+  // Contact is the redirect point, not the decorative aura/marker.
+  if(grass){
+   const u=ease((q-.18)/.18), side=1-2*u, sx=side*(18+24*u), sy=-28-30*u;
+   shapes.push(line(side*16,-25,sx,sy,8),line(sx,sy,sx-10,sy-18,8),circle(sx,sy,9));
+  }else if(ice){
+   const u=ease((q-.18)/.18), sx=-26+48*u, sy=-30-18*Math.sin(u*Math.PI);
+   shapes.push(line(-26,-30,sx,sy,7),line(sx,sy,sx+10,sy-19,8),circle(sx,sy,8));
+  }else if(thunder){
+   const u=ease((q-.16)/.20), sx=8*Math.sin(q*TAU), sy=-18-54*u;
+   shapes.push(line(-18,-24,-8,-12,5),line(-8,-12,sx,sy,7),line(sx,sy,sx+8,sy-19,7),circle(sx+8,sy-19,7));
+  }else{
+   const u=ease((q-.16)/.20), sx=8+38*u-18*u*u, sy=-32-40*u;
+   shapes.push(line(-18,-24,sx,sy,8),line(sx,sy,sx+8,sy-22,8),circle(sx,sy,8));
+  }
  } else if(move==='groundPound'){
-  const u=ease((q-.08)/.58), landing=ease((q-.58)/.2);
-  if(q<.59){const x=18+38*u,y=-22-88*u;shapes.push(line(0,-25,x,y,11),box(x-18,y-24,36,48));}
-  else {const r=18+92*landing;shapes.push(line(0,-3,r,-8,8),line(0,-3,-r*.78,-7,7),circle(0,-4,9+6*landing));}
+  // Direct dive and landing pulse are separate collision events. Art is a shallow
+  // diagonal for Grass, a shoulder curve for Ice, a last-instant twist for Thunder,
+  // and a corkscrew for Water. The landing hitbox follows the two unequal waves.
+  if(q<.58){
+   if(grass){const u=ease(q/.58),sx=14+24*u,sy=-18-72*u;shapes.push(line(4,-24,sx,sy,8),line(sx,sy,sx+9,sy+14,8),box(sx-9,sy-16,18,30));}
+   else if(ice){const u=ease(q/.58),sx=14+42*u-10*u*u,sy=-20-70*u+13*u*u;shapes.push(line(4,-25,sx,sy,8),line(sx,sy,sx+12,sy+12,9));}
+   else if(thunder){const u=ease(q/.58),tw=ease((u-.72)/.28),sx=12+34*u,sy=-18-76*u;shapes.push(line(4,-24,sx-8,sy-10,8),line(sx-8,sy-10,sx+18*tw,sy+8,10),circle(sx+18*tw,sy+8,8));}
+   else{const u=ease(q/.58),ang=q*TAU*2.3,sx=14+20*Math.sin(ang),sy=-20-75*u;shapes.push(line(3,-24,sx+Math.cos(ang)*10,sy-12,7),line(sx+Math.cos(ang)*10,sy-12,sx,sy+12,8),circle(sx,sy,7));}
+  }else{
+   const land=ease((q-.58)/.19),r1=18+70*land,r2=24+92*land;
+   if(grass){shapes.push(line(10,-3,r1,-9,6),line(-10,-3,-r1*.72,-7,5),line(10,-3,r2,-12,3.5),line(-10,-3,-r2*.72,-10,3));}
+   else if(ice){for(let i=0;i<8;i++){const side=i%2?1:-1,d=side*(12+i*r2/10);shapes.push(line(d,-8,d+side*8,-22-(i%3)*3,i<4?5:3.5));}shapes.push(line(-r1,-3,r1,-3,4));}
+   else if(thunder){for(let i=0;i<7;i++){const d=-r2+2*r2*i/6;shapes.push(line(d,-4,d+10,-11, i%2?3:4));}shapes.push(line(-r1,-3,r1,-3,4));}
+   else{shapes.push(line(10,-3,r1,-9,6),line(-10,-3,-r1*.72,-7,5),line(10,-3,r2,-12,3.5),line(-10,-3,-r2*.72,-10,3));}
+  }
  } else if(move==='super'){
   const lane=ease((q-.18)/.25), dash=ease((q-(charId==='g1_fire'?.32:.30))/(charId==='g1_fire'?.16:.13)), finish=ease((q-.78)/.2);
-  if(grass){for(let i=0;i<3;i++){const tx=65+i*80,t=ease((q-.15-i*.12)/.24);shapes.push(line(tx,-2,tx,-68*t,7));}const sx=20+300*dash,sy=-55-18*Math.sin(q*6);shapes.push(line(18,-42,sx,sy,15),circle(sx,sy,22));if(q>.78)shapes.push(circle(sx,sy,34+22*finish));}
-  else if(ice){const u=ease((q-.25)/.48),ret=ease((q-.7)/.3),sx=28+250*u-205*ret,sy=-58-24*Math.sin(u*Math.PI);shapes.push(line(20,-55,sx,sy,11),circle(sx,sy,23));}
-  else if(thunder){for(let i=0;i<4;i++){const t=ease((q-.15-i*.12)/.2),xx=35+i*74;shapes.push(line(xx,-8,xx+18*t,-70*t,6));}const sx=30+230*dash,sy=-56;shapes.push(line(22,-50,sx,sy,10),circle(sx,sy,18+12*finish));}
-  else if(fire){const sx=40+1080*dash;shapes.push(line(22,-58,sx,-58,14),circle(sx,-58,18+12*dash));if(q>.78)shapes.push(circle(sx,-58,22+30*finish));}
-  else {const u=ease((q-.2)/.58),sx=30+250*u,sy=-56-24*Math.sin(u*Math.PI);shapes.push(line(20,-55,sx,sy,12),circle(sx,sy,23));if(q>.75)shapes.push(circle(sx,sy,32));}
+  if(grass){
+   // Three separate root traps first, then a diagonal vine-lance and a final bloom.
+   for(let i=0;i<3;i++){const tx=86+i*112,t=ease((q-.18-i*.13)/.18);if(t>.05)shapes.push(line(tx,-2,tx,-72*t,7));}
+   const sx=20+300*dash,sy=-55-18*Math.sin(q*TAU);shapes.push(line(18,-48,sx,sy,10),circle(sx,sy,12));if(q>.78)shapes.push(line(sx-30,sy,sx+30,sy,8),circle(sx,sy,20+12*finish));
+  }else if(ice){
+   const u=ease((q-.25)/.48),ret=ease((q-.7)/.3),sx=28+250*u-205*ret,sy=-58-24*Math.sin(u*Math.PI);shapes.push(line(28,-58,sx,sy,9),circle(sx,sy,11));if(q>.7)shapes.push(line(sx-22,sy,sx+22,sy,8),circle(sx,sy,16));
+  }else if(thunder){
+   for(let i=0;i<4;i++){const t=ease((q-.15-i*.12)/.2),xx=35+i*74;shapes.push(line(xx,-8,xx+18*t,-70*t,5));}
+   const sx=30+230*dash;shapes.push(line(22,-50,sx,-56,9),circle(sx,-56,11+8*finish));
+  }else if(fire){
+   const sx=40+1080*dash;shapes.push(line(22,-58,sx,-58,13),circle(sx,-58,15+10*dash));if(q>.78)shapes.push(circle(sx,-58,22+30*finish));
+  }else{
+   // Three mark points are struck in sequence, then collapse to the close-range wave.
+   const marks=[54,132,210];for(let i=0;i<marks.length;i++){const t=ease((q-.16-i*.105)/.18);if(q>.14+i*.105&&q<.82)shapes.push(circle(24+(marks[i]-24)*t,-48-16*Math.sin(t*Math.PI+i*.6),8));}
+   if(q>.28&&q<.82){const u=ease((q-.28)/.52),sx=25+200*u,sy=-48-16*Math.sin(u*Math.PI);shapes.push(line(25,-48,sx,sy,9));}
+   if(q>.60){const u=ease((q-.60)/.2),cx=225-160*u,cy=-52-10*Math.sin(u*Math.PI),r=24+88*u;for(let i=0;i<14;i++){const a=i/14*TAU;shapes.push(circle(cx+Math.cos(a)*r,cy+Math.sin(a)*r*.62,6.5));}}
+  }
  }
+
  return shapes;
 }

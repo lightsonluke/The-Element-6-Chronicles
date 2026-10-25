@@ -25,9 +25,6 @@ function getConfig(charId, power, color) {
 // ── Map attack data to config key (ss/us/ds/sh/dh) ──
 function getAttackKey(attack, attackKey) {
   const st = attack.sigType || attackKey || 'side';
-  if (attack.isGroundPound) return 'groundPound';
-  if (attack.isRecovery || attack.recoveryAnimationKey) return 'recovery';
-  if (attack.isSuper || st === 'super') return 'super';
   if (attack.isHeavy) {
     if (st === 'downHeavy' || st === 'down' || attack.isGroundPound) return 'dh';
     if (st === 'upHeavy' || st === 'upheavy' || st === 'aerialHeavy' || st === 'aerial' || attack.isAerialHeavy) return 'uh';
@@ -41,7 +38,12 @@ function getAttackKey(attack, attackKey) {
 // ── Main entry: draw sig/heavy attack with per-character config ──
 export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, attackKey, power) {
   if (String(charId || '').startsWith('g1_')) {
-    drawGen1Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey), attack);
+    // Gen-I recovery and meteor are distinct animations, not aliases for Up Sig
+    // and Down Heavy. Preserve their true move identities for the art renderer.
+    const gen1Key = attack?.isGroundPound || attack?.type === 'groundPound' ? 'groundPound' :
+      attack?.isRecovery || attack?.type === 'recovery' ? 'recovery' :
+      attack?.isSuper || attack?.sigType === 'super' ? 'super' : getAttackKey(attack, attackKey);
+    drawGen1Attack(ctx, x, y, color, p, facing, charId, gen1Key, attack);
     return;
   }
   if (String(charId || '').startsWith('g2_')) {
