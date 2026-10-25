@@ -1089,7 +1089,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         left: kb.left || gp.left, right: kb.right || gp.right,
         jump: kb.jump || gp.jump, up: kb.up || gp.up, down: kb.down || gp.down,
         sig: kb.sig || gp.sig, power: kb.power || gp.power,
-        superMove: kb.superMove || gp.superMove, heavy: kb.heavy || gp.heavy,
+        superMove: kb.superMove || gp.superMove, heavy: kb.heavy || gp.heavy, dash: kb.dash || gp.dash,
       } : kb;
       let p1In, p2In;
       if (lanConnection) {

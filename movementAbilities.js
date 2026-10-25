@@ -237,6 +237,28 @@ export function updateMovementAbilities(fighter, inputs, platforms) {
 
   if (!locked) {
     tryDirectionalDoubleTap(fighter, inputs);
+
+    // Dedicated controller Dash: trigger once on the press edge, while retaining
+    // the existing directional double-tap path. Direction follows movement input,
+    // falling back to facing when no direction is held.
+    const dashPressed = !!inputs?.dash;
+    const dashEdge = dashPressed && !fighter._dashButtonHeld;
+    fighter._dashButtonHeld = dashPressed;
+    if (dashEdge) {
+      let dx = (inputs?.left ? -1 : 0) + (inputs?.right ? 1 : 0);
+      let dy = (inputs?.up ? -1 : 0) + (inputs?.down ? 1 : 0);
+      if (fighter.grounded) {
+        if (dx === 0) dx = fighter.facing || 1;
+        startDash(fighter, Math.sign(dx), 0);
+      } else {
+        if (dx === 0 && dy === 0) dx = fighter.facing || 1;
+        const magnitude = Math.hypot(dx, dy) || 1;
+        startDash(fighter, dx / magnitude, dy / magnitude);
+      }
+    }
+  } else {
+    // Requiring release before the next press prevents buffered/repeated dashes.
+    fighter._dashButtonHeld = !!inputs?.dash;
   }
 
   if (fighter.dashTimer > 0) {

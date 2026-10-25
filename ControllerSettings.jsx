@@ -101,7 +101,7 @@ export default function ControllerSettings({ onBack, settings, onSaveSettings })
   // Nintendo-style action set — no Light Attack / Dodge / Grab (these don't exist
   // as bindable actions anymore). Sig is the signature attack.
   const ACTIONS = [
-    ['jump', 'Jump'], ['heavy', 'Heavy Attack'], ['sig', 'Signature (Sig)'], ['power', 'Power'],
+    ['jump', 'Jump'], ['heavy', 'Heavy Attack'], ['sig', 'Signature (Sig)'], ['power', 'Power'], ['dash', 'Dash (Nintendo ZL / PlayStation L2)'],
     ['super', 'Super'], ['start', 'Pause'],
     ['menu', 'Menu'], ['confirm', 'Confirm'], ['back', 'Back'],
     ['up', 'D-Up'], ['down', 'D-Down'], ['left', 'D-Left'], ['right', 'D-Right'],
@@ -190,7 +190,7 @@ export default function ControllerSettings({ onBack, settings, onSaveSettings })
             className={`flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-heading ${capture === key ? 'border-accent bg-accent/20 animate-pulse' : 'border-border bg-muted/30'}`}>
             <span className="text-foreground">{label}</span>
             <span className="px-2 py-0.5 rounded bg-primary/20 text-primary min-w-[2.5rem] text-center">
-              {capture === key ? '…' : glyph(active.buttons[key])}
+              {capture === key ? '…' : glyph(active.buttons[key] ?? (key === 'dash' ? 6 : undefined))}
             </span>
           </button>
         ))}

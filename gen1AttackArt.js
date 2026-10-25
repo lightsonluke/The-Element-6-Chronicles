@@ -22,10 +22,30 @@ export function drawGen1MotionArt(ctx, x, y, p, charId, move) {
  for(const s of shapes){
    ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
    if(s.shape==='capsule'){
-     // This exact centerline + radius is also the capsule collision shape.
-     ctx.globalAlpha=.96;ctx.strokeStyle=dark;ctx.lineWidth=s.r*2.35;ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke();
-     ctx.globalAlpha=.98;ctx.strokeStyle=main;ctx.lineWidth=s.r*1.35;ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke();
-     ctx.globalAlpha=.98;ctx.strokeStyle=light;ctx.lineWidth=Math.max(1.4,s.r*.28);ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke();
+     // Water is rendered as a filled, dimensional sheet rather than a thin blue beam.
+     // The volume remains centered on the authored collision capsule.
+     if(charId==='g1_water'){
+       const dx=s.x2-s.x1,dy=s.y2-s.y1,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len;
+       const grad=ctx.createLinearGradient(s.x1+nx*s.r,s.y1+ny*s.r,s.x1-nx*s.r,s.y1-ny*s.r);
+       grad.addColorStop(0,'rgba(220,252,255,.98)');grad.addColorStop(.22,'rgba(40,205,255,.98)');
+       grad.addColorStop(.58,'rgba(0,119,238,.98)');grad.addColorStop(1,'rgba(0,58,155,.96)');
+       ctx.globalAlpha=.98;ctx.strokeStyle=grad;ctx.lineWidth=s.r*2;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke();
+       // Bright broken crest and internal rolling current give the water thickness and flow.
+       ctx.globalAlpha=.95;ctx.strokeStyle='#DDFBFF';ctx.lineWidth=Math.max(2,s.r*.34);ctx.beginPath();
+       ctx.moveTo(s.x1+nx*s.r*.34,s.y1+ny*s.r*.34);
+       ctx.quadraticCurveTo((s.x1+s.x2)/2+nx*s.r*.65,(s.y1+s.y2)/2+ny*s.r*.65,s.x2+nx*s.r*.24,s.y2+ny*s.r*.24);ctx.stroke();
+       ctx.globalAlpha=.72;ctx.strokeStyle='#38D8FF';ctx.lineWidth=Math.max(2,s.r*.24);ctx.beginPath();
+       ctx.moveTo(s.x1-nx*s.r*.38,s.y1-ny*s.r*.38);
+       ctx.quadraticCurveTo((s.x1+s.x2)/2-nx*s.r*.45,(s.y1+s.y2)/2-ny*s.r*.45,s.x2-nx*s.r*.2,s.y2-ny*s.r*.2);ctx.stroke();
+       // Fixed-count droplets/spray; deterministic placement avoids per-frame particle churn.
+       for(let d=0;d<3;d++){const t=(d+1)/4,px=s.x1+dx*t+nx*((d%2?1:-1)*s.r*.9),py=s.y1+dy*t+ny*((d%2?1:-1)*s.r*.9);
+         ctx.globalAlpha=.78;ctx.fillStyle=d===1?'#DDFBFF':'#27CFFF';ctx.beginPath();ctx.ellipse(px,py,Math.max(1.4,s.r*.13),Math.max(2,s.r*.22),Math.atan2(dy,dx),0,Math.PI*2);ctx.fill();}
+     } else {
+       // The exact centerline + radius is also the capsule collision shape.
+       ctx.globalAlpha=.96;ctx.strokeStyle=dark;ctx.lineWidth=s.r*2.35;ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke();
+       ctx.globalAlpha=.98;ctx.strokeStyle=main;ctx.lineWidth=s.r*1.35;ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke();
+       ctx.globalAlpha=.98;ctx.strokeStyle=light;ctx.lineWidth=Math.max(1.4,s.r*.28);ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke();
+     }
      // Material-specific details are attached to the strike, not floating generic particles.
      const dx=s.x2-s.x1,dy=s.y2-s.y1,len=Math.hypot(dx,dy)||1, nx=-dy/len,ny=dx/len;
      if(charId==='g1_grass'){

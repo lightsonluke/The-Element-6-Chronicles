@@ -80,7 +80,7 @@ export function detectControllerModel(gp) {
 export const DEFAULT_PROFILE = {
   name: 'Default',
   buttons: {
-    jump: 0, heavy: 1, sig: 2, power: 3,
+    jump: 0, heavy: 1, sig: 2, power: 3, dash: 6,
     super: 7, start: 9, menu: 9, confirm: 1, back: 0,
     up: 12, down: 13, left: 14, right: 15,
     emote1: 6, emote2: 6, emote3: 6,
@@ -378,7 +378,7 @@ export function readGamepadInput(slot = 0) {
   return {
     left, right, jump: btn('jump'), up, down,
     sig: btn('sig'), heavy: btn('heavy'),
-    power: btn('power'), superMove: btn('super'),
+    power: btn('power'), dash: btn('dash') || (!Object.prototype.hasOwnProperty.call(prof.buttons, 'dash') && !!gp.buttons[6]?.pressed), superMove: btn('super'),
     start: btn('start'),
     confirm: btn('confirm'), back: btn('back'),
     rightX, rightY,
