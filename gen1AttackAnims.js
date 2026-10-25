@@ -65,50 +65,24 @@ function particles(ctx, x, y, color, p, count, radius, spread = TAU) {
 // While the button is held, the move is only a translucent visual preview and
 // has no hitbox because fighter.js does not execute the attack until release.
 function thunderHold(ctx, x, y, move, q) {
-  const c = '#FFFF44';
-  const charge = Math.max(0, Math.min(1, q));
-  const a = 0.16 + charge * 0.22;
-  const pulse = 1 + Math.sin(charge * Math.PI * 6) * 0.04;
-  ctx.save();
-  ctx.globalAlpha = a;
-
+  const c = '#FFFF44', charge = Math.max(0, Math.min(1, q));
+  const a = 0.22 + charge * 0.30;
   if (move === 'us') {
-    const cy = y - 112, rx = 86 * pulse, ry = 34 * pulse;
-    ctx.strokeStyle = c; ctx.lineWidth = 2.5; glow(ctx, c, 12);
-    ctx.setLineDash([7, 8]);
-    ctx.beginPath(); ctx.ellipse(x, cy, rx, ry, 0, 0, REF_TAU); ctx.stroke();
-    const theta = -Math.PI / 2 + charge * REF_TAU;
-    dot(ctx, x + Math.cos(theta) * rx, cy + Math.sin(theta) * ry, 5 + charge * 2, '#FFFFFF', .8);
+    const cy=y-112,rx=86,ry=34;
+    for(let i=0;i<9;i++){const t=i/9*TAU+charge*.3,px=x+Math.cos(t)*rx,py=cy+Math.sin(t)*ry;lineBolt(ctx,px-5,py-5,12+charge*5,13+charge*4,c,a*(.65+.25*Math.sin(i*2)));}
+    const theta=-Math.PI/2+charge*TAU;dot(ctx,x+Math.cos(theta)*rx,cy+Math.sin(theta)*ry,5+charge*2,'#FFFFFF',.9);
   } else if (move === 'ds') {
-    dot(ctx, x - 22, y - 45, 8 + charge * 3, '#FFFFFF', .8);
-    dot(ctx, x + 22, y - 45, 8 + charge * 3, '#FFFFFF', .8);
-    dot(ctx, x - 22, y - 45, 5 + charge * 2, c, .9);
-    dot(ctx, x + 22, y - 45, 5 + charge * 2, c, .9);
-    ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.setLineDash([5, 7]);
-    ctx.beginPath(); ctx.arc(x, y - 24, 18 + charge * 35, Math.PI, REF_TAU); ctx.stroke();
+    dot(ctx,x-22,y-45,8+charge*3,'#FFFFFF',.8);dot(ctx,x+22,y-45,8+charge*3,'#FFFFFF',.8);
+    dot(ctx,x-22,y-45,5+charge*2,c,.9);dot(ctx,x+22,y-45,5+charge*2,c,.9);
+    const r=18+charge*35;for(let i=0;i<7;i++){const t=Math.PI+i/6*Math.PI,px=x+Math.cos(t)*r,py=y-24+Math.sin(t)*r*.6;lineBolt(ctx,px-4,py-3,11,10,c,a*.8);}
   } else if (move === 'ss' || move === 'heavy') {
-    const len = move === 'heavy' ? 100 : 68;
-    ctx.strokeStyle = c; ctx.lineWidth = move === 'heavy' ? 5 : 3;
-    ctx.setLineDash([8, 9]);
-    glow(ctx, c, 14);
-    ctx.beginPath(); ctx.moveTo(x + 24, y - 50);
-    ctx.lineTo(x + 24 + len * (0.25 + charge * 0.75), y - 50); ctx.stroke();
-    lineBolt(ctx, x + 24 + len * (0.15 + charge * .5), y - 50, len * .35, move === 'heavy' ? 34 : 24, c, .55);
+    const len=move==='heavy'?100:68;for(let i=0;i<5;i++){const t=(i+.5)/5,px=x+24+len*(.15+charge*.75)*t,py=y-50+Math.sin(i*2.2)*5;lineBolt(ctx,px-5,py-5,13+(move==='heavy'?5:0),12+(move==='heavy'?5:0),c,a*(.5+.08*i));}
   } else if (move === 'uh' || move === 'upHeavy') {
-    for (const dx of [24, 82, 140]) {
-      const top = y - 38 - (65 + charge * 85);
-      lineBolt(ctx, x + dx, top, 22, 42, c, .6);
-    }
+    for(const dx of [24,82,140])for(let i=0;i<3;i++)lineBolt(ctx,x+dx-5,y-38-(65+charge*85)+i*26,17,22,c,a*.75);
   } else if (move === 'dh' || move === 'downHeavy') {
-    const r = 94;
-    ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.setLineDash([7, 9]);
-    ctx.beginPath(); ctx.arc(x + 20, y - 72, r, 0, REF_TAU); ctx.stroke();
-    const ang = -Math.PI / 2 + charge * REF_TAU;
-    dot(ctx, x + 20 + Math.cos(ang) * r, y - 72 + Math.sin(ang) * r * .6, 10, c, .75);
+    const r=94;for(let i=0;i<10;i++){const t=i/10*TAU,px=x+20+Math.cos(t)*r,py=y-72+Math.sin(t)*r*.6;if(i%2===0)lineBolt(ctx,px-4,py-3,11,13,c,a*.7);}
+    const ang=-Math.PI/2+charge*TAU;dot(ctx,x+20+Math.cos(ang)*r,y-72+Math.sin(ang)*r*.6,8,c,.85);
   }
-
-  ctx.setLineDash([]);
-  ctx.restore();
 }
 
 // Thunder Up Signature — deliberately follows the supplied 12-frame reference:
@@ -140,28 +114,17 @@ function thunderUp(ctx, x, y, p) {
 
   // Frame 2 onward: the lightning circle appears above the head.
   const circleAlpha = frame < 2.5 ? (frame - 1.75) / .75 : 1;
-  ctx.globalAlpha = .35 * circleAlpha;
-  ctx.strokeStyle = c;
-  ctx.lineWidth = 2;
-  glow(ctx, c, 14);
-  ctx.beginPath(); ctx.ellipse(x, cy, rx, ry, 0, 0, TAU); ctx.stroke();
-
-  // The moving dot is the beginning of the circular line. It is deliberately
-  // brighter/larger than the path so the attack's actual collision point is clear.
-  if (frame >= 2) {
+  // The orbit is shown by separated, angular lightning chunks instead of a drawn circle.
+  if (frame >= 1.75) {
     const traceT = clamp01((frame - 2) / 8.7);
-    ctx.globalAlpha = .78 * alpha(p) + .22;
-    ctx.strokeStyle = c; ctx.lineWidth = 3.5; glow(ctx, c, 22);
-    ctx.beginPath(); ctx.ellipse(x, cy, rx, ry, 0, start, start + traceT * TAU); ctx.stroke();
-
-    // Electrical breaks along the authored path.
-    for (let i = 0; i < 7; i++) {
-      const a = start + (i / 7) * TAU + p * .04;
-      const px = x + Math.cos(a) * rx, py = cy + Math.sin(a) * ry;
-      const qx = x + Math.cos(a + .07) * (rx + 5), qy = cy + Math.sin(a + .07) * (ry + 2);
-      strokePath(ctx, [[px, py], [qx, qy]], c, 1.6, .5 * alpha(p));
+    const visible = Math.max(2, Math.ceil(12 * Math.max(.22, traceT)));
+    for (let i=0;i<visible;i++) {
+      const a=start+i/12*TAU;
+      const px=x+Math.cos(a)*rx, py=cy+Math.sin(a)*ry;
+      const side=(i%2?1:-1), len=7+(i%3)*3;
+      lineBolt(ctx,px-4,py-3,len,len*.82,c,.58*circleAlpha);
+      if(i%3===0) lineBolt(ctx,px+side*4,py+side*2,len*.55,len*.7,'#FFFFFF',.5*circleAlpha);
     }
-
     dot(ctx, dotX, dotY, frame < 3 ? 6 : 8, '#FFFFFF', .98);
     dot(ctx, dotX, dotY, 5.5, c, 1);
   }
@@ -169,9 +132,9 @@ function thunderUp(ctx, x, y, p) {
   // Frame 9: upward launch begins while the circle is still completing.
   if (frame >= 9 && frame < 12) {
     const launch = easeOut((frame - 9) / 2.6);
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 6; i++) {
       const yy = y - 24 - launch * (45 + i * 18);
-      strokePath(ctx, [[x - 15 + i * 4, y - 4], [x - 8 + i * 2, yy]], c, 2.4, (.5 - i * .045) * (1 - launch * .2));
+      lineBolt(ctx,x-12+i*4,yy,12,18,c,(.62-i*.07)*(1-launch*.2));
     }
     dot(ctx, x, y - 48 - launch * 80, 4.5, '#FFFFFF', .8);
   }
@@ -195,24 +158,28 @@ function thunderDown(ctx, x, y, p) {
   dot(ctx, x - 22, y - 45, 7 + q * 3, '#FFFFFF', .85); dot(ctx, x + 22, y - 45, 7 + q * 3, '#FFFFFF', .85);
   dot(ctx, x - 22, y - 45, 4 + q * 2, c); dot(ctx, x + 22, y - 45, 4 + q * 2, c);
   if (p > .28) {
-    ctx.save(); ctx.globalAlpha = alpha(p); ctx.strokeStyle = c; ctx.lineWidth = 5; glow(ctx, c, 20);
-    ctx.beginPath(); ctx.arc(x, y - 24, r, Math.PI, TAU); ctx.stroke();
-    for (let i = 0; i < 10; i++) {
-      const a = Math.PI + i / 9 * Math.PI;
-      const px = x + Math.cos(a) * r, py = y - 24 + Math.sin(a) * r;
-      lineBolt(ctx, px, py, 11, 9, c, .75 * alpha(p));
+    for (let i=0;i<9;i++) {
+      const a=Math.PI+i/8*Math.PI, px=x+Math.cos(a)*r, py=y-24+Math.sin(a)*r;
+      lineBolt(ctx,px-4,py-3,12+(i%3)*3,10+(i%2)*4,c,.78*alpha(p));
+      if(i%2===0)dot(ctx,px,py,2.8,'#FFFFFF',.78*alpha(p));
     }
-    ctx.restore();
   }
 }
 
 function thunderSide(ctx, x, y, p, heavy) {
-  const c = '#FFFF44'; const len = heavy ? 100 : 68; const h = heavy ? 34 : 24; const q = easeOut(p);
-  if (p < .25) {
-    strokePath(ctx, [[x + 7, y - 52], [x + 25 + q * 12, y - 45]], c, heavy ? 5 : 3, alpha(p));
+  const c='#FFFF44',len=heavy?100:68,h=heavy?34:24,q=easeOut(p),a=alpha(p);
+  // A traveling cluster of forked electric shards and a bright impact node;
+  // deliberately not one long horizontal line/laser.
+  const pieces=heavy?7:5, travel=len*q;
+  for(let i=0;i<pieces;i++){
+    const t=(i+.35)/pieces,px=x+24+travel*t,py=y-50+Math.sin(i*2.35+p*3)*h*.22;
+    const size=(heavy?12:9)*(0.75+.25*Math.sin(i*1.7));
+    lineBolt(ctx,px-size*.45,py-size*.35,size*1.55,size*1.6,c,a*(.55+.35*t));
+    if(i%2===0)lineBolt(ctx,px-size*.25,py+size*.35,size*.9,size*1.15,'#FFFFFF',a*.6);
   }
-  lineBolt(ctx, x + 24, y - 50, len * q, h, c, alpha(p));
-  for (let i = 0; i < (heavy ? 7 : 4); i++) dot(ctx, x + 25 + len * q * (i / Math.max(1, heavy ? 6 : 3)), y - 50 + Math.sin(i * 2.4) * 5, 1.5, c, .35 * alpha(p));
+  const tipX=x+24+travel,tipY=y-50+Math.sin(p*TAU)*h*.16;
+  dot(ctx,tipX,tipY,heavy?9:7,'#FFFFFF',.95*a);dot(ctx,tipX,tipY,heavy?6:4.5,c,a);
+  if(p>.28){for(let i=0;i<(heavy?5:3);i++){const side=i%2?1:-1;lineBolt(ctx,tipX-side*(i+1)*5,tipY+side*(i+1)*3,10+i*2,12+i*2,c,.72*a);}}
 }
 
 function thunderUpHeavy(ctx, x, y, p) {
@@ -226,22 +193,26 @@ function thunderUpHeavy(ctx, x, y, p) {
 
 function thunderDownHeavy(ctx, x, y, p) {
   const c = '#FFFF44'; const q = easeOut(p); const a = alpha(p); const ang = -Math.PI / 2 + q * TAU; const r = 94;
-  ctx.save(); ctx.globalAlpha = .3 * a; ctx.strokeStyle = c; ctx.setLineDash([6, 7]); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + 20, y - 72, r, 0, TAU); ctx.stroke(); ctx.restore();
+  for(let i=0;i<12;i++){const aa=i/12*TAU,bx0=x+20+Math.cos(aa)*r,by0=y-72+Math.sin(aa)*r*.6;if(i%2===0)lineBolt(ctx,bx0-4,by0-3,10,12,c,.34*a);}
   const bx = x + 20 + Math.cos(ang) * r, by = y - 72 + Math.sin(ang) * r * .6;
   dot(ctx, bx, by, 13, c, a);
   for (let i = 1; i <= 5; i++) dot(ctx, bx - Math.cos(ang) * i * 12, by - Math.sin(ang) * i * 7, Math.max(2, 8 - i), c, a * (.5 - i * .07));
 }
 
 function thunderSuper(ctx, x, y, p) {
-  const c = '#FFFF44'; const a = alpha(p); const q = easeOut(p);
-  // Giant bolt falls on the fighter's X. Only the bottom impact section is the hit.
-  const top = y - 470 + q * 120;
-  const impact = y - 8;
-  lineBolt(ctx, x - 44, top, 88, 70, c, a * .85);
-  strokePath(ctx, [[x - 5, top + 45], [x + 7, top + 100], [x - 10, top + 155], [x + 8, top + 215], [x - 4, impact]], c, 16, a * .8);
-  if (p > .52) {
-    ctx.save(); ctx.globalAlpha = a * .8; ctx.fillStyle = '#FFFFFF'; glow(ctx, c, 28); ctx.beginPath(); ctx.ellipse(x, impact, 46 + (p - .52) * 40, 12 + (p - .52) * 16, 0, 0, TAU); ctx.fill(); ctx.restore();
+  const c='#FFFF44',white='#FFFFFF',q=clamp01(p),gather=ease(clamp01(q/.25)),route=ease(clamp01((q-.18)/.48)),converge=ease(clamp01((q-.62)/.20)),finish=ease(clamp01((q-.82)/.18));
+  // Six independent jagged discharges trace a broad route around the fighter,
+  // then fold into one focused impact at the far end of the route.
+  const centerX=x+35+route*210,centerY=y-62-10*Math.sin(route*Math.PI);
+  for(let i=0;i<6;i++){
+    const ang=i/6*TAU+q*1.2,r=32+route*95;
+    const sx=x+Math.cos(ang)*r*.55,sy=y-52+Math.sin(ang)*r*.34;
+    const ex=lerp(sx,centerX,converge),ey=lerp(sy,centerY,converge);
+    for(let k=0;k<3;k++){const t=(k+.5)/3,px=lerp(sx,ex,t),py=lerp(sy,ey,t)+Math.sin(t*TAU+i)*7;lineBolt(ctx,px-6,py-7,14+4*route,19+5*route,c,(.5+.32*route)*(1-finish*.35));}
+    if(i%2===0)lineBolt(ctx,ex-4,ey-5,12,15,white,.68*(1-finish*.25));
   }
+  if(q<.3){for(let i=0;i<5;i++)lineBolt(ctx,x-18+i*9,y-52-8*gather,11+gather*5,17+gather*7,c,.65+.2*gather);}
+  if(q>.58){const r=18+finish*62;for(let i=0;i<14;i++){const ang=i/14*TAU,px=centerX+Math.cos(ang)*r,py=centerY+Math.sin(ang)*r*.72;lineBolt(ctx,px-5,py-6,13+finish*6,17+finish*8,i%3===0?white:c,(.6+.3*finish)*(1-finish*.15));}dot(ctx,centerX,centerY,8+finish*12,white,.95);dot(ctx,centerX,centerY,5+finish*8,c,.95);}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -277,9 +248,14 @@ function flameShape(ctx,x,y,r,c,a=1,rot=0){
   ctx.fillStyle='#FFF3B0'; ctx.globalAlpha*=.75; ctx.beginPath(); ctx.moveTo(0,-r*.55); ctx.bezierCurveTo(r*.28,-r*.05,r*.25,r*.35,0,r*.52); ctx.bezierCurveTo(-r*.25,r*.3,-r*.18,-r*.05,0,-r*.55); ctx.fill(); ctx.restore();
 }
 function waterRing(ctx,x,y,rx,ry,c,a=1,rot=0){
-  glowArc(ctx,x,y,rx,ry,0,REF_TAU,c,7,a,rot);
-  glowArc(ctx,x,y,rx*.72,ry*.62,0,REF_TAU,'#dffaff',2,a*.65,rot);
-  for(let i=0;i<8;i++){const t=i/8*REF_TAU; spark(ctx,x+Math.cos(t)*rx,y+Math.sin(t)*ry,2.2,c,a*.8);}
+  // Broken crest made from overlapping droplets and rounded water lobes, not a line ring.
+  const n=10;
+  for(let i=0;i<n;i++){
+    const t=i/n*REF_TAU+rot, wob=1+.08*Math.sin(i*2.4+rot);
+    const px=x+Math.cos(t)*rx*wob,py=y+Math.sin(t)*ry*wob;
+    waterDrop(ctx,px,py,2.8+(i%3)*.8,a*.7,t+.35);
+    waterOrb(ctx,px,py,3.5+(i%2),a*.36,rot+i*.4);
+  }
 }
 function leafBlade(ctx,x,y,rx,ry,rot,c,a=1){
   ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.globalAlpha=a;ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=12;
@@ -304,20 +280,16 @@ function fireRefPhase(p, count){
 }
 function smoothFire(u){ return u*u*(3-2*u); }
 function fireRing(ctx,cx,cy,rx,ry,c,a=1,rot=0,seed=0){
-  // Irregular, broken fire wheel/ring: deliberately NOT a smooth ellipse.
-  const n=FIRE_PERF_MODE ? 12 : 18, pts=[];
-  for(let i=0;i<=n;i++){
-    const t=i/n*REF_TAU;
-    const wob=1 + .09*Math.sin(i*2.71+seed) + .045*Math.sin(i*5.17-seed*.6);
-    pts.push([cx+Math.cos(t)*rx*wob, cy+Math.sin(t)*ry*wob]);
-  }
-  glowStroke(ctx,pts,c,4.5,a);
-  for(let i=0;i<(FIRE_PERF_MODE ? 4 : 10);i++){
-    const count=FIRE_PERF_MODE ? 4 : 10;
-    const t=(i+.18*Math.sin(i*3.1+seed))/count*REF_TAU;
-    const rr=1+.08*Math.sin(i*2.3+seed);
-    const fx=cx+Math.cos(t)*rx*rr, fy=cy+Math.sin(t)*ry*rr;
-    flameShape(ctx,fx,fy,5.5+.8*Math.sin(i+seed),i%2?'#FF9A22':'#FF6A18',a*.9,t+Math.PI/2);
+  // Fire is drawn as separated, overlapping flame tongues—not an outlined ring.
+  // The negative space between tongues keeps the effect organic rather than a neon circle.
+  const count=FIRE_PERF_MODE ? 7 : 13;
+  for(let i=0;i<count;i++){
+    const t=i/count*REF_TAU+rot;
+    const wob=1+.10*Math.sin(i*2.71+seed)+.05*Math.sin(i*5.17-seed*.6);
+    const fx=cx+Math.cos(t)*rx*wob, fy=cy+Math.sin(t)*ry*wob;
+    const r=(FIRE_PERF_MODE?4.4:6.2)*(0.82+.24*Math.sin(i*1.9+seed));
+    flameShape(ctx,fx,fy,r,c,a*(.72+.2*Math.sin(i*2.1+seed)),t+Math.PI/2);
+    if(i%2===0) flameShape(ctx,fx+Math.cos(t)*r*.55,fy+Math.sin(t)*r*.45,r*.55,'#FFF0A0',a*.65,t+Math.PI/2);
   }
 }
 function fireBlob(ctx,cx,cy,r,c='#FF5A16',a=1,seed=0){
@@ -338,13 +310,25 @@ function fireBlob(ctx,cx,cy,r,c='#FF5A16',a=1,seed=0){
     flameShape(ctx,cx+Math.cos(t)*r*.8,cy+Math.sin(t)*r*.62,r*(.18+.03*(i%3)), '#FF9A22',a*.8,t+Math.PI/2);
   }
 }
+function fireRock(ctx,x,y,scale=1,a=1,phase=0){
+  const r=11*scale;
+  ctx.save();ctx.translate(x,y);ctx.rotate(.18*Math.sin(phase));ctx.globalAlpha=a;
+  ctx.fillStyle='#49352B';ctx.shadowColor='#FF5A16';ctx.shadowBlur=13;
+  ctx.beginPath();ctx.moveTo(-r*.95,-r*.25);ctx.lineTo(-r*.48,-r*.92);ctx.lineTo(r*.34,-r*.78);ctx.lineTo(r,-r*.18);ctx.lineTo(r*.72,r*.62);ctx.lineTo(-r*.12,r);ctx.lineTo(-r*.85,r*.48);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#FF5A16';ctx.beginPath();ctx.moveTo(-r*.5,-r*.52);ctx.lineTo(-r*.08,-r*.22);ctx.lineTo(-r*.32,r*.28);ctx.lineTo(-r*.56,r*.08);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(r*.18,-r*.54);ctx.lineTo(r*.55,-r*.12);ctx.lineTo(r*.28,r*.42);ctx.lineTo(r*.05,r*.06);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#FFD15A';ctx.beginPath();ctx.ellipse(-r*.08,-r*.12,r*.16,r*.3,-.3,0,TAU);ctx.fill();ctx.restore();
+  for(let i=0;i<5;i++){const ang=phase+i/5*TAU,dist=r*(.85+(i%2)*.22);flameShape(ctx,x-Math.cos(ang)*dist,y-Math.sin(ang)*dist*.65,4.5*scale*(.8+(i%3)*.1),i%2?'#FF9A22':'#FF5A16',a*.9,ang+Math.PI/2);}
+}
+
 function fireRay(ctx,x,y,angle,len,a=1,hot='#FF9A22'){
-  const ux=Math.cos(angle), uy=Math.sin(angle), px=-uy, py=ux;
-  const s=.12*len, m=.52*len;
-  const pts=[[x+ux*4,y+uy*4],[x+ux*s+px*3,y+uy*s+py*3],[x+ux*m-px*2,y+uy*m-py*2],[x+ux*len,y+uy*len]];
-  glowStroke(ctx,pts,hot,3.4,a);
-  flameShape(ctx,x+ux*len,y+uy*len,5.5,hot,a*.9,angle+Math.PI/2);
-  if(len>35) glowStroke(ctx,[[x+ux*18+px*2,y+uy*18+py*2],[x+ux*(len*.68)-px*1,y+uy*(len*.68)-py*1]],'#FF5A16',1.7,a*.75);
+  // A short chain of overlapping flame lobes reads as fire, never as a stroked line.
+  const ux=Math.cos(angle), uy=Math.sin(angle), count=Math.max(2,Math.min(6,Math.ceil(len/10)));
+  for(let i=0;i<count;i++){
+    const t=(i+.5)/count, r=(2.5+3.8*Math.sin(t*Math.PI))*(1-.42*t);
+    flameShape(ctx,x+ux*len*t,y+uy*len*t,r,i%2?hot:'#FF5A16',a*(1-.25*t),angle+Math.PI/2);
+    if(i%2===0) flameShape(ctx,x+ux*len*t,y+uy*len*t-r*.15,r*.45,'#FFF0A0',a*.72,angle+Math.PI/2);
+  }
 }
 function fireLineBurstLegacy(ctx,x,y,r,alpha=1){ fireLineBurst(ctx,x,y,r,alpha,0); }
 function fireLineBurst(ctx,x,y,r,alpha=1,phase=0){
@@ -595,16 +579,32 @@ function fireAttack(ctx,x,y,p,move,attack=null){
     const hot='#FF9A22', core='#FF5A16', white='#FFF3B0', dark='#541006';
     const flameAt=(fx,fy,r,a=1,angle=0)=>flameShape(ctx,fx,fy,r,hot,a,angle);
     const sparks=(cx,cy,n,r,a,phase=0)=>{for(let i=0;i<n;i++){const ang=i/n*REF_TAU+phase;const rr=r*(.45+.55*((i*7)%n)/Math.max(1,n));flameAt(cx+Math.cos(ang)*rr,cy+Math.sin(ang)*rr*.62,3+(i%3),a*(.45+.4*((i%4)/4)),ang+Math.PI/2);}};
-    const slash=(pts,w,a,c=hot)=>glowStroke(ctx,pts,c,w,a);
-    const groundCrack=(cx,cy,spread,a)=>{for(const side of [-1,1]){const pts=[[cx,cy],[cx+side*spread*.28,cy-2],[cx+side*spread*.48,cy+5],[cx+side*spread*.72,cy+1],[cx+side*spread,cy+6]];slash(pts,3,a,core);slash(pts,1,a*.8,white);}};
+    const slash=(pts,w,a,c=hot)=>{
+      // Convert the requested strike path into a filled, irregular flame plume.
+      // There is no stroked path: the outline is made from overlapping lobes.
+      if(!pts||pts.length<2||a<=0)return;
+      for(let i=0;i<pts.length;i++){
+        const pt=pts[i],prev=pts[Math.max(0,i-1)],next=pts[Math.min(pts.length-1,i+1)];
+        const dx=next[0]-prev[0],dy=next[1]-prev[1],ang=Math.atan2(dy,dx)+Math.PI/2;
+        const taper=Math.sin((i+1)/(pts.length+1)*Math.PI);
+        const r=Math.max(2,w*(.18+.38*taper));
+        flameShape(ctx,pt[0],pt[1],r,c,a*(.62+.28*taper),ang);
+        if(i<pts.length-1){const mid=[(pt[0]+next[0])*.5,(pt[1]+next[1])*.5];flameShape(ctx,mid[0],mid[1],r*.8,c,a*.58,ang);}
+        if(i%2===0)flameShape(ctx,pt[0]+Math.cos(ang)*r*.45,pt[1]+Math.sin(ang)*r*.45,r*.48,white,a*.55,ang);
+      }
+    };
+    const groundCrack=(cx,cy,spread,a)=>{for(const side of [-1,1]){const pts=[[cx,cy],[cx+side*spread*.28,cy-2],[cx+side*spread*.48,cy+5],[cx+side*spread*.72,cy+1],[cx+side*spread,cy+6]];slash(pts,5,a,core);}};
 
     if(move==='us'){
-      // Fire Hero's Rising: planted foot -> pivot under target -> corkscrew knee.
-      if(hold){fireRing(ctx,26,-78,12+q*5,8+q*3,hot,.18+q*.22, q*2);return;}
-      if(elapsed<start*.32){ flameAt(20,-8,5,.5); slash([[16,0],[25,-4],[29,0]],2,.45); }
-      else if(elapsed<start){const t=ease((elapsed-start*.32)/(start*.68));slash([[18,-8],[26,-18],[22,-31]],3,.4+t*.3);fireRing(ctx,22,-40,8+7*t,5+3*t,hot,.35+t*.35,t*2);}
-      else if(elapsed<start+active){const t=contact;const cy=-80-28*t,cx=18+10*Math.sin(t*Math.PI*2);fireRing(ctx,cx,cy,14+7*t,9+5*t,hot,.9,t*REF_TAU);fireBlob(ctx,cx+3,cy-8,12+4*t,core,1,t*4);for(let i=0;i<8;i++){const a=i/8*REF_TAU+t*REF_TAU;flameAt(cx+Math.cos(a)*20,cy+Math.sin(a)*15,7,1,a+Math.PI/2);} }
-      else {const t=recovery;fireRing(ctx,24,-94,20*(1-t),11*(1-t),hot,.45*(1-t),t*2);sparks(22,-96,5,23,.4*(1-t),t*2);}
+      // Fire Hero's Rising: a burning rock is actually thrown diagonally upward,
+      // then follows a readable gravity arc; it is not a vertical flame geyser.
+      const sx=26,sy=-54;
+      if(hold){fireRock(ctx,sx,sy,1+q*.32,.72+q*.25,q*2);fireRing(ctx,sx,sy,12+q*5,8+q*3,hot,.42+q*.25,q);return;}
+      const t=clamp01(elapsed/Math.max(1,start+active+8));
+      if(elapsed<start*.62){const u=ease(elapsed/Math.max(1,start*.62));fireRock(ctx,sx-5*u,sy+4*u,.82+.22*u,.78,q*4);}
+      else if(elapsed<start+active+8){const travel=ease(clamp01((elapsed-start*.62)/Math.max(1,duration-start*.62)));const rx=26+travel*72,ry=-54-travel*74+travel*travel*38;fireRock(ctx,rx,ry,1.02-.12*travel,.98-.25*travel,travel*5);for(let i=0;i<4;i++){const back=travel*(i+1)/5;flameShape(ctx,rx-11-back*12,ry+5+back*7,5.5-back*1.5,i%2?hot:core,.7*(1-back),Math.PI*.72);}}
+      if(elapsed>=start&&elapsed<start+active){const u=contact,rx=26+u*72,ry=-54-u*74+u*u*38;fireBlob(ctx,rx,ry,9+4*Math.sin(u*Math.PI),hot,.45,u*3);}
+      if(elapsed>=start+active){const fade=1-recovery;const rx=98,ry=-90;fireRock(ctx,rx,ry,.72,.58*fade,recovery*3);for(let i=0;i<5;i++)flameShape(ctx,rx+(i-2)*7,ry+9,4,hot,.45*fade,(i-2)*.2);}
     } else if(move==='ds'){
       // Quake: stamp, retreat, then delayed eruption at the original footprint.
       const ox=24, oy=-2;
@@ -771,14 +771,21 @@ function grassDownReference(ctx,x,y,p){
   grassVine(ctx,leftX,y-40,leftX+curl,y-34,u,1,5); grassVine(ctx,rightX,y-40,rightX-curl,y-34,u,1,5);
   if(u>.72){ for(let i=0;i<6;i++){const side=i%2?-1:1; spark(ctx,x+side*(18-i*2),y-32-i*2,1.7,pale,.55); } }
 }
+function grassBoulder(ctx,cx,cy,r,alpha=1,cracked=false){
+  const pts=[];for(let i=0;i<11;i++){const a=-Math.PI/2+i/11*TAU,rr=r*(.84+.16*Math.sin(i*4.7+1.2));pts.push([cx+Math.cos(a)*rr*1.12,cy+Math.sin(a)*rr*.78]);}
+  ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle='#315B25';ctx.shadowColor='#7CFF28';ctx.shadowBlur=14;ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.fill();
+  ctx.globalAlpha=alpha*.9;ctx.fillStyle='#72B83A';ctx.beginPath();ctx.moveTo(cx-r*.58,cy-r*.08);ctx.lineTo(cx-r*.18,cy-r*.66);ctx.lineTo(cx+r*.48,cy-r*.5);ctx.lineTo(cx+r*.72,cy+r*.02);ctx.lineTo(cx+r*.12,cy+r*.32);ctx.closePath();ctx.fill();
+  ctx.globalAlpha=alpha*.8;ctx.fillStyle='#A9ED5C';ctx.beginPath();ctx.ellipse(cx-r*.13,cy-r*.23,r*.32,r*.12,-.45,0,TAU);ctx.fill();ctx.restore();
+  if(cracked){for(let i=0;i<5;i++){const a=-.7+i*.34,px=cx+Math.cos(a)*r*.45,py=cy+Math.sin(a)*r*.35;fillPoly(ctx,[[px,py],[px+4,py+7],[px+1,py+13]],'#203E1C',alpha*.95,null);}}
+}
 function grassSideReference(ctx,x,y,p){
-  const c='#7CFF28', wood='#9B6A3B', hi='#D6A35B';
-  if(p<0){ const q=holdCharge(p); grassBranch(ctx,x+18,y-43,35+18*q,10+2*q,.65+q*.25,0,false); return; }
-  const f=1+attackP(p)*3, u=ease(attackP(p));
-  const len=26+74*u, y0=y-44;
-  if(f<2){ grassBranch(ctx,x+16,y0,len*.55,10,.75+u*.2,0,false); }
-  else if(f<3){ grassBranch(ctx,x+16,y0,len,11,.98,0,false); for(let i=0;i<4;i++) spark(ctx,x+28+i*15,y0+(i%2?4:-4),1.4,hi,.65); }
-  else { grassBranch(ctx,x+16,y0,len,11,.9,0,false); glowStroke(ctx,[[x+16,y0],[x+len+16,y0]],hi,1.8,.7); }
+  const q=attackP(p),cx=x+52,cy=y-43;
+  if(p<0){const h=holdCharge(p);grassBoulder(ctx,cx,cy,19+12*h,.58+.32*h,false);for(let i=0;i<3;i++)leafBlade(ctx,cx-14+i*12,cy-18,4,10,-.5+i*.5,'#A8FF38',.65);return;}
+  const f=1+q*4;
+  if(f<2){const u=ease(f-1);grassBoulder(ctx,cx,cy,18+13*u,.82+.18*u,false);}
+  else if(f<3){const u=ease(f-2);grassBoulder(ctx,cx+u*4,cy,31,.98,true);}
+  else if(f<3.45){const u=ease((f-3)/.45);grassBoulder(ctx,cx+8*u,cy,31*(1-u*.35),1-u*.5,true);}
+  else {const u=ease((f-3.45)/.55);for(let i=0;i<9;i++){const a=i/9*TAU,dist=12+u*(28+(i%3)*8),sx=cx+8+Math.cos(a)*dist,sy=cy+Math.sin(a)*dist*.72;fillPoly(ctx,[[sx,sy-7],[sx+7,sy-1],[sx+3,sy+7],[sx-5,sy+3]],i%2?'#72B83A':'#A9ED5C',1-u*.25,null);spark(ctx,sx,sy,1.8,'#E4FF9C',.6*(1-u));}}
 }
 function grassUpHeavyReference(ctx,x,y,p){
   if(p<0){ const q=holdCharge(p); grassFlower(ctx,x,y-18,q*.35,.75+.2*q,.55+.3*q,q*2); return; }
@@ -907,7 +914,7 @@ function iceUpHeavyReference(ctx,x,y,p){
   if(f<2){const u=ease(f-1);for(let i=0;i<3;i++)iceShard(ctx,x+(i-1)*30,y-88-28*u,13,34,-.05+i*.05,.95);}
   else if(f<3){const u=ease(f-2);for(let i=0;i<3;i++){
     const sx=x+(i-1)*30,sy=y-116-35*u;iceShard(ctx,sx,sy,14,35,-.05+i*.05,c,1);
-    glowStroke(ctx,[[sx,sy+26],[sx,sy+52]],c,3,.45);
+    for(let k=0;k<3;k++)iceShard(ctx,sx+(k-1)*5,sy+32+k*4,3.5,10,.15*(k-1),c,.58);
   }}
   else {const u=ease(f-3);for(let i=0;i<3;i++){
     const sx=x+(i-1)*30,sy=y-151-55*u;iceShard(ctx,sx,sy,14,36,-.05+i*.05,c,1-u*.2);
@@ -958,20 +965,29 @@ function waterBezier(p0,p1,p2,p3,t){
   return [uu*u*p0[0]+3*uu*t*p1[0]+3*u*tt*p2[0]+tt*t*p3[0],
           uu*u*p0[1]+3*uu*t*p1[1]+3*u*tt*p2[1]+tt*t*p3[1]];
 }
+function waterRibbonPolygon(ctx, pts, width, alpha, color, taper=true){
+  if(pts.length<2 || alpha<=0)return;
+  const closed=Math.hypot(pts[0][0]-pts[pts.length-1][0],pts[0][1]-pts[pts.length-1][1])<Math.max(4,width*.65);
+  const left=[],right=[];
+  for(let i=0;i<pts.length;i++){
+    const prev=pts[Math.max(0,i-1)],next=pts[Math.min(pts.length-1,i+1)];
+    const dx=next[0]-prev[0],dy=next[1]-prev[1],len=Math.max(1,Math.hypot(dx,dy));
+    const u=i/(pts.length-1), taperScale=(!closed&&taper)?(.20+.80*Math.pow(Math.sin(Math.PI*u),.42)):1;
+    const w=Math.max(1,width*.5*taperScale),nx=-dy/len,ny=dx/len;
+    left.push([pts[i][0]+nx*w,pts[i][1]+ny*w]);right.push([pts[i][0]-nx*w,pts[i][1]-ny*w]);
+  }
+  ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=Math.min(16,Math.max(3,width*.48));ctx.beginPath();
+  left.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));
+  for(let i=right.length-1;i>=0;i--)ctx.lineTo(right[i][0],right[i][1]);ctx.closePath();ctx.fill();ctx.restore();
+}
 function waterCurve(ctx, pts, a=1, width=8){
   if(pts.length<2)return;
-  ctx.save();
-  ctx.globalAlpha=a;
-  ctx.lineCap='round'; ctx.lineJoin='round';
-  // broad translucent body
-  ctx.strokeStyle=WATER_C; ctx.lineWidth=width; ctx.shadowColor=WATER_C; ctx.shadowBlur=Math.max(7,width*1.6);
-  ctx.beginPath(); pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.stroke();
-  // brighter, narrower core
-  ctx.globalAlpha=a*.78; ctx.strokeStyle=WATER_MID; ctx.lineWidth=Math.max(2,width*.46); ctx.shadowBlur=5;
-  ctx.beginPath(); pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.stroke();
-  ctx.globalAlpha=a*.9; ctx.strokeStyle=WATER_HI; ctx.lineWidth=Math.max(1,width*.12); ctx.shadowBlur=3;
-  ctx.beginPath(); pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.stroke();
-  ctx.restore();
+  // Filled liquid ribbon with a broad body and internal highlights, never a stroked attack line.
+  const body=Math.max(7,width*1.9);
+  waterRibbonPolygon(ctx,pts,body,a,WATER_C,true);
+  const inner=pts.map((q,i)=>{const prev=pts[Math.max(0,i-1)],next=pts[Math.min(pts.length-1,i+1)];const dx=next[0]-prev[0],dy=next[1]-prev[1],len=Math.max(1,Math.hypot(dx,dy));return [q[0]-dy/len*body*.08,q[1]+dx/len*body*.08];});
+  waterRibbonPolygon(ctx,inner,Math.max(3,body*.48),a*.78,WATER_MID,true);
+  waterRibbonPolygon(ctx,inner,Math.max(2,body*.18),a*.78,WATER_HI,true);
 }
 function waterStream(ctx, points, a=1, width=8, phase=0){
   waterCurve(ctx,points,a,width);
@@ -1032,21 +1048,20 @@ function waterOrb(ctx,cx,cy,r,a=1,phase=0){
   }
 }
 function waterTaperedArc(ctx,cx,cy,r,ang0,ang1,a=1,phase=0,thick=13){
-  const pts=[]; const n=30;
+  // One substantial curved sheet of water, with an actual filled silhouette and a tapered tip.
+  const outer=[],inner=[],n=34;
   for(let i=0;i<=n;i++){
-    const t=i/n,ang=ang0+(ang1-ang0)*t;
-    const rr=r*(.82+.18*Math.sin(t*Math.PI));
-    pts.push([cx+Math.cos(ang)*rr,cy+Math.sin(ang)*rr*.72]);
+    const t=i/n,ang=ang0+(ang1-ang0)*t,centerR=r*(.84+.16*Math.sin(t*Math.PI));
+    const width=Math.max(1,thick*(.16+.84*Math.pow(Math.sin(Math.PI*t),.55)));
+    outer.push([cx+Math.cos(ang)*(centerR+width*.5),cy+Math.sin(ang)*(centerR+width*.5)*.72]);
+    inner.push([cx+Math.cos(ang)*(centerR-width*.5),cy+Math.sin(ang)*(centerR-width*.5)*.72]);
   }
-  // layered body; taper is simulated by short trailing segments.
-  for(let i=0;i<pts.length-1;i+=2){
-    const t=i/(pts.length-1); waterCurve(ctx,pts.slice(i,Math.min(i+4,pts.length)),a*(.52+.48*t),thick*(.38+.62*Math.sin(t*Math.PI)));
-  }
-  waterCurve(ctx,pts,a,Math.max(2,thick*.22));
-  for(let i=4;i<n;i+=4){
-    const t=i/n,ang=ang0+(ang1-ang0)*t;
-    waterDrop(ctx,cx+Math.cos(ang)*r*(1+.05*Math.sin(phase+i)),cy+Math.sin(ang)*r*.72,1.3+(i%3)*.35,a*.55*(1-t*.35),ang+.4);
-  }
+  ctx.save();ctx.globalAlpha=a;ctx.fillStyle=WATER_C;ctx.shadowColor=WATER_C;ctx.shadowBlur=13;ctx.beginPath();
+  outer.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));
+  for(let i=inner.length-1;i>=0;i--)ctx.lineTo(inner[i][0],inner[i][1]);ctx.closePath();ctx.fill();ctx.restore();
+  const highlight=[];for(let i=2;i<n-2;i+=2)highlight.push([(outer[i][0]+inner[i][0])*.5,(outer[i][1]+inner[i][1])*.5]);
+  if(highlight.length>1)waterRibbonPolygon(ctx,highlight,Math.max(3,thick*.26),a*.82,WATER_HI,true);
+  for(let i=4;i<n;i+=4){const t=i/n,ang=ang0+(ang1-ang0)*t;waterDrop(ctx,cx+Math.cos(ang)*r*(1+.05*Math.sin(phase+i)),cy+Math.sin(ang)*r*.72,1.5+(i%3)*.45,a*.58*(1-t*.3),ang+.4);}
 }
 function waterSheet(ctx,x,y,side,scale=1,a=1,phase=0){
   const s=side;
@@ -1301,7 +1316,7 @@ function waterSuper(ctx,x,y,p){
   if(q>.28&&q<.82){
     const t=mark, pts=[];
     for(let i=0;i<=28;i++){const u=i/28,xx=lerp(x+25,x+225,u),yy=lerp(y-48,y-48-16*Math.sin(u*Math.PI),u)-Math.sin(u*Math.PI)*22*(1-t*.55);pts.push([xx,yy]);}
-    waterCurve(ctx,pts,.42+.4*(1-converge),14);waterCurve(ctx,pts,WATER_HI,.65,3);
+    waterCurve(ctx,pts,.42+.4*(1-converge),14);waterCurve(ctx,pts,WATER_HI,.82,7);
   }
   if(q>.60){
     const cx=x+225-160*converge,cy=y-52-10*Math.sin(converge*Math.PI),r=24+88*converge;
@@ -1318,6 +1333,47 @@ function gen1AuthoredBodyPose(move,q,facing,charId){
   const leadPunch=v=>{if(lead==='R')punchArmR=v;else punchArmL=-v;};
   const offArm=v=>{if(lead==='R')punchArmL=v;else punchArmR=-v;};
   const grass=charId==='g1_grass',ice=charId==='g1_ice',thunder=charId==='g1_thunder',water=charId==='g1_water';
+  // Water and Ice have bespoke move choreography: throws, two-hand slams, sweeps, dives and rolls.
+  if(grass && move==='ss'){const wind=ease(clamp01(t/.35)),breakHit=ease(clamp01((t-.42)/.16));lean=facing*(-.22*wind+.44*breakHit);bob=3*wind-5*breakHit;legSwing=-.32*wind+.58*breakHit;leadPunch(-.25-1.65*breakHit);offArm(.55+.4*breakHit);return {punchArmL,punchArmR,legSwing,lean,bob};}
+  if(grass){
+    const wind=ease(clamp01(t/.34)),hit=ease(clamp01((t-.38)/.18)),settle=ease(clamp01((t-.7)/.3));
+    if(move==='us'){lean=-facing*.28*wind+facing*.12*hit;bob=-15*hit;legSwing=.5*wind-.3*hit;leadPunch(-1.4*wind-.25*hit);offArm(.75*wind);}
+    else if(move==='ds'){lean=-facing*.22*wind+facing*.12*hit;bob=8*wind+3*hit;legSwing=-.3*wind;punchArmL=.85*hit;punchArmR=.85*hit;}
+    else if(move==='ss'){lean=facing*(-.22*wind+.44*hit);bob=3*wind-5*hit;legSwing=-.32*wind+.58*hit;leadPunch(-.25-1.65*hit);offArm(.55+.4*hit);}
+    else if(move==='uh'){lean=-facing*.18*wind+facing*.08*hit;bob=-28*hit+5*settle;legSwing=.7*wind-.5*hit;leadPunch(-1.0*wind-1.0*hit);offArm(-.85*wind-1.0*hit);}
+    else if(move==='dh'){lean=facing*(.08*wind+.2*hit);bob=8*wind+7*hit;legSwing=-.1*wind;punchArmL=-1.15*hit;punchArmR=-1.15*hit;}
+    else if(move==='sh'){lean=facing*(-.34*wind+.5*hit);bob=4*wind-4*hit;legSwing=-.7*wind+.4*hit;leadPunch(-.15-1.45*hit);offArm(.9*hit);}
+    else if(move==='recovery'){const spin=Math.sin(t*TAU*1.2);lean=facing*(.34*spin-.1);bob=-17*ease(clamp01((t-.28)/.4));legSwing=.85*spin;leadPunch(-.8*spin);offArm(.7*spin);}
+    else if(move==='groundPound'){const dive=ease(clamp01(t/.6)),land=ease(clamp01((t-.6)/.22));lean=facing*(.2+.58*dive-.35*land);bob=16*dive-12*land;legSwing=.9*dive-.45*land;punchArmL=-.7-.2*dive;punchArmR=-.7-.2*dive;}
+    else if(move==='super'){const spread=ease(clamp01(t/.3)),fin=ease(clamp01((t-.76)/.2));lean=facing*(.12*spread-.38*fin);bob=-6*spread+3*fin;legSwing=.5*Math.sin(t*TAU);punchArmL=-1.15*spread-.2*fin;punchArmR=-1.15*spread-.2*fin;offArm(.5*fin);}
+    return {punchArmL,punchArmR,legSwing,lean,bob};
+  }
+  if(water){
+    const wind=ease(clamp01(t/.32)),hit=ease(clamp01((t-.34)/.18)),recover=ease(clamp01((t-.66)/.34));
+    if(move==='us'){lean=facing*(.12*wind-.28*hit);bob=-18*hit+4*recover;legSwing=.8*wind-1.1*hit;leadPunch(-.3-1.05*wind);offArm(.8*hit);}
+    else if(move==='ds'){lean=-facing*(.24*wind-.12*hit);bob=8*wind+4*hit;legSwing=-.15*wind;punchArmL=.45+1.0*hit;punchArmR=.45+1.0*hit;}
+    else if(move==='ss'){lean=facing*(-.24*wind+.36*hit);bob=2*wind-2*hit;legSwing=-.55*wind+.2*hit;leadPunch(-.2-1.1*wind+.65*hit);offArm(.85*hit);}
+    else if(move==='uh'){lean=facing*(.22*wind-.36*hit);bob=-26*hit+7*recover;legSwing=.55*wind-.85*hit;leadPunch(-1.2*hit);offArm(-.9*wind-.35*hit);}
+    else if(move==='dh'){lean=-facing*.18*wind+facing*.1*hit;bob=7*wind+8*hit;legSwing=.25*wind;punchArmL=-1.05*hit;punchArmR=-1.05*hit;}
+    else if(move==='sh'||move==='heavy'){lean=facing*(-.3*wind+.48*hit);bob=4*wind-3*hit;legSwing=-.75*wind+.45*hit;leadPunch(-.1-1.75*hit);offArm(.8*hit);}
+    else if(move==='recovery'){const roll=Math.sin(t*TAU*1.3);lean=facing*(.3*roll-.1);bob=-15*ease(clamp01((t-.28)/.4));legSwing=.9*roll;leadPunch(-.7*roll);offArm(.65*roll);}
+    else if(move==='groundPound'){const dive=ease(clamp01(t/.62)),land=ease(clamp01((t-.62)/.22));lean=facing*(.25+.4*dive);bob=17*dive-12*land;legSwing=.9*Math.sin(t*TAU*1.5);punchArmL=-.45-.4*dive;punchArmR=-.45-.4*dive;}
+    else if(move==='super'){const spin=Math.sin(t*TAU*2),cash=ease(clamp01((t-.72)/.2));lean=facing*(.22*spin-.42*cash);bob=-5*wind-8*cash;legSwing=.8*spin;leadPunch(-.5-1.0*cash);offArm(.75*spin);}
+    return {punchArmL,punchArmR,legSwing,lean,bob};
+  }
+  if(ice){
+    const wind=ease(clamp01(t/.36)),hit=ease(clamp01((t-.4)/.14)),settle=ease(clamp01((t-.72)/.28));
+    if(move==='us'){lean=-facing*(.18*wind)+facing*.08*hit;bob=-22*hit+4*settle;legSwing=.7*wind-.5*hit;leadPunch(-.25-1.0*hit);offArm(-.75*hit);}
+    else if(move==='ds'){lean=facing*(.12*wind-.1*hit);bob=6*wind;legSwing=.15*hit;punchArmL=.9*hit;punchArmR=.9*hit;}
+    else if(move==='ss'){lean=facing*(-.28*wind+.5*hit);bob=2*wind-2*hit;legSwing=-.4*wind+.75*hit;leadPunch(-.15-1.7*hit);offArm(.7*hit);}
+    else if(move==='uh'){lean=facing*(.25*wind-.25*hit);bob=-30*hit+5*settle;legSwing=.85*wind-.4*hit;leadPunch(-.65-1.1*hit);offArm(-1.0*hit);}
+    else if(move==='dh'){lean=facing*(.12*wind+.2*hit);bob=7*wind+6*hit;legSwing=-.2*wind;punchArmL=-1.1*hit;punchArmR=-1.1*hit;}
+    else if(move==='sh'||move==='heavy'){lean=facing*(-.35*wind+.55*hit);bob=4*wind-3*hit;legSwing=-.75*wind+.45*hit;leadPunch(-.1-1.75*hit);offArm(.8*hit);}
+    else if(move==='recovery'){lean=facing*(.35*wind-.2*hit);bob=-20*hit;legSwing=.65*Math.sin(t*TAU);leadPunch(-.5*hit);offArm(-.8*hit);}
+    else if(move==='groundPound'){const dive=ease(clamp01(t/.62)),land=ease(clamp01((t-.62)/.2));lean=facing*(.05+.65*dive);bob=15*dive-11*land;legSwing=.2*dive-.8*land;punchArmL=-.8*dive;punchArmR=-.8*dive;}
+    else if(move==='super'){const gather=ease(clamp01(t/.28)),shatter=ease(clamp01((t-.72)/.2));lean=facing*(.15*gather-.35*shatter);bob=-6*gather+5*shatter;legSwing=.5*Math.sin(t*TAU);leadPunch(-.6-1.2*shatter);offArm(-.75*gather+.6*shatter);}
+    return {punchArmL,punchArmR,legSwing,lean,bob};
+  }
   if(move==='us'){
     if(grass){lean=facing*(t<.2?-.18+Math.sin(t*40)*.08:.08+.18*strike);legSwing=.24*Math.sin(t*18)+.55*strike;bob=-17*strike+3*recover;leadPunch(-.45-1.1*strike);offArm(.35+.4*strike);}
     else if(ice){lean=facing*(.06-.25*wind+.12*strike);legSwing=.35*Math.sin(t*14);bob=-8*wind-10*strike;leadPunch(-.55-1.25*strike);offArm(.35+.45*strike);}
@@ -1374,6 +1430,57 @@ function gen1AuthoredBodyPose(move,q,facing,charId){
   return {punchArmL,punchArmR,legSwing,lean,bob};
 }
 
+function gen1FireBodyPose(move,q,facing){
+  const t=clamp01(q),wind=ease(clamp01(t/.28)),hit=ease(clamp01((t-.30)/.16)),settle=ease(clamp01((t-.72)/.28));
+  let punchArmL=0,punchArmR=0,legSwing=0,lean=0,bob=0;
+  const lead=v=>{if(facing>=0)punchArmR=v;else punchArmL=-v;};
+  if(move==='us'){ // plants, whips the throwing arm diagonally up, then follows the burning rock
+    lead(-.35-1.55*wind-.25*hit);punchArmL=.35+.35*wind;lean=facing*(-.12*wind+.18*hit);legSwing=-.2*wind+.62*hit;bob=3*wind-13*hit+4*settle;
+  }else if(move==='ds'){ // heel stamp with both fists pulled back
+    punchArmL=.35+1.0*wind;punchArmR=.35+1.0*wind;lean=-facing*.12*wind;legSwing=.65*hit;bob=5*wind+7*hit-2*settle;
+  }else if(move==='ss'){ // low roll into an upward hook
+    lead(-.15-1.0*wind-1.0*hit);punchArmL=.25+.65*hit;lean=facing*(-.36*wind+.42*hit);legSwing=-.75*wind+.65*hit;bob=5*wind-5*hit;
+  }else if(move==='uh'){ // both arms launch overhead, knees tuck then extend
+    punchArmL=-.65-1.4*wind-1.0*hit;punchArmR=-.8-1.45*wind-1.05*hit;lean=facing*(.12*wind-.18*hit);legSwing=.7*wind-.8*hit;bob=-3*wind-22*hit+5*settle;
+  }else if(move==='dh'){ // wind back, two-fist hammer slam, recoil
+    punchArmL=-.2-1.1*wind+.5*hit;punchArmR=-.2-1.1*wind+.5*hit;lean=facing*(.18*wind+.25*hit);legSwing=-.15*wind+.2*hit;bob=3*wind+10*hit-4*settle;
+  }else if(move==='sh'){ // long forward punch with rear leg driving the body
+    lead(-.2-1.1*wind-1.45*hit);punchArmL=.55+.45*hit;lean=facing*(-.32*wind+.5*hit);legSwing=-.55*wind+.42*hit;bob=4*wind-4*hit;
+  }else if(move==='recovery'){ // tucked shoulder roll and rising knee
+    lead(-.25-1.3*Math.sin(t*Math.PI));punchArmL=.45+.45*Math.sin(t*Math.PI);lean=facing*(.32*Math.sin(t*TAU)-.12);legSwing=.95*Math.sin(t*TAU);bob=-16*ease(clamp01((t-.28)/.42));
+  }else if(move==='groundPound'){ // corkscrew tuck, then both arms brace on landing
+    punchArmL=-.7-.35*wind;punchArmR=-.7-.35*wind;lean=facing*(.15+.62*wind-.4*hit);legSwing=.8*wind-.45*hit;bob=13*wind-12*hit;
+  }else if(move==='super'){ // alternating rush strikes, cross-body finish
+    const combo=Math.sin(t*TAU*2);punchArmL=-.35-1.1*wind-.6*Math.max(0,combo);punchArmR=-.35-1.1*wind-.6*Math.max(0,-combo);lean=facing*(.12*wind-.34*hit+.12*settle);legSwing=.65*combo;bob=-5*wind-7*hit+3*settle;
+  }
+  return {punchArmL,punchArmR,legSwing,lean,bob};
+}
+function gen1ThunderBodyPose(move,q,facing){
+  const t=clamp01(q),wind=ease(clamp01(t/.24)),strike=ease(clamp01((t-.24)/.20)),recover=ease(clamp01((t-.68)/.32));
+  let punchArmL=0,punchArmR=0,legSwing=0,lean=0,bob=0;
+  const lead=v=>{if(facing>=0)punchArmR=v;else punchArmL=-v;};
+  if(move==='us'){ // pivot on one foot, orbiting arm leads the upward electric launch
+    lead(-.2-1.55*strike);punchArmL=.75*wind-.25*strike;lean=facing*(-.22*wind+.18*strike);legSwing=-.45*wind+1.0*strike;bob=-14*strike+3*recover;
+  }else if(move==='ds'){ // compact crouch, both palms clap down/outward
+    punchArmL=.6+1.05*strike;punchArmR=.6+1.05*strike;lean=-facing*(.2*wind-.08*strike);legSwing=.25*wind+.6*strike;bob=6*wind+4*strike;
+  }else if(move==='ss'){ // fast fencing thrust: arm shoots forward while rear leg drives
+    lead(-.15-1.8*strike);punchArmL=.45+.5*strike;lean=facing*(-.28*wind+.48*strike);legSwing=-.45*wind+.35*strike;bob=2*wind-3*strike;
+  }else if(move==='uh'){ // spring upward with both fists split above the head
+    punchArmL=-.6-1.25*wind-1.1*strike;punchArmR=-.65-1.35*wind-1.15*strike;lean=facing*(.15*wind-.2*strike);legSwing=.7*wind-.75*strike;bob=-5*wind-22*strike+4*recover;
+  }else if(move==='dh'){ // two-handed overhead hammer and grounded brace
+    punchArmL=-.3-1.25*wind+.6*strike;punchArmR=-.3-1.25*wind+.6*strike;lean=facing*(.12*wind+.25*strike);legSwing=-.2*wind+.2*strike;bob=4*wind+9*strike-3*recover;
+  }else if(move==='sh'){ // burst-step kick, hands counterbalance the extended leg
+    punchArmL=.7*wind-.45*strike;punchArmR=-.5-1.1*strike;lean=facing*(-.25*wind+.45*strike);legSwing=1.05*strike-.35*wind;bob=2*wind-5*strike;
+  }else if(move==='recovery'){ // tight crouch, then a rapid rising spin
+    lead(-.2-1.2*strike);punchArmL=.75*Math.sin(t*TAU);lean=facing*(.3*wind-.18*recover);legSwing=1.0*Math.sin(t*TAU);bob=7*wind-23*recover;
+  }else if(move==='groundPound'){ // shoulder-forward aerial dive with legs tucked behind
+    punchArmL=-.65-.45*wind;punchArmR=-.7-.4*wind;lean=facing*(.12+.68*wind-.2*strike);legSwing=.9*wind-.25*strike;bob=15*wind-10*strike;
+  }else if(move==='super'){ // rapid alternating strikes followed by a grounded power slam
+    const combo=Math.sin(t*TAU*2.4);punchArmL=-.35-1.2*wind-.7*Math.max(0,combo);punchArmR=-.35-1.2*wind-.7*Math.max(0,-combo);lean=facing*(.12*wind-.32*strike+.12*recover);legSwing=.7*combo;bob=-4*wind-8*strike+4*recover;
+  }
+  return {punchArmL,punchArmR,legSwing,lean,bob};
+}
+
 export function getGen1AttackPose(move,p,facing=1,charId='g1_water'){
   const q=clamp01(Math.max(0,p));
   const t=ease(q);
@@ -1381,7 +1488,11 @@ export function getGen1AttackPose(move,p,facing=1,charId='g1_water'){
   let punchArmL=0,punchArmR=0,legSwing=0,lean=facing*.05,bob=0;
   const leadPunch=(v)=>{if(lead==='R')punchArmR=v;else punchArmL=-v;};
   const offArm=(v)=>{if(lead==='R')punchArmL=v;else punchArmR=-v;};
-  if (p >= 0) return gen1AuthoredBodyPose(move,q,facing,charId);
+  if (p >= 0) {
+    if(charId==='g1_fire') return gen1FireBodyPose(move,q,facing);
+    if(charId==='g1_thunder') return gen1ThunderBodyPose(move,q,facing);
+    return gen1AuthoredBodyPose(move,q,facing,charId);
+  }
   // Give the non-Fire Gen-I heroes matching body choreography for their newly
   // authored recovery and ground-pound effects instead of leaving them in idle.
   if(move==='recovery'||move==='groundPound'){
@@ -1448,7 +1559,6 @@ export function getGen1AttackPose(move,p,facing=1,charId='g1_water'){
 
 // Improved supers. Fire keeps its existing design; Water uses the single reference-native implementation above.
 function fireFlameOrbitLegacy(ctx,cx,cy,rx,ry,start,end,color,alpha=1,count=7){
-  glowArc(ctx,cx,cy,rx,ry,start,end,color,5,alpha);
   for(let i=0;i<count;i++){
     const t=count===1 ? 0 : i/(count-1);
     const a=start+(end-start)*t;
@@ -1473,8 +1583,7 @@ function fireSuper(ctx,x,y,p){
         const endX=q<.375 ? x+96+launch*34 : x+80+travel*1030;
         const endY=yLane+lane*travel*5;
         const a=(1-launch)*.75+travel*.45;
-        glowStroke(ctx,[[x+26,yLane],[x+48,yLane-lane*5],[endX,endY]],c,5+launch*7,a);
-        glowStroke(ctx,[[x+26,yLane],[x+48,yLane-lane*5],[endX,endY]],hot,2.2+launch*3,a*.9);
+        for(let k=0;k<5;k++){const t=k/4,px=x+26+(endX-(x+26))*t,py=yLane+(endY-yLane)*t-lane*5*Math.sin(t*Math.PI);fireBlob(ctx,px,py,5+launch*5,c,a*(.65+.2*Math.sin(t*Math.PI)),k+q*5);if(k%2===0)flameShape(ctx,px,py-4,4+launch*3,hot,a*.72,-Math.PI/2);}
         for(let i=0;i<2;i++) fireRay(ctx,x+45+i*18,yLane,-.1+lane*.08,10+i*2,a*.5,hot);
         if(q>.18){const cx=x+35+travel*990,cy=yLane;fireBlob(ctx,cx,cy,10+launch*18,hot,.7+launch*.25,q*6+lane);}
       }
@@ -1485,8 +1594,7 @@ function fireSuper(ctx,x,y,p){
       const radius=18+travel*12;
       fireBlob(ctx,cx,cy,radius,c,1- impact*.2,q*8);
       fireRing(ctx,cx,cy,radius+8,radius*.42,hot,.9*(1-impact),q*5);
-      glowStroke(ctx,[[x+24,y-58],[cx-radius*1.6,cy-3],[cx-radius*.55,cy]],hot,13*(1-impact),.75);
-      glowStroke(ctx,[[x+24,y-58],[cx-radius*1.6,cy-3],[cx-radius*.55,cy]],white,3.2*(1-impact),.9);
+      for(let k=0;k<4;k++){const t=k/3,px=x+24+(cx-radius*.55-(x+24))*t,py=y-58-3*t-8*Math.sin(t*Math.PI);fireBlob(ctx,px,py,7+5*Math.sin(t*Math.PI),hot,.7*(1-impact),k+q*8);if(k%2===0)flameShape(ctx,px,py-4,4,white,.68*(1-impact),-.4);}
       for(let i=0;i<3;i++) fireRay(ctx,cx-radius*.5,cy,-.14+i*.14,12+i*3,.55*(1-impact),hot);
     }
     if(impact>0){
@@ -1523,11 +1631,9 @@ function gen1Recovery(ctx,x,y,p,charId){
   } else if(charId==='g1_ice'){
     // A fixed frost marker remains behind while the body snaps through a curved return path.
     const markerX=x+18, markerY=y-38, travel=ease(clamp01((q-.20)/.46));
-    glowArc(ctx,markerX,markerY,15+4*Math.sin(q*TAU),9,0,TAU,c,2.5,.65*(q<.72?1:fade));
-    for(let i=0;i<4;i++)iceShard(ctx,markerX+(i-1.5)*5,markerY-12,3.5,11,-.2+i*.13,c,.65);
+    for(let i=0;i<7;i++){const aa=i/7*TAU;iceShard(ctx,markerX+Math.cos(aa)*15,markerY+Math.sin(aa)*9,3.5,10,-.2+i*.13,c,.65*(q<.72?1:fade));}
     const sx=lerp(x-26, x+22, travel), sy=lerp(y-30,y-76,travel)-Math.sin(travel*Math.PI)*18;
-    const pts=[];for(let i=0;i<=14;i++){const t=i/14;pts.push([lerp(x-26,sx,t),lerp(y-30,sy,t)-Math.sin(t*Math.PI)*12]);}
-    if(q>.2){glowStroke(ctx,pts,c,8,.65*fade);glowStroke(ctx,pts,white,2,.8*fade);}
+    if(q>.2){for(let i=0;i<=10;i++){const t=i/10,px=lerp(x-26,sx,t),py=lerp(y-30,sy,t)-Math.sin(t*Math.PI)*12;iceShard(ctx,px,py,4.5,10+(i%3)*2,-.55+t*.9,c,.66*fade);if(i%3===0)iceShard(ctx,px+3,py-2,2.5,7,.2,white,.62*fade);}}
     iceLargeIcicle(ctx,sx,sy,12,34,-.65+travel*.85,.95*fade);
     if(q>.42){iceShard(ctx,sx-11,sy+7,6,18,.9,c,.7*fade);iceShard(ctx,sx+12,sy-7,5,16,-.8,c,.65*fade);}
   } else if(charId==='g1_thunder'){
@@ -1535,7 +1641,7 @@ function gen1Recovery(ctx,x,y,p,charId){
     const sx=x+Math.sin(q*TAU)*10, sy=y-8-66*lift;
     if(q<.25){lineBolt(ctx,x-12,y-3,20,8,c,.45+.35*wind);dot(ctx,x+18,y-4,3,white,.75);}
     const pts=[[x-18,y-24],[x-28+12*snap,y-13],[x-8+10*snap,sy+13],[sx,sy-10],[sx+9,sy-28]];
-    strokePath(ctx,pts,c,5,fade);strokePath(ctx,pts,white,1.6,.85*fade);
+    for(let i=0;i<pts.length-1;i++){const a0=pts[i],b0=pts[i+1],mx=(a0[0]+b0[0])*.5,my=(a0[1]+b0[1])*.5;lineBolt(ctx,mx-5,my-7,15,19,c,.82*fade);}
     lineBolt(ctx,sx-12,sy-7,27,29,c,.95*fade);dot(ctx,sx+13,sy-29,4,white,.9*fade);
     if(q>.48)for(let i=0;i<4;i++)lineBolt(ctx,sx-20+i*13,sy+5+i*2,8,11,c,.6*fade);
   } else {
@@ -1568,8 +1674,7 @@ function gen1GroundPound(ctx,x,y,p,charId){
     }else if(charId==='g1_thunder'){
       // Head-first approach twists into a shoulder-first diagonal on the final beat.
       const twist=ease(clamp01((dive-.72)/.28)),dx=12+34*dive,dy=y-18-76*dive;
-      lineBolt(ctx,dx-14,dy-18,30,30,c,.92);strokePath(ctx,[[x+8,y-25],[dx-9,dy+15],[dx+10,dy+2]],white,2.2,.85);
-      strokePath(ctx,[[dx-8,dy-8],[dx+11*twist,dy+4],[dx+24,dy+9]],c,5,.9);
+      lineBolt(ctx,dx-14,dy-18,30,30,c,.92);lineBolt(ctx,x+8+(dx-x)*.45,y-25+38*dive,17,22,white,.78);lineBolt(ctx,dx-8,dy-8,23,21,c,.9);
     }else{
       // Tight corkscrew: three offset streams rotate around the diving pressure core.
       const angle=q*TAU*2.3,dx=14+20*Math.sin(angle),dy=y-20-75*dive;
@@ -1589,9 +1694,7 @@ function gen1GroundPound(ctx,x,y,p,charId){
     icePlate(ctx,x,y-2,r1*.72,a1,q*4);icePlate(ctx,x,y-2,r2*.60,a2,q*4+1);
     for(let i=0;i<8;i++){const side=i%2?1:-1,d=side*(12+i*r2/10);iceShard(ctx,x+d,y-8,5,12+i%3*3,side*.6,c,(i<4?a1:a2)*.8);}
   }else if(charId==='g1_thunder'){
-    glowArc(ctx,x,y-3,r1,r1*.20,Math.PI,TAU,c,4,a1);glowArc(ctx,x,y-3,r2,r2*.18,Math.PI,TAU,c,2.4,a2);
-    glowArc(ctx,x,y-3,r1*.7,r1*.12,Math.PI,TAU,white,1.4,a1*.8);
-    for(let i=0;i<8;i++){const d=-r2+2*r2*i/7;lineBolt(ctx,x+d,y-4,8,7,c,(i%2?a1:a2)*.75);}
+    for(let i=0;i<12;i++){const aa=Math.PI+i/11*Math.PI,xx=x+Math.cos(aa)*r1,yy=y-3+Math.sin(aa)*r1*.20;lineBolt(ctx,xx-4,yy-3,11,10,c,a1*.8);if(i%2===0){const bx=x+Math.cos(aa)*r2,by=y-3+Math.sin(aa)*r2*.18;lineBolt(ctx,bx-3,by-3,8,8,c,a2*.65);}}
   }else{
     waterWave(ctx,x,y-2,-1,land,a1,q*4);waterWave(ctx,x,y-2,1,land*.82,a1*.8,q*4+1);
     waterWave(ctx,x,y-2,-1,land*.84,a2,q*4+2);waterWave(ctx,x,y-2,1,land*.68,a2*.8,q*4+3);
@@ -1613,8 +1716,8 @@ function grassSuper(ctx,x,y,p){
   }
   const sx=x+20+dash*300,sy=y-55-18*Math.sin(q*TAU),trail=[];
   for(let i=0;i<=20;i++){const t=i/20;trail.push([lerp(x+18,sx,t),lerp(y-48,sy,t)-Math.sin(t*Math.PI)*20]);}
-  if(q>.42&&q<.9){glowStroke(ctx,trail,'#3F9B17',12,.8);glowStroke(ctx,trail,c,7,.95);glowStroke(ctx,trail,pale,1.8,.85);}
-  for(let i=0;i<9;i++){const t=i/8,px=lerp(x+18,sx,t),py=lerp(y-48,sy,t)-Math.sin(t*Math.PI)*20;leafBlade(ctx,px,py,5,16,-.6+t*.9,c,.75*(1-finish*.3));}
+  if(q>.42&&q<.9){for(let i=0;i<7;i++){const t=i/6,px=lerp(x+18,sx,t),py=lerp(y-48,sy,t)-Math.sin(t*Math.PI)*20;leafBlade(ctx,px,py,8,22,-.7+t*1.25,c,.78*(1-finish*.3));leafBlade(ctx,px+5,py-4,4,13,.4+t*.5,pale,.62);}}
+  else {for(let i=0;i<4;i++){const t=i/3,px=lerp(x+18,sx,t),py=lerp(y-48,sy,t)-Math.sin(t*Math.PI)*20;leafBlade(ctx,px,py,5,14,-.6+t*.9,c,.5);}}
   if(q>.78){const r=28+82*finish;grassFlower(ctx,sx,sy,finish,1,.95,q*2);glowArc(ctx,sx,sy,r,r*.55,0,TAU,c,5,.85);for(let i=0;i<8;i++)leafBlade(ctx,sx+Math.cos(i/8*TAU)*r,sy+Math.sin(i/8*TAU)*r*.55,6,16,i/8*TAU,pale,.75);}
 }
 function iceSuper(ctx,x,y,p){
@@ -1624,7 +1727,7 @@ function iceSuper(ctx,x,y,p){
   if(q<.42){icePlate(ctx,x+28,y-2,22+charge*28,.85,charge*3);for(let i=0;i<5;i++)iceShard(ctx,x+28+(i-2)*10,y-20-charge*(30+i*5),5,15+charge*12,-.15+i*.08,c,.85);}
   // A guided frost path curves around the opponent lane, then returns to a close finisher.
   const pts=[];for(let i=0;i<=24;i++){const t=i/24;pts.push([lerp(x+28,cx,t),lerp(y-56,cy,t)-Math.sin(t*Math.PI)*(42+travel*26)]);}
-  if(q>.24){waterCurve(ctx,pts,.22+.2*ret,17);glowStroke(ctx,pts,c,8,.9);glowStroke(ctx,pts,white,2,.85);}
+  if(q>.24){waterCurve(ctx,pts,.48+.2*ret,22);for(let i=2;i<pts.length;i+=4){const z=i/(pts.length-1),pt=pts[i];iceShard(ctx,pt[0],pt[1],5+2*ret,13+4*travel,Math.sin(z*TAU)*.5,c,.65);}}
   iceCrystal(ctx,cx,cy,.65+travel*.35,.9,q*4);
   if(q>.7){icePlate(ctx,cx,cy+8,32+ret*20,ret,.0);for(let i=0;i<7;i++)iceShard(ctx,cx+(i-3)*11,cy-18,6,18,-.3+i*.1,c,ret*.8);}
 }
@@ -1633,14 +1736,15 @@ function thunderRecoveryOrPound(ctx,x,y,p,groundPound=false){
   const q=attackP(p),c='#FFFF44',white='#FFFFFF';
   if(!groundPound){
     const crouch=ease(clamp01(q/.24)),rise=ease(clamp01((q-.24)/.42)),sx=x+Math.sin(q*TAU)*9,sy=y-8-68*rise;
-    if(q<.3){strokePath(ctx,[[x-18,y-4],[x-7,y+1],[x+15,y-4]],c,3,.65);dot(ctx,x+16,y-4,3,white,.85);}
+    if(q<.3){lineBolt(ctx,x-15,y-7,23,12,c,.7);dot(ctx,x+16,y-4,3,white,.85);}
     const pts=[[x-20,y-25],[x-29+14*crouch,y-12],[x-7+12*crouch,sy+16],[sx,sy],[sx+10,sy-26]];
-    strokePath(ctx,pts,c,5,.92);strokePath(ctx,pts,white,1.5,.9);lineBolt(ctx,sx-13,sy-6,28,30,c,.95);dot(ctx,sx+12,sy-27,4.5,white,.95);
-    if(q>.45){for(let i=0;i<5;i++)lineBolt(ctx,sx-22+i*11,sy+4+i*2,8,10,c,.62*(1-q*.25));}
+    for(let i=0;i<pts.length-1;i++){const a0=pts[i],b0=pts[i+1],mx=(a0[0]+b0[0])*.5,my=(a0[1]+b0[1])*.5;lineBolt(ctx,mx-5,my-7,15,19,c,.82);if(i%2===0)lineBolt(ctx,mx-2,my-5,9,13,white,.72);}
+    lineBolt(ctx,sx-13,sy-6,28,30,c,.95);dot(ctx,sx+12,sy-27,4.5,white,.95);
+    if(q>.45)for(let i=0;i<5;i++)lineBolt(ctx,sx-22+i*11,sy+4+i*2,10,12,c,.62*(1-q*.25));
   }else{
     const dive=ease(clamp01(q/.58)),twist=ease(clamp01((dive-.70)/.30)),land=ease(clamp01((q-.58)/.19)),fade=1-ease(clamp01((q-.8)/.2));
-    if(q<.59){const sx=12+34*dive,sy=y-18-76*dive;lineBolt(ctx,sx-14,sy-20,31,32,c,.95);strokePath(ctx,[[x+12,y-20],[sx-8,sy-6],[sx+20*twist,sy+9]],white,2.1,.82);strokePath(ctx,[[sx-7,sy-7],[sx+9,sy+4],[sx+23,sy+9]],c,5,.9);}
-    else{const r1=18+70*land,r2=24+92*land;glowArc(ctx,x,y-3,r1,r1*.20,Math.PI,TAU,c,4,fade);glowArc(ctx,x,y-3,r2,r2*.18,Math.PI,TAU,c,2.4,fade*.62);for(let i=0;i<8;i++){const d=-r2+2*r2*i/7;lineBolt(ctx,x+d,y-4,8,7,c,(i%2?fade:fade*.62)*.75);}}
+    if(q<.59){const sx=12+34*dive,sy=y-18-76*dive;lineBolt(ctx,sx-14,sy-20,31,32,c,.95);lineBolt(ctx,x+12+(sx-x)*.45,y-20-38*dive,18,24,white,.76);lineBolt(ctx,sx-7,sy-7,27,25,c,.9);}
+    else{const r1=18+70*land,r2=24+92*land;for(let i=0;i<12;i++){const aa=i/12*TAU,xx=x+Math.cos(aa)*r1,yy=y-3+Math.sin(aa)*r1*.20;lineBolt(ctx,xx-4,yy-3,11,10,c,fade*.8);if(i%2===0)lineBolt(ctx,x+Math.cos(aa)*r2-3,y-3+Math.sin(aa)*r2*.18-3,8,8,c,fade*.55);}}
   }
 }
 
