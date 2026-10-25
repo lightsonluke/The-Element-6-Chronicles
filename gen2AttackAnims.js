@@ -171,6 +171,27 @@ function nishikawa(ctx,p){
 
 function itto(ctx,p){
   const c='#DDE5EA', red='#A8B4BF', q=out(p);
+  // Only these two Ittō moves are new/adjustable; his seven existing attack
+  // branches below are intentionally preserved byte-for-byte in behavior.
+  if(this==='recovery'){
+    const rise=smooth(phase(p,.12,.68)), cut=pulse(phase(p,.32,.7));
+    // A low, coiled draw becomes a rising diagonal cut, then a visible rebound.
+    blade(ctx,-8,-18,34+rise*86,13,c,pulse(p),-.95);
+    stroke(ctx,[[-10,-14],[20+rise*72,-35-rise*62]],'#FFFFFF',3,cut*.9);
+    stroke(ctx,[[-18,-8],[10+rise*60,-30-rise*48]],red,5,cut*.5);
+    if(p>.68){const r=phase(p,.68,1);ring(ctx,12,-42-rise*42,20+r*18,8+r*7,c,.6*(1-r),2,-.8);}
+    return;
+  }
+  if(this==='groundPound'){
+    const drop=smooth(phase(p,.08,.62)), impact=pulse(phase(p,.62,.9));
+    blade(ctx,8,-45,28+drop*82,16,c,pulse(p),Math.PI/2);
+    stroke(ctx,[[8,-36],[8,-36+drop*70]],red,4,.75*pulse(p));
+    if(p>.62){const r=smooth(phase(p,.62,.86));
+      poly(ctx,[[-88*r,4],[-62*r,-8*r],[0,-13*r],[62*r,-8*r],[88*r,4],[58*r,13*r],[-58*r,13*r]],'#8795A3',.7*impact,'#E8EEF2');
+      for(let i=0;i<5;i++)stroke(ctx,[[(-1.9+i*.95)*20*r,2],[(-1.9+i*.95)*32*r,12*r]],'#FFFFFF',2,.6*impact);
+    }
+    return;
+  }
   if(this==='us'){const e=smooth(phase(p,.12,.7)); blade(ctx,10,-45,110*e,18,c,pulse(p),-Math.PI/2); stroke(ctx,[[10,-45],[10,-45-100*e]],'#FFFFFF',2,.7*pulse(p)); return;}
   if(this==='ds'){const e=smooth(phase(p,.12,.72)); blade(ctx,0,-30,100*e,16,c,pulse(p),Math.PI/2); stroke(ctx,[[0,-30],[0,20]],red,3,.65*pulse(p)); return;}
   if(this==='ss'){const e=smooth(phase(p,.1,.7)); blade(ctx,12,-48,115*e,14,c,pulse(p),-.08); stroke(ctx,[[22,-54],[100*e,-52]],'#FFFFFF',2,.7*pulse(p)); return;}
@@ -307,18 +328,18 @@ export function drawGen2Attack(ctx,x,y,color,p,facing,charId,moveKey){
   ctx.restore(); return true;
 }
 
-export function drawGen2Super(ctx,x,y,color,p,charId){
-  const c=color||'#fff', q=clamp01(p); ctx.save();ctx.translate(x,y);
-  if(charId==='g2_renji'){const h=phase(q,.38,.72);metal(ctx,55,-48,130,120,c,.55);for(let i=0;i<5;i++)metal(ctx,55+i*8,-48,70+i*14,65+i*12,i%2?c:'#E8EEF2',.55);capsule(ctx,8,-48,55+smooth(h)*150,-48,34,c,pulse(h));if(q>.7)spark(ctx,55+smooth(h)*150,-48,65,c,pulse(q),14);}
-  else if(charId==='g2_kaito'){const h=phase(q,.4,.75);flame(ctx,0,-48,65+q*10,c,.65);for(let i=0;i<10;i++)flame(ctx,Math.cos(i)*30+smooth(h)*120,-48+Math.sin(i)*25,14,c,.6*pulse(h),i*.6);capsule(ctx,5,-48,30+smooth(h)*150,-48,28,c,pulse(h));circle(ctx,30+smooth(h)*150,-48,32,'#FFD27A',pulse(h));}
-  else if(charId==='g2_hana'){const e=phase(q,.0,.42),h=phase(q,.45,.82);ring(ctx,0,-48,80+e*12,60+e*8,c,.45);for(let i=0;i<22;i++){const a=i/22*TAU;const r=20+smooth(h)*120;circle(ctx,Math.cos(a)*r,-48+Math.sin(a)*r*.72,7,'#E7FAFF',.75*pulse(h));}ring(ctx,0,-48,125,90,c,pulse(q),5);}
-  else if(charId==='g2_daigo'){const e=phase(q,.0,.45),h=phase(q,.45,.78);stone(ctx,55,-45,150+e*30,130+e*20,c,.7);stone(ctx,55+smooth(h)*140,-45,125,110,c,pulse(h));for(let i=0;i<8;i++)stone(ctx,55+Math.cos(i)*50,-45+Math.sin(i)*35,30,25,'#D7C4A8',.6*pulse(h),i*.4);}
-  else if(charId==='g2_suzu'){const h=phase(q,.38,.8);ring(ctx,0,-48,75,58,c,.4,4);const a=-Math.PI/2+smooth(h)*TAU;const px=Math.cos(a)*90,py=-48+Math.sin(a)*65;gust(ctx,px,py,55,c,pulse(h),a);if(q>.72)ring(ctx,0,-48,115,85,c,pulse(q),5);}
-  else if(charId==='g2_mai'){const h=phase(q,.4,.8);shadow(ctx,0,-48,95,70,'#171322',.8);shadow(ctx,0,-48,105,72,c,.35);const a=-.7+smooth(h)*1.4;shadow(ctx,Math.cos(a)*100,-48+Math.sin(a)*55,65,14,c,pulse(h),a);shadow(ctx,Math.cos(a+Math.PI)*100,-48+Math.sin(a+Math.PI)*55,65,14,c,pulse(h),a+Math.PI);}
-  else if(charId==='g2_osamu'){const h=phase(q,.45,.82);ring(ctx,0,-48,95,72,c,.4,4);for(let i=0;i<20;i++){const a=i/20*TAU;const r=20+smooth(h)*125;soundRing(ctx,Math.cos(a)*r,-48+Math.sin(a)*r*.7,9,c,.7*pulse(h));}ring(ctx,0,-48,130,96,'#FFFFFF',pulse(q),5);}
-  else if(charId==='g2_yui'){const e=phase(q,0,.4),h=phase(q,.45,.8);star(ctx,0,-48,78+e*10,c,.55);ring(ctx,0,-48,92+e*10,70+e*8,'#FFFFFF',.5);for(let i=0;i<14;i++){const a=i/14*TAU;const r=25+smooth(h)*115;star(ctx,Math.cos(a)*r,-48+Math.sin(a)*r*.7,10,c,.7*pulse(h),a);}}
-  else if(charId==='g2_ibuki'){const h=phase(q,.45,.8);ring(ctx,0,-48,100,75,c,.35,5);for(let i=0;i<18;i++){const a=i/18*TAU;const r=25+smooth(h)*110;circle(ctx,Math.cos(a)*r,-48+Math.sin(a)*r*.7,7,i%2?c:'#FFB7C9',.7*pulse(h));}}
-  else if(charId==='g2_nishikawa'){const h=phase(q,.4,.82);ring(ctx,0,-48,90,65,c,.4,4);for(let i=0;i<14;i++){const a=i/14*TAU;const r=25+smooth(h)*110;thread(ctx,[[Math.cos(a)*r,-48+Math.sin(a)*r*.7],[Math.cos(a)*15,-48+Math.sin(a)*12]],c,.8*pulse(h),4);}}
+export function drawGen2Super(ctx,x,y,color,p,charId,facing=1){
+  const c=color||'#fff', q=clamp01(p); ctx.save();ctx.translate(x,y); if(charId!=='g2_itto')ctx.scale(facing||1,1);
+  if(charId==='g2_renji'){const rise=phase(q,.08,.38),eruption=phase(q,.32,.58),crash=phase(q,.62,.9); if(q<.4){metal(ctx,0,-28,62+rise*20,50+rise*22,c,.65);for(let i=0;i<5;i++)metal(ctx,(i-2)*23,-8-rise*42,20,38,'#DDE5EA',.8*rise,i*.12);} if(q>=.3){for(let i=0;i<7;i++){const x=-170+i*55;metal(ctx,x,-14-eruption*35,34,55+eruption*28,c,.7*eruption,i%2?.25:-.2);} } if(q>.62){stone(ctx,20+smooth(crash)*95,12,100,32,'#777F88',.8*pulse(crash));ring(ctx,30,-2,65+crash*95,15+crash*15,'#DDE5EA',pulse(crash),5);}}
+  else if(charId==='g2_kaito'){const flight=phase(q,.16,.56),rain=phase(q,.42,.78),impact=phase(q,.76,.96); if(q<.45){flame(ctx,0,-48,40+flight*34,'#FF3322',.8);for(let i=0;i<3;i++)flame(ctx,-22+i*22,-80-flight*30,24,'#FFB12A',pulse(flight),-.25+i*.25);} if(q>=.4){for(let i=0;i<9;i++){const x=-190+i*48+smooth(rain)*35;flame(ctx,x,-155+((i%3)*17)+rain*105,18+i%3*3,i%2?'#FF3322':'#FFB12A',pulse(rain),.25);} } if(q>.75){circle(ctx,20,0,28+impact*75,'#FFD27A',pulse(impact));for(let i=0;i<8;i++)flame(ctx,Math.cos(i*TAU/8)*(35+impact*60),-8+Math.sin(i*TAU/8)*(20+impact*35),20,'#FF3322',pulse(impact),i*.7);}}
+  else if(charId==='g2_hana'){const wall=phase(q,.05,.4),surge=phase(q,.38,.7),spikes=phase(q,.68,.92);if(q<.42){poly(ctx,[[-20,-8],[-8,-72-wall*22],[15,-110-wall*20],[40,-70-wall*18],[48,8],[22,20],[-18,14]],'#168EDB',.8*wall,'#D8F7FF');water(ctx,[[-28,8],[-12,-38-wall*40],[12,-88-wall*20],[35,-40],[54,10]],'#44BFFF',15,.85*wall);}if(q>=.36){poly(ctx,[[-30,8],[0,-15],[45,-10],[80,-30],[120,-10],[170,6],[140,20],[70,14],[0,20]],'#168EDB',.75*surge,'#D8F7FF');water(ctx,[[-25,8],[35,-12],[75,-5],[120,-18],[170,7]],'#44BFFF',20,.85*surge);}if(q>.66){for(let i=0;i<7;i++){const x=-150+i*48;poly(ctx,[[x,10],[x+12,-20-spikes*65],[x+25,10]],'#168EDB',.8*pulse(spikes),'#D8F7FF');}}}
+  else if(charId==='g2_daigo'){const raise=phase(q,.08,.42),fall=phase(q,.4,.72),burst=phase(q,.72,.95);if(q<.45){stone(ctx,35,-65-raise*55,100+raise*65,105+raise*45,c,.8*raise,-.08);stone(ctx,90,-25-raise*25,90,70,'#A0826D',.75*raise,.15);}if(q>=.38){for(let i=0;i<6;i++){const x=-180+i*66;stone(ctx,x,-180+fall*135,42,54+fall*18,c,.85*pulse(fall),i%2?.2:-.18);}}if(q>.7){for(let i=0;i<9;i++){const a=i/9*TAU;stone(ctx,Math.cos(a)*(35+burst*125),-5+Math.sin(a)*(15+burst*35),28,22,'#D7C4A8',pulse(burst),a);}}}
+  else if(charId==='g2_suzu'){const tornado=phase(q,.08,.48),blades=phase(q,.4,.72),launch=phase(q,.7,.92);for(let i=0;i<5;i++){const a=i*TAU/5+q*TAU*2;const r=20+tornado*85;gust(ctx,Math.cos(a)*r,-48+Math.sin(a)*r*.6,30+tornado*25,c,.65*pulse(tornado),a);}if(q>.38){for(let i=0;i<6;i++){const a=i*TAU/6+blades*2;const x=Math.cos(a)*(45+blades*95),y=-48+Math.sin(a)*(25+blades*55);stroke(ctx,[[x-18,y+10],[x+22,y-12]],'#E8FFF2',4,pulse(blades));}}if(q>.68){gust(ctx,0,-100-launch*70,100,c,pulse(launch),-Math.PI/2);}}
+  else if(charId==='g2_mai'){const veil=phase(q,.05,.3),clones=phase(q,.28,.68),cut=phase(q,.68,.92);shadow(ctx,0,-48,65+veil*50,48+veil*28,'#171322',.8);if(q>.25){for(let i=0;i<4;i++){const a=i*TAU/4+clones*1.2;shadow(ctx,Math.cos(a)*(65+clones*65),-48+Math.sin(a)*40,28,48,'#171322',.8*pulse(clones),a);}}if(q>.66){const a=-.9+cut*1.8;shadow(ctx,Math.cos(a)*135,-48+Math.sin(a)*65,95,12,c,pulse(cut),a);stroke(ctx,[[Math.cos(a)*35,-48+Math.sin(a)*20],[Math.cos(a)*180,-48+Math.sin(a)*80]],'#D9B8FF',4,pulse(cut));}}
+  else if(charId==='g2_osamu'){const build=phase(q,.05,.35),waves=phase(q,.32,.7),blast=phase(q,.7,.94);for(let i=0;i<4;i++)soundRing(ctx,0,-48,22+i*18+build*22,10+i*6,'#FFE68A',.75*build,3);if(q>.3){for(let i=0;i<5;i++){const a=i*TAU/5+waves*1.2,r=35+waves*100;soundRing(ctx,Math.cos(a)*r,-48+Math.sin(a)*r*.7,18+waves*8,c,.75*pulse(waves));}}if(q>.68){ring(ctx,0,-48,30+blast*150,24+blast*95,'#FFFFFF',pulse(blast),7);ring(ctx,0,-48,18+blast*115,12+blast*75,c,pulse(blast),4);}}
+  else if(charId==='g2_yui'){const constellation=phase(q,.05,.38),rain=phase(q,.35,.72),burst=phase(q,.7,.93);if(q<.42){for(let i=0;i<7;i++){const a=i*TAU/7;star(ctx,Math.cos(a)*70,-115+Math.sin(a)*30,9,'#FFFFFF',pulse(constellation));stroke(ctx,[[Math.cos(a)*70,-115+Math.sin(a)*30],[Math.cos((i+1)*TAU/7)*70,-115+Math.sin((i+1)*TAU/7)*30]],'#FFEEFF',1.5,.5*constellation);}}if(q>.32){for(let i=0;i<10;i++){const x=-160+i*34;star(ctx,x,-160+rain*125+(i%3)*12,10,c,pulse(rain));}}if(q>.68){star(ctx,0,-48,48+burst*70,'#FFFFFF',pulse(burst));ring(ctx,0,-48,35+burst*100,25+burst*75,c,pulse(burst),4);}}
+  else if(charId==='g2_ibuki'){const pull=phase(q,.08,.42),vortex=phase(q,.36,.7),burst=phase(q,.68,.93);if(q<.44){ring(ctx,0,-48,30+pull*65,22+pull*42,c,.8*pull,5);for(let i=0;i<8;i++){const a=i*TAU/8;stroke(ctx,[[Math.cos(a)*120,-48+Math.sin(a)*70],[Math.cos(a)*35,-48+Math.sin(a)*22]],'#FFB7C9',4,.65*pull);}}if(q>.34){for(let i=0;i<12;i++){const a=i*TAU/12+vortex*TAU;circle(ctx,Math.cos(a)*(95-vortex*55),-48+Math.sin(a)*(60-vortex*35),7,i%2?c:'#FFB7C9',pulse(vortex));}}if(q>.66){circle(ctx,0,-48,25+burst*70,'#FFB7C9',pulse(burst));ring(ctx,0,-48,45+burst*75,30+burst*45,c,pulse(burst),5);}}
+  else if(charId==='g2_nishikawa'){const web=phase(q,.05,.38),bind=phase(q,.34,.7),snap=phase(q,.68,.94);for(let i=0;i<9;i++){const x=-210+i*52;thread(ctx,[[x,-155],[x+web*10,-15],[0,-48]],c,.75*web,3);}if(q>.32){for(let i=0;i<7;i++){const y=-120+i*22;thread(ctx,[[-180,-48],[0,y],[180,-48]],c,.8*bind,4);}}if(q>.66){for(let i=0;i<10;i++){const a=i*TAU/10;thread(ctx,[[Math.cos(a)*150,-48+Math.sin(a)*95],[Math.cos(a)*25,-48+Math.sin(a)*16]],'#F7E9FF',pulse(snap),5);}}}
   else if(charId==='g2_itto'){const h=phase(q,.4,.78);blade(ctx,10,-48,100+smooth(h)*230,36,c,pulse(h),-.08);stroke(ctx,[[25,-62],[230* smooth(h),-58]],'#FFFFFF',4,.75*pulse(h));}
   else if(charId==='g2_twinfoxes'){const h=phase(q,.4,.8);for(const side of [-1,1]){const a=side*(Math.PI/2+smooth(h)*Math.PI);const px=Math.cos(a)*100,py=-48+Math.sin(a)*70;flame(ctx,px,py,30,side<0?c:'#FFD77A',pulse(h),a);}ring(ctx,0,-48,115,80,c,pulse(q),5);}
   else if(charId==='g2_utsuro'){const h=phase(q,.35,.8);circle(ctx,0,-48,80+smooth(h)*45,'#140B1C',.7);ring(ctx,0,-48,100+smooth(h)*40,75+smooth(h)*30,c,pulse(h),6);for(let i=0;i<12;i++){const a=i/12*TAU;stroke(ctx,[[0,-48],[Math.cos(a)*(70+smooth(h)*80),-48+Math.sin(a)*(50+smooth(h)*55)]],c,7,.6*pulse(h));}}
@@ -426,7 +447,9 @@ export function getGen2Hitboxes(charId,move,p,facing=1){
       else if(move==='sp'){const h=smooth(phase(t,.45,.8));for(let i=0;i<12;i++){const ang=i/12*TAU;K(a,Math.cos(ang)*15,-48+Math.sin(ang)*12,Math.cos(ang)*(30+100*h),-48+Math.sin(ang)*(25+75*h),4);}}
       break;
     case 'g2_itto':
-      if(move==='us'){const e=smooth(phase(t,.12,.7));K(a,10,-45,10,-45-110*e,9);}
+      if(move==='recovery'){const e=smooth(phase(t,.24,.72));K(a,-8,-18,20+e*72,-35-e*62,8);}
+      else if(move==='groundPound'){if(t<.62){const e=smooth(phase(t,.08,.62));K(a,8,-45,8,-45+e*70,9);}else{const e=smooth(phase(t,.62,.86));P(a,[[-88*e,4],[-62*e,-8],[0,-13*e],[62*e,-8],[88*e,4],[58*e,13*e],[-58*e,13*e]]);}}
+      else if(move==='us'){const e=smooth(phase(t,.12,.7));K(a,10,-45,10,-45-110*e,9);}
       else if(move==='ds'){const e=smooth(phase(t,.12,.72));K(a,0,-30,0,65*e,8);}
       else if(move==='ss'){const e=smooth(phase(t,.1,.7));K(a,12,-48,12+115*e,-48,7);}
       else if(move==='uh'){const e=smooth(phase(t,.1,.75));K(a,10,-45,10,-45-125*e,9);}

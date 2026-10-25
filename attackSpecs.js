@@ -120,6 +120,30 @@ export function getAttackSpecForData(charId, attackData) {
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 function activeProgress(fighter) {
   const d=fighter?.attackData, id=fighter?.char?.id;
+  // Gen-II collision windows are evaluated against the same normalized elapsed
+  // animation time used by their authored local-space artwork. Ittō's seven
+  // protected attacks intentionally retain their legacy timing unchanged.
+  if (String(id || '').startsWith('g2_') && d && d.type !== 'attackHold' && !d.holding) {
+    const isItto = id === 'g2_itto';
+    const isPermittedIttoMove = Boolean(d.isRecovery || d.type === 'recovery' || d.isGroundPound || d.type === 'groundPound');
+    if (!(isItto && !isPermittedIttoMove)) {
+      const total = Math.max(1, Number(d.duration) || 1);
+      const elapsed = Math.max(0, total - (Number(fighter.attackTimer) || 0));
+      const startup = Math.max(0, Number(d.startupFrames ?? d.startup) || Math.floor(total * (d.isSuper ? 0.30 : d.isHeavy ? 0.28 : 0.22)));
+      const active = Math.max(1, Number(d.activeFrames ?? d.active) || Math.floor(total * (d.isSuper ? 0.48 : d.isHeavy ? 0.34 : 0.30)));
+      if (d.isSuper) {
+        // Supers use three separated contact windows: opening approach, main
+        // sequence, and finishing impact. Geometry remains driven by p.
+        const end = startup + active;
+        const mid = startup + Math.floor(active * 0.42);
+        const finish = startup + Math.floor(active * 0.76);
+        if ((elapsed >= startup && elapsed < mid) || (elapsed >= mid + 2 && elapsed < finish) || (elapsed >= finish + 2 && elapsed < end)) return clamp01(d.progress || 0);
+        return 0;
+      }
+      if (elapsed < startup || elapsed >= startup + active) return 0;
+      return clamp01(d.progress || 0);
+    }
+  }
   if (String(id||'').startsWith('g1_') && d && d.type!=='attackHold' && !d.holding) {
     const key=gen1MoveKey(id,d), frames=GEN1_TIMINGS[id]?.[key];
     if(frames){
@@ -157,7 +181,9 @@ export function getActiveSpecHitboxes(attacker) {
   const t = activeProgress(attacker); if (t <= 0 || t >= 1) return [];
   if (String(attacker?.char?.id || '').startsWith('g2_')) {
     let mk = data.sigType || data.moveKey || '';
-    if (data.isSuper) mk = 'sp';
+    if (data.isRecovery || data.type === 'recovery') mk = 'recovery';
+    else if (data.isGroundPound || data.type === 'groundPound') mk = 'groundPound';
+    else if (data.isSuper) mk = 'sp';
     else if (data.isHeavy) {
       if (mk === 'downHeavy' || mk === 'down' || data.isGroundPound) mk = 'dh';
       else if (mk === 'upHeavy' || mk === 'upheavy' || mk === 'aerialHeavy' || mk === 'aerial' || data.isAerialHeavy) mk = 'uh';

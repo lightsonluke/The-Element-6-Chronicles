@@ -47,7 +47,10 @@ export function drawCharAttack(ctx, x, y, color, p, facing, attack, charId, atta
     return;
   }
   if (String(charId || '').startsWith('g2_')) {
-    drawGen2Attack(ctx, x, y, color, p, facing, charId, getAttackKey(attack, attackKey));
+    const gen2Key = charId === 'g2_itto' && (attack?.isRecovery || attack?.type === 'recovery') ? 'recovery' :
+      charId === 'g2_itto' && (attack?.isGroundPound || attack?.type === 'groundPound') ? 'groundPound' :
+      attack?.isSuper || attack?.sigType === 'super' ? 'sp' : getAttackKey(attack, attackKey);
+    drawGen2Attack(ctx, x, y, color, p, facing, charId, gen2Key);
     return;
   }
   if (String(charId || '').startsWith('g3_')) {
