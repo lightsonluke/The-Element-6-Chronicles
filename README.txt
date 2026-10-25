@@ -1,24 +1,22 @@
-FIRE HERO — ATTACKS + CUSTOM ART UPDATE
+ATTACK SPEED + HOLD + COOLDOWN BAR UPDATE
 
-Replace these existing files in the root of The-Element-6-Chronicles-main with the files in this ZIP:
-- eras.js
+Replace these files in the root of The-Element-6-Chronicles-main:
 - fighter.js
 - renderer.js
-- gen1AttackAnims.js
-- charAttackAnims.js
-- attackSpecs.js
-- upHeavies.js
-- downHeavies.js
+- PlatformFighter.jsx
+- GCMatch.jsx
 
-What changed:
-- Added hand-authored, layered flame artwork and distinct body poses for Fire Hero's Rising, Fire Hero's Quake, Fire Hero's Wave, Ascendant Breaker, Sunder Slam, Rend Strike, Return Return, Meteor Pound, and Ultimate: Flame Unleashed.
-- Recovery and ground pound now use their own visual animation paths instead of reusing Up Signature / Down Heavy art.
-- Added bespoke hitbox shapes for the Fire Hero attacks, with separate aerial meteor and grounded lateral knockback behavior for Meteor Pound.
-- Updated Fire Hero's attack names, baseline damage, ranges, and move durations to match the supplied design.
-- Heavy alone or Up + Heavy selects Up Heavy; Left/Right + Heavy selects Side Heavy; Down + Heavy on the ground selects Down Heavy; Down + Heavy in the air selects Ground Pound.
-- Recovery remains Up + Signature while airborne; a normal Signature tap selects Up Signature unless a direction is held.
+Changes:
+- Speeds up the existing attack animations by shortening attack lock time while keeping the hand-authored move art.
+- Fire Hero's custom attack animations are noticeably faster without replacing their choreography.
+- Removes the extra heavy/signature cooldown lockout; attack duration/endlag is now the limiter.
+- Removes the small signature/heavy cooldown bars beneath fighters in the main fighter match and GC match renderers.
+- Removes the old red sword-sweep guide line while keeping the actual sword animation.
+- Adds a grounded attack hold for all characters: hold a grounded signature or heavy for up to 4 seconds; release to fire early, or it auto-fires at 4 seconds. A small colored ring above the fighter shows charge progress. Held attacks have no hitbox.
+- Aerial attacks are never charge-held and execute immediately.
+- Heavy alone selects Up Heavy when the fighter has one; Left/Right + Heavy selects Side Heavy; Down + Heavy on the ground selects Down Heavy; Down + Heavy in the air remains Ground Pound.
 
 Validation:
-- Ran Node syntax checks on every changed JavaScript file.
-- Successfully imported gen1AttackAnims.js, attackSpecs.js, and charAttackAnims.js in Node.
-- A full Vite build was not run because dependencies are not installed in the supplied project directory.
+- Node syntax checks passed for fighter.js, renderer.js, and attackSpecs.js.
+- Confirmed the signature/heavy cooldown bars are absent from PlatformFighter.jsx and GCMatch.jsx.
+- A full app build was not run because project dependencies are not installed in this runtime.

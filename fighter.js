@@ -23,9 +23,9 @@ export const AIR_FRICTION = 0.94;
 export const ACCEL_GROUND = 1.2;
 export const ACCEL_AIR = 0.9;
 
-const SIG_COOLDOWN = 45;    // 0.75 seconds at 60fps
+const SIG_COOLDOWN = 0;
 const NORMAL_COOLDOWN = 8;
-const HEAVY_COOLDOWN = 42;  // 0.70 seconds at 60fps
+const HEAVY_COOLDOWN = 0; // Heavy/signature lockout is governed by attack duration/endlag only.
 const KNOCKBACK_SCALE = 0.40; // global 60% knockback reduction for all attacks
 
 // CPU difficulty configs
@@ -1005,32 +1005,30 @@ function isGen1Fighter(f) { return String(f?.char?.id || '').startsWith('g1_'); 
 function gen1ReferenceDuration(charId, sigType, isHeavy=false, isSuper=false) {
   // Fire Hero uses the individual frame timings from the authored move design.
   if (charId === 'g1_fire') {
-    if (isSuper) return 93; // 30 startup + 15 active + 48 endlag
-    if (sigType === 'downHeavy') return 45; // Sunder Slam: 14 + 4 + 27
-    if (sigType === 'upHeavy') return 57; // Ascendant Breaker: 14 + 5 + 38
-    if (sigType === 'heavy') return 61; // Rend Strike: 17 + 7 + 37
-    if (sigType === 'side') return 26; // Wave: 4 + 5 + 17
-    if (sigType === 'up') return 25; // Rising: 10 + 2 + 13
-    if (sigType === 'down') return 42; // Quake: 11 + 4 + 27
+    if (isSuper) return 62; // Preserve the cinematic, but cut excessive startup/recovery.
+    if (sigType === 'downHeavy') return 31; // Sunder Slam — faster wind-up and recovery.
+    if (sigType === 'upHeavy') return 38; // Ascendant Breaker — quicker rise and landing.
+    if (sigType === 'heavy') return 34; // Rend Strike — faster step-back/lunge recovery.
+    if (sigType === 'side') return 17; // Wave — fast roll and pop-up strike.
+    if (sigType === 'up') return 17; // Rising — quick corkscrew.
+    if (sigType === 'down') return 29; // Quake — quick stamp and delayed burst.
   }
   // Other Gen 1 heroes retain their established timing.
   if (String(charId || '').startsWith('g1_')) {
-    if (isSuper) return 42;
-    if (sigType === 'downHeavy') return 24;
-    if (sigType === 'upHeavy') return 24;
-    if (sigType === 'heavy') return 18;
-    if (sigType === 'side') return 14;
-    if (sigType === 'up') return 28;
-    if (sigType === 'down') return 22;
+    if (isSuper) return 34;
+    if (sigType === 'downHeavy') return 18;
+    if (sigType === 'upHeavy') return 18;
+    if (sigType === 'heavy') return 14;
+    if (sigType === 'side') return 11;
+    if (sigType === 'up') return 21;
+    if (sigType === 'down') return 16;
   }
   return 0;
 }
 
 function gen1HoldMaxFrames(charId, sigType, isHeavy=false) {
-  // Every Gen 1 signature/heavy has an actual pre-release hold window.
-  // Keep it short enough that a normal tap never feels delayed.
-  if (String(charId || '').startsWith('g1_')) return isHeavy ? 20 : 18;
-  return 180;
+  // Grounded signatures/heavies can be held for up to four seconds.
+  return 240; // Four seconds at 60 FPS for every grounded fighter.
 }
 
 function startGen1Hold(fighter, button, sigType, wasAirborne = false, wasGrounded = false) {
@@ -1058,8 +1056,8 @@ function executeGen1HeldAttack(fighter, hold) {
   let isHeavy = hold.button === 'heavy';
 
   if (isHeavy) {
-    if (sigType === 'upHeavy') data = fighter.resonanceActive ? fighter.char?.upHeavy : UP_HEAVIES[id];
-    else if (sigType === 'downHeavy') data = fighter.resonanceActive ? fighter.char?.downHeavy : DOWN_HEAVIES[id];
+    if (sigType === 'upHeavy') data = fighter.resonanceActive ? fighter.char?.upHeavy : (fighter.char?.upHeavy || UP_HEAVIES[id]);
+    else if (sigType === 'downHeavy') data = fighter.resonanceActive ? fighter.char?.downHeavy : (fighter.char?.downHeavy || DOWN_HEAVIES[id]);
     else data = fighter.char.heavyAttack;
   } else {
     data = fighter.char.signatures?.[sigType];
@@ -1070,7 +1068,7 @@ function executeGen1HeldAttack(fighter, hold) {
   // deliberately ignored here, so changing direction during the hold cannot
   // turn one attack into another.
   const refDur = gen1ReferenceDuration(id, sigType, isHeavy, false);
-  const dur = refDur || Math.min(data.duration || (isHeavy ? 24 : 20), isHeavy ? 32 : 30);
+  const dur = refDur || Math.min(data.duration || (isHeavy ? 20 : 16), isHeavy ? 23 : 19);
   fighter.attackData = {
     ...data,
     duration: dur,
@@ -1080,7 +1078,7 @@ function executeGen1HeldAttack(fighter, hold) {
     holding: false,
     holdProgress: 1,
     // Preserve the real amount of time this attack was charged. 0 = instant release,
-    // 1 = the full 3-second charge. This is used by applyHit() for the damage bonus.
+    // 1 = the full four-second charge. This is used by applyHit() for the damage bonus.
     holdCharge: Math.min(1, hold.frames / hold.maxFrames),
     isHeavy,
   };
@@ -1109,10 +1107,10 @@ function executeGen1HeldAttack(fighter, hold) {
   fighter.state = 'attacking';
   fighter.attackHold = null;
   if (isHeavy) {
-    fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
+    fighter.heavyCooldown = 0;
     fighter.moveStats.heavy++;
   } else {
-    fighter.sigCooldown = SIG_COOLDOWN * (fighter.statControlRecoveryMul || 1);
+    fighter.sigCooldown = 0;
     if (sigType === 'side') fighter.moveStats.sigSide++;
     else if (sigType === 'up') fighter.moveStats.sigUp++;
     else if (sigType === 'down') fighter.moveStats.sigDown++;
@@ -1317,9 +1315,8 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     return fighter;
   }
 
-  // ── Generation I attack hold system ──────────────────────────────────────
-  // Signatures/heavies begin charging on button-down and do not commit until
-  // release (or 180 frames / 3 seconds). The directional choice is captured
+  // ── Grounded signature/heavy hold system ─────────────────────────────────
+  // Grounded signatures/heavies begin on button-down, fire on release, or auto-fire after four seconds. The directional choice is captured
   // on the first frame and cannot be changed while charging.
   if (fighter.attackHold) {
     const h = fighter.attackHold;
@@ -1333,8 +1330,8 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     }
     if (released || forced) {
       executeGen1HeldAttack(fighter, h);
-      if (h.button === 'sig') inputs._sigConsumed = false;
-      if (h.button === 'heavy') inputs._heavyConsumed = false;
+      if (h.button === 'sig') inputs._sigConsumed = !released;
+      if (h.button === 'heavy') inputs._heavyConsumed = !released;
     } else {
       updateGen1HoldPhysics(fighter, platforms, stageWidth, stageHeight);
       return fighter;
@@ -1385,7 +1382,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       fighter.state = 'attacking';
       const upSig = fighter.resonanceActive ? (fighter.char.recoveryAttack || fighter.char.signatures?.up) : fighter.char.signatures?.up;
       const isFireRecovery = fighter.char.id === 'g1_fire';
-      const recoveryDuration = isFireRecovery ? 34 : Math.min(upSig?.duration || 16, 28);
+      const recoveryDuration = isFireRecovery ? 22 : Math.min(upSig?.duration || 16, 22);
       fighter.attackTimer = recoveryDuration;
       fighter.attackData = {
         ...(upSig || {}),
@@ -1412,10 +1409,13 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     // Gen I captures the attack and direction on the initial button-down before
     // jump/movement processing. This prevents Up+Signature from becoming a
     // jump first, and guarantees the held move cannot be changed mid-charge.
-    if (isGen1Fighter(fighter) && !fighter.attackHold) {
-      if (inputs.heavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
-        let holdType = (inputs.up || inputs.jump) ? 'upHeavy' : (inputs.down ? 'downHeavy' : 'heavy');
-        const hasAttack = holdType === 'upHeavy' ? !!(fighter.resonanceActive ? fighter.char?.upHeavy : UP_HEAVIES[fighter.char.id]) : holdType === 'downHeavy' ? !!(fighter.resonanceActive ? fighter.char?.downHeavy : DOWN_HEAVIES[fighter.char.id]) : !!fighter.char.heavyAttack;
+    if (fighter.grounded && !fighter.attackHold) {
+      if (inputs.heavy && !inputs._heavyConsumed) {
+        // Heavy alone means Up Heavy. Side Heavy requires an explicit left/right direction.
+        let holdType = inputs.down ? 'downHeavy' : ((inputs.left || inputs.right) ? 'heavy' : 'upHeavy');
+        let hasAttack = holdType === 'upHeavy' ? !!(fighter.resonanceActive ? fighter.char?.upHeavy : (fighter.char?.upHeavy || UP_HEAVIES[fighter.char.id])) : holdType === 'downHeavy' ? !!(fighter.resonanceActive ? fighter.char?.downHeavy : (fighter.char?.downHeavy || DOWN_HEAVIES[fighter.char.id])) : !!fighter.char.heavyAttack;
+        // If a fighter has no authored Up Heavy, preserve a usable heavy rather than swallowing the input.
+        if (!hasAttack && holdType === 'upHeavy' && fighter.char?.heavyAttack) { holdType = 'heavy'; hasAttack = true; }
         if (hasAttack) {
           inputs._heavyConsumed = true;
           startGen1Hold(fighter, 'heavy', holdType, !fighter.grounded, fighter.grounded);
@@ -1423,7 +1423,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
           return fighter;
         }
       }
-      if (inputs.sig && !inputs._sigConsumed && fighter.sigCooldown <= 0) {
+      if (inputs.sig && !inputs._sigConsumed) {
         const capturedType = (inputs.left || inputs.right) ? 'side' : (inputs.down ? 'down' : 'up');
         inputs._sigConsumed = true;
         startGen1Hold(fighter, 'sig', capturedType, !fighter.grounded, fighter.grounded);
@@ -1561,7 +1561,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
     // ── Heavy Attack ──
     // Gen I heavies use the same captured-button hold behavior as signatures.
-    if (isGen1Fighter(fighter) && inputs.heavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
+    if (isGen1Fighter(fighter) && !fighter.grounded && inputs.heavy && !inputs._heavyConsumed) {
       let holdType = (!inputs.down && !inputs.left && !inputs.right) ? 'upHeavy' : 'heavy';
       if (inputs.up || inputs.jump) holdType = 'upHeavy';
       else if (inputs.down) holdType = 'downHeavy';
@@ -1577,22 +1577,22 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     // input as jump in the fight controls, so test both fields explicitly and
     // consume the heavy before the jump logic can turn the input into a jump.
     const wantsUpHeavy = !!inputs.heavy && (!!inputs.up || !!inputs.jump || (!inputs.down && !inputs.left && !inputs.right));
-    const availableUpHeavy = fighter.resonanceActive ? fighter.char?.upHeavy : UP_HEAVIES[fighter.char.id];
-    if (wantsUpHeavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && availableUpHeavy) {
+    const availableUpHeavy = fighter.resonanceActive ? fighter.char?.upHeavy : (fighter.char?.upHeavy || UP_HEAVIES[fighter.char.id]);
+    if (wantsUpHeavy && !inputs._heavyConsumed && availableUpHeavy) {
       inputs._heavyConsumed = true;
-      const upHeavy = fighter.resonanceActive ? fighter.char?.upHeavy : UP_HEAVIES[fighter.char.id];
+      const upHeavy = fighter.resonanceActive ? fighter.char?.upHeavy : (fighter.char?.upHeavy || UP_HEAVIES[fighter.char.id]);
       fighter.state = 'attacking';
       const refDur = gen1ReferenceDuration(fighter.char.id, 'upHeavy', true, false);
-      const dur = refDur || Math.min(upHeavy.duration || 24, 30);
+      const dur = refDur || Math.min(upHeavy.duration || 20, 22);
       fighter.attackTimer = dur;
       fighter.attackData = { ...upHeavy, duration: dur, sigType: 'upHeavy', hitApplied: false, progress: 0, isHeavy: true };
       fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
-      fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
+      fighter.heavyCooldown = 0;
       fighter.vy = 0;
       fighter.moveStats.heavy++;
     }
     // Air + down + heavy = Ground Pound (slam down with AoE)
-    if (inputs.heavy && inputs.down && !fighter.grounded && !inputs._heavyConsumed && fighter.heavyCooldown <= 0 && fighter.groundPoundCooldown <= 0) {
+    if (inputs.heavy && inputs.down && !fighter.grounded && !inputs._heavyConsumed && fighter.groundPoundCooldown <= 0) {
       inputs._heavyConsumed = true;
       fighter.state = 'attacking';
       fighter.attackTimer = fighter.char.id === 'g1_fire' ? 52 : 20;
@@ -1601,39 +1601,39 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         : fighter.resonanceActive && fighter.char?.downHeavy
           ? { ...fighter.char.downHeavy, name: `${fighter.resonanceConstruct || 'Resonance'} Diving Slam`, type: 'groundPound', duration: 20, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true, isGroundPound: true }
           : { name: 'Ground Pound', type: 'groundPound', duration: 20, damage: 18, range: 130, color: fighter.char.color, sigType: 'down', hitApplied: false, progress: 0, isHeavy: true, isGroundPound: true };
-      fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
+      fighter.heavyCooldown = 0;
       fighter.groundPoundCooldown = 45 * (fighter.statControlRecoveryMul || 1);
       fighter.vy = 18;
       fighter.moveStats.groundPound++;
     }
     // Ground + down + heavy = Down Heavy (unique per character, different from side heavy)
-    else if (inputs.heavy && inputs.down && fighter.grounded && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
+    else if (inputs.heavy && inputs.down && fighter.grounded && !inputs._heavyConsumed) {
       inputs._heavyConsumed = true;
       const downHeavy = fighter.resonanceActive ? fighter.char?.downHeavy : DOWN_HEAVIES[fighter.char.id];
       if (downHeavy) {
         fighter.state = 'attacking';
         const refDur = gen1ReferenceDuration(fighter.char.id, 'downHeavy', true, false);
-        const dur = refDur || Math.min(downHeavy.duration, 28);
+        const dur = refDur || Math.min(downHeavy.duration, 21);
         fighter.attackTimer = dur;
         fighter.attackData = { ...downHeavy, duration: dur, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true };
         fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
-        fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
+        fighter.heavyCooldown = 0;
         fighter.vy = 0;
         fighter.moveStats.downHeavy++;
       }
     }
     // No down + heavy = Side Heavy (existing heavyAttack)
-    else if (inputs.heavy && !inputs._heavyConsumed && fighter.heavyCooldown <= 0) {
+    else if (inputs.heavy && !inputs._heavyConsumed) {
       inputs._heavyConsumed = true;
       const heavy = fighter.char.heavyAttack;
       if (heavy) {
         fighter.state = 'attacking';
         const refDur = gen1ReferenceDuration(fighter.char.id, 'heavy', true, false);
-        const dur = refDur || Math.min(heavy.duration, 30);
+        const dur = refDur || Math.min(heavy.duration, 22);
         fighter.attackTimer = dur;
         fighter.attackData = { ...heavy, duration: dur, sigType: 'heavy', hitApplied: false, progress: 0, isHeavy: true };
         fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
-        fighter.heavyCooldown = Math.max(60, HEAVY_COOLDOWN * (fighter.statControlRecoveryMul || 1));
+        fighter.heavyCooldown = 0;
         if (fighter.grounded) fighter.vy = 0;
         if (heavy.hasArmor) fighter.invincible = Math.max(fighter.invincible, 8);
         fighter.moveStats.heavy++;
@@ -1643,7 +1643,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
     // ── Signature / Recovery ──
     if (inputs.sig && !inputs._sigConsumed) {
-      if (isGen1Fighter(fighter) && fighter.sigCooldown <= 0) {
+      if (isGen1Fighter(fighter) && fighter.grounded) {
         const capturedType = (inputs.left || inputs.right) ? 'side' : (inputs.down ? 'down' : 'up');
         inputs._sigConsumed = true;
         startGen1Hold(fighter, 'sig', capturedType, !fighter.grounded, fighter.grounded);
@@ -1656,12 +1656,12 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       if (!fighter.grounded) {
         if (fighter.normalCooldown <= 0) {
           fighter.state = 'attacking';
-          fighter.attackTimer = 18;
+          fighter.attackTimer = 14;
           fighter.attackData = fighter.resonanceActive && fighter.char?.lightAttack
-            ? { ...fighter.char.lightAttack, name: `${fighter.resonanceConstruct || 'Resonance'} Aerial`, type: 'aerialNormal', duration: fighter.char.lightAttack.duration || 18, sigType: 'aerial', resonanceAction: ['bow','cannons','blasters','disc','projector','shards','rings','core'].includes(fighter.char.lightAttack.resonanceFamily) ? 'projectileUp' : 'rise', hitApplied: false, progress: 0, isNormal: true }
+            ? { ...fighter.char.lightAttack, name: `${fighter.resonanceConstruct || 'Resonance'} Aerial`, type: 'aerialNormal', duration: Math.min(fighter.char.lightAttack.duration || 18, 14), sigType: 'aerial', resonanceAction: ['bow','cannons','blasters','disc','projector','shards','rings','core'].includes(fighter.char.lightAttack.resonanceFamily) ? 'projectileUp' : 'rise', hitApplied: false, progress: 0, isNormal: true }
             : {
                 name: 'Aerial', type: 'aerialNormal',
-                duration: 18, damage: 7 + Math.random() * 4,
+                duration: 14, damage: 7 + Math.random() * 4,
                 range: 55, color: fighter.char.color,
                 sigType: 'aerial', hitApplied: false, progress: 0, isNormal: true,
               };
@@ -1677,11 +1677,11 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         if (sig) {
           fighter.state = 'attacking';
           const refDur = gen1ReferenceDuration(fighter.char.id, sigType, false, false);
-          const dur = refDur || Math.min(sig.duration, 28);
+          const dur = refDur || Math.min(sig.duration, 20);
           fighter.attackTimer = dur;
           fighter.attackData = { ...sig, duration: dur, sigType, hitApplied: false, progress: 0 };
           fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
-          fighter.sigCooldown = SIG_COOLDOWN * (fighter.statControlRecoveryMul || 1);
+          fighter.sigCooldown = 0;
           fighter.vy = 0;
           if (sigType === 'side') fighter.moveStats.sigSide++;
           else if (sigType === 'up') fighter.moveStats.sigUp++;
@@ -2185,7 +2185,7 @@ function resonanceHitStage(attacker) {
 }
 
 export function checkHit(attacker, defender) {
-  if (!attacker.attackData) return false;
+  if (!attacker.attackData || attacker.attackData.type === 'attackHold' || attacker.attackData.holding) return false;
   const resonanceStage = resonanceHitStage(attacker);
   const multi = !!attacker.attackData.multiHitStages || resonanceStage >= 0;
   const stage = resonanceStage >= 0 ? resonanceStage : (multi ? gen1HitStage(attacker) : 0);

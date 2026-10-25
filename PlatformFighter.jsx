@@ -1763,8 +1763,6 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         if (cxName) { ctx.fillStyle = '#FFD700'; ctx.font = 'bold 7px Orbitron, sans-serif'; ctx.fillText(cxName.toUpperCase(), f.x, f.y - 70); }
         ctx.restore();
         }
-        if (f.sigCooldown > 0) { const cdPct = 1 - f.sigCooldown / 28; ctx.fillStyle = '#222'; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 10, 40, 4, 2); ctx.fill(); ctx.fillStyle = f.char.color; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 10, 40 * cdPct, 4, 2); ctx.fill(); }
-        if (f.heavyCooldown > 0) { const cdPct = 1 - f.heavyCooldown / 32; ctx.fillStyle = '#222'; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 16, 40, 3, 2); ctx.fill(); ctx.fillStyle = '#FFD700'; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 16, 40 * cdPct, 3, 2); ctx.fill(); }
       };
 
       // Fighters are rendered at the end of the world pass below so stage/platform

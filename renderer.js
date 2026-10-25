@@ -1004,6 +1004,22 @@ function drawResonanceConstructAttack(ctx, x, y, attack, progress, facing, color
 }
 
 export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isNormal = false, charId = '', power = null, powerActive = null) {
+  // Charge indicator only: a held grounded move is deliberately non-damaging.
+  if (attack?.type === 'attackHold' || attack?.holding) {
+    const charge = Math.max(0, Math.min(1, Number(attack.holdProgress) || 0));
+    ctx.save();
+    const cx = x, cy = y - 78;
+    ctx.globalAlpha = 0.9;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = color || '#FFD166';
+    ctx.shadowColor = color || '#FFD166';
+    ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.arc(cx, cy, 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * charge); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#FFF4C2'; ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    return;
+  }
   if (attack?.resonanceFamily) {
     // The actual construct weapon is animated in-hand by drawConstructWeapon.
     // Do not draw a second unrelated generic blade/line overlay here.
@@ -1092,18 +1108,7 @@ function drawEmiSwordSwing(ctx, x, y, attack, progress, facing) {
   }
   const ang = angStart + (angEnd - angStart) * p;
 
-  // Red slash trail — arc showing the sweep path
-  ctx.save();
-  ctx.globalAlpha = alpha * 0.35;
-  ctx.strokeStyle = swordColor;
-  ctx.lineWidth = 4;
-  ctx.lineCap = 'round';
-  ctx.shadowColor = swordColor;
-  ctx.shadowBlur = 14;
-  ctx.beginPath();
-  ctx.arc(cx, cy, len, angStart, ang, (angEnd - angStart) > 0);
-  ctx.stroke();
-  ctx.restore();
+  // The old red sweep-path line is intentionally removed; only the authored blade remains.
 
   // Sword blade at current swing angle
   ctx.save();

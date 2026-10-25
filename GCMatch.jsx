@@ -445,8 +445,6 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
         drawProjectiles(ctx, f);
 
         // Sig/heavy cooldown bars under fighter
-        if (f.sigCooldown > 0) { const cdPct = 1 - f.sigCooldown / 28; ctx.fillStyle = '#222'; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 10, 40, 4, 2); ctx.fill(); ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 10, 40 * cdPct, 4, 2); ctx.fill(); }
-        if (f.heavyCooldown > 0) { const cdPct = 1 - f.heavyCooldown / 32; ctx.fillStyle = '#222'; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 16, 40, 3, 2); ctx.fill(); ctx.fillStyle = '#FFD700'; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 16, 40 * cdPct, 3, 2); ctx.fill(); }
       };
       drawF(f1, c1, true);
       drawF(f2, c2, false);
