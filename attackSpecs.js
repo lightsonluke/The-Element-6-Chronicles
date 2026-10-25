@@ -77,6 +77,10 @@ const GEN1_MOVE_SPECS = {
   groundPound:{name:'Meteor Pound',shape:'gen1Motion',range:150,knockback:'downAway',damage:9}
  }
 };
+// Grass / Ice / Water knockback now follows the written move data: grounded and airborne
+// targets get different launch vectors (see specKnockbackVector: g1* profiles).
+const GEN1_V2_KB={us:'g1UpSig',ds:'g1DownSig',ss:'g1SideSig',uh:'g1UpHeavy',dh:'g1DownHeavy',sh:'g1SideHeavy',recovery:'g1Recovery'};
+for(const id of ['g1_grass','g1_ice','g1_water'])for(const [k,v] of Object.entries(GEN1_V2_KB))GEN1_MOVE_SPECS[id][k].knockback=v;
 function normalizeProfile(value, fallback = 'forward') { const v = String(value || '').toLowerCase(); return v || fallback; }
 function moveFromKey(char, key) {
   if (!char) return null;
@@ -120,30 +124,6 @@ export function getAttackSpecForData(charId, attackData) {
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 function activeProgress(fighter) {
   const d=fighter?.attackData, id=fighter?.char?.id;
-  // Gen-II collision windows are evaluated against the same normalized elapsed
-  // animation time used by their authored local-space artwork. Ittō's seven
-  // protected attacks intentionally retain their legacy timing unchanged.
-  if (String(id || '').startsWith('g2_') && d && d.type !== 'attackHold' && !d.holding) {
-    const isItto = id === 'g2_itto';
-    const isPermittedIttoMove = Boolean(d.isRecovery || d.type === 'recovery' || d.isGroundPound || d.type === 'groundPound');
-    if (!(isItto && !isPermittedIttoMove)) {
-      const total = Math.max(1, Number(d.duration) || 1);
-      const elapsed = Math.max(0, total - (Number(fighter.attackTimer) || 0));
-      const startup = Math.max(0, Number(d.startupFrames ?? d.startup) || Math.floor(total * (d.isSuper ? 0.30 : d.isHeavy ? 0.28 : 0.22)));
-      const active = Math.max(1, Number(d.activeFrames ?? d.active) || Math.floor(total * (d.isSuper ? 0.48 : d.isHeavy ? 0.34 : 0.30)));
-      if (d.isSuper) {
-        // Supers use three separated contact windows: opening approach, main
-        // sequence, and finishing impact. Geometry remains driven by p.
-        const end = startup + active;
-        const mid = startup + Math.floor(active * 0.42);
-        const finish = startup + Math.floor(active * 0.76);
-        if ((elapsed >= startup && elapsed < mid) || (elapsed >= mid + 2 && elapsed < finish) || (elapsed >= finish + 2 && elapsed < end)) return clamp01(d.progress || 0);
-        return 0;
-      }
-      if (elapsed < startup || elapsed >= startup + active) return 0;
-      return clamp01(d.progress || 0);
-    }
-  }
   if (String(id||'').startsWith('g1_') && d && d.type!=='attackHold' && !d.holding) {
     const key=gen1MoveKey(id,d), frames=GEN1_TIMINGS[id]?.[key];
     if(frames){
@@ -181,9 +161,7 @@ export function getActiveSpecHitboxes(attacker) {
   const t = activeProgress(attacker); if (t <= 0 || t >= 1) return [];
   if (String(attacker?.char?.id || '').startsWith('g2_')) {
     let mk = data.sigType || data.moveKey || '';
-    if (data.isRecovery || data.type === 'recovery') mk = 'recovery';
-    else if (data.isGroundPound || data.type === 'groundPound') mk = 'groundPound';
-    else if (data.isSuper) mk = 'sp';
+    if (data.isSuper) mk = 'sp';
     else if (data.isHeavy) {
       if (mk === 'downHeavy' || mk === 'down' || data.isGroundPound) mk = 'dh';
       else if (mk === 'upHeavy' || mk === 'upheavy' || mk === 'aerialHeavy' || mk === 'aerial' || data.isAerialHeavy) mk = 'uh';
@@ -518,6 +496,16 @@ export function specKnockbackVector(attacker, defender, profile){
     if(id==='g1_ice') return stage===0 ? {x:f*.72,y:-.10} : {x:f*.76,y:-.62}; // traveling frost threat, then return strike
     if(id==='g1_thunder') return stage===0 ? {x:f*.52,y:-.22} : {x:f*.82,y:-.72}; // route hits converge into finisher
     if(id==='g1_water') return stage===0 ? {x:f*.48,y:-.18} : {x:f*.88,y:-.48}; // marked stagger then pressure cash-in
+  }
+  { // Gen-I v2 launch vectors (grounded vs airborne), per the move data
+    const gr=!!defender.grounded, side=Math.sign((defender.x-attacker.x)||f);
+    if(p==='g1upsig') return gr?{x:f*.30,y:-1}:{x:f*.08,y:-1};              // steep launch / vertical pop
+    if(p==='g1downsig') return gr?{x:side*.62,y:-.55}:{x:side*.50,y:.90};   // trip-pop / spike then outward
+    if(p==='g1sidesig') return gr?{x:f,y:-.10}:{x:f,y:-.32};                // shove / shallow outward angle
+    if(p==='g1upheavy') return gr?{x:f*.10,y:-1.05}:{x:f*.66,y:-.88};       // high vertical / diagonal up-away
+    if(p==='g1downheavy') return gr?{x:side*1.0,y:-.34}:{x:side*.16,y:1.0}; // strong horizontal pop / meteor
+    if(p==='g1sideheavy') return gr?{x:f,y:-.30}:{x:f*.86,y:-.58};          // outward blast / diagonal away
+    if(p==='g1recovery') return gr?{x:f*.40,y:-1}:{x:f*.58,y:-.78};         // pop up / lift with modest knockback
   }
   if(p==='up') return {x:f*.18,y:-1};
   if(p==='upcontact'){const dx=defender.x-attacker.x;return{x:Math.max(-.55,Math.min(.55,dx/90)),y:-1};}

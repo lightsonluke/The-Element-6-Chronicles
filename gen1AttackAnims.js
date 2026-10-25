@@ -1,3 +1,4 @@
+import { gen1Phase, getGen1Rig } from './gen1AttackGeometry.js';
 // Generation I hand-authored attack animation system.
 // IMPORTANT: every directional attack is authored facing RIGHT and mirrored
 // with the canvas transform. This guarantees left/right are literal flips of
@@ -1491,7 +1492,7 @@ export function getGen1AttackPose(move,p,facing=1,charId='g1_water'){
   if (p >= 0) {
     if(charId==='g1_fire') return gen1FireBodyPose(move,q,facing);
     if(charId==='g1_thunder') return gen1ThunderBodyPose(move,q,facing);
-    return gen1AuthoredBodyPose(move,q,facing,charId);
+    return gen1HeroBodyPose(move,p,facing,charId);
   }
   // Give the non-Fire Gen-I heroes matching body choreography for their newly
   // authored recovery and ground-pound effects instead of leaving them in idle.
@@ -1742,8 +1743,8 @@ function thunderRecoveryOrPound(ctx,x,y,p,groundPound=false){
     lineBolt(ctx,sx-13,sy-6,28,30,c,.95);dot(ctx,sx+12,sy-27,4.5,white,.95);
     if(q>.45)for(let i=0;i<5;i++)lineBolt(ctx,sx-22+i*11,sy+4+i*2,10,12,c,.62*(1-q*.25));
   }else{
-    const dive=ease(clamp01(q/.58)),twist=ease(clamp01((dive-.70)/.30)),land=ease(clamp01((q-.58)/.19)),fade=1-ease(clamp01((q-.8)/.2));
-    if(q<.59){const sx=12+34*dive,sy=y-18-76*dive;lineBolt(ctx,sx-14,sy-20,31,32,c,.95);lineBolt(ctx,x+12+(sx-x)*.45,y-20-38*dive,18,24,white,.76);lineBolt(ctx,sx-7,sy-7,27,25,c,.9);}
+    const dive=ease(clamp01(q/.565)),twist=ease(clamp01((dive-.70)/.30)),land=ease(clamp01((q-.565)/.12)),fade=1-ease(clamp01((q-.8)/.2));
+    if(q<.566){const sx=12+34*dive,sy=y-18-76*dive;lineBolt(ctx,sx-14,sy-20,31,32,c,.95);lineBolt(ctx,x+12+(sx-x)*.45,y-20-38*dive,18,24,white,.76);lineBolt(ctx,sx-7,sy-7,27,25,c,.9);}
     else{const r1=18+70*land,r2=24+92*land;for(let i=0;i<12;i++){const aa=i/12*TAU,xx=x+Math.cos(aa)*r1,yy=y-3+Math.sin(aa)*r1*.20;lineBolt(ctx,xx-4,yy-3,11,10,c,fade*.8);if(i%2===0)lineBolt(ctx,x+Math.cos(aa)*r2-3,y-3+Math.sin(aa)*r2*.18-3,8,8,c,fade*.55);}}
   }
 }
@@ -1760,10 +1761,182 @@ function drawNonFireRecoveryAndPound(ctx,x,y,p,charId,move){
   return false;
 }
 
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Gen-I v2 hero artwork (Grass / Ice / Water). Every shape drawn here comes from
+// getGen1Rig(), the same skeleton the hitbox uses, so art and collision can't drift.
+// No shadowBlur is used (layered strokes fake the glow), so these are cheap to draw.
+// ═════════════════════════════════════════════════════════════════════════════
+const HC = {
+  g1_grass:{main:'#3FBF4A',dark:'#17582A',light:'#B8F77E',acc:'#FFD84D',pale:'#9CE88A'},
+  g1_ice:  {main:'#7FE3FF',dark:'#2A7FB8',light:'#F4FDFF',acc:'#BFF3FF',pale:'#CFF3FF'},
+  g1_water:{main:'#2F9BFF',dark:'#0E4C9E',light:'#D4F2FF',acc:'#FFFFFF',pale:'#8FD3FF'}
+};
+function hLeaf(ctx,x,y,len,ang,col,a){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.globalAlpha=a;ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(len*.5,-len*.38,len,0);ctx.quadraticCurveTo(len*.5,len*.38,0,0);ctx.fill();ctx.strokeStyle='rgba(255,255,255,.45)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(len*.9,0);ctx.stroke();ctx.restore();}
+function hShard(ctx,x,y,len,ang,col,a){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.globalAlpha=a;ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(0,-len*.14);ctx.lineTo(len,0);ctx.lineTo(0,len*.14);ctx.lineTo(-len*.12,0);ctx.closePath();ctx.fill();ctx.strokeStyle='#FFFFFF';ctx.globalAlpha=a*.8;ctx.lineWidth=1;ctx.stroke();ctx.restore();}
+function hDrop(ctx,x,y,r,col,a,ang=0){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.globalAlpha=a;ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(0,-r*1.6);ctx.quadraticCurveTo(r*1.1,-r*.2,0,r);ctx.quadraticCurveTo(-r*1.1,-r*.2,0,-r*1.6);ctx.fill();ctx.globalAlpha=a*.8;ctx.fillStyle='#FFFFFF';ctx.beginPath();ctx.arc(-r*.3,-r*.1,r*.25,0,TAU);ctx.fill();ctx.restore();}
+function hRibbon(ctx,pts,w0,w1,fill,a,edge){
+  const n=pts.length;if(n<2)return;const L=[],R=[];
+  for(let i=0;i<n;i++){const p=pts[i],pr=pts[Math.max(0,i-1)],nx=pts[Math.min(n-1,i+1)];let dx=nx[0]-pr[0],dy=nx[1]-pr[1];const d=Math.hypot(dx,dy)||1;dx/=d;dy/=d;const w=lerp(w0,w1,i/(n-1))/2;L.push([p[0]-dy*w,p[1]+dx*w]);R.push([p[0]+dy*w,p[1]-dx*w]);}
+  ctx.save();ctx.globalAlpha=a;ctx.fillStyle=fill;ctx.beginPath();L.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));for(let i=n-1;i>=0;i--)ctx.lineTo(R[i][0],R[i][1]);ctx.closePath();ctx.fill();
+  if(edge){ctx.strokeStyle=edge;ctx.lineWidth=1.4;ctx.stroke();}ctx.restore();
+}
+function hLine(ctx,pts,col,w,a){ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=col;ctx.lineWidth=w;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.stroke();ctx.restore();}
+function hHex(ctx,x,y,r,rot,fill,a,edge='#FFFFFF'){ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.globalAlpha=a;ctx.fillStyle=fill;ctx.beginPath();for(let i=0;i<6;i++){const t=i/6*TAU,rr=i%2?r*.78:r;ctx.lineTo(Math.cos(t)*rr,Math.sin(t)*rr);}ctx.closePath();ctx.fill();ctx.strokeStyle=edge;ctx.lineWidth=1.4;ctx.stroke();ctx.globalAlpha=a*.6;ctx.fillStyle='#FFFFFF';ctx.beginPath();ctx.moveTo(-r*.1,-r*.8);ctx.lineTo(r*.5,-r*.2);ctx.lineTo(0,r*.05);ctx.closePath();ctx.fill();ctx.restore();}
+
+// ── segments (limbs, vines, blades, jets) ──
+function heroSeg(ctx,id,p,t){
+  const C=HC[id],a=p.a??1,pts=p.pts,w=p.w;if(a<=.01||pts.length<1)return;
+  const ghostRole=['trail','path','feint','slide','burst','blur','trailpath','sweep','frostarc','creep'].includes(p.role);
+  if(id==='g1_grass'){
+    if(ghostRole){hRibbon(ctx,pts,w*.9,w*.15,C.pale,a*.45);hLine(ctx,pts,C.light,1.5,a*.5);for(let i=1;i<pts.length;i+=2)hLeaf(ctx,pts[i][0],pts[i][1],7,(i*1.9)+t*.1,C.main,a*.55);return;}
+    hRibbon(ctx,pts,w+5,w*.5+3,C.dark,a*.85);hRibbon(ctx,pts,w,w*.45,C.main,a);hLine(ctx,pts,C.light,Math.max(1.5,w*.22),a*.7);
+    for(let i=1;i<pts.length;i++){const q=pts[i],pr=pts[i-1],ang=Math.atan2(q[1]-pr[1],q[0]-pr[0]);const s=(i%2?1:-1);hLeaf(ctx,q[0],q[1],w*1.1+4,ang+s*.95,C.main,a*.95);hLeaf(ctx,q[0],q[1],w*.8+3,ang-s*.95,C.light,a*.8);if(p.role==='lance'||p.role==='ram'||p.role==='lowvine'){ctx.save();ctx.globalAlpha=a;ctx.fillStyle=C.dark;ctx.translate(q[0],q[1]);ctx.rotate(ang+s*1.6);ctx.beginPath();ctx.moveTo(-2,0);ctx.lineTo(0,-6);ctx.lineTo(2,0);ctx.fill();ctx.restore();}}
+  }else if(id==='g1_ice'){
+    if(ghostRole){hRibbon(ctx,pts,w*.8,1,C.pale,a*.4);hLine(ctx,pts,'#FFFFFF',1.4,a*.6);for(let i=0;i<pts.length;i+=2)hShard(ctx,pts[i][0],pts[i][1],7,i*1.4+t*.1,C.main,a*.6);return;}
+    hRibbon(ctx,pts,w+3,2,C.dark,a*.8);hRibbon(ctx,pts,w,1.5,C.main,a,'#FFFFFF');hLine(ctx,pts,'#FFFFFF',Math.max(1.2,w*.16),a*.8);
+    for(let i=1;i<pts.length;i++){const q=pts[i],pr=pts[i-1],ang=Math.atan2(q[1]-pr[1],q[0]-pr[0]);hShard(ctx,q[0],q[1],w*.9+4,ang+1.1,C.light,a*.9);hShard(ctx,q[0],q[1],w*.7+3,ang-1.1,C.main,a*.9);}
+  }else{
+    if(ghostRole){hRibbon(ctx,pts,w*.8,1.5,C.pale,a*.4);hLine(ctx,pts,'#FFFFFF',1.2,a*.5);return;}
+    hRibbon(ctx,pts,w+6,w*.4+2,C.dark,a*.35);hRibbon(ctx,pts,w,w*.4,C.main,a*.92);hRibbon(ctx,pts,w*.55,w*.2,C.pale,a*.9);hLine(ctx,pts,'#FFFFFF',Math.max(1.2,w*.14),a*.75);
+    for(let i=1;i<pts.length;i++){const q=pts[i],s=(i%2?1:-1);hDrop(ctx,q[0]+Math.sin(t*.3+i)*3,q[1]+s*(w*.7+3),2+w*.1,C.pale,a*.85,s*.6);}
+  }
+}
+// ── orbs (fists, shoulders, crystals, buds, geysers) ──
+function heroOrb(ctx,id,p,t){
+  const C=HC[id],a=p.a??1,r=p.r,x=p.x,y=p.y;if(a<=.01)return;
+  if(id==='g1_grass'){
+    if(p.role==='aura'){ctx.save();ctx.globalAlpha=a*.55;ctx.strokeStyle=C.main;ctx.lineWidth=4;ctx.setLineDash([14,8]);ctx.beginPath();ctx.ellipse(x,y,r,r*.85,t*.15,0,TAU);ctx.stroke();ctx.restore();for(let i=0;i<8;i++){const an=i/8*TAU+t*.15;hLeaf(ctx,x+Math.cos(an)*r,y+Math.sin(an)*r*.85,12,an+1.6,C.main,a*.85);}return;}
+    if(p.role==='bloom'){for(let i=0;i<8;i++)hLeaf(ctx,x,y,r*.9,i/8*TAU+t*.1,i%2?C.acc:'#FF8FB8',a*.9);ctx.save();ctx.globalAlpha=a;ctx.fillStyle=C.acc;ctx.beginPath();ctx.arc(x,y,r*.2,0,TAU);ctx.fill();ctx.restore();return;}
+    if(p.role==='coil'){ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=C.main;ctx.lineWidth=4;ctx.beginPath();ctx.arc(x,y,r,0,TAU*.8);ctx.stroke();ctx.restore();return;}
+    // bud / shoulder pad / heel guard: layered seed-pod with petals
+    for(let i=0;i<6;i++)hLeaf(ctx,x,y,r*1.15,i/6*TAU+t*.12,i%2?C.main:C.light,a*.9);
+    ctx.save();ctx.globalAlpha=a;ctx.fillStyle=C.dark;ctx.beginPath();ctx.arc(x,y,r*.62,0,TAU);ctx.fill();ctx.fillStyle=C.main;ctx.beginPath();ctx.arc(x,y,r*.5,0,TAU);ctx.fill();ctx.fillStyle=C.acc;ctx.beginPath();ctx.arc(x-r*.12,y-r*.12,r*.2,0,TAU);ctx.fill();ctx.restore();
+  }else if(id==='g1_ice'){
+    if(p.role==='burst'){for(let i=0;i<10;i++){const an=i/10*TAU+t*.08;hShard(ctx,x+Math.cos(an)*r*.3,y+Math.sin(an)*r*.3,r*(.6+.4*((i*7)%3)/2),an,i%2?C.light:C.main,a*.9);}hHex(ctx,x,y,r*.3,t*.1,C.light,a);return;}
+    if(p.role==='maul'){hHex(ctx,x,y,r,.3,C.main,a);hHex(ctx,x+r*.55,y-r*.35,r*.55,1,C.light,a);hHex(ctx,x-r*.5,y+r*.4,r*.5,.1,C.acc,a);for(let i=0;i<4;i++)hShard(ctx,x+r*.6,y-r*.1+(i-1.5)*r*.45,r*.9,(i-1.5)*.35,C.light,a*.9);return;}
+    if(p.role==='body'){ctx.save();ctx.globalAlpha=a*.5;ctx.fillStyle=C.pale;ctx.beginPath();ctx.ellipse(x,y,r*.85,r,0,0,TAU);ctx.fill();ctx.restore();hHex(ctx,x,y,r*.45,t*.1,C.main,a*.9);return;}
+    if(p.role==='lift'){ctx.save();ctx.globalAlpha=a*.4;ctx.strokeStyle=C.light;ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x,y,r,r*.5,0,0,TAU);ctx.stroke();ctx.restore();return;}
+    hHex(ctx,x,y,r,t*.05,C.main,a);for(let i=0;i<5;i++)hShard(ctx,x,y,r*1.5,i/5*TAU+t*.05+.3,C.light,a*.85);
+  }else{
+    if(p.role==='mark'){ctx.save();ctx.globalAlpha=a*.8;ctx.strokeStyle=C.pale;ctx.lineWidth=2.5;ctx.beginPath();ctx.ellipse(x,y,r,r*.5,0,0,TAU);ctx.stroke();ctx.globalAlpha=a*.5;ctx.beginPath();ctx.ellipse(x,y,r*.55,r*.28,0,0,TAU);ctx.stroke();ctx.restore();hDrop(ctx,x,y-2,Math.max(3,r*.28),C.main,a);return;}
+    if(p.role==='grip'){ctx.save();ctx.globalAlpha=a*.6;ctx.strokeStyle=C.pale;ctx.lineWidth=4;ctx.lineCap='round';ctx.beginPath();ctx.arc(x,y,r*.7,-1.2,1.2);ctx.stroke();ctx.beginPath();ctx.arc(x-4,y,r*.5,1.9,TAU-1.9);ctx.stroke();ctx.restore();return;}
+    if(p.role==='roll'){ctx.save();ctx.translate(x,y);ctx.rotate(p.rot||0);ctx.globalAlpha=a;ctx.strokeStyle=C.pale;ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,r,0,TAU*.75);ctx.stroke();ctx.strokeStyle='#FFFFFF';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(0,0,r*.6,0,TAU*.6);ctx.stroke();ctx.restore();return;}
+    // droplet-orb: body, rim, rotating highlight, ripple ring
+    ctx.save();ctx.globalAlpha=a*.35;ctx.fillStyle=C.dark;ctx.beginPath();ctx.arc(x,y,r*1.12,0,TAU);ctx.fill();ctx.globalAlpha=a*.92;ctx.fillStyle=C.main;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();ctx.globalAlpha=a*.85;ctx.fillStyle=C.pale;ctx.beginPath();ctx.arc(x-r*.18,y-r*.18,r*.62,0,TAU);ctx.fill();ctx.fillStyle='#FFFFFF';ctx.beginPath();ctx.ellipse(x-r*.38,y-r*.42,r*.22,r*.14,-.6,0,TAU);ctx.fill();ctx.globalAlpha=a*.6;ctx.strokeStyle='#FFFFFF';ctx.lineWidth=1.6;ctx.beginPath();ctx.ellipse(x,y,r*(1.25+.1*Math.sin(t*.3)),r*.55,0,0,TAU);ctx.stroke();ctx.restore();
+    for(let i=0;i<4;i++){const an=i/4*TAU+t*.2;hDrop(ctx,x+Math.cos(an)*r*1.4,y+Math.sin(an)*r*1.0,2.2,C.pale,a*.8,an);}
+  }
+}
+// ── ground waves (roots, spikes, crests) ──
+function heroGround(ctx,id,p,t){
+  const C=HC[id],a=p.a??1,y=p.y,x0=Math.min(p.x0,p.x1),x1=Math.max(p.x0,p.x1);if(a<=.01||x1-x0<2)return;
+  const sp=Math.max(9,Math.min(16,(x1-x0)/6));
+  if(id==='g1_grass'){
+    if(p.role==='creep')return;
+    hLine(ctx,[[x0,y],[(x0+x1)/2,y-3],[x1,y]],C.dark,5,a*.8);hLine(ctx,[[x0,y],[(x0+x1)/2,y-3],[x1,y]],C.main,3,a);
+    if(p.role==='crack')return;
+    let k=0;for(let x=x0+sp/2;x<=x1;x+=sp,k++){const h=(p.role==='roots'?20:12)+((k*7)%5)*(p.role==='roots'?5:2),lean=Math.sin(k*1.7)*4;ctx.save();ctx.globalAlpha=a;ctx.fillStyle=C.dark;ctx.beginPath();ctx.moveTo(x-4,y);ctx.quadraticCurveTo(x+lean,y-h*.6,x+lean*1.6,y-h);ctx.quadraticCurveTo(x+lean+3,y-h*.5,x+4,y);ctx.fill();ctx.fillStyle=C.main;ctx.beginPath();ctx.moveTo(x-2.5,y);ctx.quadraticCurveTo(x+lean,y-h*.6,x+lean*1.6,y-h);ctx.quadraticCurveTo(x+lean+2,y-h*.5,x+2.5,y);ctx.fill();ctx.restore();if(k%2===0)hLeaf(ctx,x+lean,y-h*.55,9,-1.1+(k%4)*.5,C.light,a*.9);}
+  }else if(id==='g1_ice'){
+    hLine(ctx,[[x0,y],[x1,y]],C.pale,3,a*.55);
+    if(p.role==='creep'){return;}
+    let k=0;for(let x=x0+sp/2;x<=x1;x+=sp,k++){const h=(p.role==='spikes2'?12:20)+((k*5)%4)*7;ctx.save();ctx.globalAlpha=a;ctx.fillStyle=k%2?C.main:C.light;ctx.beginPath();ctx.moveTo(x-5,y);ctx.lineTo(x+Math.sin(k)*3,y-h);ctx.lineTo(x+5,y);ctx.closePath();ctx.fill();ctx.strokeStyle='#FFFFFF';ctx.lineWidth=1;ctx.stroke();ctx.restore();}
+  }else{
+    ctx.save();ctx.globalAlpha=a*.9;ctx.fillStyle=C.main;ctx.beginPath();ctx.moveTo(x0,y+3);let k=0;for(let x=x0;x<x1;x+=sp,k++){const h=10+((k*3)%4)*4+(p.role==='wave2'?-3:2);ctx.quadraticCurveTo(x+sp*.5,y-h*1.6,x+sp,y-h*.3);}ctx.lineTo(x1,y+3);ctx.closePath();ctx.fill();ctx.globalAlpha=a*.8;ctx.strokeStyle='#FFFFFF';ctx.lineWidth=1.6;ctx.stroke();ctx.restore();
+    for(let x=x0+4;x<x1;x+=sp*1.5)hDrop(ctx,x,y-14-((x*3)%7),2,C.pale,a*.8);
+  }
+}
+function heroMark(ctx,id,p,t){
+  const C=HC[id],a=p.a??1,r=p.r;if(a<=.01)return;
+  ctx.save();ctx.translate(p.x,p.y);ctx.globalAlpha=a;
+  if(id==='g1_grass'){ctx.strokeStyle=C.light;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,0,r,r*.35,0,0,TAU);ctx.stroke();for(let i=0;i<4;i++){ctx.save();ctx.rotate(i/4*TAU+t*.05);hLeaf(ctx,r*.5,0,r*.7,0,C.main,a);ctx.restore();}}
+  else if(id==='g1_ice'){ctx.rotate(p.rot||0);ctx.strokeStyle=C.light;ctx.lineWidth=2;for(let i=0;i<6;i++){ctx.rotate(TAU/6);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(r,0);ctx.moveTo(r*.6,0);ctx.lineTo(r*.8,r*.2);ctx.moveTo(r*.6,0);ctx.lineTo(r*.8,-r*.2);ctx.stroke();}}
+  else{ctx.strokeStyle=C.pale;ctx.lineWidth=2;for(let i=0;i<3;i++){ctx.globalAlpha=a*(1-i*.3);ctx.beginPath();ctx.ellipse(0,0,r*(1+i*.55),r*(1+i*.55)*.4,0,0,TAU);ctx.stroke();}}
+  ctx.restore();
+}
+function heroGhost(ctx,id,p){
+  const C=HC[id],x=p.x;ctx.save();ctx.globalAlpha=Math.max(0,p.a)*.38;ctx.fillStyle=C.main;ctx.strokeStyle=C.light;ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(x,-90,10,0,TAU);ctx.fill();ctx.stroke();ctx.lineCap='round';ctx.lineWidth=15;ctx.strokeStyle=C.main;ctx.beginPath();ctx.moveTo(x,-76);ctx.lineTo(x,-40);ctx.stroke();ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(x-4,-40);ctx.lineTo(x-8,-2);ctx.moveTo(x+4,-40);ctx.lineTo(x+8,-2);ctx.stroke();ctx.restore();
+}
+function heroImpact(ctx,id,x,y,k,t){
+  const C=HC[id];if(k<=0)return;const n=8;
+  for(let i=0;i<n;i++){const an=i/n*TAU+t*.04,d=8+26*k,a=1-k*.8;
+    if(id==='g1_grass')hLeaf(ctx,x+Math.cos(an)*d,y+Math.sin(an)*d,10,an,i%2?C.main:C.light,a);
+    else if(id==='g1_ice')hShard(ctx,x+Math.cos(an)*d,y+Math.sin(an)*d,11,an,i%2?C.light:C.main,a);
+    else hDrop(ctx,x+Math.cos(an)*d,y+Math.sin(an)*d,3,i%2?C.pale:C.main,a,an+1.57);}
+}
+const HOLD_ANCHOR={us:[14,-96],ds:[22,-8],ss:[30,-54],sh:[30,-56],uh:[14,-112],dh:[0,-8],recovery:[0,-46],groundPound:[0,-40],super:[28,-58]};
+function heroHold(ctx,id,move,q){
+  const [ax,ay]=HOLD_ANCHOR[move]||[24,-50],C=HC[id],r=5+q*9,t=q*40;
+  heroOrb(ctx,id,{x:ax,y:ay,r,a:.55+.3*q,role:'bud'},t);
+  for(let i=0;i<6;i++){const an=i/6*TAU+q*9,d=(1-q*.55)*(26+i%2*8);
+    if(id==='g1_grass')hLeaf(ctx,ax+Math.cos(an)*d,ay+Math.sin(an)*d*.7,8,an+Math.PI,C.main,.6);
+    else if(id==='g1_ice')hShard(ctx,ax+Math.cos(an)*d,ay+Math.sin(an)*d*.7,8,an+Math.PI,C.light,.7);
+    else hDrop(ctx,ax+Math.cos(an)*d,ay+Math.sin(an)*d*.7,2.4,C.pale,.7,an);}
+}
+function drawHeroAttack(ctx,x,y,p,move,charId){
+  const t=(p<0?0:p)*60;
+  ctx.save();ctx.translate(x,y);
+  try{
+    if(p<0){heroHold(ctx,charId,move,Math.max(0,Math.min(1,-p-1)));return;}
+    const parts=getGen1Rig(charId,move,p),ph=gen1Phase(charId,move,p);
+    // draw order: ground & ghosts & marks (back) → segments → orbs (front) → impact sparks
+    for(const q of parts)if(q.t==='ghost')heroGhost(ctx,charId,q);
+    for(const q of parts)if(q.t==='mark')heroMark(ctx,charId,q,t);
+    for(const q of parts)if(q.t==='ground')heroGround(ctx,charId,q,t);
+    for(const q of parts)if(q.t==='seg')heroSeg(ctx,charId,q,t);
+    for(const q of parts)if(q.t==='orb')heroOrb(ctx,charId,q,t);
+    // contact flash at the leading hit shape on the first frames of the active window and just after
+    const lead=parts.filter(q=>q.t==='orb'&&q.hit>0).slice(-1)[0]||parts.filter(q=>q.t==='orb').slice(-1)[0];
+    if(lead&&(ph.act||(ph.post&&ph.rec<.18))){const k=ph.act?clamp01(ph.c*.6+.1):clamp01(.6+ph.rec*2);heroImpact(ctx,charId,lead.x,lead.y,k,t);}
+  }finally{ctx.restore();}
+}
+
+// ── Body choreography: [windup-end, contact-end] keys, blended per phase ──
+const POSE={
+ g1_grass:{
+  us:{lead:[.4,-1.9],off:[-.5,.5],lean:[-.10,.05],leg:[.35,.5],bob:[3,-6]},
+  ds:{lead:[.5,.9],off:[.2,.4],lean:[-.14,.08],leg:[.3,.45],bob:[6,7]},
+  ss:{lead:[-.7,-1.7],off:[.5,.2],lean:[-.06,.2],leg:[.15,.1],bob:[2,3]},
+  uh:{lead:[-1.2,-2.6],off:[-1,-2.4],lean:[.1,0],leg:[.4,.7],bob:[-2,-10]},
+  dh:{lead:[0,.3],off:[0,.3],lean:[0,.16],leg:[0,.1],bob:[0,8]},
+  sh:{lead:[-.4,-1.5],off:[.6,.5],lean:[.22,.3],leg:[.5,.2],bob:[10,4]},
+  recovery:{lead:[-1,-2.2],off:[.4,-.4],lean:[-.2,.1],leg:[.4,.3],bob:[2,-6]},
+  groundPound:{lead:[-.6,.2],off:[-.6,.2],lean:[.12,.34],leg:[.4,.3],bob:[-2,6]},
+  super:{lead:[-.9,-1.9],off:[-.9,.9],lean:[-.05,.18],leg:[.1,.3],bob:[0,2]}},
+ g1_ice:{
+  us:{lead:[-.3,-1.8],off:[.4,-1.2],lean:[.05,-.08],leg:[.2,.6],bob:[-2,-8]},
+  ds:{lead:[.5,.9],off:[.5,-.9],lean:[.1,-.12],leg:[.5,.7],bob:[5,6]},
+  ss:{lead:[-1,-1.9],off:[.2,.3],lean:[-.04,.2],leg:[.05,.15],bob:[0,2]},
+  uh:{lead:[-.9,-2.7],off:[-.9,-2.3],lean:[.08,.04],leg:[.2,.4],bob:[-1,-9]},
+  dh:{lead:[-.2,.3],off:[-.2,.3],lean:[-.04,.1],leg:[0,.1],bob:[0,6]},
+  sh:{lead:[-2.6,-1.35],off:[-2,.5],lean:[-.1,.28],leg:[.1,.3],bob:[-2,5]},
+  recovery:{lead:[-1.2,-1.8],off:[.4,.5],lean:[-.1,.1],leg:[.3,.2],bob:[-3,-5]},
+  groundPound:{lead:[-1.4,.4],off:[-1.4,.4],lean:[.2,.36],leg:[.3,.5],bob:[-6,6]},
+  super:{lead:[-1.2,-2],off:[1.2,1.4],lean:[.1,.14],leg:[.1,.2],bob:[0,0]}},
+ g1_water:{
+  us:{lead:[.5,-2.2],off:[-.3,.3],lean:[.04,.16],leg:[.5,.6],bob:[3,-5]},
+  ds:{lead:[.9,.4],off:[.3,-.4],lean:[.12,-.1],leg:[.1,.4],bob:[8,5]},
+  ss:{lead:[-.5,-1.8],off:[.3,.2],lean:[-.02,.2],leg:[.1,.2],bob:[2,2]},
+  uh:{lead:[-.9,-2],off:[-.9,-1.5],lean:[.12,-.06],leg:[.2,.5],bob:[4,-4]},
+  dh:{lead:[.3,.5],off:[.3,.5],lean:[.18,.2],leg:[.7,.9],bob:[-8,9]},
+  sh:{lead:[.3,-1.8],off:[-.5,.5],lean:[-.14,.28],leg:[.5,.3],bob:[4,3]},
+  recovery:{lead:[-.6,-1.6],off:[.6,-.8],lean:[-.2,.14],leg:[.5,.4],bob:[0,-5]},
+  groundPound:{lead:[-.4,.3],off:[-.4,.3],lean:[.1,.4],leg:[.6,.4],bob:[0,8]},
+  super:{lead:[-1,-1.9],off:[1,1.9],lean:[.05,.12],leg:[.1,.3],bob:[0,0]}}
+};
+function gen1HeroBodyPose(move,p,facing,charId){
+  const k=POSE[charId]?.[move];if(!k)return {punchArmL:0,punchArmR:0,legSwing:0,lean:facing*.05,bob:0};
+  const ph=gen1Phase(charId,move,p),v=pair=>ph.act?lerp(pair[0],pair[1],ease(ph.c)):ph.post?lerp(pair[1],0,ease(ph.rec)):lerp(0,pair[0],ease(ph.w));
+  let punchArmL=0,punchArmR=0;const lead=v(k.lead),off=v(k.off);
+  if(facing>=0){punchArmR=lead;punchArmL=off;}else{punchArmL=-lead;punchArmR=-off;}
+  return {punchArmL,punchArmR,legSwing:v(k.leg),lean:facing*v(k.lean),bob:v(k.bob)};
+}
+
 export function drawGen1Attack(ctx,x,y,color,p,facing,charId,move,attack=null){
   ctx.save();
   try {
     ctx.translate(x,y); ctx.scale(facing<0?-1:1,1);
+    if(charId==='g1_grass'||charId==='g1_ice'||charId==='g1_water'){ drawHeroAttack(ctx,0,0,p,move,charId); return; }
     // Render the actual hero-specific animation functions. Do not short-circuit
     // into a shared generic geometry overlay: that overlay made every hero's
     // attacks look alike and hid the authored choreography below.
@@ -1794,10 +1967,10 @@ export function drawGen1Super(ctx,x,y,p,facing,charId){
     // Use the dedicated super animation for each hero; never replace these with
     // a shared silhouette/effect pass.
     if(charId==='g1_fire') fireSuper(ctx,0,0,p);
-    else if(charId==='g1_grass') grassSuper(ctx,0,0,p);
-    else if(charId==='g1_ice') iceSuper(ctx,0,0,p);
+    else if(charId==='g1_grass') drawHeroAttack(ctx,0,0,p,'super','g1_grass');
+    else if(charId==='g1_ice') drawHeroAttack(ctx,0,0,p,'super','g1_ice');
     else if(charId==='g1_thunder') thunderSuper(ctx,0,0,p);
-    else if(charId==='g1_water') waterSuper(ctx,0,0,p);
+    else if(charId==='g1_water') drawHeroAttack(ctx,0,0,p,'super','g1_water');
   } finally {
     ctx.restore();
   }
