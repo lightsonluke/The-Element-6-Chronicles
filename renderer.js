@@ -1044,7 +1044,11 @@ export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isN
   const isGen2 = String(charId || '').startsWith('g2_');
   const isGen3 = String(charId || '').startsWith('g3_');
   // Do not add generic circular glows over authored attacks.
-  ctx.globalAlpha = Math.max(0, 1 - progress * 1.2);
+  // Keep authored attack art visible through the complete move timeline.
+  // The old global fade reached zero at 83% of the move, hiding the actual strike
+  // and making every attack look much shorter than its frame data. Individual
+  // animation layers already control their own fade during recovery.
+  ctx.globalAlpha = 1;
 
   const p = progress;
 

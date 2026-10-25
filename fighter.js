@@ -2236,7 +2236,7 @@ function resonanceHitStage(attacker) {
 }
 
 export function checkHit(attacker, defender) {
-  if (!attacker.attackData || attacker.attackData.type === 'attackHold' || attacker.attackData.holding) return false;
+  if (!attacker.attackData || attacker.attackData.type === 'attackHold' || attacker.attackData.holding || attacker.attackData._hitboxConsumed) return false;
   const resonanceStage = resonanceHitStage(attacker);
   const multi = !!attacker.attackData.multiHitStages || resonanceStage >= 0;
   const stage = resonanceStage >= 0 ? resonanceStage : (multi ? gen1HitStage(attacker) : 0);
@@ -2346,6 +2346,10 @@ export function checkHit(attacker, defender) {
 
 export function applyHit(attacker, defender) {
   if (!attacker.attackData) return;
+  // Every attack owns one live collision shape: the first confirmed contact
+  // consumes it immediately, while the fighter's authored recovery animation
+  // continues normally. This applies to multi-stage moves as well.
+  attacker.attackData._hitboxConsumed = true;
   if (attacker.attackData.multiHitStages || resonanceHitStage(attacker) >= 0) {
     const stage = resonanceHitStage(attacker) >= 0 ? resonanceHitStage(attacker) : gen1HitStage(attacker);
     attacker.attackData.hitStageIds ||= {};

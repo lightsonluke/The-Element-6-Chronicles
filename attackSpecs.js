@@ -127,11 +127,18 @@ function activeProgress(fighter) {
     if (elapsed < start || elapsed >= end) return 0;
     return clamp01((elapsed - start + 0.5) / Math.max(1, active));
   }
-  return clamp01((clamp01(d?.progress ?? 0) - .08) / .77);
+  // These non-Fire authored hitbox paths use the same normalized timeline as the
+  // renderer. Do not remap .08-.85 to 0-1: that makes the collision geometry
+  // race ahead of (or lag behind) the visible weapon/limb every frame.
+  return clamp01(d?.progress ?? 0);
 }
 
 export function getActiveSpecHitboxes(attacker) {
   const data = attacker?.attackData; if (!data) return [];
+  // A confirmed hit consumes the current attack's hitbox. The animation and
+  // recovery continue, but the collision shape disappears immediately.
+  // Stage-based combo weapons manage their own per-stage/per-target hit tokens.
+  if (data._hitboxConsumed || (data.hitApplied && !data.multiHitStages && !data.resonanceFamily)) return [];
   if (data.resonanceFamily) return getResonanceConstructHitboxes(attacker);
   const t = activeProgress(attacker); if (t <= 0 || t >= 1) return [];
   if (String(attacker?.char?.id || '').startsWith('g2_')) {
@@ -248,23 +255,52 @@ export function getActiveSpecHitboxes(attacker) {
   switch (spec.shape) {
     // Fire Hero hitboxes are measured to the authored move silhouettes and only
     // exist during the exact startup/active window stored on attackData.
-    case 'fireRise': { B(-35, -132, 70, 95); break; }
-    case 'fireQuake': { B(-60, -35, 120, 35); break; }
-    case 'fireWave': { FB(12, -66, 95, 55); break; }
-    case 'fireAscendant': { B(-45, -155, 90, 125); break; }
-    case 'fireSunder': { B(-70, -42, 140, 45); break; }
-    case 'fireRend': { FB(0, -76, 135, 65); break; }
+    // Fire Hero: collision follows the moving flame/limb silhouette on each
+    // active frame instead of using one oversized box for the entire move.
+    case 'fireRise': {
+      const cx = 18 + 10 * Math.sin(q * TAU), cy = -80 - 28 * q;
+      B(cx, cy, 42 + 12 * q, 42 + 10 * q); break;
+    }
+    case 'fireQuake': {
+      // The stomp and delayed eruption each have their own short active window.
+      const stageT = q < .5 ? q * 2 : (q - .5) * 2;
+      B(24, -1, 44 + 76 * stageT, 18); break;
+    }
+    case 'fireWave': {
+      const cx = 28 + 45 * q, cy = -36 - 24 * Math.sin(Math.PI * q);
+      B(cx, cy, 30 + 14 * Math.sin(Math.PI * q), 28 + 8 * Math.sin(Math.PI * q)); break;
+    }
+    case 'fireAscendant': {
+      const cx = 10 + 12 * q, cy = -78 - 25 * q;
+      B(cx, cy, 48 + 16 * q, 60 + 10 * q); break;
+    }
+    case 'fireSunder': {
+      const spread = 30 + 45 * q;
+      B(20, -1, spread * 2, 18); break;
+    }
+    case 'fireRend': {
+      const tip = 88 + 28 * q;
+      B((48 + tip) / 2, -49, tip - 48 + 22, 34); break;
+    }
     case 'fireReturn': {
-      if (q < .5) B(-42, -92, 85, 85); else B(-32, -142, 65, 100);
+      // Two uneven pulses are visibly present together in the four-frame strike.
+      B(16, -42, 38, 32);
+      B(20, -70, 28 + 18 * q, 24 + 10 * q);
       break;
     }
     case 'fireMeteor': {
-      B(-37, -5, 75, 110);
-      // Landing wave is only enabled once the dive reaches its final beat.
-      if (q > .68 && attacker?.grounded) B(-75, -30, 150, 30);
+      const cy = -25 + 18 * q;
+      B(0, cy, 34 + 10 * q, 48 + 14 * q);
       break;
     }
-    case 'fireUltimate': { FB(35, -108, 1120, 180); break; }
+    case 'fireUltimate': {
+      // Two-lane feint resolves to one long lance. Follow the actual advancing
+      // projectile instead of treating the entire 1,120px lane as hot at once.
+      const travel = Math.max(0, Math.min(1, (q - .12) / .88));
+      const cx = 40 + travel * 1080;
+      B(cx, -58, 42 + 22 * q, 34 + 18 * q);
+      break;
+    }
     // Thunder — Up Signature: ONLY the moving dot at the start of the circular line.
     case 'orbitPoint': { const a = -Math.PI/2 + (q < .92 ? q * TAU : TAU); C(Math.cos(a)*86, -112 + Math.sin(a)*34, 9); break; }
     case 'smallDome': { if (q < .18) break; const r=18 + Math.min(1,(q-.18)/.82)*35; for(let i=0;i<9;i++){const a=Math.PI+i/8*Math.PI; C(Math.cos(a)*r, -24+Math.sin(a)*r, 9);} break; }
