@@ -30,15 +30,15 @@ const GEN1_MOVE_SPECS = {
     super:{name:'Thunder Strike',shape:'bottomBolt',range:90,knockback:'radialUp',duration:42,damage:38},
   },
   g1_fire: {
-    us:{name:"Fire Hero's Rising",shape:'fireRisingKnee',range:95,knockback:'upContact',duration:25,damage:6,holdMaxFrames:18,referenceFrames:4},
-    ds:{name:"Fire Hero's Quake",shape:'fireDelayedQuake',range:120,knockback:'radialContact',duration:42,damage:8,holdMaxFrames:18,referenceFrames:4},
-    ss:{name:"Fire Hero's Wave",shape:'fireWaveRoll',range:95,knockback:'forwardContact',duration:26,damage:8,holdMaxFrames:18,referenceFrames:4},
-    upHeavy:{name:'Ascendant Breaker',shape:'fireAscendantBreaker',range:125,knockback:'upContact',duration:57,damage:14,holdMaxFrames:20,referenceFrames:4},
-    dh:{name:'Sunder Slam',shape:'fireSunderBrace',range:140,knockback:'fireSunder',duration:45,damage:17,holdMaxFrames:20,referenceFrames:6},
-    sh:{name:'Rend Strike',shape:'fireRendStrike',range:135,knockback:'forwardContact',duration:61,damage:15,holdMaxFrames:20,referenceFrames:4},
-    recovery:{name:'Return Return',shape:'fireReturnReturn',range:85,knockback:'upContact',duration:34,damage:5,referenceFrames:4},
-    groundPound:{name:'Meteor Pound',shape:'fireMeteorPound',range:150,knockback:'meteor',duration:52,damage:9},
-    super:{name:'Ultimate: Flame Unleashed',shape:'fireSuperLanes',range:260,knockback:'radialContact',duration:93,damage:28,holdMaxFrames:20,referenceFrames:7},
+    us:{name:"Fire Hero's Rising",shape:'fireRise',range:95,knockback:'upContact',duration:25,damage:6,startupFrames:10,activeFrames:2,endlagFrames:13},
+    ds:{name:"Fire Hero's Quake",shape:'fireQuake',range:120,knockback:'radialContact',duration:42,damage:8,startupFrames:11,activeFrames:4,endlagFrames:27},
+    ss:{name:"Fire Hero's Wave",shape:'fireWave',range:95,knockback:'forwardContact',duration:26,damage:8,startupFrames:4,activeFrames:5,endlagFrames:17},
+    upHeavy:{name:'Ascendant Breaker',shape:'fireAscendant',range:125,knockback:'upContact',duration:57,damage:14,startupFrames:14,activeFrames:5,endlagFrames:38},
+    dh:{name:'Sunder Slam',shape:'fireSunder',range:140,knockback:'radialContact',duration:45,damage:17,startupFrames:14,activeFrames:4,endlagFrames:27},
+    sh:{name:'Rend Strike',shape:'fireRend',range:135,knockback:'forwardContact',duration:61,damage:15,startupFrames:17,activeFrames:7,endlagFrames:37},
+    recovery:{name:'Return Return',shape:'fireReturn',range:85,knockback:'upContact',duration:34,damage:5,startupFrames:5,activeFrames:4,endlagFrames:25},
+    groundPound:{name:'Meteor Pound',shape:'fireMeteor',range:150,knockback:'radialContact',duration:52,damage:9,startupFrames:15,activeFrames:6,endlagFrames:31},
+    super:{name:'Ultimate: Flame Unleashed',shape:'fireUltimate',range:1200,knockback:'radialContact',duration:93,damage:28,startupFrames:30,activeFrames:15,endlagFrames:48},
   },
   g1_water: {
     us:{name:'Water Ring',shape:'waterRing',range:150,knockback:'velocity',duration:28,damage:16,holdMaxFrames:18},
@@ -98,15 +98,9 @@ export function getAttackSpec(charId, moveKey) {
 }
 export function getAttackSpecForData(charId, attackData) {
   if (!attackData) return null;
-  if (charId === 'g1_fire' && attackData.isGroundPound) {
-    return { charId, kind:'groundPound', moveKey:'groundPound', name:'Meteor Pound', shape:'fireMeteorPound', knockback:'meteor', range:150, duration:52, damage:9, color:'#FF6600' };
-  }
-  if (charId === 'g1_fire' && attackData.isRecovery) {
-    return { charId, kind:'recovery', moveKey:'recovery', name:'Return Return', shape:'fireReturnReturn', knockback:'upContact', range:85, duration:34, damage:5, color:'#FF6600' };
-  }
   if (GEN1_MOVE_SPECS[charId]) {
     const raw = attackData.sigType;
-    const key = attackData.isSuper ? 'super' : attackData.isHeavy ? (raw === 'downHeavy' ? 'dh' : raw === 'upHeavy' ? 'upHeavy' : 'sh') : raw === 'up' ? 'us' : raw === 'down' || raw === 'downNormal' ? 'ds' : 'ss';
+    const key = charId === 'g1_fire' && attackData.isGroundPound ? 'groundPound' : charId === 'g1_fire' && attackData.isRecovery ? 'recovery' : attackData.isSuper ? 'super' : attackData.isHeavy ? (raw === 'downHeavy' ? 'dh' : raw === 'upHeavy' ? 'upHeavy' : 'sh') : raw === 'up' ? 'us' : raw === 'down' || raw === 'downNormal' ? 'ds' : 'ss';
     const override = GEN1_MOVE_SPECS[charId][key];
     if (override) return { charId, kind:attackData.isSuper ? 'super' : attackData.isHeavy ? 'heavy' : 'signature', moveKey:key, color:attackData.color, ...override };
   }
@@ -118,26 +112,22 @@ export function getAttackSpecForData(charId, attackData) {
 }
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 function activeProgress(fighter) {
-  const p = clamp01(fighter?.attackData?.progress ?? 0);
-  if (fighter?.char?.id === 'g1_fire' && fighter?.attackData) {
-    const d = fighter.attackData;
-    // Active windows follow Flame's authored startup/active frame counts (60 FPS).
-    // Quake's active window is intentionally delayed until the second ground burst.
-    let window;
-    if (d.isGroundPound) window = [.29, .115];
-    else if (d.isRecovery) window = [.15, .12];
-    else if (d.isSuper) window = [.32, .162];
-    else if (d.isHeavy && (d.sigType === 'upHeavy' || d.sigType === 'up')) window = [.245, .088];
-    else if (d.isHeavy && (d.sigType === 'downHeavy' || d.sigType === 'down')) window = [.31, .09];
-    else if (d.isHeavy) window = [.28, .115];
-    else if (d.sigType === 'up') window = [.40, .08];
-    else if (d.sigType === 'down' || d.sigType === 'downNormal') window = [.48, .095];
-    else window = [.15, .192];
-    if (p <= window[0]) return 0;
-    if (p >= window[0] + window[1]) return 1;
-    return (p - window[0]) / window[1];
+  const d = fighter?.attackData;
+  if (fighter?.char?.id === 'g1_fire' && d && Number.isFinite(d.startupFrames) && Number.isFinite(d.activeFrames)) {
+    const elapsed = Math.max(0, (Number(d.duration) || 1) - (Number(fighter.attackTimer) || 0));
+    const start = d.startupFrames, active = d.activeFrames;
+    // Quake spends two active frames on the initial stamp and two on the delayed
+    // eruption at the original position after Flame has hopped back.
+    if (d.spec?.shape === 'fireQuake' || d.name === "Fire Hero's Quake") {
+      if (elapsed >= start && elapsed < start + 2) return (elapsed - start + .5) / 4;
+      if (elapsed >= start + 8 && elapsed < start + 10) return (elapsed - start - 8 + 2.5) / 4;
+      return 0;
+    }
+    const end = start + active;
+    if (elapsed < start || elapsed >= end) return 0;
+    return clamp01((elapsed - start + 0.5) / Math.max(1, active));
   }
-  return clamp01((p - .08) / .77);
+  return clamp01((clamp01(d?.progress ?? 0) - .08) / .77);
 }
 
 export function getActiveSpecHitboxes(attacker) {
@@ -251,19 +241,30 @@ export function getActiveSpecHitboxes(attacker) {
   const out = [];
   const C = (lx, ly, r) => out.push({shape:'circle', x:x + lx * f, y:y + ly, r});
   const B = (lx, ly, w, h) => out.push({shape:'box', x:x + lx * f, y:y + ly, w, h});
+  const FB = (lx, ly, w, h) => out.push({shape:'box', x: f > 0 ? x + lx : x - lx - w, y:y + ly, w, h});
   const K = (x1,y1,x2,y2,r) => out.push({shape:'capsule', x1:x + x1*f, y1:y + y1, x2:x + x2*f, y2:y + y2, r});
   const P = pts => out.push({shape:'polygon', points:pts.map(([px,py]) => [x + px*f, y + py])});
   const q = t;
   switch (spec.shape) {
-    case 'fireSuperLanes': { if(q<.35) break; const u=(q-.35)/.65; const len=70+190*u; K(24,-70,24+len,-70,13); if(q>.55) K(24,-25,24+len,-25,9); if(q>.72) C(24+len,-70,24); break; }
-    case 'fireRisingKnee': { const u=q; K(8,-40-u*46,28+u*12,-52-u*45,18); C(28+u*12,-72-u*18,16); break; }
-    case 'fireDelayedQuake': { const u=q; for(let side=-1;side<=1;side+=2) K(22,-3,22+side*(18+42*u),-3,7); break; }
-    case 'fireWaveRoll': { const u=q; K(8+22*u,-24-12*u,35+24*u,-42-6*u,17); C(48+12*u,-46,16); break; }
-    case 'fireAscendantBreaker': { const u=q; K(-12,-8-u*95,6+u*10,-35-u*95,20); C(8+u*10,-83-u*15,18); break; }
-    case 'fireSunderBrace': { const u=q; for(const side of [-1,1]) K(22,-2,22+side*(25+45*u),-2,10); break; }
-    case 'fireRendStrike': { const u=q; K(20,-44,48+87*u,-44-3*u,19); C(48+87*u,-44-3*u,18); break; }
-    case 'fireReturnReturn': { const u=q; C(10+35*u,-44-20*u,18); K(10,-44,14+18*u,-78-18*u,13); break; }
-    case 'fireMeteorPound': { const u=q; if(u<.78) K(2,-20,4,-110,18); else {const r=20+58*(u-.78)/.22; for(const side of [-1,1]) K(22,-2,22+side*r,-2,10);} break; }
+    // Fire Hero hitboxes are measured to the authored move silhouettes and only
+    // exist during the exact startup/active window stored on attackData.
+    case 'fireRise': { B(-35, -132, 70, 95); break; }
+    case 'fireQuake': { B(-60, -35, 120, 35); break; }
+    case 'fireWave': { FB(12, -66, 95, 55); break; }
+    case 'fireAscendant': { B(-45, -155, 90, 125); break; }
+    case 'fireSunder': { B(-70, -42, 140, 45); break; }
+    case 'fireRend': { FB(0, -76, 135, 65); break; }
+    case 'fireReturn': {
+      if (q < .5) B(-42, -92, 85, 85); else B(-32, -142, 65, 100);
+      break;
+    }
+    case 'fireMeteor': {
+      B(-37, -5, 75, 110);
+      // Landing wave is only enabled once the dive reaches its final beat.
+      if (q > .68 && attacker?.grounded) B(-75, -30, 150, 30);
+      break;
+    }
+    case 'fireUltimate': { FB(35, -108, 1120, 180); break; }
     // Thunder — Up Signature: ONLY the moving dot at the start of the circular line.
     case 'orbitPoint': { const a = -Math.PI/2 + (q < .92 ? q * TAU : TAU); C(Math.cos(a)*86, -112 + Math.sin(a)*34, 9); break; }
     case 'smallDome': { if (q < .18) break; const r=18 + Math.min(1,(q-.18)/.82)*35; for(let i=0;i<9;i++){const a=Math.PI+i/8*Math.PI; C(Math.cos(a)*r, -24+Math.sin(a)*r, 9);} break; }
@@ -419,8 +420,6 @@ function radialVector(attacker, defender){const dx=defender.x-attacker.x,dy=defe
 export function specKnockbackVector(attacker, defender, profile){
   const p=String(profile||'forward').toLowerCase(),f=attacker.facing||1;
   if(p==='up') return {x:f*.18,y:-1};
-  if(p==='meteor') { const away=Math.sign((defender.x-attacker.x)||f); return defender.grounded ? {x:away,y:-.12} : {x:away*.42,y:.91}; }
-  if(p==='firesunder') { const away=Math.sign((defender.x-attacker.x)||f); return defender.grounded ? {x:away,y:-.22} : {x:away*.55,y:.84}; }
   if(p==='upcontact'){const dx=defender.x-attacker.x;return{x:Math.max(-.55,Math.min(.55,dx/90)),y:-1};}
   if(p==='radial'||p==='radialcontact') return radialVector(attacker,defender);
   if(p==='splitsplash'){ const dx=defender.x-attacker.x; return {x:Math.sign(dx||f),y:-.42}; }

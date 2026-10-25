@@ -404,36 +404,7 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
         if (!flashing) accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive));
         if (!flashing) drawStickman(ctx, f.x, f.y, col, f.facing, f.frame || 0, 1, (f.resonanceActive ? f.char : charData)?.isSpirit, f.state, f.resonanceActive ? f.char : charData, f.powerActive, false, null, f.emote, f.attackData);
         if (!flashing && f.resonanceActive) { try { drawConstructWeapon(ctx,f,1); } catch (error) { console.error('[Grand Circuit Resonance] Weapon render failed safely:',error); } }
-        // Settings > Hitboxes draws the exact same construct geometry used by checkHit().
-        if (settings?.hitboxes === true && f.resonanceActive && (f.attackData?.resonanceFamily || f.attackData?.resonanceAnimation) && f.state === 'attacking') {
-          let boxes=[]; try { boxes=getConstructAttackGeometry(f)||[]; } catch (err) { boxes=[]; }
-          if (boxes.length) {
-            ctx.save(); ctx.fillStyle='rgba(255,45,90,.20)'; ctx.strokeStyle='#ff315d'; ctx.lineWidth=3; ctx.setLineDash([6,3]);
-            for (const hb of boxes) {
-              if (hb.shape === 'circle') {
-                ctx.beginPath(); ctx.arc(hb.x, hb.y, hb.r || 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-              } else if (hb.shape === 'polygon' && hb.points?.length) {
-                ctx.beginPath(); ctx.moveTo(hb.points[0][0], hb.points[0][1]);
-                for (let i = 1; i < hb.points.length; i++) ctx.lineTo(hb.points[i][0], hb.points[i][1]);
-                ctx.closePath(); ctx.fill(); ctx.stroke();
-              } else if (hb.shape === 'capsule') {
-                ctx.beginPath(); ctx.moveTo(hb.x1, hb.y1); ctx.lineTo(hb.x2, hb.y2);
-                ctx.lineWidth = Math.max(2, (hb.r || 1) * 2); ctx.lineCap = 'round'; ctx.stroke();
-              } else if (hb.shape === 'box') {
-                ctx.fillRect(hb.x, hb.y, hb.w, hb.h); ctx.strokeRect(hb.x, hb.y, hb.w, hb.h);
-              } else {
-                const left = Number.isFinite(hb.left) ? hb.left : (hb.x || 0) - (hb.w || 0) / 2;
-                const top = Number.isFinite(hb.top) ? hb.top : (hb.y || 0) - (hb.h || 0) / 2;
-                ctx.fillRect(left, top, hb.w || 0, hb.h || 0); ctx.strokeRect(left, top, hb.w || 0, hb.h || 0);
-              }
-            }
-            const hb = boxes[0];
-            const labelX = Number.isFinite(hb.x) ? hb.x : Number.isFinite(hb.x1) ? (hb.x1 + hb.x2) / 2 : 0;
-            const labelY = Number.isFinite(hb.top) ? hb.top - 6 : Number.isFinite(hb.y) ? hb.y - (hb.r || hb.h || 12) - 6 : Math.min(hb.y1 || 0, hb.y2 || 0) - (hb.r || 12) - 6;
-            ctx.setLineDash([]); ctx.lineWidth = 3; ctx.lineCap = 'butt'; ctx.fillStyle = '#ff315d'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
-            ctx.fillText(`CONSTRUCT HITBOX · ${f.attackData.resonanceMoveKey || 'attack'}`, labelX, labelY); ctx.restore();
-          }
-        }
+        // Attack hitboxes remain invisible during normal play; no red guide/outline is drawn.
         if (!flashing) accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive));
         drawShikigamiFollower(ctx, f, equippedShikigamiRef.current?.[charData?.id], f.frame || 0, 1);
 
@@ -444,7 +415,6 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
         if (f.hitEffects) f.hitEffects = f.hitEffects.filter(he => drawHitSparks(ctx, he.x, he.y, he.color, f.frame || 0, he.spawnFrame));
         drawProjectiles(ctx, f);
 
-        // Sig/heavy cooldown bars under fighter
       };
       drawF(f1, c1, true);
       drawF(f2, c2, false);

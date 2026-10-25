@@ -1812,7 +1812,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           // exact authored circles/capsules/polygons used by collision.
           drawTrainingHitbox(ctx, f.x, f.y + FIGHTER_HURTBOX.centerY, FIGHTER_HURTBOX.w, FIGHTER_HURTBOX.h, label);
           if (f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
-            drawExactAttackHitboxOverlay(ctx, f, label);
+            // Attack hitbox guides are intentionally hidden; only the optional fighter hurtbox remains.
           }
         };
         drawFighterBox(f1, 'P1'); drawFighterBox(f2, 'P2');
