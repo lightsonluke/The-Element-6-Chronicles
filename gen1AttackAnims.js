@@ -1,3 +1,4 @@
+import { drawGen1MotionArt } from './gen1AttackArt.js';
 // Generation I hand-authored attack animation system.
 // IMPORTANT: every directional attack is authored facing RIGHT and mirrored
 // with the canvas transform. This guarantees left/right are literal flips of
@@ -1295,6 +1296,60 @@ function waterSuper(ctx,x,y,p){
   else {const u=ease(f-6),r=135-8*u;wRing(ctx,x,cy,r,r*.68,1,.12,attackP(p)*6);waterSpray(ctx,x+42,cy-54,-1.5,1.1,12,.75*(1-u),attackP(p));}
 }
 
+function gen1AuthoredBodyPose(move,q,facing,charId){
+  const t=clamp01(q), wind=ease(clamp01(t/.34)), strike=ease(clamp01((t-.30)/.18)), recover=ease(clamp01((t-.52)/.48));
+  const lead=facing>=0?'R':'L';let punchArmL=0,punchArmR=0,legSwing=0,lean=0,bob=0;
+  const leadPunch=v=>{if(lead==='R')punchArmR=v;else punchArmL=-v;};
+  const offArm=v=>{if(lead==='R')punchArmL=v;else punchArmR=-v;};
+  const grass=charId==='g1_grass',ice=charId==='g1_ice',thunder=charId==='g1_thunder',water=charId==='g1_water';
+  if(move==='us'){
+    if(grass){lean=facing*(t<.2?-.18+Math.sin(t*40)*.08:.08+.18*strike);legSwing=.24*Math.sin(t*18)+.55*strike;bob=-17*strike+3*recover;leadPunch(-.45-1.1*strike);offArm(.35+.4*strike);}
+    else if(ice){lean=facing*(.06-.25*wind+.12*strike);legSwing=.35*Math.sin(t*14);bob=-8*wind-10*strike;leadPunch(-.55-1.25*strike);offArm(.35+.45*strike);}
+    else if(thunder){lean=-facing*.18*(1-strike)+facing*.20*strike;legSwing=-.25+1.0*strike;bob=-12*strike;leadPunch(-.2-1.45*strike);offArm(.5);}
+    else if(water){lean=facing*(.08*Math.sin(t*10)+.2*strike);legSwing=.42*Math.sin(t*12);bob=-12*strike;leadPunch(-.4-1.3*strike);offArm(.25);}
+    else {lean=facing*(.08+.12*strike);legSwing=.2+.65*strike;bob=-15*strike;leadPunch(-.5-1.3*strike);offArm(.3);}
+  } else if(move==='ds'){
+    if(grass){lean=-facing*.16*wind+facing*.22*strike;bob=5*wind+2*strike;legSwing=-.35*wind+.2*strike;leadPunch(.35+.45*strike);offArm(.2);}
+    else if(ice){lean=facing*.18*wind;legSwing=.7*strike;bob=2*wind;leadPunch(.55*strike);offArm(-.55*strike);}
+    else if(thunder){lean=-facing*.10+facing*.15*strike;legSwing=.8*strike;bob=3*wind;leadPunch(.3*strike);offArm(-.5*strike);}
+    else if(water){lean=-facing*.2*wind;legSwing=.25*wind;bob=2*wind;leadPunch(.3*strike);offArm(-.3*strike);}
+    else {lean=facing*.06;bob=4*wind;leadPunch(.25*strike);}
+  } else if(move==='ss'){
+    if(grass){lean=facing*(.12*wind+.25*strike);bob=2*wind-3*strike;legSwing=-.3*wind+.45*strike;leadPunch(-.45-1.1*strike);offArm(.55*strike);}
+    else if(ice){lean=facing*(.08+.18*strike);leadPunch(-.4-1.35*strike);offArm(.25);legSwing=.18*strike;}
+    else if(thunder){lean=facing*.02+facing*.24*strike;leadPunch(-.2-1.3*strike);offArm(.3);legSwing=.1*strike;}
+    else if(water){lean=facing*(.05+.18*strike);leadPunch(-.45-1.2*strike);offArm(.25);legSwing=.2*strike;}
+    else {lean=facing*(.08+.2*strike);leadPunch(-.45-1.15*strike);offArm(.2);legSwing=.2*strike;}
+  } else if(move==='uh'){
+    if(grass){lean=facing*(.05+.28*wind-.38*strike+.12*recover);bob=-24*wind+15*strike-5*recover;legSwing=.55*wind-1.0*strike+.25*recover;leadPunch(-.4-1.4*strike);offArm(-.25-1.0*strike);}
+    else if(ice){lean=facing*(.12*wind-.22*strike);bob=-8*wind-18*strike;legSwing=.55*Math.sin(t*TAU);leadPunch(-.45-1.5*strike);offArm(-.7-0.5*strike);}
+    else if(thunder){lean=facing*(.18*wind+.22*strike);bob=-20*strike;legSwing=.5*wind-.55*strike;leadPunch(-.3-1.35*strike);offArm(.65);}
+    else if(water){lean=facing*(.1*wind+.12*strike);bob=-10*wind-24*strike;legSwing=.35*wind-.5*strike;leadPunch(-.45-1.2*strike);offArm(-.7);}
+    else {lean=facing*.15*strike;bob=-18*strike;legSwing=.4*strike;leadPunch(-.6-1.3*strike);offArm(-.8);}
+  } else if(move==='dh'){
+    // Stop completely before the floor hit; then brace as the elemental follow-through expands.
+    const brace=ease(clamp01((t-.18)/.16)), impact=ease(clamp01((t-.30)/.12));
+    lean=facing*(.06*wind-.12*impact);bob=8*wind+8*impact-3*recover;legSwing=.08*wind+.12*impact;
+    punchArmL=-.35-.45*brace;punchArmR=-.35-.45*brace;
+    if(thunder){lean=-facing*.18*wind+facing*.04*impact;leadPunch(.45*impact);}
+    if(water){lean=-facing*.12*wind;legSwing=.45*impact;}
+  } else if(move==='sh'){
+    if(grass){lean=facing*(.28*wind-.32*strike);bob=4*wind-5*strike;legSwing=-.5*wind+.35*strike;leadPunch(-.45-1.0*strike);offArm(.7*strike);}
+    else if(ice){lean=-facing*.22*wind+facing*.26*strike;bob=3*wind;legSwing=.2*strike;leadPunch(-.15-1.7*strike);offArm(.75*strike);}
+    else if(thunder){lean=facing*.2*Math.sin(t*TAU);legSwing=.5*Math.sin(t*TAU);leadPunch(-.4-1.25*strike);offArm(.7*strike);}
+    else if(water){lean=-facing*.12*wind+facing*.24*strike;legSwing=-.25*wind+.3*strike;leadPunch(-.4-1.2*strike);offArm(.5*strike);}
+    else {lean=-facing*.12*wind+facing*.3*strike;legSwing=-.2*wind+.4*strike;leadPunch(-.4-1.2*strike);offArm(.55*strike);}
+  } else if(move==='recovery'){
+    const side=Math.sin(t*Math.PI*1.15), lift=ease(clamp01((t-.3)/.4));lean=facing*(t<.35?-.2:.12-lift*.25);bob=-15*lift;legSwing=.6*side;leadPunch(-1.0*Math.sin(t*Math.PI));offArm(.65*Math.sin(t*Math.PI));
+  } else if(move==='groundPound'){
+    const dive=ease(clamp01(t/.62)),land=ease(clamp01((t-.58)/.22));lean=facing*(.08+.42*dive);bob=18*dive-10*land;legSwing=.7*dive-.3*land;punchArmL=-.5-.45*dive;punchArmR=-.5-.45*dive;
+  } else if(move==='super'){
+    const gather=ease(clamp01(t/.28)), dash=ease(clamp01((t-.3)/.18)), finish=ease(clamp01((t-.78)/.2));
+    lean=facing*(.04+.16*gather-.34*dash+.12*finish);bob=-4*gather-8*dash+4*finish;legSwing=.2*gather+.65*dash-.25*finish;leadPunch(-.4-1.1*gather-0.3*dash);offArm(-.25-.9*gather+.2*finish);
+  }
+  return {punchArmL,punchArmR,legSwing,lean,bob};
+}
+
 export function getGen1AttackPose(move,p,facing=1,charId='g1_water'){
   const q=clamp01(Math.max(0,p));
   const t=ease(q);
@@ -1302,6 +1357,26 @@ export function getGen1AttackPose(move,p,facing=1,charId='g1_water'){
   let punchArmL=0,punchArmR=0,legSwing=0,lean=facing*.05,bob=0;
   const leadPunch=(v)=>{if(lead==='R')punchArmR=v;else punchArmL=-v;};
   const offArm=(v)=>{if(lead==='R')punchArmL=v;else punchArmR=-v;};
+  if (p >= 0) return gen1AuthoredBodyPose(move,q,facing,charId);
+  // Give the non-Fire Gen-I heroes matching body choreography for their newly
+  // authored recovery and ground-pound effects instead of leaving them in idle.
+  if(move==='recovery'||move==='groundPound'){
+    const recovery=move==='recovery';
+    const phase=recovery?clamp01(q/.78):clamp01(q/.72);
+    const snap=easeOut(phase);
+    if(recovery){
+      lean=facing*(phase<.38?-.16+phase*.28:.12-snap*.20);
+      bob=-4*snap;
+      legSwing=.45*Math.sin(phase*Math.PI*1.4);
+      leadPunch(-1.1*Math.sin(phase*Math.PI)); offArm(.55*Math.sin(phase*Math.PI));
+    }else{
+      lean=facing*(.05+.32*snap);
+      bob=phase<.68?3+10*snap:10*(1-ease(clamp01((phase-.68)/.32)));
+      legSwing=.55*snap;
+      punchArmL=-.65*snap; punchArmR=-.65*snap;
+    }
+    return {punchArmL,punchArmR,legSwing,lean,bob};
+  }
   if(charId==='g1_fire'){
     const count = move==='dh' ? 6 : move==='super' ? 7 : (move==='groundPound' ? 6 : move==='recovery' ? 4 : 4);
     const z=q*count, i=Math.min(count-1,Math.floor(z)), u=z-Math.floor(z), s=u*u*(3-2*u);
@@ -1403,11 +1478,131 @@ function fireSuper(ctx,x,y,p){
 function grassSuper(ctx,x,y,p){const c='#7CFF28',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*105; for(let i=0;i<14;i++){const ang=i/14*REF_TAU+q*1.8; leafBlade(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.62,13,34,ang,c,a*.85);} glowArc(ctx,x,y-58,r,r*.62,0,REF_TAU,c,6,a);}
 function iceSuper(ctx,x,y,p){const c='#79DFFF',q=attackP(p),a=.2+.8*Math.sin(q*Math.PI); const r=30+easeOut(q)*120; for(let i=0;i<18;i++){const ang=i/18*REF_TAU;iceShard(ctx,x+Math.cos(ang)*r,y-58+Math.sin(ang)*r*.68,10,28,ang,c,a);} glowArc(ctx,x,y-58,r,r*.68,0,REF_TAU,c,5,a*.8);}
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gen-I recovery and ground-pound animation sheets for Grass, Ice, Thunder,
+// and Water. These are authored per element and use the same p progress value
+// as the rest of the attack renderer. Effects are deterministic (no random
+// particle allocation), so their cost does not grow over time.
+function gen1Recovery(ctx,x,y,p,charId){
+  const q=attackP(p), c=charId==='g1_grass'?'#7CFF28':charId==='g1_ice'?'#79DFFF':charId==='g1_thunder'?'#FFFF44':'#18BFFF';
+  const white=charId==='g1_grass'?'#E4FF9C':'#F1FFFF';
+  const side=Math.sin(q*Math.PI*1.15), lift=easeOut(clamp01((q-.38)/.42));
+  const sx=x+side*42, sy=y-46-lift*28;
+  if(charId==='g1_grass'){
+    grassVine(ctx,x-18,y-22,sx-18,sy+18,q,.9,5); grassVine(ctx,x+18,y-22,sx+16,sy+18,q,.9,5);
+    leafBlade(ctx,sx,sy,11,28,-.8+side*.9,c,.95); leafBlade(ctx,sx+13,sy+7,8,20,.9+side*.7,c,.8);
+    if(q>.32){grassBranch(ctx,sx-12,sy+8,28+18*lift,6,.85,-.9,false);}
+    if(q>.6){for(let i=0;i<5;i++)leafBlade(ctx,sx+(i-2)*8,sy-18-(i%2)*8,4,12,-.5+i*.22,c,.65*(1-q));}
+  } else if(charId==='g1_ice'){
+    icePlate(ctx,sx,sy+9,24+9*Math.sin(q*Math.PI),.75,q*4);
+    iceShard(ctx,sx,sy-5,11,29,-.5+side*.9,c,.95); iceShard(ctx,sx+17,sy+4,7,19,.8+side*.5,c,.75);
+    if(q>.35){iceShard(ctx,sx-13,sy+14,6,16,1.5,c,.7*(1-q*.4));}
+  } else if(charId==='g1_thunder'){
+    const pts=[[x-18,y-42],[x-30+side*14,y-28],[sx-8,sy],[sx+10,sy-17]];
+    strokePath(ctx,pts,c,4,.85); strokePath(ctx,pts,white,1.4,.8);
+    lineBolt(ctx,sx-13,sy-5,24,24,c,.9); dot(ctx,sx+10,sy-18,5,white,.9);
+  } else {
+    const pts=[];for(let i=0;i<=16;i++){const t=i/16;pts.push([lerp(x-18,sx+16,t),lerp(y-28,sy+12,t)-Math.sin(t*Math.PI)*18]);}
+    waterCurve(ctx,pts,.95,12);waterCurve(ctx,pts,white,.65,3);
+    waterOrb(ctx,sx,sy,12+7*lift,.85,q*4); waterSpray(ctx,sx,sy,-.5,1.3,7,.55,q);
+  }
+  // Bright, compact impact mark at the redirection point; this is decorative,
+  // while the collision box is owned by the game's attack-spec system.
+  if(q>.28&&q<.76){const a=Math.sin((q-.28)/.48*Math.PI);spark(ctx,sx+10,sy+4,3,c,.7*a);}
+}
+function gen1GroundPound(ctx,x,y,p,charId){
+  const q=attackP(p), c=charId==='g1_grass'?'#7CFF28':charId==='g1_ice'?'#79DFFF':charId==='g1_thunder'?'#FFFF44':'#18BFFF';
+  const white=charId==='g1_grass'?'#E4FF9C':'#F1FFFF';
+  const dive=ease(clamp01(q/.62)), land=ease(clamp01((q-.58)/.22)), fade=1-ease(clamp01((q-.78)/.22));
+  const dx=22+38*dive, dy=y-18-92*dive;
+  if(q<.58){
+    if(charId==='g1_grass'){
+      grassBranch(ctx,x+8,dy-10,26+20*dive,6,.8,-.85,false);leafBlade(ctx,dx,dy,10,25,.8,c,.9);leafBlade(ctx,dx-8,dy+16,7,18,-.2,c,.75);
+    }else if(charId==='g1_ice'){
+      iceLargeIcicle(ctx,dx,dy,18,47,-.75,.95);iceShard(ctx,dx-10,dy+15,6,18,-.4,c,.7);
+    }else if(charId==='g1_thunder'){
+      lineBolt(ctx,dx-15,dy-20,30,32,c,.95);strokePath(ctx,[[x+12,y-25],[dx-5,dy+18]],white,2,.75);
+    }else{
+      waterCurve(ctx,[[x+10,y-24],[x+30,dy-26],[dx,dy+16]],.95,12);waterOrb(ctx,dx,dy,13,.85,q*5);
+    }
+    return;
+  }
+  // Landing burst is low and spreads sideways in two unequal pulses.
+  const radius=18+92*land;
+  if(charId==='g1_grass'){
+    grassVine(ctx,x+12,y-3,x+radius,y-10,land,fade,6);grassVine(ctx,x-12,y-3,x-radius*.72,y-7,land,fade*.8,5);
+    for(let i=0;i<5;i++){const d=(i+1)/6*radius;leafBlade(ctx,x+d,y-8-(i%2)*5,4,11,.4,c,fade*.65);leafBlade(ctx,x-d*.72,y-7,4,10,-.4,c,fade*.55);}
+  }else if(charId==='g1_ice'){
+    icePlate(ctx,x,y-2,radius*.78,fade,q*4);for(let i=0;i<7;i++){const side=i%2?1:-1, d=side*(12+i*radius/8);iceShard(ctx,x+d,y-8,5,12+i%3*3,side*.6,c,fade*.8);}
+  }else if(charId==='g1_thunder'){
+    glowArc(ctx,x,y-3,radius,radius*.22,Math.PI,TAU,c,4,fade);glowArc(ctx,x,y-3,radius*.7,radius*.15,Math.PI,TAU,white,1.5,fade*.8);
+    for(let i=0;i<7;i++){const d=-radius+2*radius*i/6;lineBolt(ctx,x+d,y-4,10,7,c,fade*.75);}
+  }else{
+    waterWave(ctx,x,y-2,-1,land,fade,q*4);waterWave(ctx,x,y-2,1,land*.82,fade*.8,q*4+1);waterOrb(ctx,x,y-8,10+10*(1-land),fade*.7,q*5);
+  }
+  if(land>.2){for(let i=0;i<4;i++){const side=i%2?1:-1,d=side*(18+radius*(i+1)/6);spark(ctx,x+d,y-8-(i%3)*3,2.2,white,fade*.7);}}
+}
+function grassSuper(ctx,x,y,p){
+  const q=attackP(p), c='#7CFF28', pale='#E4FF9C';
+  const charge=ease(clamp01(q/.28)), corridor=ease(clamp01((q-.25)/.28)), dash=ease(clamp01((q-.52)/.28)), finish=ease(clamp01((q-.78)/.22));
+  // Three staggered root traps grow in order, then the hero's green lance curves through them.
+  for(let i=0;i<3;i++){
+    const tx=x+86+i*112, delay=i*.13, t=clamp01((q-.18-delay)/.34), h=76+12*(i%2);
+    if(t>0){grassBranch(ctx,tx,y-3,h*t,7,.85*(1-finish*.65),-Math.PI/2,false);leafBlade(ctx,tx,y-3-h*t,8,22,-.25,c,.9*(1-finish*.5));}
+    if(q>.24+delay&&q<.83){grassVine(ctx,tx-20,y-14,tx+22,y-34,1,.65,4);}
+  }
+  const sx=x+20+dash*300, sy=y-55-18*Math.sin(q*TAU);
+  const trail=[];for(let i=0;i<=18;i++){const t=i/18;trail.push([lerp(x+18,sx,t),lerp(y-48,sy,t)-Math.sin(t*Math.PI)*20]);}
+  if(q>.42&&q<.88){grassVine(ctx,trail[0][0],trail[0][1],trail[18][0],trail[18][1],1,.85*(1-finish*.45),8);}
+  for(let i=0;i<7;i++){const t=i/6, px=lerp(x+18,sx,t),py=lerp(y-48,sy,t)-Math.sin(t*Math.PI)*20;leafBlade(ctx,px,py,5,17,-.6+t*.9,c,.7*(1-finish*.4));}
+  if(q>.78){const r=28+82*finish;glowArc(ctx,sx,sy,r,r*.55,0,TAU,c,5,1-finish*.25);for(let i=0;i<7;i++)leafBlade(ctx,sx+Math.cos(i/7*TAU)*r,sy+Math.sin(i/7*TAU)*r*.55,6,16,i/7*TAU,pale,.75*(1-finish*.35));}
+  if(charge>.1)glowArc(ctx,x+20,y-55,20+charge*16,9+charge*7,0,TAU,c,3,.45);
+}
+function iceSuper(ctx,x,y,p){
+  const q=attackP(p), c='#79DFFF', white='#F1FFFF';
+  const charge=ease(clamp01(q/.3)), travel=ease(clamp01((q-.28)/.48)), returnT=ease(clamp01((q-.7)/.3));
+  const cx=x+30+travel*250- returnT*205, cy=y-58-24*Math.sin(travel*Math.PI);
+  if(q<.42){icePlate(ctx,x+28,y-2,22+charge*28,.85,charge*3);for(let i=0;i<5;i++)iceShard(ctx,x+28+(i-2)*10,y-20-charge*(30+i*5),5,15+charge*12,-.15+i*.08,c,.85);}
+  // A linked, curving frost projectile bends around the target and returns.
+  const pts=[];for(let i=0;i<=22;i++){const t=i/22;pts.push([lerp(x+28,cx,t),lerp(y-56,cy,t)-Math.sin(t*Math.PI)*(42+travel*26)]);}
+  if(q>.24){waterCurve(ctx,pts,.25,17);glowStroke(ctx,pts,c,8,.9);glowStroke(ctx,pts,white,2,.85);}
+  iceCrystal(ctx,cx,cy,.65+travel*.35,.9, q*4);
+  if(q>.7){icePlate(ctx,cx,cy+8,32+returnT*20,returnT,.0);for(let i=0;i<5;i++)iceShard(ctx,cx+(i-2)*13,cy-18,6,18,-.3+i*.15,c,returnT*.8);}
+}
+function thunderRecoveryOrPound(ctx,x,y,p,groundPound=false){
+  const q=attackP(p), c='#FFFF44', white='#FFFFFF';
+  if(!groundPound){
+    const u=easeOut(clamp01(q/.62)), sx=x+Math.sin(q*TAU)*30, sy=y-38-u*46;
+    strokePath(ctx,[[x-18,y-24],[x-30,sy+10],[sx-5,sy],[sx+13,sy-24]],c,4,.9);lineBolt(ctx,sx-12,sy-4,27,24,c,.95);dot(ctx,sx+14,sy-22,4,white,.95);
+    if(q>.5)glowArc(ctx,sx,sy+8,20+20*(q-.5),7+6*(q-.5),0,TAU,c,2,.6*(1-q));
+  }else{
+    const dive=ease(clamp01(q/.62)),land=ease(clamp01((q-.58)/.2)),fade=1-ease(clamp01((q-.8)/.2));
+    if(q<.6){lineBolt(ctx,x+20+32*dive,y-20-80*dive,32,36,c,.95);strokePath(ctx,[[x+12,y-18],[x+28+30*dive,y-30-80*dive]],white,2,.75);}
+    else{glowArc(ctx,x,y-4,18+94*land,8+15*land,Math.PI,TAU,c,4,fade);for(let i=0;i<6;i++)lineBolt(ctx,x-65+i*26,y-5,9,8,c,fade*.8);}
+  }
+}
+function drawNonFireRecoveryAndPound(ctx,x,y,p,charId,move){
+  if(move==='recovery'){
+    if(charId==='g1_thunder')thunderRecoveryOrPound(ctx,x,y,p,false);else gen1Recovery(ctx,x,y,p,charId);
+    return true;
+  }
+  if(move==='groundPound'){
+    if(charId==='g1_thunder')thunderRecoveryOrPound(ctx,x,y,p,true);else gen1GroundPound(ctx,x,y,p,charId);
+    return true;
+  }
+  return false;
+}
+
 export function drawGen1Attack(ctx,x,y,color,p,facing,charId,move,attack=null){
   ctx.save();
   try {
     ctx.translate(x,y); ctx.scale(facing<0?-1:1,1);
-    if(charId==='g1_thunder'){
+    // Grounded charge previews keep their dedicated hold art; released attacks use
+    // the same authored geometry that the collision system reads, frame by frame.
+    if (p >= 0 && drawGen1MotionArt(ctx,0,0,p,charId,move)) return;
+    if(charId!=='g1_fire' && drawNonFireRecoveryAndPound(ctx,0,0,p,charId,move)) { /* charge fallback */ }
+    else if(charId==='g1_thunder'){
       if(p < 0){
         thunderHold(ctx,0,0,move,Math.max(0,Math.min(1,-p-1)));
       } else if(move==='us') thunderUp(ctx,0,0,p); else if(move==='ds') thunderDown(ctx,0,0,Math.max(0,p)); else if(move==='ss') thunderSide(ctx,0,0,Math.max(0,p),false); else if(move==='sh'||move==='heavy') thunderSide(ctx,0,0,Math.max(0,p),true); else if(move==='uh'||move==='upHeavy') thunderUpHeavy(ctx,0,0,Math.max(0,p)); else if(move==='dh'||move==='downHeavy') thunderDownHeavy(ctx,0,0,Math.max(0,p));
@@ -1424,7 +1619,7 @@ export function drawGen1Super(ctx,x,y,p,facing,charId){
   ctx.save();
   try {
     ctx.translate(x,y);ctx.scale(facing<0?-1:1,1);
-    if(charId==='g1_thunder') thunderSuper(ctx,0,0,p); else if(charId==='g1_fire') fireSuper(ctx,0,0,p); else if(charId==='g1_water') waterSuper(ctx,0,0,p); else if(charId==='g1_grass') grassSuper(ctx,0,0,p); else if(charId==='g1_ice') iceSuper(ctx,0,0,p);
+    if (drawGen1MotionArt(ctx,0,0,p,charId,'super')) return;
   } finally {
     ctx.restore();
   }
