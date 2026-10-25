@@ -8,6 +8,7 @@ export const DEFAULT_KEYBINDS = {
     power: '.',
     superMove: '/',
     heavy: 'l',
+    dash: 'Shift',
   },
   p2: {
     left: 'a',
@@ -18,6 +19,7 @@ export const DEFAULT_KEYBINDS = {
     power: 'c',
     superMove: 'x',
     heavy: 'f',
+    dash: 'Alt',
   },
 };
 
@@ -32,6 +34,7 @@ export const WASD_KEYBINDS = {
     power: 'g',
     superMove: 'h',
     heavy: 'v',
+    dash: 'Shift',
   },
   p2: {
     left: 'j',
@@ -42,6 +45,7 @@ export const WASD_KEYBINDS = {
     power: 'p',
     superMove: 'u',
     heavy: ';',
+    dash: 'Alt',
   },
 };
 
@@ -54,6 +58,7 @@ export const KEYBIND_ACTIONS = [
   { id: 'power', label: 'Power' },
   { id: 'superMove', label: 'Super Move' },
   { id: 'heavy', label: 'Heavy Attack' },
+  { id: 'dash', label: 'Dash' },
 ];
 
 // Get the full set of keybinds based on the active main control setting.
@@ -134,6 +139,7 @@ export function readPlayerInput(keys, binds) {
     power: keyIsDown(keys, binds.power),
     superMove: keyIsDown(keys, binds.superMove),
     heavy: keyIsDown(keys, binds.heavy),
+    dash: keyIsDown(keys, binds.dash),
   };
 }
 
@@ -148,6 +154,7 @@ export function readSinglePlayerInput(keys, p1binds, p2binds) {
     power: !!keys[p1binds.power] || !!keys[p2binds.power],
     superMove: !!keys[p1binds.superMove] || !!keys[p2binds.superMove],
     heavy: !!keys[p1binds.heavy] || !!keys[p2binds.heavy],
+    dash: keyIsDown(keys, p1binds.dash) || keyIsDown(keys, p2binds.dash),
   };
 }
 

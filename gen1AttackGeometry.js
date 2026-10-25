@@ -111,9 +111,9 @@ export function getGen1AttackGeometry(charId,move,p=0){
    const u=ease((q-.25)/.48),ret=ease((q-.7)/.3),sx=28+250*u-205*ret,sy=-58-24*Math.sin(u*Math.PI);shapes.push(line(28,-58,sx,sy,9),circle(sx,sy,11));if(q>.7)shapes.push(line(sx-22,sy,sx+22,sy,8),circle(sx,sy,16));
   }else if(thunder){
    for(let i=0;i<4;i++){const t=ease((q-.15-i*.12)/.2),xx=35+i*74;shapes.push(line(xx,-8,xx+18*t,-70*t,5));}
-   const sx=30+230*dash;shapes.push(line(22,-50,sx,-56,9),circle(sx,-56,11+8*finish));
+   const sx=30+230*dash;shapes.push({...line(22,-50,sx,-56,9),visualOnly:true},circle(sx,-56,11+8*finish));
   }else if(fire){
-   const sx=40+1080*dash;shapes.push(line(22,-58,sx,-58,13),circle(sx,-58,15+10*dash));if(q>.78)shapes.push(circle(sx,-58,22+30*finish));
+   const sx=40+1080*dash;shapes.push({...line(22,-58,sx,-58,13),visualOnly:true},circle(sx,-58,15+10*dash));if(q>.78)shapes.push(circle(sx,-58,22+30*finish));
   }else{
    // Three mark points are struck in sequence, then collapse to the close-range wave.
    const marks=[54,132,210];for(let i=0;i<marks.length;i++){const t=ease((q-.16-i*.105)/.18);if(q>.14+i*.105&&q<.82)shapes.push(circle(24+(marks[i]-24)*t,-48-16*Math.sin(t*Math.PI+i*.6),8));}

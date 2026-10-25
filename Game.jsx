@@ -1575,7 +1575,39 @@ export default function Game() {
     if (mode === 'onlineunranked') { setOnlineMode('unranked'); setScreen('onlinelobby'); return; }
     setPending({ mode }); setScreen('charSelect');
   };
-  const handleCharSelect = (p1, p2, isCPU, difficulty, p1Element, p2Element, shikigamiOverride) => {
+  const handleCharSelect = (p1, p2, isCPU, difficulty, p1Element, p2Element, shikigamiOverride, matchConfig) => {
+    // Match Settings is available on every character-select screen. If the player
+    // changes from a local fight variant to a standalone mode, route into that
+    // mode's real screen instead of silently starting the old fight mode.
+    const selectedMatchType = matchConfig?.mode;
+    if (selectedMatchType && !['Fight', 'Ranked', 'Unranked Fight'].includes(selectedMatchType)) {
+      const standaloneRoutes = {
+        'Tournament': () => setScreen('tournament'),
+        'Grand Circuit': () => setScreen('grandcircuit'),
+        'The Table': () => setScreen('thetable'),
+        'Battle Royale': () => setScreen('battleroyale'),
+        'Custom Rooms': () => { setCustomRoomMode('fight'); setScreen('customrooms'); },
+        'Party': () => setScreen('party'),
+        'LAN Play': () => setScreen('lan'),
+        'Soccer': () => setScreen('soccer'),
+        'Volleyball': () => { initialSportRouteRef.current = 'volleyball'; setScreen('sports'); },
+        'Parkour': () => { initialSportRouteRef.current = 'parkour'; setScreen('sports'); },
+        'Rock Climbing': () => { initialSportRouteRef.current = 'rockclimb'; setScreen('sports'); },
+        'CTF': () => { initialSportRouteRef.current = 'ctf'; setScreen('sports'); },
+        'Dodgeball': () => { initialSportRouteRef.current = 'dodgeball'; setScreen('sports'); },
+        'Ziplining': () => { initialSportRouteRef.current = 'zipline'; setScreen('sports'); },
+        'Banger': () => { initialSportRouteRef.current = 'banger'; setScreen('sports'); },
+        'Soccer Ranked': () => { setOnlineSport('soccer'); setScreen('onlinesports'); },
+        'Soccer Online': () => { setOnlineSport('soccer'); setScreen('onlinesports'); },
+        'Volleyball 2v2 Online': () => { setOnlineSport('volleyball'); setScreen('onlinesports'); },
+        'Volleyball 1v1 Ranked': () => { setOnlineSport('volleyball'); setScreen('onlinesports'); },
+        'Dodgeball Ranked': () => { setOnlineSport('dodgeball'); setScreen('onlinesports'); },
+        'Dodgeball Online': () => { setOnlineSport('dodgeball'); setScreen('onlinesports'); },
+        'Banger 3v3 Online': () => { setOnlineSport('banger'); setScreen('onlinesports'); },
+      };
+      const route = standaloneRoutes[selectedMatchType];
+      if (route) { route(); return; }
+    }
     // Evil is banned from ranked and challenge modes
     const evilBanned = ['ranked', 'challenge'];
     const isEvilChar = (id) => id === 'evil' || ALL.find(c => c.id === id)?.baseCharId === 'evil';
@@ -1590,13 +1622,27 @@ export default function Game() {
         : elo >= 1550 ? 'pro' : elo >= 1300 ? 'regular' : elo >= 1100 ? 'amateur'
         : elo >= 950 ? 'easy' : elo >= 800 ? 'beginner' : 'newcomer';
     }
+    // Match Settings' Fight variant must control the simulation that launches,
+    // not merely the label shown in the selector.
+    const variantModes = {
+      'Regular': 'regular', 'Timed': 'time', 'HP Battle': 'hp', 'Super': 'superonly',
+      'Sudden Death': 'sudden', 'Bot Ranked': 'ranked', 'Coin': 'coin',
+      'Split City Brawl': 'brawl', 'Challenge': 'challenge',
+      'Low Gravity': 'lowgravity', '2v2': 'team', 'Shapeshift': 'shapeshift',
+    };
+    const selectedMode = matchConfig?.mode === 'Fight'
+      ? (variantModes[matchConfig.fightVariant] || pending?.mode)
+      : matchConfig?.mode === 'Ranked' ? 'ranked'
+      : matchConfig?.mode === 'Unranked Fight' ? 'regular'
+      : pending?.mode;
+    const playerControls = Array.isArray(matchConfig?.slots) ? matchConfig.slots.map(slot => ({ ...slot })) : null;
     // Brawl: skip map select, force Split City
-    if (pending?.mode === 'brawl') {
-      setFighters({ p1, p2, isCPU, map: 'splitcity', difficulty: resolvedDifficulty, gameMode: 'brawl', customPlatforms: [{ x: 40, y: 620, w: 1200, h: 48 }], p1Element, p2Element, shikigamiOverride: shikigamiOverride || null });
+    if (selectedMode === 'brawl') {
+      setFighters({ p1, p2, isCPU, map: 'splitcity', difficulty: resolvedDifficulty, gameMode: 'brawl', playerControls, customPlatforms: [{ x: 40, y: 620, w: 1200, h: 48 }], p1Element, p2Element, shikigamiOverride: shikigamiOverride || null });
       setScreen('loading');
       return;
     }
-    setPending(prev => ({ ...prev, p1, p2, isCPU, difficulty: resolvedDifficulty, p1Element, p2Element, shikigamiOverride: shikigamiOverride || null }));
+    setPending(prev => ({ ...prev, mode: selectedMode, p1, p2, isCPU, difficulty: resolvedDifficulty, p1Element, p2Element, shikigamiOverride: shikigamiOverride || null, playerControls }));
     setScreen('mapSelect');
   };
   // Shapeshift: receive 3-character teams for P1 (and P2 if human), then go to map select
@@ -1652,7 +1698,7 @@ export default function Game() {
         rankedSkins[p2Id] = availSkins[Math.floor(Math.random() * availSkins.length)].id;
       }
     }
-    setFighters({ p1: pending.p1, p2: pending.p2, isCPU: pending.isCPU, map: resolvedMap, difficulty: pending.difficulty, gameMode: pending.mode, customPlatforms, customSpawnPoints, customHazards, customObjects, customStageConfig, stageCamera: customStageConfig?.stageCamera || null, killPerimeter: customStageConfig?.killPerimeter || null, rankedAccessories, rankedSkins, p1Element: pending.p1Element || 'basic', p2Element: pending.p2Element || 'basic', shikigamiOverride: pending.shikigamiOverride || null, p1Team: pending.p1Team || null, p2Team: pending.p2Team || null, shapeshiftMode: pending.shapeshiftMode || false });
+    setFighters({ p1: pending.p1, p2: pending.p2, isCPU: pending.isCPU, map: resolvedMap, difficulty: pending.difficulty, gameMode: pending.mode, customPlatforms, customSpawnPoints, customHazards, customObjects, customStageConfig, stageCamera: customStageConfig?.stageCamera || null, killPerimeter: customStageConfig?.killPerimeter || null, rankedAccessories, rankedSkins, p1Element: pending.p1Element || 'basic', p2Element: pending.p2Element || 'basic', shikigamiOverride: pending.shikigamiOverride || null, playerControls: pending.playerControls || null, p1Team: pending.p1Team || null, p2Team: pending.p2Team || null, shapeshiftMode: pending.shapeshiftMode || false });
     setScreen('loading');
   };
 
@@ -2139,7 +2185,7 @@ export default function Game() {
             unlockedIds={progress.unlockedIds} favoriteId={progress.favoriteId} onSetFavorite={setFavorite}
             equippedAccessories={progress.equippedAccessories} equippedSkins={progress.equippedSkins} gameMode={pending?.mode}
             charLevels={progress.charLevels || {}} equippedElements={progress.equippedElements || {}} onEquipElement={equipElement}
-            defaultCPUDifficulty={progress.settings?.defaultCPUDifficulty || 'regular'}
+            defaultCPUDifficulty={progress.settings?.defaultCPUDifficulty || 'regular'} settings={progress.settings || {}}
             customCharsData={customCharData} customNumberMap={customNumberMap}
             ownedCrossovers={progress.ownedCrossovers || []} equippedCrossovers={progress.equippedCrossovers || {}}
             onEquipCrossover={equipCrossover}
@@ -2162,7 +2208,7 @@ export default function Game() {
           <ShapeshiftSelect
             onStart={handleShapeshiftSelect} onBack={goBack}
             unlockedIds={progress.unlockedIds} favoriteId={progress.favoriteId}
-            defaultCPUDifficulty={progress.settings?.defaultCPUDifficulty || 'regular'}
+            defaultCPUDifficulty={progress.settings?.defaultCPUDifficulty || 'regular'} settings={progress.settings || {}}
             customCharsData={customCharData}
             ownedCrossovers={progress.ownedCrossovers || []}
           />
@@ -2181,7 +2227,7 @@ export default function Game() {
           <PlatformFighter
             p1Char={fighters.p1} p2Char={fighters.p2} p2IsCPU={fighters.isCPU}
             selectedMap={fighters.map} cpuDifficulty={fighters.difficulty}
-            gameMode={fighters.gameMode} customPlatforms={fighters.customPlatforms} customSpawnPoints={fighters.customSpawnPoints} customHazards={fighters.customHazards} customObjects={fighters.customObjects} customStageConfig={fighters.customStageConfig} stageCamera={fighters.stageCamera} killPerimeter={fighters.killPerimeter}
+            gameMode={fighters.gameMode} playerControls={fighters.playerControls || null} customPlatforms={fighters.customPlatforms} customSpawnPoints={fighters.customSpawnPoints} customHazards={fighters.customHazards} customObjects={fighters.customObjects} customStageConfig={fighters.customStageConfig} stageCamera={fighters.stageCamera} killPerimeter={fighters.killPerimeter}
             p1Element={fighters.p1Element || 'basic'} p2Element={fighters.p2Element || 'basic'}
             onEnd={handleFightEnd} onAward={(result) => awardFightMatch(result)} musicVolume={progress.settings?.musicVolume ?? 50} sfxVolume={progress.settings?.sfxVolume ?? 70}
             equippedAccessories={fighters.rankedAccessories ? { ...(progress.equippedAccessories || {}), ...fighters.rankedAccessories } : progress.equippedAccessories}

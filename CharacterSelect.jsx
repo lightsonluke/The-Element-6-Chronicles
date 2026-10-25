@@ -5,7 +5,7 @@ const CPU_ONLY_MODES = ['ranked', 'challenge', 'botbattle'];
 
 // CharacterSelect now delegates to the universal character select screen
 // used across ALL game modes. Preserves the same external prop interface.
-export default function CharacterSelect({ onStart, onBack, unlockedIds, favoriteId, onSetFavorite, equippedAccessories, equippedSkins, gameMode, charLevels, equippedElements, onEquipElement, defaultCPUDifficulty = 'regular', customCharsData, customNumberMap, ownedCrossovers = [], equippedCrossovers: equippedCxs = {}, onEquipCrossover, charMastery = {}, ownedShikigami = [], equippedShikigami = {}, ownedAccessories = [], onEquipAccessory }) {
+export default function CharacterSelect({ onStart, onBack, settings = {}, unlockedIds, favoriteId, onSetFavorite, equippedAccessories, equippedSkins, gameMode, charLevels, equippedElements, onEquipElement, defaultCPUDifficulty = 'regular', customCharsData, customNumberMap, ownedCrossovers = [], equippedCrossovers: equippedCxs = {}, onEquipCrossover, charMastery = {}, ownedShikigami = [], equippedShikigami = {}, ownedAccessories = [], onEquipAccessory }) {
   const isRanked = gameMode === 'ranked';
   const cpuOnly = CPU_ONLY_MODES.includes(gameMode);
   const banCustom = ['ranked', 'unranked', 'tournament'].includes(gameMode);
@@ -35,9 +35,10 @@ export default function CharacterSelect({ onStart, onBack, unlockedIds, favorite
       cpuOnly={cpuOnly}
       rankedRandom={isRanked}
       defaultCPUDifficulty={defaultCPUDifficulty}
+      settings={settings || {}}
       banCustomChars={banCustom}
       charMastery={charMastery}
-      onStart={(p1, p2, p2IsCPU, difficulty, p1Element, p2Element, _extra, shikigamiOverride) => onStart(p1, p2, p2IsCPU, difficulty, p1Element, p2Element, shikigamiOverride)}
+      onStart={(p1, p2, p2IsCPU, difficulty, p1Element, p2Element, ...extra) => { const shikigamiOverride = extra.length > 1 ? extra[extra.length - 2] : extra[0]; const matchConfig = extra.length > 1 ? extra[extra.length - 1] : null; onStart(p1, p2, p2IsCPU, difficulty, p1Element, p2Element, shikigamiOverride, matchConfig); }}
       onBack={onBack}
     />
   );

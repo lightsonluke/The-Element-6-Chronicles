@@ -270,6 +270,7 @@ export function getActiveSpecHitboxes(attacker) {
     const key=gen1MoveKey(attacker.char.id,data);
     const local=getGen1AttackGeometry(attacker.char.id,key,clamp01(data.progress||0));
     for(const h of local){
+      if(h.visualOnly) continue;
       if(h.shape==='circle') out.push({...h,x:x+(f>0?h.x:-h.x),y:y+h.y});
       else if(h.shape==='box') out.push({...h,x:x+(f>0?h.x:-h.x-h.w),y:y+h.y});
       else if(h.shape==='capsule') out.push({...h,x1:x+h.x1*f,y1:y+h.y1,x2:x+h.x2*f,y2:y+h.y2});

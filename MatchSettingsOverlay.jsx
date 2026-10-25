@@ -8,7 +8,7 @@ export const MATCH_MODE_TILES = [
   'Volleyball 1v1 Ranked', 'Dodgeball Ranked', 'Dodgeball Online', 'Banger 3v3 Online',
 ];
 
-const FIGHT_VARIANTS = ['Regular', 'Timed', 'Super', 'Sudden Death', 'Bot Ranked', 'Coin', 'Split City Brawl', 'Challenge', 'Low Gravity', '2v2', 'Shapeshift'];
+const FIGHT_VARIANTS = ['Regular', 'Timed', 'HP Battle', 'Super', 'Sudden Death', 'Bot Ranked', 'Coin', 'Split City Brawl', 'Challenge', 'Low Gravity', '2v2', 'Shapeshift'];
 const ONLINE_OR_RANKED = new Set(['Ranked', 'Unranked Fight', 'Soccer Ranked', 'Soccer Online', 'Volleyball 2v2 Online', 'Volleyball 1v1 Ranked', 'Dodgeball Ranked', 'Dodgeball Online', 'Banger 3v3 Online']);
 
 const lockedCount = (mode, variant) => {
@@ -27,7 +27,7 @@ function normalizeSlots(slots, count) {
 export default function MatchSettingsOverlay({ open, onClose, config, onChange }) {
   const [controllers, setControllers] = useState([]);
   useEffect(() => {
-    const update = () => setControllers(Array.from(navigator.getGamepads?.() || []).filter(Boolean).map((g, i) => `Controller ${i + 1} · ${g.id.slice(0, 34)}`));
+    const update = () => setControllers(Array.from(navigator.getGamepads?.() || []).filter(Boolean).map(g => `Controller ${g.index + 1} · ${g.id.slice(0, 34)}`));
     update(); window.addEventListener('gamepadconnected', update); window.addEventListener('gamepaddisconnected', update);
     return () => { window.removeEventListener('gamepadconnected', update); window.removeEventListener('gamepaddisconnected', update); };
   }, []);
@@ -35,7 +35,7 @@ export default function MatchSettingsOverlay({ open, onClose, config, onChange }
   const fixed = lockedCount(config.mode, config.fightVariant);
   const count = fixed || Math.max(1, Math.min(8, Number(config.slotCount) || 2));
   const slots = useMemo(() => normalizeSlots(config.slots, count), [config.slots, count]);
-  const controls = ['Keyboard · WASD', 'Keyboard · Arrows', 'Custom keyboard', ...controllers];
+  const controls = ['Keyboard · WASD', 'Keyboard · Arrows', ...(config.customControls || []).filter(Boolean).map(c => `Custom keyboard · ${c.name || 'Custom'}`), ...controllers];
   const update = patch => onChange({ ...config, ...patch });
   const changeCount = value => update({ slotCount: Number(value), slots: normalizeSlots(slots, Number(value)) });
   if (!open) return null;

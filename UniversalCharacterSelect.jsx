@@ -283,6 +283,7 @@ export default function UniversalCharacterSelect({
   matchMode = null,
   onMatchModeChange,
   onMatchSettingsChange,
+  settings = {},
 }) {
   const unlockedSet = new Set(unlockedIds);
 
@@ -486,7 +487,7 @@ export default function UniversalCharacterSelect({
 
   return (
     <div className="el6-character-select-scroll flex flex-col gap-2 w-full max-w-6xl mx-auto h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] overflow-y-auto overflow-x-hidden overscroll-contain pr-2 pb-28" tabIndex={-1}>
-      <MatchSettingsOverlay open={settingsOpen} onClose={() => setSettingsOpen(false)} config={matchConfig} onChange={handleMatchConfigChange} />
+      <MatchSettingsOverlay open={settingsOpen} onClose={() => setSettingsOpen(false)} config={{ ...matchConfig, customControls: settings?.customControls || [] }} onChange={handleMatchConfigChange} />
       {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-heading text-foreground tracking-wider">MANAGE MATCH</h2>

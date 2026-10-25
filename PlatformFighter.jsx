@@ -699,7 +699,7 @@ function drawExactAttackHitboxOverlay(ctx, fighter, label) {
 
 export default function PlatformFighter({
   p1Char, p2Char, p2IsCPU, onEnd, onAward, onRematch, selectedMap, cpuDifficulty = 'regular',
-  gameMode = 'regular', dummy = false, dummyAutoRecover = false, customPlatforms = null, customSpawnPoints = null, musicVolume = 50, sfxVolume = 70,
+  gameMode = 'regular', playerControls = null, dummy = false, dummyAutoRecover = false, customPlatforms = null, customSpawnPoints = null, musicVolume = 50, sfxVolume = 70,
   equippedAccessories = {}, equippedSkins = {}, killFXId = 'none',
   p1Element = 'basic', p2Element = 'basic', infiniteSuper = false, lanConnection = null, lanRole = null,
   matchTime = 240, settings = {}, localScheme = null,
@@ -1089,8 +1089,29 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         left: kb.left || gp.left, right: kb.right || gp.right,
         jump: kb.jump || gp.jump, up: kb.up || gp.up, down: kb.down || gp.down,
         sig: kb.sig || gp.sig, power: kb.power || gp.power,
-        superMove: kb.superMove || gp.superMove, heavy: kb.heavy || gp.heavy, dash: kb.dash || gp.dash,
+        superMove: kb.superMove || gp.superMove, heavy: kb.heavy || gp.heavy, dash: !!kb.dash || !!gp.dash,
       } : kb;
+      // Explicit per-player assignments are exclusive: no accidental keyboard +
+      // controller input merging, and an unconnected assigned controller stays idle.
+      const assignedInput = (playerIndex) => {
+        const slot = playerControls?.[playerIndex];
+        if (!slot || slot.kind !== 'player' || !slot.control) return null;
+        const control = String(slot.control);
+        if (control.startsWith('Controller ')) {
+          const match = control.match(/^Controller\s+(\d+)/);
+          const gp = match ? readGamepadInput(Math.max(0, Number(match[1]) - 1)) : null;
+          return gp ? { ...gp } : { left:false,right:false,jump:false,up:false,down:false,sig:false,power:false,superMove:false,heavy:false,dash:false };
+        }
+        if (control === 'Keyboard · WASD') return readPlayerInput(k, _kb.p2);
+        if (control === 'Keyboard · Arrows') return readPlayerInput(k, _kb.p1);
+        if (control.startsWith('Custom keyboard')) {
+          const label = control.split('·').slice(1).join('·').trim();
+          const idx = (settings?.customControls || []).findIndex(cc => cc?.name === label);
+          if (idx >= 0) { const profile = settings?.customControls?.[idx]; const base = playerIndex === 0 ? _kb.p1 : _kb.p2; return readPlayerInput(k, { ...base, ...(profile?.[playerIndex === 0 ? 'p1' : 'p2'] || profile?.p1 || {}) }); }
+          return { left:false,right:false,jump:false,up:false,down:false,sig:false,power:false,superMove:false,heavy:false,dash:false };
+        }
+        return null;
+      };
       let p1In, p2In;
       if (lanConnection) {
         // Each device reads its own chosen scheme; remote input arrives already parsed
@@ -1126,11 +1147,12 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         }
       } else {
         const soloPlay = p2IsCPU || dummy; // only one human player (P1)
+        const assignedP1 = assignedInput(0);
         p1In = gameMode === 'botbattle'
           ? updateAI(f1, f2, cpuDifficulty, platforms, 1 + ((settings.aiAggression ?? 50) - 50) / 100)
-          : mergeGp(soloPlay && _soloKb ? readPlayerInput(k, _soloKb)
+          : (assignedP1 || mergeGp(soloPlay && _soloKb ? readPlayerInput(k, _soloKb)
              : soloPlay ? readSinglePlayerInput(k, _kb.p1, _kb.p2)
-             : readPlayerInput(k, _kb.p1), gp1);
+             : readPlayerInput(k, _kb.p1), gp1));
         p2In = dummy ? (() => {
           const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
           if (trainingMode && trainingController) {
@@ -1164,7 +1186,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           if (f2.y > 460 && f2.recoveryCooldown <= 0) { inp.up = true; inp.sig = true; }
           return inp;
         })()
-          : (p2IsCPU ? (M?.freezeAI ? { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false } : updateAI(f2, f1, cpuDifficulty, platforms, 1 + ((settings.aiAggression ?? 50) - 50) / 100)) : mergeGp(readPlayerInput(k, _kb.p2), gp2));
+          : (p2IsCPU ? (M?.freezeAI ? { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false } : updateAI(f2, f1, cpuDifficulty, platforms, 1 + ((settings.aiAggression ?? 50) - 50) / 100)) : (assignedInput(1) || mergeGp(readPlayerInput(k, _kb.p2), gp2)));
       }
 
       // Brawl mode: only light attacks (sig) allowed

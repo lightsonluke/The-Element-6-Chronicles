@@ -214,11 +214,25 @@ function getWallContact(platforms, fighter) {
 }
 
 export function updateMovementAbilities(fighter, inputs, platforms) {
-  if (isSportsMode(fighter)) {
-    return;
+  if (isSportsMode(fighter)) return;
+  // Dedicated Dash is edge-triggered; held buttons never repeat the action.
+  // Preserve the existing double-tap path and use only directional movement
+  // (not the jump action's `up` alias) to choose an air-dash direction.
+  const dashPressed = !!inputs?.dash;
+  const dashWasHeld = !!fighter._dashButtonHeld;
+  fighter._dashButtonHeld = dashPressed;
+  if (dashPressed && !dashWasHeld) {
+    let dx = inputs.left === inputs.right ? 0 : (inputs.left ? -1 : 1);
+    let dy = inputs.down ? 1 : 0;
+    if (fighter.grounded) {
+      if (dx === 0) dx = fighter.facing || 1;
+      startDash(fighter, dx, 0);
+    } else {
+      if (dx === 0 && dy === 0) dx = fighter.facing || 1;
+      const length = Math.hypot(dx, dy) || 1;
+      startDash(fighter, dx / length, dy / length);
+    }
   }
-
-  // Landing resets the wall departure chain and restores jumps.
   if (fighter.grounded) {
     fighter.airDodgeUses = fighter.maxJumps;
     fighter.jumpsUsed = 0;
@@ -237,28 +251,6 @@ export function updateMovementAbilities(fighter, inputs, platforms) {
 
   if (!locked) {
     tryDirectionalDoubleTap(fighter, inputs);
-
-    // Dedicated controller Dash: trigger once on the press edge, while retaining
-    // the existing directional double-tap path. Direction follows movement input,
-    // falling back to facing when no direction is held.
-    const dashPressed = !!inputs?.dash;
-    const dashEdge = dashPressed && !fighter._dashButtonHeld;
-    fighter._dashButtonHeld = dashPressed;
-    if (dashEdge) {
-      let dx = (inputs?.left ? -1 : 0) + (inputs?.right ? 1 : 0);
-      let dy = (inputs?.up ? -1 : 0) + (inputs?.down ? 1 : 0);
-      if (fighter.grounded) {
-        if (dx === 0) dx = fighter.facing || 1;
-        startDash(fighter, Math.sign(dx), 0);
-      } else {
-        if (dx === 0 && dy === 0) dx = fighter.facing || 1;
-        const magnitude = Math.hypot(dx, dy) || 1;
-        startDash(fighter, dx / magnitude, dy / magnitude);
-      }
-    }
-  } else {
-    // Requiring release before the next press prevents buffered/repeated dashes.
-    fighter._dashButtonHeld = !!inputs?.dash;
   }
 
   if (fighter.dashTimer > 0) {
@@ -354,6 +346,7 @@ export function resetMovementAbilityState(fighter) {
   fighter.dashCooldown = 0;
   fighter.dashTimer = 0;
   fighter.dashDirection = { x: 0, y: 0 };
+  fighter._dashButtonHeld = false;
 
   fighter.jumpsUsed = 0;
   fighter.airDodgeUses = fighter.maxJumps || 3;
