@@ -30,15 +30,15 @@ const GEN1_MOVE_SPECS = {
     super:{name:'Thunder Strike',shape:'bottomBolt',range:90,knockback:'radialUp',duration:42,damage:38},
   },
   g1_fire: {
-    us:{name:"Fire Hero's Rising",shape:'fireRise',range:95,knockback:'upContact',duration:25,damage:6,startupFrames:10,activeFrames:2,endlagFrames:13},
-    ds:{name:"Fire Hero's Quake",shape:'fireQuake',range:120,knockback:'radialContact',duration:42,damage:8,startupFrames:11,activeFrames:4,endlagFrames:27},
-    ss:{name:"Fire Hero's Wave",shape:'fireWave',range:95,knockback:'forwardContact',duration:26,damage:8,startupFrames:4,activeFrames:5,endlagFrames:17},
-    upHeavy:{name:'Ascendant Breaker',shape:'fireAscendant',range:125,knockback:'upContact',duration:57,damage:14,startupFrames:14,activeFrames:5,endlagFrames:38},
-    dh:{name:'Sunder Slam',shape:'fireSunder',range:140,knockback:'radialContact',duration:45,damage:17,startupFrames:14,activeFrames:4,endlagFrames:27},
-    sh:{name:'Rend Strike',shape:'fireRend',range:135,knockback:'forwardContact',duration:61,damage:15,startupFrames:17,activeFrames:7,endlagFrames:37},
-    recovery:{name:'Return Return',shape:'fireReturn',range:85,knockback:'upContact',duration:34,damage:5,startupFrames:5,activeFrames:4,endlagFrames:25},
-    groundPound:{name:'Meteor Pound',shape:'fireMeteor',range:150,knockback:'radialContact',duration:52,damage:9,startupFrames:15,activeFrames:6,endlagFrames:31},
-    super:{name:'Ultimate: Flame Unleashed',shape:'fireUltimate',range:1200,knockback:'radialContact',duration:93,damage:28,startupFrames:30,activeFrames:15,endlagFrames:48},
+    us:{name:"Fire Hero's Rising",shape:'fireRise',range:95,knockback:'upContact',duration:34,damage:6,startupFrames:14,activeFrames:4,endlagFrames:16},
+    ds:{name:"Fire Hero's Quake",shape:'fireQuake',range:120,knockback:'radialContact',duration:50,damage:8,startupFrames:15,activeFrames:4,endlagFrames:31},
+    ss:{name:"Fire Hero's Wave",shape:'fireWave',range:95,knockback:'forwardContact',duration:44,damage:8,startupFrames:10,activeFrames:8,endlagFrames:26},
+    upHeavy:{name:'Ascendant Breaker',shape:'fireAscendant',range:125,knockback:'upContact',duration:68,damage:14,startupFrames:18,activeFrames:7,endlagFrames:43},
+    dh:{name:'Sunder Slam',shape:'fireSunder',range:140,knockback:'radialContact',duration:62,damage:17,startupFrames:24,activeFrames:8,endlagFrames:30},
+    sh:{name:'Rend Strike',shape:'fireRend',range:135,knockback:'forwardContact',duration:72,damage:15,startupFrames:28,activeFrames:10,endlagFrames:34},
+    recovery:{name:'Return Return',shape:'fireReturn',range:85,knockback:'upContact',duration:42,damage:5,startupFrames:7,activeFrames:6,endlagFrames:29},
+    groundPound:{name:'Meteor Pound',shape:'fireMeteor',range:150,knockback:'radialContact',duration:62,damage:9,startupFrames:20,activeFrames:8,endlagFrames:34},
+    super:{name:'Ultimate: Flame Unleashed',shape:'fireUltimate',range:1200,knockback:'radialContact',duration:120,damage:28,startupFrames:45,activeFrames:24,endlagFrames:51},
   },
   g1_water: {
     us:{name:'Water Ring',shape:'waterRing',range:150,knockback:'velocity',duration:28,damage:16,holdMaxFrames:18},
@@ -259,46 +259,49 @@ export function getActiveSpecHitboxes(attacker) {
     // active frame instead of using one oversized box for the entire move.
     case 'fireRise': {
       const cx = 18 + 10 * Math.sin(q * TAU), cy = -80 - 28 * q;
-      B(cx, cy, 42 + 12 * q, 42 + 10 * q); break;
+      const w=42+12*q,h=42+10*q; B(cx-w/2,cy-h/2,w,h); break;
     }
     case 'fireQuake': {
-      // The stomp and delayed eruption each have their own short active window.
-      const stageT = q < .5 ? q * 2 : (q - .5) * 2;
-      B(24, -1, 44 + 76 * stageT, 18); break;
+      // Two active windows: the first stomp, then the delayed ground eruption.
+      const stageT = q < .5 ? clamp01((q-.125)*4) : clamp01((q-.625)*4);
+      const spread=q<.5 ? 22+12*stageT : 40+18*stageT; K(24-spread,-1,24+spread,-1,7); C(24,-1,8+3*stageT); break;
     }
     case 'fireWave': {
       const cx = 28 + 45 * q, cy = -36 - 24 * Math.sin(Math.PI * q);
-      B(cx, cy, 30 + 14 * Math.sin(Math.PI * q), 28 + 8 * Math.sin(Math.PI * q)); break;
+      // Capsules trace the visible flame slash from the wrist to its moving tip.
+      K(17,-20,24,-28,6); K(24,-28,cx,cy,7);
+      C(cx,cy,12 + 5 * Math.sin(Math.PI*q)); break;
     }
     case 'fireAscendant': {
-      const cx = 10 + 12 * q, cy = -78 - 25 * q;
-      B(cx, cy, 48 + 16 * q, 60 + 10 * q); break;
+      const cx = 10 + 12 * q, cy = -78 - 25 * q, w=48+16*q, h=60+10*q;
+      B(cx-w/2, cy-h/2, w, h); break;
     }
     case 'fireSunder': {
       const spread = 30 + 45 * q;
-      B(20, -1, spread * 2, 18); break;
+      // The damaging floor shape is the same spreading contact line drawn by the slam.
+      K(20-spread,-1,20+spread,-1,7 + 2*q); C(20,-1,12 + 8*q); break;
     }
     case 'fireRend': {
-      const tip = 88 + 28 * q;
-      B((48 + tip) / 2, -49, tip - 48 + 22, 34); break;
+      const tip = 48 + 40 + 28*q, hy=-45;
+      // Follow the visible palm/flame trail rather than a box beyond the hand.
+      K(42,hy-3,60,hy-2,7); K(60,hy-2,tip,hy-4,8); C(tip,hy-4,16 + 5*Math.sin(Math.PI*q)); break;
     }
     case 'fireReturn': {
       // Two uneven pulses are visibly present together in the four-frame strike.
-      B(16, -42, 38, 32);
-      B(20, -70, 28 + 18 * q, 24 + 10 * q);
+      B(16-19, -42-16, 38, 32);
+      const w=28+18*q,h=24+10*q; B(20-w/2, -70-h/2, w, h);
       break;
     }
     case 'fireMeteor': {
-      const cy = -25 + 18 * q;
-      B(0, cy, 34 + 10 * q, 48 + 14 * q);
+      const cy = -25 + 18 * q, w=40+24*q, h=24+16*q;
+      B(-w/2, cy-h/2, w, h);
       break;
     }
     case 'fireUltimate': {
-      // Two-lane feint resolves to one long lance. Follow the actual advancing
-      // projectile instead of treating the entire 1,120px lane as hot at once.
-      const travel = Math.max(0, Math.min(1, (q - .12) / .88));
+      // Match the glowing projectile core; the long lance behind it is a trail, not a hitbox.
+      const travel = clamp01(q);
       const cx = 40 + travel * 1080;
-      B(cx, -58, 42 + 22 * q, 34 + 18 * q);
+      C(cx, -58, 18 + 12 * travel);
       break;
     }
     // Thunder — Up Signature: ONLY the moving dot at the start of the circular line.

@@ -1007,15 +1007,15 @@ function gen1ReferenceDuration(charId, sigType, isHeavy=false, isSuper=false) {
   // Do not compress animation time to make controls feel responsive: responsiveness
   // comes from removing the extra cooldown lockout, not speeding up the animation.
   if (charId === 'g1_fire') {
-    if (isSuper) return 93;                         // 30f startup + 15f active + 48f endlag
-    if (sigType === 'groundPound') return 52;       // 15f + 6f + 31f
-    if (sigType === 'recovery') return 34;          // 5f + 4f + 25f
-    if (sigType === 'downHeavy') return 45;         // Sunder Slam: 14f + 4f + 27f
-    if (sigType === 'upHeavy') return 57;           // Ascendant Breaker: 14f + 5f + 38f
-    if (sigType === 'heavy') return 61;              // Rend Strike: 17f + 7f + 37f
-    if (sigType === 'side') return 26;               // Wave: 4f + 5f + 17f
-    if (sigType === 'up') return 25;                 // Rising: 10f + 2f + 13f
-    if (sigType === 'down') return 42;               // Quake: 11f + 4f + 27f
+    if (isSuper) return 120;                        // Longer, readable charge, travel and recovery
+    if (sigType === 'groundPound') return 62;       // 20f startup + 8f active + 34f endlag
+    if (sigType === 'recovery') return 42;          // 7f startup + 6f active + 29f endlag
+    if (sigType === 'downHeavy') return 62;         // Sunder Slam: 24f startup + 8f active + 30f endlag
+    if (sigType === 'upHeavy') return 68;           // Ascendant Breaker: 18f startup + 7f active + 43f endlag
+    if (sigType === 'heavy') return 72;             // Rend Strike: 28f startup + 10f active + 34f endlag
+    if (sigType === 'side') return 44;              // Wave: 10f startup + 8f active + 26f endlag
+    if (sigType === 'up') return 34;                // Rising: 14f startup + 4f active + 16f endlag
+    if (sigType === 'down') return 50;              // Quake: 15f startup + 4f active + 31f endlag
   }
   // Other Generation I moves retain their existing authored timings.
   if (String(charId || '').startsWith('g1_')) {
@@ -1073,7 +1073,7 @@ function executeGen1HeldAttack(fighter, hold) {
   // turn one attack into another.
   const refDur = gen1ReferenceDuration(id, sigType, isHeavy, false);
   const dur = refDur || Math.min(data.duration || (isHeavy ? 20 : 16), isHeavy ? 23 : 19);
-  const fireFrames = id === 'g1_fire' ? ({ up:[10,2,13], down:[11,4,27], side:[4,5,17], upHeavy:[14,5,38], downHeavy:[14,4,27], heavy:[17,7,37] }[sigType] || null) : null;
+  const fireFrames = id === 'g1_fire' ? ({ up:[14,4,16], down:[15,4,31], side:[10,8,26], upHeavy:[18,7,43], downHeavy:[24,8,30], heavy:[28,10,34] }[sigType] || null) : null;
   fighter.attackData = {
     ...data,
     duration: dur,
@@ -1092,7 +1092,7 @@ function executeGen1HeldAttack(fighter, hold) {
     fighter.attackData.type = 'recovery';
     fighter.attackData.isRecovery = true;
     fighter.attackData.recoveryAnimationKey = 'recovery';
-    if (id === 'g1_fire') { fighter.attackData.name = 'Return Return'; fighter.attackData.duration = 34; fighter.attackData.damage = 5; fighter.attackData.range = 85; fighter.attackData.startupFrames = 5; fighter.attackData.activeFrames = 4; fighter.attackData.endlagFrames = 25; fighter.attackData.sigType = 'up'; fighter.attackTimer = 34; }
+    if (id === 'g1_fire') { fighter.attackData.name = 'Return Return'; fighter.attackData.duration = 42; fighter.attackData.damage = 5; fighter.attackData.range = 85; fighter.attackData.startupFrames = 7; fighter.attackData.activeFrames = 6; fighter.attackData.endlagFrames = 29; fighter.attackData.sigType = 'up'; }
   }
   if (isHeavy && sigType === 'downHeavy' && hold.wasAirborne) {
     fighter.attackData.type = 'groundPound';
@@ -1100,12 +1100,12 @@ function executeGen1HeldAttack(fighter, hold) {
     if (id === 'g1_fire') {
       fighter.attackData.name = 'Meteor Pound';
       fighter.attackData.sigType = 'down';
-      fighter.attackData.startupFrames = 15; fighter.attackData.activeFrames = 6; fighter.attackData.endlagFrames = 31;
-      fighter.attackData.duration = 52;
+      fighter.attackData.startupFrames = 20; fighter.attackData.activeFrames = 8; fighter.attackData.endlagFrames = 34;
+      fighter.attackData.duration = 62;
       fighter.attackData.damage = 9;
       fighter.attackData.range = 150;
       fighter.attackData.color = '#FF6600';
-      fighter.attackTimer = 52;
+      fighter.attackTimer = 62;
       fighter.groundPoundCooldown = 0;
       fighter.vy = Math.max(fighter.vy || 0, 18);
     }
@@ -1412,7 +1412,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       fighter.state = 'attacking';
       const upSig = fighter.resonanceActive ? (fighter.char.recoveryAttack || fighter.char.signatures?.up) : fighter.char.signatures?.up;
       const isFireRecovery = fighter.char.id === 'g1_fire';
-      const recoveryDuration = isFireRecovery ? 34 : Math.min(upSig?.duration || 16, 22);
+      const recoveryDuration = isFireRecovery ? 42 : Math.min(upSig?.duration || 16, 22);
       fighter.attackTimer = recoveryDuration;
       fighter.attackData = {
         ...(upSig || {}),
@@ -1427,7 +1427,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         hitApplied: false,
         progress: 0,
         recoveryAnimationKey: 'recovery',
-        ...(isFireRecovery ? { startupFrames:5, activeFrames:4, endlagFrames:25 } : {}),
+        ...(isFireRecovery ? { startupFrames:7, activeFrames:6, endlagFrames:29 } : {}),
       };
       fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
       fighter.vy = -14;
@@ -1606,7 +1606,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       const refDur = gen1ReferenceDuration(fighter.char.id, 'upHeavy', true, false);
       const dur = refDur || Math.min(upHeavy.duration || 20, 22);
       fighter.attackTimer = dur;
-      fighter.attackData = { ...upHeavy, duration: dur, sigType: 'upHeavy', hitApplied: false, progress: 0, isHeavy: true, ...(fighter.char.id === 'g1_fire' ? { startupFrames:14, activeFrames:5, endlagFrames:38 } : {}) };
+      fighter.attackData = { ...upHeavy, duration: dur, sigType: 'upHeavy', hitApplied: false, progress: 0, isHeavy: true, ...(fighter.char.id === 'g1_fire' ? { startupFrames:18, activeFrames:7, endlagFrames:43 } : {}) };
       fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
       fighter.heavyCooldown = 0;
       fighter.vy = 0;
@@ -1616,9 +1616,9 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     if (inputs.heavy && inputs.down && !fighter.grounded && !inputs._heavyConsumed) {
       inputs._heavyConsumed = true;
       fighter.state = 'attacking';
-      fighter.attackTimer = fighter.char.id === 'g1_fire' ? 52 : 20;
+      fighter.attackTimer = fighter.char.id === 'g1_fire' ? 62 : 20;
       fighter.attackData = fighter.char.id === 'g1_fire'
-        ? { name: 'Meteor Pound', type: 'groundPound', duration: 52, damage: 9, range: 150, color: '#FF6600', sigType: 'down', hitApplied: false, progress: 0, isHeavy: true, isGroundPound: true, startupFrames:15, activeFrames:6, endlagFrames:31 }
+        ? { name: 'Meteor Pound', type: 'groundPound', duration: 62, damage: 9, range: 150, color: '#FF6600', sigType: 'down', hitApplied: false, progress: 0, isHeavy: true, isGroundPound: true, startupFrames:20, activeFrames:8, endlagFrames:34 }
         : fighter.resonanceActive && fighter.char?.downHeavy
           ? { ...fighter.char.downHeavy, name: `${fighter.resonanceConstruct || 'Resonance'} Diving Slam`, type: 'groundPound', duration: 20, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true, isGroundPound: true }
           : { name: 'Ground Pound', type: 'groundPound', duration: 20, damage: 18, range: 130, color: fighter.char.color, sigType: 'down', hitApplied: false, progress: 0, isHeavy: true, isGroundPound: true };
@@ -1636,7 +1636,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         const refDur = gen1ReferenceDuration(fighter.char.id, 'downHeavy', true, false);
         const dur = refDur || Math.min(downHeavy.duration, 21);
         fighter.attackTimer = dur;
-        fighter.attackData = { ...downHeavy, duration: dur, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true, ...(fighter.char.id === 'g1_fire' ? { startupFrames:14, activeFrames:4, endlagFrames:27 } : {}) };
+        fighter.attackData = { ...downHeavy, duration: dur, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true, ...(fighter.char.id === 'g1_fire' ? { startupFrames:24, activeFrames:8, endlagFrames:30 } : {}) };
         fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
         fighter.heavyCooldown = 0;
         fighter.vy = 0;
@@ -1652,7 +1652,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         const refDur = gen1ReferenceDuration(fighter.char.id, 'heavy', true, false);
         const dur = refDur || Math.min(heavy.duration, 22);
         fighter.attackTimer = dur;
-        fighter.attackData = { ...heavy, duration: dur, sigType: 'heavy', hitApplied: false, progress: 0, isHeavy: true, ...(fighter.char.id === 'g1_fire' ? { startupFrames:17, activeFrames:7, endlagFrames:37 } : {}) };
+        fighter.attackData = { ...heavy, duration: dur, sigType: 'heavy', hitApplied: false, progress: 0, isHeavy: true, ...(fighter.char.id === 'g1_fire' ? { startupFrames:28, activeFrames:10, endlagFrames:34 } : {}) };
         fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
         fighter.heavyCooldown = 0;
         if (fighter.grounded) fighter.vy = 0;
@@ -1739,7 +1739,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
       const refDur = gen1ReferenceDuration(fighter.char.id, 'super', false, true);
       const dur = refDur || Math.min(sm?.duration || 50, 55);
       fighter.attackTimer = dur;
-      fighter.attackData = { ...(sm || {}), duration: dur, sigType: 'super', hitApplied: false, progress: 0, isSuper: true, ...(fighter.char.id === 'g1_fire' ? { startupFrames:30, activeFrames:15, endlagFrames:48 } : {}) };
+      fighter.attackData = { ...(sm || {}), duration: dur, sigType: 'super', hitApplied: false, progress: 0, isSuper: true, ...(fighter.char.id === 'g1_fire' ? { startupFrames:45, activeFrames:24, endlagFrames:51 } : {}) };
       fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
       fighter.moveStats.super++;
     }
@@ -2176,15 +2176,15 @@ function applyFireHeroMoveData(fighter) {
   if (fighter?.char?.id !== 'g1_fire' || !d || d._fireAuthoredApplied || d.isNormal || d.type === 'attackHold' || d.holding) return;
   const key = d.isSuper ? 'super' : d.isGroundPound ? 'groundPound' : d.isRecovery ? 'recovery' : d.isHeavy ? (d.sigType === 'upHeavy' ? 'upHeavy' : d.sigType === 'downHeavy' ? 'downHeavy' : 'heavy') : d.sigType === 'up' ? 'up' : d.sigType === 'down' ? 'down' : 'side';
   const authored = {
-    up: { name: "Fire Hero's Rising", damage: 6, startup: 10, active: 2, endlag: 13 },
-    down: { name: "Fire Hero's Quake", damage: 8, startup: 11, active: 4, endlag: 27 },
-    side: { name: "Fire Hero's Wave", damage: 8, startup: 4, active: 5, endlag: 17 },
-    upHeavy: { name: 'Ascendant Breaker', damage: 14, startup: 14, active: 5, endlag: 38 },
-    downHeavy: { name: 'Sunder Slam', damage: 17, startup: 14, active: 4, endlag: 27 },
-    heavy: { name: 'Rend Strike', damage: 15, startup: 17, active: 7, endlag: 37 },
-    recovery: { name: 'Return Return', damage: 5, startup: 5, active: 4, endlag: 25 },
-    groundPound: { name: 'Meteor Pound', damage: 9, startup: 15, active: 6, endlag: 31 },
-    super: { name: 'Ultimate: Flame Unleashed', damage: 28, startup: 30, active: 15, endlag: 48 },
+    up: { name: "Fire Hero's Rising", damage: 6, startup: 14, active: 4, endlag: 16 },
+    down: { name: "Fire Hero's Quake", damage: 8, startup: 15, active: 4, endlag: 31 },
+    side: { name: "Fire Hero's Wave", damage: 8, startup: 10, active: 8, endlag: 26 },
+    upHeavy: { name: 'Ascendant Breaker', damage: 14, startup: 18, active: 7, endlag: 43 },
+    downHeavy: { name: 'Sunder Slam', damage: 17, startup: 24, active: 8, endlag: 30 },
+    heavy: { name: 'Rend Strike', damage: 15, startup: 28, active: 10, endlag: 34 },
+    recovery: { name: 'Return Return', damage: 5, startup: 7, active: 6, endlag: 29 },
+    groundPound: { name: 'Meteor Pound', damage: 9, startup: 20, active: 8, endlag: 34 },
+    super: { name: 'Ultimate: Flame Unleashed', damage: 28, startup: 45, active: 24, endlag: 51 },
   }[key];
   if (!authored) return;
   d.name = authored.name;
@@ -2382,7 +2382,12 @@ export function applyHit(attacker, defender) {
   // gets +25%. The bonus scales smoothly in between.
   const holdCharge = Math.max(0, Math.min(1, Number(attacker.attackData.holdCharge) || 0));
   const holdDamageMul = 1 + holdCharge * 0.25;
-  const rawDmg = (attacker.attackData.damage || 10) * holdDamageMul * (attacker.damageBoost || 1) * (attacker.statPowerMul || 1);
+  const fireHero = attacker.char?.id === 'g1_fire';
+  const fireHeavy = !!attacker.attackData.isHeavy || !!attacker.attackData.isSuper;
+  // Flame starts at the authored low base damage, then gains a restrained bonus
+  // as the target's damage rises. Heavies/super scale a little harder than sigs.
+  const fireDamageScale = fireHero ? 1 + Math.min(200, Math.max(0, Number(defender.damage) || 0)) * (fireHeavy ? 0.00165 : 0.0010) : 1;
+  const rawDmg = (attacker.attackData.damage || 10) * fireDamageScale * holdDamageMul * (attacker.damageBoost || 1) * (attacker.statPowerMul || 1);
   const totalReduction = (defender.shieldAmount || 0) + (defender.statDefenseReduction || 0);
   const dmg = rawDmg * Math.max(0.1, 1 - totalReduction);
   // Super-only mode: non-super attacks deal no damage
@@ -2410,7 +2415,7 @@ export function applyHit(attacker, defender) {
 
   // Knockback scales smoothly with damage (Brawlhalla-style curve)
   const isLight = attacker.attackData.isNormal;
-  const kbMul = 1 + defender.damage * 0.025;
+  const kbMul = fireHero ? 1 + Math.min(160, Math.max(0, Number(defender.damage) || 0)) * (fireHeavy ? 0.032 : 0.025) : 1 + defender.damage * 0.025;
   const kbBase = attacker.attackData.knockback || 1.0;
   const kbFactor = isLight ? 0.16 : attacker.attackData.isHeavy ? 0.32 : 0.24;
   const kb = dmg * kbFactor * kbMul * kbBase * (attacker.knockbackMul || 1) * KNOCKBACK_SCALE * (1 - (defender.knockbackReduction || 0));

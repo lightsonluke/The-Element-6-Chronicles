@@ -347,7 +347,7 @@ function fireRay(ctx,x,y,angle,len,a=1,hot='#FF9A22'){
 function fireLineBurstLegacy(ctx,x,y,r,alpha=1){ fireLineBurst(ctx,x,y,r,alpha,0); }
 function fireLineBurst(ctx,x,y,r,alpha=1,phase=0){
   // Short jagged flame rays radiating from the impact point.
-  const count=10;
+  const count=7;
   for(let i=0;i<count;i++){
     const a=i/count*REF_TAU + phase*.08;
     const len=r*(.68+.22*Math.sin(i*2.1+phase));
@@ -519,7 +519,7 @@ function fireRayLite(ctx,x,y,angle,len,a=1,hot='#FF9A22'){
   ctx.restore();
 }
 function fireLineBurstLite(ctx,x,y,r,a=1,phase=0){
-  const count=10;
+  const count=7;
   for(let i=0;i<count;i++){
     const ang=i/count*REF_TAU+phase*.08;
     const len=r*(.68+.22*Math.sin(i*2.1+phase));
@@ -588,7 +588,7 @@ function fireAttack(ctx,x,y,p,move,attack=null){
     const active=Number(attack?.activeFrames ?? ({us:2,ds:4,ss:5,uh:5,dh:4,sh:7,recovery:4,groundPound:6,super:15}[move]||4));
     const hold=p<0, q=hold ? Math.max(0,Math.min(1,-p-1)) : clamp01(elapsed/Math.max(1,duration));
     const wind=hold ? q : ease(clamp01(elapsed/Math.max(1,start)));
-    const contact=hold ? 0 : ease(clamp01((elapsed-start)/Math.max(1,active)));
+    const contact=hold ? 0 : clamp01((elapsed-start)/Math.max(1,active));
     const recovery=hold ? 0 : ease(clamp01((elapsed-start-active)/Math.max(1,duration-start-active)));
     const hot='#FF9A22', core='#FF5A16', white='#FFF3B0', dark='#541006';
     const flameAt=(fx,fy,r,a=1,angle=0)=>flameShape(ctx,fx,fy,r,hot,a,angle);
@@ -608,8 +608,10 @@ function fireAttack(ctx,x,y,p,move,attack=null){
       const ox=24, oy=-2;
       if(hold){fireBlob(ctx,ox,oy,5+q*4,dark,.3+q*.25,q);return;}
       if(elapsed<start){const t=wind;slash([[14,-2],[22,2],[29,-1]],2,.25+t*.35,hot);flameAt(22,-7,5+t*3,.25+t*.2,Math.PI);}
-      else if(elapsed<start+active){const t=contact;groundCrack(ox,oy,22+38*t,.7+t*.3);fireLineBurstLite(ctx,ox,oy,18+28*t,.65+t*.35,t*5);}
-      else {const t=recovery;const delayed=ease(clamp01((elapsed-start-active-3)/Math.max(1,duration-start-active-3)));groundCrack(ox,oy,10+58*delayed,.85*(1-.25*t));if(delayed>.1){fireLineBurstLite(ctx,ox,oy,22+52*delayed,1-.22*t,delayed*6);for(let i=0;i<7;i++)flameAt(ox+(i-3)*13,oy-4-(i%3)*5,5,.75*(1-t),(i-3)*.18);}}
+      else if(elapsed<start+2){const t=clamp01((elapsed-start)/2);groundCrack(ox,oy,22+12*t,.75);fireLineBurstLite(ctx,ox,oy,18+10*t,.72,t*3);}
+      else if(elapsed<start+8){const t=clamp01((elapsed-start-2)/6);slash([[18,-3],[12,-5],[6,-2]],2,.28*(1-t),hot);flameAt(ox-8,-5,4,.28*(1-t),Math.PI);}
+      else if(elapsed<start+10){const t=clamp01((elapsed-start-8)/2);groundCrack(ox,oy,40+18*t,.95);fireLineBurstLite(ctx,ox,oy,42+22*t,.95,t*5);for(let i=0;i<5;i++)flameAt(ox+(i-2)*17,oy-4-(i%3)*5,5,.85,(i-2)*.18);}
+      else {const t=recovery;const delayed=ease(clamp01((elapsed-start-10)/Math.max(1,duration-start-10)));groundCrack(ox,oy,58*(1-delayed*.45),.5*(1-delayed));if(delayed<.8){fireLineBurstLite(ctx,ox,oy,60-20*delayed,.45*(1-delayed),delayed*6);}}
     } else if(move==='ss'){
       // Wave: low forward roll, then close pop-up strike; fire follows the limb path.
       if(hold){fireRing(ctx,30,-36,9+q*5,6+q*3,hot,.25+q*.25,-q);return;}
@@ -1334,39 +1336,39 @@ function fireSuper(ctx,x,y,p){
   try {
     const q=clamp01(p), c='#FF5A16', hot='#FF9A22', white='#FFF3B0';
     const charge=ease(clamp01(q/.34));
-    const launch=ease(clamp01((q-.34)/.18));
-    const travel=ease(clamp01((q-.43)/.42));
-    const impact=ease(clamp01((q-.82)/.18));
+    const launch=ease(clamp01((q-.375)/.10));
+    const travel=clamp01((q-.375)/.20);
+    const impact=ease(clamp01((q-.575)/.22));
     // Two distinct lanes are presented first, making the opponent choose a response.
     for (const lane of [-1,1]) {
       const yLane=y-58+lane*(42-28*launch);
       const spread=1-charge*.55;
       fireRing(ctx,x+24+launch*18,yLane,18+charge*17,8+charge*7,hot,.55+charge*.3,lane*launch*2);
-      if(q<.52){
-        const endX=x+80+travel*1030;
+      if(q<.375 || q<.58){
+        const endX=q<.375 ? x+96+launch*34 : x+80+travel*1030;
         const endY=yLane+lane*travel*5;
         const a=(1-launch)*.75+travel*.45;
         glowStroke(ctx,[[x+26,yLane],[x+48,yLane-lane*5],[endX,endY]],c,5+launch*7,a);
         glowStroke(ctx,[[x+26,yLane],[x+48,yLane-lane*5],[endX,endY]],hot,2.2+launch*3,a*.9);
-        for(let i=0;i<5;i++) fireRay(ctx,x+45+i*10,yLane,-.1+lane*.08,13+i*3,a*.65,hot);
+        for(let i=0;i<3;i++) fireRay(ctx,x+45+i*14,yLane,-.1+lane*.08,11+i*2,a*.55,hot);
         if(q>.18){const cx=x+35+travel*990,cy=yLane;fireBlob(ctx,cx,cy,10+launch*18,hot,.7+launch*.25,q*6+lane);}
       }
     }
     // The committed lane snaps into one fast, high-energy projectile, not a lingering aura.
-    if(q>=.34 && q<.92){
+    if(q>=.375 && q<.575){
       const cx=x+40+travel*1080, cy=y-58;
-      const radius=18+launch*12;
+      const radius=18+travel*12;
       fireBlob(ctx,cx,cy,radius,c,1- impact*.2,q*8);
       fireRing(ctx,cx,cy,radius+8,radius*.42,hot,.9*(1-impact),q*5);
       glowStroke(ctx,[[x+24,y-58],[cx-radius*1.6,cy-3],[cx-radius*.55,cy]],hot,13*(1-impact),.75);
       glowStroke(ctx,[[x+24,y-58],[cx-radius*1.6,cy-3],[cx-radius*.55,cy]],white,3.2*(1-impact),.9);
-      for(let i=0;i<8;i++) fireRay(ctx,cx-radius*.5,cy,-.22+i*.06,14+i*4,.7*(1-impact),hot);
+      for(let i=0;i<5;i++) fireRay(ctx,cx-radius*.5,cy,-.18+i*.09,12+i*3,.65*(1-impact),hot);
     }
     if(impact>0){
-      const cx=x+1120, cy=y-58, r=22+impact*92;
+      const cx=x+1120, cy=y-58, r=22+impact*72;
       fireLineBurstLite(ctx,cx,cy,r,impact,impact*8);
       fireBlob(ctx,cx,cy,14+impact*18,c,impact,q*9);
-      for(let i=0;i<14;i++){const a=i/14*REF_TAU;flameShape(ctx,cx+Math.cos(a)*r,cy+Math.sin(a)*r*.58,5+impact*4,hot,impact*.8,a+Math.PI/2);}
+      for(let i=0;i<8;i++){const a=i/8*REF_TAU;flameShape(ctx,cx+Math.cos(a)*r,cy+Math.sin(a)*r*.58,5+impact*3,hot,impact*.75,a+Math.PI/2);}
     }
   } finally { FIRE_PERF_MODE=prev; }
 }
