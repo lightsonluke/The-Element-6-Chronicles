@@ -24,6 +24,8 @@ function getConfig(charId, power, color) {
 
 // ── Map attack data to config key (ss/us/ds/sh/dh) ──
 function getAttackKey(attack, attackKey) {
+  if (attack?.isGroundPound || attack?.type === 'groundPound') return 'groundPound';
+  if (attack?.isRecovery || attack?.type === 'recovery') return 'recovery';
   const st = attack.sigType || attackKey || 'side';
   if (attack.isHeavy) {
     if (st === 'downHeavy' || st === 'down' || attack.isGroundPound) return 'dh';

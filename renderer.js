@@ -167,11 +167,11 @@ function solveFighterPose(s, frame, state, facing, emote, attackData, charData, 
   let gen1 = null;
   if (charData?.id?.startsWith('g1_') && attackData && (state === 'attacking' || state === 'superAttack')) {
     try {
-      const st = attackData.isSuper ? 'super' : (attackData.isHeavy ?
+      const st = attackData.isSuper ? 'super' : (attackData.isGroundPound ? 'groundPound' : attackData.isRecovery ? 'recovery' : (attackData.isHeavy ?
         ((attackData.sigType === 'upHeavy' || attackData.sigType === 'up') ? 'uh' :
-         (attackData.sigType === 'downHeavy' || attackData.isGroundPound || attackData.sigType === 'down') ? 'dh' : 'sh') :
-        (attackData.sigType === 'up' || attackData.sigType === 'aerial' ? 'us' :
-         attackData.sigType === 'down' || attackData.sigType === 'downNormal' ? 'ds' : 'ss'));
+         (attackData.sigType === 'downHeavy' || attackData.sigType === 'down') ? 'dh' : 'sh') :
+        (attackData.sigType === 'up' || attackData.sigType === 'aerial' ? (attackData.isRecovery ? 'recovery' : 'us') :
+         attackData.sigType === 'down' || attackData.sigType === 'downNormal' ? 'ds' : 'ss')));
       const held = Math.max(0, Number(attackData.holdProgress) || 0);
       const prog = attackData.isSuper ? Math.max(0, Number(attackData.progress) || 0) :
         (held > 0 && !(Number(attackData.progress) > 0) ? held * 0.55 : Math.max(0, Number(attackData.progress) || 0));

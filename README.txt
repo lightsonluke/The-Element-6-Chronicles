@@ -1,18 +1,24 @@
-Split City stage replacement v11
+FIRE HERO — ATTACKS + CUSTOM ART UPDATE
 
-Files to replace/copy into the project:
-- PlatformFighter.jsx
-- renderer.js
-- movingPlatforms.js
-- movementAbilities.js
+Replace these existing files in the root of The-Element-6-Chronicles-main with the files in this ZIP:
+- eras.js
 - fighter.js
-- public/art/stages/split-city/split-city-main-platform.png
-- public/art/stages/split-city/split-city-moving-platform.png
-- public/art/stages/split-city/split-city-backdrop.png
-- public/art/stages/split-city/split-city-side-platform.png
+- renderer.js
+- gen1AttackAnims.js
+- charAttackAnims.js
+- attackSpecs.js
+- upHeavies.js
+- downHeavies.js
 
-Main platform collision: top y=370 (standing line through the purple light strip); x=75, w=1118; bottom y=682, h=312, matching the visible main image bounds after uniform rendering. Artwork is drawn at x=75 with width 1130 and preserved aspect ratio.
+What changed:
+- Added hand-authored, layered flame artwork and distinct body poses for Fire Hero's Rising, Fire Hero's Quake, Fire Hero's Wave, Ascendant Breaker, Sunder Slam, Rend Strike, Return Return, Meteor Pound, and Ultimate: Flame Unleashed.
+- Recovery and ground pound now use their own visual animation paths instead of reusing Up Signature / Down Heavy art.
+- Added bespoke hitbox shapes for the Fire Hero attacks, with separate aerial meteor and grounded lateral knockback behavior for Meteor Pound.
+- Updated Fire Hero's attack names, baseline damage, ranges, and move durations to match the supplied design.
+- Heavy alone or Up + Heavy selects Up Heavy; Left/Right + Heavy selects Side Heavy; Down + Heavy on the ground selects Down Heavy; Down + Heavy in the air selects Ground Pound.
+- Recovery remains Up + Signature while airborne; a normal Signature tap selects Up Signature unless a direction is held.
 
-Moving platform: renderer loads /art/stages/split-city/split-city-moving-platform.png directly. This file is the exact supplied thin-platform image (896x177; SHA-256 verified against the supplied attachment). It is rendered proportionally at platform.w. Collision is top-only/one-way at y=178 with h=16; no side/underside collision. Down+jump drop-through and jumping through from below are handled by the platform collision code. Horizontal distance is 700; speed 1/180 in the triangle-wave movement system gives about 45 seconds each way.
-
-This package is source/assets only; test in the actual game after copying.
+Validation:
+- Ran Node syntax checks on every changed JavaScript file.
+- Successfully imported gen1AttackAnims.js, attackSpecs.js, and charAttackAnims.js in Node.
+- A full Vite build was not run because dependencies are not installed in the supplied project directory.

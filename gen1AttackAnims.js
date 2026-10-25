@@ -579,18 +579,99 @@ function fireSideHeavyReference(ctx,x,y,p){
   for(let i=0;i<8;i++) fireRay(ctx,cx,cy,-.2+i*.06,10+i*2,.5*(1-v));
 }
 
+// Flame's bespoke attack artwork. Each move has its own silhouette, timing beats,
+// layered flame shapes and directional trail; these are authored canvas illustrations,
+// not generic rings pasted over every attack.
+function fireCorkscrew(ctx,cx,cy,r,t,a=1){
+  const pts=[]; for(let i=0;i<=34;i++){const u=i/34,ang=-Math.PI*.55+u*Math.PI*2.2+t*1.4,rr=r*(.25+.75*u);pts.push([cx+Math.cos(ang)*rr,cy+Math.sin(ang)*rr*.72]);}
+  glowStroke(ctx,pts,'#FF5A16',9,a*.8); glowStroke(ctx,pts,'#FFB52E',4,a);
+  for(let i=0;i<8;i++){const u=i/7,ang=-Math.PI*.55+u*Math.PI*2.2+t*1.4,rr=r*(.25+.75*u);flameShape(ctx,cx+Math.cos(ang)*rr,cy+Math.sin(ang)*rr*.72,5+(i%3)*1.5,i%2?'#FF6A18':'#FFD34E',a*(.45+.45*u),ang+Math.PI/2);}
+}
+function fireImpactBloom(ctx,x,y,r,a=1,phase=0){
+  fireBlob(ctx,x,y,r*.52,'#FFF2A0',a,phase); fireBlob(ctx,x,y,r,'#FF7A18',a*.9,phase+.4);
+  for(let i=0;i<13;i++){const ang=i/13*REF_TAU+phase*.13,len=r*(.7+.35*Math.sin(i*2.1+phase));fireRay(ctx,x,y,ang,len,a*.8);}
+  for(let i=0;i<7;i++){const ang=i/7*REF_TAU+phase;flameShape(ctx,x+Math.cos(ang)*r*.7,y+Math.sin(ang)*r*.48,6+(i%3)*2,'#FFB52E',a*.8,ang+Math.PI/2);}
+}
+function fireRisingKnee(ctx,x,y,p){
+  const q=attackP(p), lift=ease(clamp01((q-.18)/.36)), hit=ease(clamp01((q-.38)/.16)), fade=1-ease(clamp01((q-.72)/.28));
+  // tight floor/air compression -> knee corkscrew -> contact flare -> ember recovery
+  if(q<.32){fireRing(ctx,x+2,y-3,16+10*q,5+4*q,'#FF7A18',.48+q*.7,0,q*3);flameShape(ctx,x+12,y-4,7,'#FFB52E',.6,-.4);}
+  fireCorkscrew(ctx,x+18+lift*5,y-43-lift*59,18+hit*24,q,fade*.95);
+  const kx=x+20+lift*10, ky=y-32-lift*65;
+  if(hit>0){fireImpactBloom(ctx,kx,ky,16+hit*18,hit*fade,q*8);}
+  if(q>.68){for(let i=0;i<8;i++)spark(ctx,kx+(i-4)*5,ky+12+(i%3)*4,1.6,'#FFB52E',fade*.65);}
+}
+function fireDelayedQuake(ctx,x,y,p){
+  const q=attackP(p), stamp=ease(clamp01(q/.23)), hop=ease(clamp01((q-.22)/.25)), delay=ease(clamp01((q-.48)/.2)), fade=1-ease(clamp01((q-.78)/.22));
+  // The first contact is a small stamp; Flame visibly hops backward before the delayed spot erupts.
+  fireRing(ctx,x+22,y-2,13+stamp*10,5+stamp*3,'#FF8A1A',.75*(1-hop*.6),0,q*2);
+  if(q<.5){for(let i=0;i<4;i++)flameShape(ctx,x+22+Math.sin(q*8+i)*3,y-4-i*4,4+i*.8,'#FF9A22',.65*(1-hop),-.15);}
+  if(q>.24&&q<.64){glowStroke(ctx,[[x+24,y-5],[x+14-hop*20,y-14-hop*7],[x+6-hop*24,y-7-hop*5]],'#FF6A18',5,.65);}
+  if(delay>0){fireLineBurst(ctx,x+22,y-2,18+54*delay,fade,q*6);fireImpactBloom(ctx,x+22,y-3,9+12*delay,delay*fade*.75,q*4);}
+}
+function fireWaveRoll(ctx,x,y,p){
+  const q=attackP(p), roll=ease(clamp01(q/.28)), rise=ease(clamp01((q-.16)/.22)), hit=ease(clamp01((q-.25)/.18)), fade=1-ease(clamp01((q-.72)/.28));
+  const cx=x+10+roll*34, cy=y-15-roll*18+Math.sin(q*Math.PI*2)*5;
+  const pts=[];for(let i=0;i<=20;i++){const u=i/20;pts.push([x+5+u*(cx-x),y-5-Math.sin(u*Math.PI)*18*roll]);}
+  glowStroke(ctx,pts,'#FF5A16',7,fade*.8);glowStroke(ctx,pts,'#FFC044',2.5,fade);
+  for(let i=0;i<6;i++){const u=i/5;flameShape(ctx,x+6+roll*35*u,y-7-Math.sin(u*Math.PI)*17*roll,5,'#FF8A1A',fade*.65,u*2);}
+  if(rise>0){fireCorkscrew(ctx,x+42+rise*7,y-28-rise*15,17+rise*9,q,fade);}
+  if(hit>0){fireImpactBloom(ctx,x+50+rise*6,y-42-rise*7,12+hit*10,hit*fade,q*7);}
+}
+function fireAscendantBreaker(ctx,x,y,p){
+  const q=attackP(p), vault=ease(clamp01((q-.08)/.32)), hit=ease(clamp01((q-.24)/.13)), fade=1-ease(clamp01((q-.72)/.28));
+  // The trail stays behind the rising shoulder; the hot contact is above the head.
+  if(q<.35){fireRing(ctx,x+4,y-4,20+vault*12,5+vault*5,'#FF7A18',.6*(1-vault*.5),0,q*2);}
+  const pts=[];for(let i=0;i<=18;i++){const u=i/18;pts.push([x-14-u*9,y-4-u*(25+vault*93)]);}
+  glowStroke(ctx,pts,'#8F1B0B',15,fade*.75);glowStroke(ctx,pts,'#FF5A16',9,fade);glowStroke(ctx,pts,'#FFD45B',3.5,fade*.9);
+  for(let i=0;i<8;i++){const u=i/7;flameShape(ctx,x-17-u*7,y-8-u*(20+vault*88),7+(i%3),i%2?'#FF6A18':'#FFB52E',fade*.75,-.25);}
+  if(hit>0){fireImpactBloom(ctx,x+9,y-73-vault*18,18+hit*18,hit*fade,q*5);fireCorkscrew(ctx,x+3,y-84-vault*8,24,q,hit*fade);}
+}
+function fireSunderBrace(ctx,x,y,p){
+  const q=attackP(p), drop=ease(clamp01((q-.16)/.24)), hit=ease(clamp01((q-.31)/.13)), fade=1-ease(clamp01((q-.72)/.28));
+  if(q<.36){fireRing(ctx,x+22,y-2,12+drop*9,4+drop*3,'#FF9A22',.65,0,q*2);flameShape(ctx,x+12,y-4,5,'#FFB52E',.55,-.3);}
+  if(drop>0){
+    // Paired flame braces fold inward, then slam down as two feet meet the floor.
+    for(const side of [-1,1]){const pts=[[x+22+side*23,y-35],[x+22+side*18,y-22-drop*8],[x+22+side*9,y-10-drop*3],[x+22+side*3,y-2]];glowStroke(ctx,pts,'#FF6A18',7,fade*.9);glowStroke(ctx,pts,'#FFD45B',2,fade);}
+  }
+  if(hit>0){fireImpactBloom(ctx,x+22,y-3,20+hit*43,hit*fade,q*6);fireRing(ctx,x+22,y-2,24+hit*47,7+hit*9,'#FF7A18',hit*fade,0,q*5);}
+}
+function fireRendStrike(ctx,x,y,p){
+  const q=attackP(p), wind=ease(clamp01(q/.18)), lunge=ease(clamp01((q-.14)/.28)), hit=ease(clamp01((q-.28)/.13)), fade=1-ease(clamp01((q-.72)/.28));
+  if(q<.38){fireBlob(ctx,x+17,y-48,5+wind*9,'#FF9A22',.45+wind*.25,q);fireRing(ctx,x+17,y-48,8+wind*10,6+wind*5,'#FF5A16',.55,-.2,q);}
+  const hx=x+28+lunge*52, hy=y-45-lunge*3;
+  const trail=[[x+7,y-30],[x+13-lunge*4,y-37],[x+18,y-43],[hx-6,hy]];
+  glowStroke(ctx,trail,'#9B210D',12,fade*.7);glowStroke(ctx,trail,'#FF5A16',7,fade);glowStroke(ctx,trail,'#FFC044',2.5,fade);
+  if(hit>0){fireImpactBloom(ctx,hx+8,hy,13+hit*19,hit*fade,q*6);for(let i=0;i<5;i++)fireRay(ctx,hx+4,hy,-.35+i*.13,18+i*6,hit*fade*.7);}
+}
+function fireReturnReturn(ctx,x,y,p){
+  const q=attackP(p), roll=ease(clamp01(q/.34)), pulse1=ease(clamp01((q-.2)/.18)), pulse2=ease(clamp01((q-.43)/.18)), lift=ease(clamp01((q-.42)/.36)), fade=1-ease(clamp01((q-.77)/.23));
+  fireCorkscrew(ctx,x+4+roll*8,y-45-roll*7,20+roll*9,q,fade*.8);
+  if(pulse1>0){fireImpactBloom(ctx,x+25,y-44,12+pulse1*9,pulse1*fade,q*5);}
+  if(pulse2>0){fireImpactBloom(ctx,x+43,y-53,8+pulse2*6,pulse2*fade*.62,q*8);}
+  if(lift>0){const pts=[];for(let i=0;i<=16;i++){const u=i/16;pts.push([x-6+Math.sin(u*REF_TAU*1.5+q*3)*(8+u*12),y-7-u*(45+lift*48)]);}glowStroke(ctx,pts,'#FF6A18',8,fade*.8);glowStroke(ctx,pts,'#FFD45B',2.5,fade);}
+}
+function fireMeteorPound(ctx,x,y,p){
+  const q=attackP(p), dive=ease(clamp01(q/.55)), impact=ease(clamp01((q-.28)/.17)), landing=ease(clamp01((q-.76)/.12)), fade=1-ease(clamp01((q-.79)/.21));
+  // Compact rotating meteor silhouette, a white-hot drill core, and a broad landing wave.
+  const cx=x+3+Math.sin(q*REF_TAU*2)*8, cy=y-18-dive*82;
+  if(q<.55){fireCorkscrew(ctx,cx,cy,15+dive*12,q,fade);const pts=[[cx-3,cy-12],[cx-1,cy-26-dive*30],[cx+5,cy-44-dive*40]];glowStroke(ctx,pts,'#FF5A16',10,fade*.8);glowStroke(ctx,pts,'#FFE28A',3,fade);}
+  if(impact>0){fireImpactBloom(ctx,x+22,y-2,18+impact*24,impact*fade,q*8);}
+  if(landing>0){fireRing(ctx,x+22,y-2,28+landing*48,6+landing*10,'#FF7A18',landing*fade,0,q*7);fireRing(ctx,x+22,y-2,18+landing*33,3+landing*5,'#FFD45B',landing*fade*.8,0,-q*6);for(let i=0;i<12;i++){const ang=i/12*REF_TAU,dist=22+landing*55;flameShape(ctx,x+22+Math.cos(ang)*dist,y-3+Math.sin(ang)*dist*.25,5+(i%3),i%2?'#FF6A18':'#FFB52E',landing*fade*.65,ang);}}
+}
 function fireAttack(ctx,x,y,p,move){
   const prev=FIRE_PERF_MODE; FIRE_PERF_MODE=true;
   try {
-  if(move==='us'){fireUpReference(ctx,x,y,p);return;}
-  if(move==='ss'){fireSideReference(ctx,x,y,p);return;}
-  if(move==='ds'){fireDownReference(ctx,x,y,p);return;}
-  if(move==='uh'||move==='upHeavy'){fireUpHeavyReference(ctx,x,y,p);return;}
-  if(move==='dh'||move==='downHeavy'){fireDownHeavyReference(ctx,x,y,p);return;}
-  if(move==='sh'||move==='heavy'){fireSideHeavyReference(ctx,x,y,p);return;}
+    if(move==='us'){fireRisingKnee(ctx,x,y,p);return;}
+    if(move==='ss'){fireWaveRoll(ctx,x,y,p);return;}
+    if(move==='ds'){fireDelayedQuake(ctx,x,y,p);return;}
+    if(move==='uh'||move==='upHeavy'){fireAscendantBreaker(ctx,x,y,p);return;}
+    if(move==='dh'||move==='downHeavy'){fireSunderBrace(ctx,x,y,p);return;}
+    if(move==='sh'||move==='heavy'){fireRendStrike(ctx,x,y,p);return;}
+    if(move==='recovery'){fireReturnReturn(ctx,x,y,p);return;}
+    if(move==='groundPound'){fireMeteorPound(ctx,x,y,p);return;}
   } finally { FIRE_PERF_MODE=prev; }
 }
-
 
 function grassSeed(ctx,x,y,q,a=1){
   const c='#7CFF28', pale='#E7FF9A';
@@ -1218,12 +1299,14 @@ export function getGen1AttackPose(move,p,facing=1,charId='g1_water'){
     const z=q*count, i=Math.min(count-1,Math.floor(z)), u=z-Math.floor(z), s=u*u*(3-2*u);
     const beat=(arr)=>arr[i]+(arr[Math.min(i+1,count-1)]-arr[i])*s;
     const lead=(angle)=>{if(facing>=0) punchArmR=angle; else punchArmL=-angle;};
-    if(move==='us'){ lead(beat([0,-2.05,-2.25,-2.15])); lean=facing*beat([0,.02,.03,.08]); }
-    else if(move==='ss'){ lead(beat([0,-1.05,-1.72,-1.15])); lean=facing*beat([0,.08,.20,.16]); legSwing=beat([0,.04,.22,.12]); }
+    if(move==='us'){ lead(beat([0,-1.7,-2.25,-1.8])); lean=facing*beat([0,.02,.03,.08]); legSwing=beat([0,-.22,-.58,-.12]); bob=beat([0,1,-7,-2]); }
+    else if(move==='ss'){ lead(beat([0,-.75,-1.72,-1.15])); lean=facing*beat([-.02,.08,.28,.16]); legSwing=beat([0,.28,.55,.12]); bob=beat([0,4,-2,0]); }
     else if(move==='ds'){ lean=facing*beat([0,.10,.03,-.10]); bob=beat([0,5,8,2]); lead(beat([0,.30,.20,.05])); }
-    else if(move==='uh'){ punchArmR=beat([-1.0,-2.55,-2.70,-2.20]); punchArmL=beat([-1.0,-2.85,-2.95,-2.45]); lean=facing*beat([0,0,.02,.05]); }
-    else if(move==='dh'){ lean=facing*beat([0,.18,.06,-.02,-.04,-.02]); bob=beat([0,9,6,4,2,0]); legSwing=beat([0,.04,.12,.08,.03,0]); lead(beat([0,.62,.55,.35,.18,.05])); }
-    else if(move==='sh'){ lead(beat([-1.15,-1.45,-1.75,-.55])); lean=facing*beat([.02,.08,.18,.10]); legSwing=beat([0,.05,.18,.08]); }
+    else if(move==='uh'){ punchArmR=beat([-.25,-1.25,-2.45,-1.2]); punchArmL=beat([.35,-.9,-1.85,-.45]); lean=facing*beat([-.08,.04,.24,.05]); bob=beat([0,-5,-16,-4]); legSwing=beat([.12,-.35,-.62,.05]); }
+    else if(move==='dh'){ lean=facing*beat([0,.05,.02,-.02,-.04,-.02]); bob=beat([0,-3,1,7,3,0]); legSwing=beat([0,-.12,.02,.08,.03,0]); lead(beat([0,.35,.15,.08,.12,.05])); offArm(beat([-.1,.25,.1,.05,.08,.02])); }
+    else if(move==='recovery'){ lead(beat([-.3,-1.5,-2.1,-1.0])); offArm(beat([.6,.2,-.5,.3])); lean=facing*beat([-.12,.2,.28,.04]); bob=beat([0,-5,-10,-16]); legSwing=beat([.1,.28,-.12,.04]); }
+    else if(move==='groundPound'){ lead(beat([-.3,.2,.85,.2])); offArm(beat([-.3,.4,.85,.2])); lean=facing*beat([-.05,-.12,.08,0]); bob=beat([-2,-12,-4,0]); legSwing=beat([-.15,.1,0,0]); }
+    else if(move==='sh'){ lead(beat([-.35,-.55,-1.9,-.65])); offArm(beat([.25,.55,.15,.1])); lean=facing*beat([-.12,-.05,.32,.10]); legSwing=beat([-.08,-.02,.34,.08]); }
     else if(move==='super'){ if(i===0){punchArmR=-.85;punchArmL=-.65;lean=facing*.03;} else if(i===1||i===2){punchArmR=-1.15;punchArmL=-.95;lean=facing*.06;} else if(i===3||i===4){punchArmR=-1.7;punchArmL=-1.55;lean=facing*.22;legSwing=.2;} else if(i===5){punchArmR=.2;punchArmL=.1;lean=-facing*.12;} else {punchArmR=-.1;punchArmL=-.05;lean=-facing*.05;} }
     return {punchArmL,punchArmR,legSwing,lean,bob};
   }
@@ -1302,12 +1385,23 @@ function fireSuper(ctx,x,y,p){
   // Explosion grows smoothly instead of popping at one discrete frame.
   const blast=ease(clamp01((q-4.45)/1.05));
   if(blast>0){
-    fireLineBurstLegacy(ctx,x+105,y-48,70+50*blast,blast);
+    // Two distinct attack lanes briefly appear; the upper lane is a feint while
+    // the lower lane tightens into the actual punish projectile.
+    const laneFade=1-blast*.72;
+    for(const lane of [-1,1]){
+      const yy=y-48+lane*(22+18*blast);
+      const reach=62+112*blast;
+      const pts=[[x+22,yy+lane*5],[x+45,yy-lane*9],[x+75+reach*.35,yy+lane*4],[x+105+reach,yy-lane*2]];
+      glowStroke(ctx,pts,lane<0?'#FFB52E':'#FF5A16',lane<0?5:9,blast*(lane<0?laneFade:.95));
+      glowStroke(ctx,pts,'#FFF3B0',2.1,blast*(lane<0?laneFade*.7:.8));
+      for(let i=0;i<7;i++) flameShape(ctx,x+35+i*(reach/7),yy+Math.sin(i*1.8+q)*5,5+(i%3)*2,lane<0?hot:c,blast*(lane<0?.35:.75),lane*.4);
+    }
+    fireLineBurstLegacy(ctx,x+105+112*blast,y-48+22+18*blast,70+45*blast,blast);
     for(let i=0;i<10;i++){
       const ang=i/10*TAU;
       flameShape(ctx,x+105+Math.cos(ang)*(38+38*blast),y-48+Math.sin(ang)*(25+25*blast),7+4*blast,hot,blast*.72,ang+Math.PI/2);
     }
-    spark(ctx,x+105,y-48,14+10*blast,white,.55*blast);
+    spark(ctx,x+105+112*blast,y-26-18*blast,14+10*blast,white,.7*blast);
   }
   } finally { FIRE_PERF_MODE=prev; }
 }

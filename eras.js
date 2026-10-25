@@ -85,13 +85,13 @@ const G1_CHARS = [
     powerTitle: 'Flame', powerDescription: 'Cracks a line of flowing fire forward in the facing direction, damaging and stunning the opponent briefly.',
     weapon: 'Flame Fists', stats: { speed: 7, power: 8, defense: 6, utility: 6, control: 8 },
     lore: 'One of the five original heroes. An aggressive fighter who overwhelmed enemies with relentless flame.',
-    heavyAttack: { name: 'Eruption', desc: 'Slams both fists into the ground, causing a pillar of fire to erupt beneath the opponent', damage: 23, range: 170, duration: 22, color: '#FF4400', type: 'groundSlam', knockback: 1.4 },
+    heavyAttack: { name: 'Rend Strike', desc: 'Steps back, then lunges forward with a flame-clinging palm thrust and a sharp directional trace', damage: 15, range: 135, duration: 61, color: '#FF4400', type: 'launch', knockback: 1.4 },
     signatures: {
-      side: { name: 'Flame Charge', desc: 'Charges forward wreathed in fire, leaving a trail of flames', duration: 20, damage: 19, range: 200, color: '#FF4400', type: 'dash' },
-      up: { name: 'Fire Fountain', desc: 'Erupts a fountain of fire upward', duration: 18, damage: 16, range: 130, color: '#FF8800', type: 'launch' },
-      down: { name: 'Magma Pool', desc: 'Creates a pool of magma on the ground that damages over time', duration: 28, damage: 14, range: 150, color: '#CC2200', type: 'rootBind' },
+      side: { name: "Fire Hero's Wave", desc: 'Rolls low beneath guard, then pops up with a close-range flame strike', duration: 26, damage: 8, range: 95, color: '#FF4400', type: 'dash' },
+      up: { name: "Fire Hero's Rising", desc: 'Pivots beneath the opponent and snaps into a corkscrew rising knee wrapped in tightly compressed flame', duration: 25, damage: 6, range: 95, color: '#FF8800', type: 'launch' },
+      down: { name: "Fire Hero's Quake", desc: 'Stamps once and hops back before a delayed flame burst erupts at the first contact point', duration: 42, damage: 8, range: 120, color: '#CC2200', type: 'rootBind' },
     },
-    superMove: { name: 'Inferno', desc: 'The entire battlefield erupts in fire — geysers, walls of flame, and a massive explosion at the center', duration: 55, damage: 42, color: '#FF4400' },
+    superMove: { name: 'Ultimate: Flame Unleashed', desc: 'Briefly threatens two flame lanes, then punishes the chosen lane with a long-range cinematic flame projectile and explosive finish', duration: 93, damage: 28, color: '#FF4400' },
   },
   {
     id: 'g1_water', name: 'Water Hero', title: 'The First Tide', era: 'g1', role: 'Hero',
