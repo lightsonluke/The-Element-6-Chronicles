@@ -303,6 +303,12 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
     }
   }, []);
 
+  useEffect(() => () => {
+    hubCanvasFocusedRef.current = false;
+    if (window.__el6CommunityHubMovement) window.__el6CommunityHubMovement = false;
+    if (window.__el6GameplayActive) window.__el6GameplayActive = false;
+  }, []);
+
   // Controller can enter the actual hub game from the Quick Queue menu.
   // Once the canvas owns focus, left stick/D-pad controls the character and B
   // returns focus to Quick Queue instead of opening a generic menu/back action.
@@ -320,6 +326,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
           if (gp.back) {
             hubCanvasFocusedRef.current = false;
             window.__el6GameplayActive = false;
+            window.__el6CommunityHubMovement = false;
             canvasRef.current?.blur();
             const queue = document.querySelector('[data-el6-quick-queue] button');
             queue?.focus();
@@ -811,8 +818,8 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
       </div>
 
       <canvas ref={canvasRef} width={800} height={420} tabIndex={0}
-        onFocus={() => { hubCanvasFocusedRef.current = true; window.__el6GameplayActive = true; }}
-        onBlur={() => { hubCanvasFocusedRef.current = false; window.__el6GameplayActive = false; }}
+        onFocus={() => { hubCanvasFocusedRef.current = true; window.__el6GameplayActive = true; window.__el6CommunityHubMovement = true; }}
+        onBlur={() => { hubCanvasFocusedRef.current = false; window.__el6GameplayActive = false; window.__el6CommunityHubMovement = false; }}
         onClick={handleClick} onMouseMove={handleMove}
         data-el6-hub-gameplay="true"
         className="w-full rounded-xl border-2 border-border shadow-2xl outline-none" style={{ aspectRatio: '800 / 420', cursor: 'pointer' }} />

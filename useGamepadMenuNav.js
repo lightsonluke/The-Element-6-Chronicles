@@ -15,15 +15,20 @@ import { readGamepadInput } from './controllerProfiles.js';
 //   B / Circle (power) → back (dispatch Escape)
 //   Start (start)      → also confirms (handy on some controllers)
 
-const FOCUSABLE = 'button:not([disabled]):not([hidden]), a[href]:not([hidden]), input:not([disabled]):not([hidden]), select:not([disabled]):not([hidden]), [role="combobox"]:not([aria-disabled="true"]):not([hidden]), [role="option"]:not([aria-disabled="true"]):not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])';
+const FOCUSABLE = 'button:not([disabled]):not([hidden]), a[href]:not([hidden]), input:not([disabled]):not([hidden]), textarea:not([disabled]):not([hidden]), select:not([disabled]):not([hidden]), [role="combobox"]:not([aria-disabled="true"]):not([hidden]), [role="option"]:not([aria-disabled="true"]):not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])';
 
 function getVisibleFocusable() {
-  const els = Array.from(document.querySelectorAll(FOCUSABLE));
+  // Prefer the currently open dialog/menu so focus cannot escape into controls
+  // behind an overlay. Fall back to the page for ordinary screens.
+  const scope = document.querySelector('[role="dialog"], [aria-modal="true"], .el6-pause-overlay-layer, .el6-global-pause-layer, [role="listbox"][data-state="open"]');
+  const root = scope || document;
+  const els = Array.from(root.querySelectorAll(FOCUSABLE));
   return els.filter((el) => {
     const rect = el.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return false;
     const style = window.getComputedStyle(el);
     if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+    if (el.closest('[aria-hidden="true"], [inert]')) return false;
     return true;
   });
 }
@@ -141,8 +146,11 @@ function activateFocused() {
     el.click();
   } else if (el.getAttribute('role') === 'option') {
     el.click();
-  } else if (el.tagName === 'INPUT') {
+  } else if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
     el.focus();
+    if (!el.readOnly && !el.disabled && !['checkbox', 'radio', 'range', 'file', 'submit', 'button', 'reset', 'color', 'date', 'number'].includes((el.type || '').toLowerCase())) {
+      el.dispatchEvent(new CustomEvent('el6-controller-text-activate', { bubbles: true }));
+    }
   } else {
     const f = getVisibleFocusable();
     if (f[0]) { f[0].focus(); f[0].click(); }
@@ -193,6 +201,14 @@ export function useGamepadMenuNav(enabled = true) {
     window.addEventListener('keydown', onKeyDown, { passive: false });
 
     const tick = () => {
+      // Community Hub owns its controller while the world canvas is focused.
+      // Do not also interpret movement buttons as menu confirm/back/pause.
+      if (window.__el6CommunityHubMovement && !window.__el6ControllerCapture) {
+        lastDir.current = { up: false, down: false, left: false, right: false };
+        lastStart.current = false; lastBack.current = false; lastConfirm.current = false;
+        raf = requestAnimationFrame(tick);
+        return;
+      }
       const gp = readGamepadInput(0);
       if (gp) {
         const gameplay = !!window.__el6GameplayActive || !!document.querySelector('.el6-controller-pause-trigger');
@@ -284,9 +300,12 @@ export function useGamepadMenuNav(enabled = true) {
         lastBack.current = back;
         lastStart.current = start;
       } else {
+        lastDir.current = { up: false, down: false, left: false, right: false };
         lastStart.current = false;
         lastBack.current = false;
         lastConfirm.current = false;
+        lastRightY.current = 0;
+        repeatTimer = 0;
       }
       raf = requestAnimationFrame(tick);
     };

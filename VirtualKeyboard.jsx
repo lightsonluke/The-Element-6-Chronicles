@@ -94,7 +94,7 @@ export default function VirtualKeyboard() {
       if (el.tagName === 'INPUT' && NON_TEXT_TYPES.has(el.type)) return;
       if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return;
       if (el.readOnly || el.disabled) return;
-      const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+      const gps = typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
       if (gps.length === 0) return;
       targetRef.current = el;
       cursorRef.current = { r: 0, c: 0 };
@@ -111,7 +111,7 @@ export default function VirtualKeyboard() {
   useEffect(() => {
     if (!active) return;
     const onFocusOut = (e) => {
-      if (e.target === targetRef.current) {
+      if (e.target === targetRef.current && !e.relatedTarget?.closest?.('[data-el6-virtual-keyboard]')) {
         setActive(false);
         targetRef.current = null;
       }
@@ -160,7 +160,7 @@ export default function VirtualKeyboard() {
   if (!active) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[200] flex flex-col items-center gap-2 p-3 bg-background/95 backdrop-blur border-t-2 border-accent shadow-2xl">
+    <div data-el6-virtual-keyboard="true" className="fixed bottom-0 left-0 right-0 z-[200] flex flex-col items-center gap-2 p-3 bg-background/95 backdrop-blur border-t-2 border-accent shadow-2xl">
       <div className="flex items-center gap-3 w-full max-w-2xl justify-center">
         <p className="text-[10px] font-heading text-muted-foreground whitespace-nowrap"><GameIcon emoji="🎮" size={14} /> D-Pad: move · A: type · B: close</p>
         <div className="flex-1 min-w-0 px-3 py-1 bg-muted/50 rounded font-body text-sm text-foreground truncate text-center">

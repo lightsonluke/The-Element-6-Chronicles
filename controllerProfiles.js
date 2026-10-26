@@ -81,9 +81,9 @@ export const DEFAULT_PROFILE = {
   name: 'Default',
   buttons: {
     jump: 0, heavy: 1, sig: 2, power: 3,
-    super: 7, dash: 6, start: 9, menu: 9, confirm: 1, back: 0,
+    super: 7, start: 9, menu: 9, confirm: 1, back: 0,
     up: 12, down: 13, left: 14, right: 15,
-    emote1: 8, emote2: 10, emote3: 11,
+    emote1: 6, emote2: 6, emote3: 6,
   },
   leftStick: { move: true, deadzone: 0.18, sensitivity: 1, invertX: false, invertY: false },
   rightStick: { deadzone: 0.18, sensitivity: 1 },
@@ -108,7 +108,6 @@ export const JOYCON_LEFT_PROFILE = {
     heavy: 12,     // D-Up (right when horizontal) → Heavy Attack
     power: 13,     // D-Down (left when horizontal) → Power
     super: 5,      // SR → Super
-    dash: 6,      // ZL / trigger-style dash where supported
     start: 8,      // Minus → Start/Pause
     menu: 8, confirm: 15, back: 13,
     up: 12, down: 13, left: 14, right: 15,
@@ -129,7 +128,6 @@ export const JOYCON_RIGHT_PROFILE = {
     heavy: 3,      // X (top) → Heavy Attack
     power: 1,      // A (right) → Power
     super: 4,      // SL → Super
-    dash: 6,      // ZL / trigger-style dash where supported
     start: 9,      // Plus → Start/Pause
     menu: 9, confirm: 0, back: 1,
     up: 12, down: 13, left: 14, right: 15,
@@ -150,7 +148,6 @@ export const JOYCON_PAIR_PROFILE = {
     sig: 2,        // Y → Signature (Sig)
     power: 3,      // X → Power
     super: 7,      // ZR → Super
-    dash: 6,      // ZL → Dash
     start: 9,      // Plus → Start/Pause
     menu: 9, confirm: 1, back: 0,
     up: 12, down: 13, left: 14, right: 15,
@@ -180,7 +177,7 @@ export function setSlotProfileName(slot, name) {
 // Auto-assign Joy-Con profiles to slots that don't have one yet.
 // Call this when controllers connect or when entering controller settings.
 export function autoAssignJoyConProfiles() {
-  const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+  const gps = typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
   let changed = false;
   gps.forEach((gp) => {
     const model = detectControllerModel(gp);
@@ -220,12 +217,10 @@ function migrateProfile(p) {
   // Ensure the new menu actions exist.
   if (b.confirm == null) b.confirm = b.jump;
   if (b.back == null) b.back = b.power;
-  // Dash is a dedicated, remappable action; default to ZL/L2 on standard pads.
-  if (b.dash == null) b.dash = 6;
-  // Keep emote actions separate from the dedicated Dash trigger.
-  if (b.emote1 == null || b.emote1 === 6) b.emote1 = 8;
-  if (b.emote2 == null || b.emote2 === 6) b.emote2 = 10;
-  if (b.emote3 == null || b.emote3 === 6) b.emote3 = 11;
+  // Ensure emote defaults exist.
+  if (b.emote1 == null) b.emote1 = 6;
+  if (b.emote2 == null) b.emote2 = 6;
+  if (b.emote3 == null) b.emote3 = 6;
   p.buttons = b;
   return p;
 }
@@ -344,7 +339,7 @@ export function triggerRumble(index, strong = 0.6, weak = 0.4, duration = 200) {
   if (!prof.vibration) return;
   const s = Math.min(1, strong * (prof.vibrationStrength ?? 0.6));
   const w = Math.min(1, weak * (prof.vibrationStrength ?? 0.6));
-  const gp = navigator.getGamepads?.()[index];
+  const gp = typeof navigator !== 'undefined' ? navigator.getGamepads?.()[index] : null;
   if (gp?.vibrationActuator?.playEffect) {
     gp.vibrationActuator.playEffect('dual-rumble', { duration, strongMagnitude: s, weakMagnitude: w }).catch(() => {});
   }
@@ -356,10 +351,10 @@ export function triggerRumble(index, strong = 0.6, weak = 0.4, duration = 200) {
 // Each slot uses its own profile (per-slot or auto-detected Joy-Con profile),
 // so a single left Joy-Con and a single right Joy-Con can be used as 2 players.
 export function readGamepadInput(slot = 0) {
-  const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()) : [];
-  const gp = gps.find(g => g && g.index === slot) || gps[slot] || null;
+  const gps = typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+  const gp = gps[slot];
   if (!gp) return null;
-  const prof = resolveSlotProfile(slot, gp);
+  const prof = resolveSlotProfile(gp.index ?? slot, gp);
   const dz = (v, dzv) => (Math.abs(v) < dzv ? 0 : v);
   const apply = (axis, cfg) => {
     let v = dz(gp.axes[axis] || 0, cfg.deadzone ?? 0.18);
@@ -384,7 +379,7 @@ export function readGamepadInput(slot = 0) {
     left, right, jump: btn('jump'), up, down,
     sig: btn('sig'), heavy: btn('heavy'),
     power: btn('power'), superMove: btn('super'),
-    start: btn('start'), dash: btn('dash'),
+    start: btn('start'),
     confirm: btn('confirm'), back: btn('back'),
     rightX, rightY,
   };

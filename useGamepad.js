@@ -20,20 +20,23 @@ export function useGamepad() {
   const pressRef = useRef({}); // index -> {btn: prevBool}
   const profileRef = useRef(loadActiveProfile());
   const [justPressed, setJustPressed] = useState({});
+  const lastJustPressedRef = useRef({});
   const rafRef = useRef(0);
   const lastPadKeyRef = useRef('');
 
   const refresh = useCallback(() => {
-    const list = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+    const list = typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
     setPads(list.map(gp => ({ index: gp.index, id: gp.id, family: guessFamily(gp), gp })));
     lastPadKeyRef.current = list.map(gp => `${gp.index}:${gp.id}`).join(',');
   }, []);
 
   useEffect(() => {
-    const onConnect = () => refresh();
-    const onDisconnect = () => refresh();
+    const onConnect = (event) => { refresh(); window.dispatchEvent(new CustomEvent('el6-gamepad-status', { detail: { connected: true, index: event.gamepad?.index } })); };
+    const onDisconnect = (event) => { refresh(); window.dispatchEvent(new CustomEvent('el6-gamepad-status', { detail: { connected: false, index: event.gamepad?.index } })); };
+    const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
     window.addEventListener('gamepadconnected', onConnect);
     window.addEventListener('gamepaddisconnected', onDisconnect);
+    document.addEventListener('visibilitychange', onVisibility);
     // Bluetooth controllers in some browsers only appear in getGamepads() after
     // a user gesture lands on the iframe/window. Re-poll right after any
     // pointer/key interaction so newly-connected pads register instantly.
@@ -45,6 +48,7 @@ export function useGamepad() {
     return () => {
       window.removeEventListener('gamepadconnected', onConnect);
       window.removeEventListener('gamepaddisconnected', onDisconnect);
+      document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('pointerdown', onInteract);
       window.removeEventListener('keydown', onInteract);
       window.removeEventListener('click', onInteract);
@@ -58,7 +62,7 @@ export function useGamepad() {
   useEffect(() => {
     const tick = () => {
       // ── Detect connection changes ──
-      const rawGps = navigator.getGamepads ? Array.from(navigator.getGamepads()) : [];
+      const rawGps = typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()) : [];
       const connected = rawGps.filter(Boolean);
       const connectedKey = connected.map(gp => `${gp.index}:${gp.id}`).join(',');
       if (connectedKey !== lastPadKeyRef.current) {
@@ -80,7 +84,11 @@ export function useGamepad() {
         }
         if (edges.length) fresh[gp.index] = edges;
       });
-      if (Object.keys(fresh).length) setJustPressed(fresh);
+      const previousEdges = lastJustPressedRef.current;
+      const edgeKeys = Object.keys(fresh).join(',');
+      const previousKeys = Object.keys(previousEdges).join(',');
+      const sameEdges = edgeKeys === previousKeys && edgeKeys.split(',').every(k => !k || (fresh[k] || []).join(',') === (previousEdges[k] || []).join(','));
+      if (!sameEdges) { lastJustPressedRef.current = fresh; setJustPressed(fresh); }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -98,7 +106,7 @@ export function useGamepad() {
 
   // Read a controller's normalized state for a given player slot.
   const read = useCallback((slot = 0) => {
-    const gp = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean)[slot] : null;
+    const gp = typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean)[slot] : null;
     if (!gp) return null;
     const prof = profileRef.current;
     const dz = (v, dzv) => (Math.abs(v) < dzv ? 0 : v);
