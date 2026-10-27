@@ -1,0 +1,13 @@
+PARTY BACKEND MIGRATION ORDER
+
+The React party screens require the Element 6 party and presence RPCs. If these
+migrations have not already been applied to the project's Supabase database, run
+them in the Supabase SQL Editor in this order, after the existing Element 6
+social/online schema:
+
+1. Supabase-party-table-race-replays.sql
+2. Supabase-2026-09-28-party-table-community-replay-fix.sql
+3. Supabase-party-presence-completion.sql
+
+Do not rerun migrations if your deployment process manages them separately.
+The party UI cannot create backend tables/functions from frontend code alone.

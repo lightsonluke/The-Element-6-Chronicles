@@ -18,6 +18,7 @@ const DIFFICULTIES = ['newcomer', 'beginner', 'easy', 'amateur', 'regular', 'pro
 
 function inferMatchMode(label = '', title = '') {
   const source = `${label} ${title}`.toUpperCase();
+  if (source.includes('BOT RANKED')) return 'Fight';
   if (source.includes('SOCCER')) return 'Soccer';
   if (source.includes('VOLLEYBALL')) return 'Volleyball';
   if (source.includes('DODGEBALL')) return 'Dodgeball';
@@ -272,6 +273,8 @@ export default function UniversalCharacterSelect({
   cpuOnly = false,
   rankedRandom = false,
   defaultCPUDifficulty = 'regular',
+  defaultFightVariant = 'Regular',
+  enableMatchSettings = false,
   onStart,
   onBack,
   extraControls,
@@ -341,8 +344,11 @@ export default function UniversalCharacterSelect({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [matchConfig, setMatchConfig] = useState(() => ({
     mode: matchMode || inferMatchMode(modeLabel, title),
-    fightVariant: 'Regular',
+    fightVariant: defaultFightVariant,
     slotCount: playerCount,
+    handicapsEnabled: false,
+    handicaps: Array.from({ length: playerCount }, () => ({ damageDealt: 100, damageTaken: 100, knockback: 100, movementSpeed: 100, jumpHeight: 100 })),
+    localRules: { stocks: 3, matchTime: Number(settings?.matchTime ?? 240), gravity: 100, jumpHeight: 100, movementSpeed: 100, infiniteJumps: false, infiniteStocks: false, infiniteHP: false, infinitePower: false },
     slots: Array.from({ length: playerCount }, (_, i) => ({ kind: i === 0 ? 'player' : 'cpu', control: i === 0 ? 'Keyboard · WASD' : 'Keyboard · Arrows' })),
   }));
   const activePlayerCount = Math.max(1, Math.min(8, Number(matchConfig.slotCount) || playerCount));
@@ -464,9 +470,15 @@ export default function UniversalCharacterSelect({
     // Build the match-temporary Shikigami override map (only non-null choices).
     const shikigamiOverride = {};
     picks.forEach((p, i) => { if (shikigami[i]) shikigamiOverride[p] = shikigami[i]; });
+    // Ranked CPU mode chooses a real random opponent instead of reusing P1's
+    // default second slot. Other modes preserve the selected P2 and team picks.
+    const rankedPool = rankedRandom ? ALL_DISPLAY.filter(c => c?.id && c.id !== p1 && !c.isCustom && c.id !== 'evil' && c.baseCharId !== 'evil') : [];
+    const p2ForStart = rankedRandom && rankedPool.length ? rankedPool[Math.floor(Math.random() * rankedPool.length)].id : p2;
     // Pass all picks; extra picks (P3+) are appended after the standard 6 args.
-    // Shikigami override map is always the final argument.
-    onStart?.(p1, p2, activePlayerCount >= 2 ? p2IsCPU : true, difficulty, p1Element, p2Element, ...picks.slice(2), shikigamiOverride, matchConfig);
+    // Only the main offline character selector opts into the tagged match-config payload.
+    const tail = [...picks.slice(2), shikigamiOverride];
+    if (enableMatchSettings) tail.push({ __matchConfig: true, config: matchConfig });
+    onStart?.(p1, p2ForStart, activePlayerCount >= 2 ? p2IsCPU : true, difficulty, p1Element, rankedRandom ? 'basic' : p2Element, ...tail);
   };
   const handlePickShikigami = (id) => {
     const idx = (activePlayerCount === 1 || rankedRandom) ? 0 : selecting - 1;
@@ -487,14 +499,14 @@ export default function UniversalCharacterSelect({
 
   return (
     <div className="el6-character-select-scroll flex flex-col gap-2 w-full max-w-6xl mx-auto h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] overflow-y-auto overflow-x-hidden overscroll-contain pr-2 pb-28" tabIndex={-1}>
-      <MatchSettingsOverlay open={settingsOpen} onClose={() => setSettingsOpen(false)} config={{ ...matchConfig, customControls: settings?.customControls || [] }} onChange={handleMatchConfigChange} />
+      {enableMatchSettings && <MatchSettingsOverlay open={settingsOpen} onClose={() => setSettingsOpen(false)} config={{ ...matchConfig, customControls: settings?.customControls || [], characterNames: picks.slice(0, activePlayerCount).map(id => ALL_CHARS.find(c => c.id === id)?.name || id) }} onChange={handleMatchConfigChange} />}
       {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-heading text-foreground tracking-wider">MANAGE MATCH</h2>
         <div className="flex gap-2 items-center">
           {rankedRandom && <span className="text-[9px] text-muted-foreground"><GameIcon emoji="🔒" size={14} /> P2: Random</span>}
           <button onClick={onBack} className="px-2 py-1 bg-muted text-muted-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
-          <button onClick={() => setSettingsOpen(true)} className="px-2 py-1 bg-primary text-primary-foreground rounded font-heading text-xs hover:opacity-80">MATCH SETTINGS</button>
+          {enableMatchSettings && <button onClick={() => setSettingsOpen(true)} className="px-2 py-1 bg-primary text-primary-foreground rounded font-heading text-xs hover:opacity-80">MATCH SETTINGS</button>}
         </div>
       </div>
 

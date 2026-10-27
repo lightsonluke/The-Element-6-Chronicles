@@ -499,7 +499,7 @@ function drawViewport(ctx, s, idx, charId, customCharsData, skins, accs, ox, oy)
   let yOff = 0, yStretch = 0;
   if (p.grabAnim > 0) { const t = 1 - p.grabAnim / 12; yOff = Math.sin(t * Math.PI) * 3; }
   if (p.dropAnim > 0) { const t = 1 - p.dropAnim / 10; yStretch = Math.sin(t * Math.PI) * 4; }
-  drawSportChar(ctx, p.x, p.y + yOff + yStretch, char, { facing: p.facing, frame: p.frame, scale: 0.92, jersey: false, sport: 'climb', state, equippedSkins: skins, equippedAccessories: accs });
+  drawSportChar(ctx, p.x, p.y + yOff + yStretch, char, { facing: p.facing, frame: p.frame, scale: 0.92, jersey: false, sport: 'climb', state, equippedSkins: skins, equippedAccessories: accs, motion: { vx: p.vx || 0, vy: p.vy || 0, grounded: p.state !== 'climbing' && p.state !== 'air' && p.state !== 'jumping', wallSlide: p.state === 'climbing', wallSide: p.climbWall ? (p.x < p.climbWall.x + p.climbWall.w / 2 ? -1 : 1) : 0, memo: (p._rigMemo = p._rigMemo || {}) } });
   if (p.grabAnim > 0 && p.hold) {
     const t = 1 - p.grabAnim / 12;
     ctx.save(); ctx.globalAlpha = (1 - t) * 0.6; ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 2;

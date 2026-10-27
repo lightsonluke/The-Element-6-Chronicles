@@ -29,6 +29,12 @@ const NORMAL_COOLDOWN = 8;
 const HEAVY_COOLDOWN = 0; // Heavy/signature lockout is governed by attack duration/endlag only.
 const KNOCKBACK_SCALE = 0.40; // global 60% knockback reduction for all attacks
 
+function localMatchMultiplier(fighter, key) {
+  if (!fighter?.matchHandicap) return 1;
+  const value = Number(fighter.matchHandicap[key] ?? 100) / 100;
+  return Number.isFinite(value) ? Math.max(0, Math.min(3, value)) : 1;
+}
+
 // CPU difficulty configs
 // (CPU_DIFFICULTY moved to botAI.js)
 
@@ -1133,8 +1139,8 @@ function updateGen1HoldPhysics(fighter, platforms, stageWidth, stageHeight) {
   // Holding blocks player actions, but never freezes physics. Existing dash or
   // dodge momentum gets its normal continuation; otherwise gravity continues.
   if (fighter.dashTimer > 0) {
-    fighter.vx = fighter.dashDirection.x * 9.5;
-    fighter.vy = fighter.dashDirection.y * 9.5;
+    fighter.vx = fighter.dashDirection.x * 9.5 * localMatchMultiplier(fighter, 'movementSpeed');
+    fighter.vy = fighter.dashDirection.y * 9.5 * localMatchMultiplier(fighter, 'movementSpeed');
     if (fighter.dashDirection.x) fighter.facing = fighter.dashDirection.x;
   } else {
     const gravMul = fighter.lowGravity ? 0.45 : 1;
@@ -1467,8 +1473,9 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     }
 
     const slowFactor = fighter.slowTimer > 0 ? (fighter.speedMul || 0.4) : 1;
-    const speed = (fighter.grounded ? MOVE_SPEED : AIR_SPEED) * (fighter.statSpeedMul || 1) * (fighter.statUtilityMul || 1) * (fighter.speedBoost || 1) * slowFactor;
-    const accel = (fighter.grounded ? ACCEL_GROUND : ACCEL_AIR) * (fighter.statSpeedMul || 1);
+    const localSpeedMul = localMatchMultiplier(fighter, 'movementSpeed');
+    const speed = (fighter.grounded ? MOVE_SPEED : AIR_SPEED) * (fighter.statSpeedMul || 1) * (fighter.statUtilityMul || 1) * (fighter.speedBoost || 1) * localSpeedMul * slowFactor;
+    const accel = (fighter.grounded ? ACCEL_GROUND : ACCEL_AIR) * (fighter.statSpeedMul || 1) * localSpeedMul;
 
     // Indigo's Gravity power: tap down to launch self upward (auto-stops before KO)
     if (fighter.powerActive === 'gravity_flip') {
@@ -1530,7 +1537,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     // Flying (White)
     if (fighter.canFly) {
       if (inputs.jump && !fighter.jumpHeld && !(inputs.heavy && UP_HEAVIES[fighter.char.id])) {
-        fighter.vy = JUMP_FORCE * 0.7;
+        fighter.vy = JUMP_FORCE * 0.7 * localMatchMultiplier(fighter, 'jumpHeight');
         fighter.jumpHeld = true;
         fighter.isFlying = true;
       }
@@ -1545,7 +1552,8 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
       if (useGroundJump || useAirJump) {
         const qsMul = (fighter.platformMaterial === 'quicksand' || fighter.platformMaterial === 'snow') ? 0.3 : 1;
-        const force = (useGroundJump ? JUMP_FORCE : DOUBLE_JUMP_FORCE) * qsMul * (fighter.statUtilityMul || 1);
+        const localJumpMul = localMatchMultiplier(fighter, 'jumpHeight');
+        const force = (useGroundJump ? JUMP_FORCE : DOUBLE_JUMP_FORCE) * qsMul * (fighter.statUtilityMul || 1) * localJumpMul;
         fighter.vy = fighter.gravityInverted ? -force : force;
         if (useGroundJump) {
           fighter.jumps = fighter.maxJumps - 1;
@@ -1750,8 +1758,8 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
   // Universal dash motion. Ground dashes are short horizontal bursts; air dodges
   // remain invulnerable for their full 0.3s window.
   if (fighter.dashTimer > 0) {
-    fighter.vx = fighter.dashDirection.x * 9.5;
-    fighter.vy = fighter.dashDirection.y * 9.5;
+    fighter.vx = fighter.dashDirection.x * 9.5 * localMatchMultiplier(fighter, 'movementSpeed');
+    fighter.vy = fighter.dashDirection.y * 9.5 * localMatchMultiplier(fighter, 'movementSpeed');
     if (fighter.dashDirection.x) fighter.facing = fighter.dashDirection.x;
   }
 

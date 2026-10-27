@@ -1,6 +1,26 @@
 import { drawStickman, getLimbPose } from './renderer.js';
 import { getCharNumber } from './characterNumber.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
+
+const sportRigMemos = new Map();
+const normalizeSportState = state => { const v = String(state || 'idle').toLowerCase(); if (['run','running','walk','walking','moving'].includes(v)) return 'moving'; if (['jump','jumping','airborne','falling','freefall'].includes(v)) return 'jumping'; if (['dash','dashing','airdash','airdodge','dodging'].includes(v)) return 'dashing'; if (['hurt','hit','stun','stunned','hitstun'].includes(v)) return 'hitstun'; if (['attack','attacking'].includes(v)) return 'attacking'; if (['crouch','duck'].includes(v)) return 'crouching'; return state || 'idle'; };
+const normalizeSportMotion = (char, facing, state, opts) => {
+  const rawState = String(state || 'idle').toLowerCase();
+  const airborne = ['jumping','jump','airborne','falling','freefall','dashing','dash','airdashing','airdodge','dodging'].includes(rawState);
+  const dash = ['dashing','dash','airdashing','airdodge','dodging'].includes(rawState);
+  const supplied = opts.motion || {};
+  const key = opts.rigKey || `${char?.id || 'sport'}:${facing < 0 ? -1 : 1}:${opts.sport || 'generic'}:${opts.teamColor || 'neutral'}`;
+  if (!sportRigMemos.has(key)) sportRigMemos.set(key, {});
+  const memo = supplied.memo || sportRigMemos.get(key);
+  const vx = Number(supplied.vx ?? opts.vx ?? (rawState === 'moving' ? (facing < 0 ? -3.5 : 3.5) : 0));
+  const vy = Number(supplied.vy ?? opts.vy ?? (rawState === 'jumping' ? -5 : 0));
+  const grounded = supplied.grounded !== undefined ? !!supplied.grounded : opts.grounded !== undefined ? !!opts.grounded : !airborne;
+  const dashTimer = Number(supplied.dashTimer ?? opts.dashTimer ?? (dash ? 8 : 0));
+  const candidateDir = supplied.dashDir || opts.dashDir;
+  const dashDir = candidateDir && typeof candidateDir === 'object' && (candidateDir.x || candidateDir.y)
+    ? candidateDir : (dashTimer > 0 ? { x: facing < 0 ? -1 : 1, y: 0 } : null);
+  return { ...supplied, vx, vy, grounded, dashTimer, dashDir, wallSlide: !!(supplied.wallSlide ?? opts.wallSlide), wallSide: Number(supplied.wallSide ?? opts.wallSide ?? 0), hitSide: Number(supplied.hitSide ?? opts.hitSide ?? 0), memo };
+};
 import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor } from './cosmetics.js';
 
 // Draws a sport fighter: shadow + base stickman + themed jersey overlay.
@@ -8,8 +28,10 @@ import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor } from 
 // visually distinct (P1 blue vs P2 red); character limbs/head still use the
 // character's own color, so identity is preserved.
 export function drawSportChar(ctx, x, y, char, opts = {}) {
-  const { facing = 1, frame = 0, scale = 1, state = 'idle', powerActive = null, jersey = true, sport = 'soccer', teamColor, equippedSkins = {}, equippedAccessories = {},   noWeapon = sport === 'volleyball' || sport === 'baseball' } = opts;
+  const { facing = 1, frame = 0, scale = 1, state = 'idle', powerActive = null, jersey = true, sport = 'soccer', teamColor, equippedSkins = {}, equippedAccessories = {},   noWeapon = sport === 'volleyball' || sport === 'baseball', motion = null, attackData = null, emote = null } = opts;
+  state = normalizeSportState(state);
   const baseColor = char?.color || '#888';
+  motion = normalizeSportMotion(char, facing, state, { ...opts, motion });
   // Skins only apply when the jersey is OFF — jersey on = base character + jersey.
   const skinColor = !jersey ? getCharRenderColor(char?.id, equippedSkins) : null;
   const color = skinColor || baseColor;
@@ -21,14 +43,14 @@ export function drawSportChar(ctx, x, y, char, opts = {}) {
     skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, x, y, p.type, p.color, frame, scale, char?.id, state, facing, powerActive));
     if (acc && isBehindAccessory(acc.type)) drawAccessory(ctx, x, y, acc.type, resolveAccColor(acc, char), frame, scale, char?.id, state, facing, powerActive);
   }
-  drawStickman(ctx, x, y, color, facing, frame, scale, char?.isSpirit, state, char, powerActive, noWeapon);
+  drawStickman(ctx, x, y, color, facing, frame, scale, char?.isSpirit, state, char, powerActive, noWeapon, null, emote, attackData, motion);
   if (!jersey) {
     const skinParts = getSkinParts(char?.id, equippedSkins);
     const acc = getAccessory(equippedAccessories[char?.id]);
     skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, x, y, p.type, p.color, frame, scale, char?.id, state, facing, powerActive));
     if (acc && !isBehindAccessory(acc.type)) drawAccessory(ctx, x, y, acc.type, resolveAccColor(acc, char), frame, scale, char?.id, state, facing, powerActive);
   }
-  if (jersey) drawSportJersey(ctx, x, y, color, char?.id, sport, frame, scale, state, facing, teamColor);
+  if (jersey) drawSportJersey(ctx, x, y, color, char?.id, sport, frame, scale, state, facing, teamColor, motion);
 }
 
 const SPORT_ACCENTS = {
@@ -36,8 +58,8 @@ const SPORT_ACCENTS = {
   tennis: '#FFFFFF', track: '#FFD700', basketball: '#222222', dodgeball: '#FF6600',
 };
 
-export function drawSportJersey(ctx, x, y, color, charId, sport, frame = 0, scale = 1, state = 'idle', facing = 1, teamColor) {
-  const pose = getLimbPose(frame, state, facing, scale, null);
+export function drawSportJersey(ctx, x, y, color, charId, sport, frame = 0, scale = 1, state = 'idle', facing = 1, teamColor, motion = null) {
+  const pose = getLimbPose(frame, state, facing, scale, null, null, motion);
   const s = pose.s;
   const num = getCharNumber(charId);
   const accent = SPORT_ACCENTS[sport] || '#FFFFFF';

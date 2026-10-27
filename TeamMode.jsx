@@ -74,16 +74,30 @@ function drawSuperMeter(ctx, fighter, bx, by, w = 100, h = 8) {
   }
 }
 
-export default function TeamMode({ onBack, onEnd, unlockedIds, favoriteId, musicVolume, sfxVolume = 70, matchTime = 240, settings = {}, equippedAccessories = {}, equippedSkins = {}, equippedShikigami = {}, charLevels = {}, equippedElements = {}, onEquipElement, customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
+function normalizeTeamHandicap(value = {}) {
+  const bound = n => Math.max(0, Math.min(300, Number.isFinite(Number(n)) ? Number(n) : 100));
+  return { damageDealt: bound(value.damageDealt), damageTaken: bound(value.damageTaken), knockback: bound(value.knockback), movementSpeed: bound(value.movementSpeed), jumpHeight: bound(value.jumpHeight) };
+}
+function applyTeamHandicap(attacker, defender, damageBefore, hpBefore, vxBefore, vyBefore) {
+  const a = attacker?.matchHandicap, d = defender?.matchHandicap; if (!a && !d) return;
+  const factor = ((a?.damageDealt ?? 100) / 100) * ((d?.damageTaken ?? 100) / 100);
+  if (Number.isFinite(Number(damageBefore)) && Number.isFinite(Number(defender.damage))) { defender.damage = damageBefore + (defender.damage - damageBefore) * factor; if (factor < 1 && defender.damage < 1500) defender._pendingDeath = false; }
+  if (Number.isFinite(Number(hpBefore)) && Number.isFinite(Number(defender.hp))) defender.hp = Math.max(0, hpBefore - (hpBefore - defender.hp) * factor);
+  const kb = (a?.knockback ?? 100) / 100;
+  if (Number.isFinite(defender.vx)) defender.vx = vxBefore + (defender.vx - vxBefore) * kb;
+  if (Number.isFinite(defender.vy)) defender.vy = vyBefore + (defender.vy - vyBefore) * kb;
+}
+
+export default function TeamMode({ onBack, onEnd, matchHandicaps = null, initialTeamCharacters = [], initialTeamFormat = 'pc_cc', unlockedIds, favoriteId, musicVolume, sfxVolume = 70, matchTime = 240, settings = {}, equippedAccessories = {}, equippedSkins = {}, equippedShikigami = {}, charLevels = {}, equippedElements = {}, onEquipElement, customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
   const [phase, setPhase] = useState('select');
-  const [p1, setP1] = useState(favoriteId || 'yellow');
-  const [p1b, setP1b] = useState('blue');
-  const [p2, setP2] = useState('red');
-  const [p2b, setP2b] = useState('green');
+  const [p1, setP1] = useState(initialTeamCharacters?.[0] || favoriteId || 'yellow');
+  const [p1b, setP1b] = useState(initialTeamCharacters?.[1] || 'blue');
+  const [p2, setP2] = useState(initialTeamCharacters?.[2] || 'red');
+  const [p2b, setP2b] = useState(initialTeamCharacters?.[3] || 'green');
   const [cpuDifficulty, setCpuDifficulty] = useState(settings?.defaultCPUDifficulty || 'regular');
   const [teamDamage, setTeamDamage] = useState(true);
   const [showTriangles, setShowTriangles] = useState(true);
-  const [teamFormat, setTeamFormat] = useState('pc_cc');
+  const [teamFormat, setTeamFormat] = useState(initialTeamFormat || 'pc_cc');
   const [p1Element, setP1Element] = useState(equippedElements?.[favoriteId || 'yellow'] || 'basic');
   const [p1bElement, setP1bElement] = useState('basic');
   const [p2Element, setP2Element] = useState('basic');
@@ -310,6 +324,9 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
     const f2 = createFighter({ ...c2, stats: applyElement(c2.stats || {}, teamFormat === 'pp_cc' ? p1bElement : 'basic') }, 350, spawnY, 1);
     const f3 = createFighter({ ...c3, stats: applyElement(c3.stats || {}, teamFormat === 'pc_pc' ? p2Element : 'basic') }, 1030, spawnY, -1);
     const f4 = createFighter(c4, 930, spawnY, -1);
+    if (matchHandicaps?.enabled) {
+      [f1, f2, f3, f4].forEach((f, i) => { f.matchHandicap = normalizeTeamHandicap(matchHandicaps.players?.[i]); });
+    }
     f1.grounded = true; f2.grounded = true; f3.grounded = true; f4.grounded = true;
 
     f1.team = 1; f2.team = 1; f3.team = 2; f4.team = 2;
@@ -479,7 +496,9 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
         if (checkHit(atk, def)) {
           const _isSuper = atk.state === 'superAttack';
           const _isHeavy = atk.attackData && atk.attackData.isHeavy;
+          const _dmgBefore = def.damage, _hpBefore = def.hp, _vxBefore = def.vx, _vyBefore = def.vy;
           applyHit(atk, def);
+          applyTeamHandicap(atk, def, _dmgBefore, _hpBefore, _vxBefore, _vyBefore);
           if (_isSuper) { shakeMag = Math.max(shakeMag, 20); sfx.superImpact(); }
           else if (_isHeavy) { shakeMag = Math.max(shakeMag, 10); sfx.heavyHit(); }
           else { shakeMag = Math.max(shakeMag, 6); sfx.hit(); }
@@ -549,7 +568,7 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
           skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, 1, f.char.id, f.state, f.facing, f.powerActive));
           accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, 1, f.char.id, f.state, f.facing, f.powerActive));
           drawShikigamiFollower(ctx, f, botShikigamiRef.current?.[f.char.id], f.frame, 1);
-          drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, 1, f.char.isSpirit, f.state, f.char, f.powerActive, false, null, f.emote, f.attackData);
+          drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, 1, f.char.isSpirit, f.state, f.char, f.powerActive, false, null, f.emote, f.attackData, { vx: f.vx || 0, vy: f.vy || 0, grounded: !!f.grounded, dashTimer: f.dashTimer || 0, dashDir: f.dashDirection || 0, wallSlide: !!f.wallSlide, wallSide: f.wallSide || 0, hitSide: f._hitSide || 0, memo: (f._rigMemo = f._rigMemo || {}) });
           skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, 1, f.char.id, f.state, f.facing, f.powerActive));
           accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, 1, f.char.id, f.state, f.facing, f.powerActive));
           if (f.attackData && f.state === 'attacking') drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || f.char.color, f.attackData.isNormal, f.char.id, f.char.power, f.powerActive);

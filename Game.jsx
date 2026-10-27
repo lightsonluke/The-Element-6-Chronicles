@@ -327,6 +327,21 @@ export default function Game() {
   const onChatScreenRef = useRef(false);
   const clanRewardSyncInFlightRef = useRef(false);
 
+  // Expose the current app state to the persistent party-status heartbeat so
+  // party members can see whether each player is online, away, or in a match.
+  useEffect(() => {
+    window.__el6CurrentScreen = screen;
+    window.__el6CurrentMode = fighters?.gameMode || (screen === 'sports' ? (initialSportRouteRef.current || 'sports') : screen === 'onlinesports' ? (onlineSport || 'online sports') : screen === 'soccer' ? 'soccer' : pending?.mode || screen);
+    // The fight renderer is hosted on the `loading` screen after setup. Publish
+    // the actual simulation state separately so presence never reports players
+    // as merely online while their match is running.
+    window.__el6IsPlaying = Boolean(fighters && screen === 'loading');
+    return () => {
+      if (window.__el6CurrentScreen === screen) window.__el6CurrentScreen = 'menu';
+      if (window.__el6IsPlaying && screen === 'loading') window.__el6IsPlaying = false;
+    };
+  }, [screen, fighters, pending?.mode, onlineSport]);
+
   // Human-readable URLs work while browsing. GitHub Pages still needs its
   // normal SPA fallback for a direct refresh on a non-root URL.
   useEffect(() => {
@@ -1575,13 +1590,23 @@ export default function Game() {
     if (mode === 'onlineunranked') { setOnlineMode('unranked'); setScreen('onlinelobby'); return; }
     setPending({ mode }); setScreen('charSelect');
   };
-  const handleCharSelect = (p1, p2, isCPU, difficulty, p1Element, p2Element, shikigamiOverride, matchConfig) => {
+  const handleCharSelect = (...rawArgs) => {
+    // Keep the match-config payload at a stable position even when a sport or
+    // team selector sends additional character picks for P3 and beyond.
+    const lastArg = rawArgs[rawArgs.length - 1];
+    const matchConfig = lastArg?.__matchConfig ? lastArg.config : null;
+    if (lastArg?.__matchConfig) rawArgs.pop();
+    const shikigamiOverride = rawArgs.pop();
+    const extraCharacterPicks = rawArgs.slice(6).filter(Boolean);
+    const [p1, p2, isCPU, difficulty, p1Element, p2Element] = rawArgs;
     // Match Settings is available on every character-select screen. If the player
     // changes from a local fight variant to a standalone mode, route into that
     // mode's real screen instead of silently starting the old fight mode.
     const selectedMatchType = matchConfig?.mode;
-    if (selectedMatchType && !['Fight', 'Ranked', 'Unranked Fight'].includes(selectedMatchType)) {
+    if (selectedMatchType && selectedMatchType !== 'Fight') {
       const standaloneRoutes = {
+        'Ranked': () => { setOnlineMode('ranked'); setScreen('onlinelobby'); },
+        'Unranked Fight': () => { setOnlineMode('unranked'); setScreen('onlinelobby'); },
         'Tournament': () => setScreen('tournament'),
         'Grand Circuit': () => setScreen('grandcircuit'),
         'The Table': () => setScreen('thetable'),
@@ -1591,6 +1616,7 @@ export default function Game() {
         'LAN Play': () => setScreen('lan'),
         'Soccer': () => setScreen('soccer'),
         'Volleyball': () => { initialSportRouteRef.current = 'volleyball'; setScreen('sports'); },
+        'Baseball': () => { initialSportRouteRef.current = 'baseball'; setScreen('sports'); },
         'Parkour': () => { initialSportRouteRef.current = 'parkour'; setScreen('sports'); },
         'Rock Climbing': () => { initialSportRouteRef.current = 'rockclimb'; setScreen('sports'); },
         'CTF': () => { initialSportRouteRef.current = 'ctf'; setScreen('sports'); },
@@ -1609,13 +1635,14 @@ export default function Game() {
       if (route) { route(); return; }
     }
     // Evil is banned from ranked and challenge modes
-    const evilBanned = ['ranked', 'challenge'];
     const isEvilChar = (id) => id === 'evil' || ALL.find(c => c.id === id)?.baseCharId === 'evil';
-    if (evilBanned.includes(pending?.mode) && (isEvilChar(p1) || isEvilChar(p2))) {
+    const isBotRankedMatch = matchConfig?.mode === 'Fight' ? matchConfig.fightVariant === 'Bot Ranked' : pending?.mode === 'ranked';
+    const isChallengeMatch = matchConfig?.mode === 'Fight' ? matchConfig.fightVariant === 'Challenge' : pending?.mode === 'challenge';
+    if ((isBotRankedMatch || isChallengeMatch) && (isEvilChar(p1) || isEvilChar(p2))) {
       return; // silently reject
     }
     let resolvedDifficulty = difficulty;
-    if (pending?.mode === 'ranked') {
+    if (isBotRankedMatch) {
       // Bot Ranked difficulty scales relative to the player's rating.
       const elo = progress.rankedRating || 1000;
       resolvedDifficulty = elo >= 2400 ? 'honored' : elo >= 2100 ? 'insane' : elo >= 1800 ? 'hard'
@@ -1628,7 +1655,7 @@ export default function Game() {
       'Regular': 'regular', 'Timed': 'time', 'HP Battle': 'hp', 'Super': 'superonly',
       'Sudden Death': 'sudden', 'Bot Ranked': 'ranked', 'Coin': 'coin',
       'Split City Brawl': 'brawl', 'Challenge': 'challenge',
-      'Low Gravity': 'lowgravity', '2v2': 'team', 'Shapeshift': 'shapeshift',
+      'Low Gravity': 'lowgravity', 'Bot Battle': 'botbattle', '2v2': 'team', 'Shapeshift': 'shapeshift',
     };
     const selectedMode = matchConfig?.mode === 'Fight'
       ? (variantModes[matchConfig.fightVariant] || pending?.mode)
@@ -1636,13 +1663,31 @@ export default function Game() {
       : matchConfig?.mode === 'Unranked Fight' ? 'regular'
       : pending?.mode;
     const playerControls = Array.isArray(matchConfig?.slots) ? matchConfig.slots.map(slot => ({ ...slot })) : null;
+    const isLocalFight = matchConfig?.mode === 'Fight';
+    const matchHandicaps = isLocalFight && matchConfig?.handicapsEnabled
+      ? { enabled: true, players: Array.from({ length: 8 }, (_, i) => ({ damageDealt: 100, damageTaken: 100, knockback: 100, movementSpeed: 100, jumpHeight: 100, ...(matchConfig?.handicaps?.[i] || {}) })) }
+      : { enabled: false, players: [] };
+    const ruleValues = matchConfig?.localRules || {};
+    const hasPhysicsMods = ['gravity','jumpHeight','movementSpeed'].some(k => Number(ruleValues[k] ?? 100) !== 100) || ['infiniteJumps','infiniteStocks','infiniteHP','infinitePower'].some(k => !!ruleValues[k]);
+    const localRules = isLocalFight ? { stocks: Number(ruleValues.stocks ?? 3), matchTime: Number(ruleValues.matchTime ?? 240), mods: hasPhysicsMods ? { gravity: Number(ruleValues.gravity ?? 100) / 100, jumpHeight: Number(ruleValues.jumpHeight ?? 100) / 100, movementSpeed: Number(ruleValues.movementSpeed ?? 100) / 100, infiniteJumps: !!ruleValues.infiniteJumps, infiniteStocks: !!ruleValues.infiniteStocks, infiniteHP: !!ruleValues.infiniteHP, infinitePower: !!ruleValues.infinitePower } : null } : null;
+    if (selectedMode === 'shapeshift') {
+      setPending(prev => ({ ...prev, mode: 'shapeshift', p1, p2, p1Element, p2Element, matchHandicaps, localRules }));
+      setScreen('shapeshiftSelect');
+      return;
+    }
+    if (selectedMode === 'team') {
+      const teamFormat = matchConfig?.slots?.[1]?.kind === 'player' ? 'pp_cc' : matchConfig?.slots?.[2]?.kind === 'player' ? 'pc_pc' : 'pc_cc';
+      setPending(prev => ({ ...prev, mode: 'team', p1, p2, teamPicks: [p1, p2, ...extraCharacterPicks].slice(0, 4), teamFormat, isCPU, difficulty: resolvedDifficulty, p1Element, p2Element, matchHandicaps }));
+      setScreen('team');
+      return;
+    }
     // Brawl: skip map select, force Split City
     if (selectedMode === 'brawl') {
-      setFighters({ p1, p2, isCPU, map: 'splitcity', difficulty: resolvedDifficulty, gameMode: 'brawl', playerControls, customPlatforms: [{ x: 40, y: 620, w: 1200, h: 48 }], p1Element, p2Element, shikigamiOverride: shikigamiOverride || null });
+      setFighters({ p1, p2, isCPU, map: 'splitcity', difficulty: resolvedDifficulty, gameMode: 'brawl', playerControls, matchHandicaps, localRules, customPlatforms: [{ x: 40, y: 620, w: 1200, h: 48 }], p1Element, p2Element, shikigamiOverride: shikigamiOverride || null });
       setScreen('loading');
       return;
     }
-    setPending(prev => ({ ...prev, mode: selectedMode, p1, p2, isCPU, difficulty: resolvedDifficulty, p1Element, p2Element, shikigamiOverride: shikigamiOverride || null, playerControls }));
+    setPending(prev => ({ ...prev, mode: selectedMode, p1, p2, isCPU, difficulty: resolvedDifficulty, p1Element, p2Element, shikigamiOverride: shikigamiOverride || null, playerControls, matchHandicaps, localRules }));
     setScreen('mapSelect');
   };
   // Shapeshift: receive 3-character teams for P1 (and P2 if human), then go to map select
@@ -1698,7 +1743,7 @@ export default function Game() {
         rankedSkins[p2Id] = availSkins[Math.floor(Math.random() * availSkins.length)].id;
       }
     }
-    setFighters({ p1: pending.p1, p2: pending.p2, isCPU: pending.isCPU, map: resolvedMap, difficulty: pending.difficulty, gameMode: pending.mode, customPlatforms, customSpawnPoints, customHazards, customObjects, customStageConfig, stageCamera: customStageConfig?.stageCamera || null, killPerimeter: customStageConfig?.killPerimeter || null, rankedAccessories, rankedSkins, p1Element: pending.p1Element || 'basic', p2Element: pending.p2Element || 'basic', shikigamiOverride: pending.shikigamiOverride || null, playerControls: pending.playerControls || null, p1Team: pending.p1Team || null, p2Team: pending.p2Team || null, shapeshiftMode: pending.shapeshiftMode || false });
+    setFighters({ p1: pending.p1, p2: pending.p2, isCPU: pending.isCPU, map: resolvedMap, difficulty: pending.difficulty, gameMode: pending.mode, customPlatforms, customSpawnPoints, customHazards, customObjects, customStageConfig, stageCamera: customStageConfig?.stageCamera || null, killPerimeter: customStageConfig?.killPerimeter || null, rankedAccessories, rankedSkins, p1Element: pending.p1Element || 'basic', p2Element: pending.p2Element || 'basic', shikigamiOverride: pending.shikigamiOverride || null, playerControls: pending.playerControls || null, matchHandicaps: pending.matchHandicaps || { enabled: false, players: [] }, localRules: pending.localRules || null, p1Team: pending.p1Team || null, p2Team: pending.p2Team || null, shapeshiftMode: pending.shapeshiftMode || false });
     setScreen('loading');
   };
 
@@ -2227,13 +2272,13 @@ export default function Game() {
           <PlatformFighter
             p1Char={fighters.p1} p2Char={fighters.p2} p2IsCPU={fighters.isCPU}
             selectedMap={fighters.map} cpuDifficulty={fighters.difficulty}
-            gameMode={fighters.gameMode} playerControls={fighters.playerControls || null} customPlatforms={fighters.customPlatforms} customSpawnPoints={fighters.customSpawnPoints} customHazards={fighters.customHazards} customObjects={fighters.customObjects} customStageConfig={fighters.customStageConfig} stageCamera={fighters.stageCamera} killPerimeter={fighters.killPerimeter}
+            gameMode={fighters.gameMode} playerControls={fighters.playerControls || null} matchHandicaps={fighters.matchHandicaps || null} mods={fighters.localRules?.mods || null} stockCount={fighters.localRules?.stocks || 0} customPlatforms={fighters.customPlatforms} customSpawnPoints={fighters.customSpawnPoints} customHazards={fighters.customHazards} customObjects={fighters.customObjects} customStageConfig={fighters.customStageConfig} stageCamera={fighters.stageCamera} killPerimeter={fighters.killPerimeter}
             p1Element={fighters.p1Element || 'basic'} p2Element={fighters.p2Element || 'basic'}
             onEnd={handleFightEnd} onAward={(result) => awardFightMatch(result)} musicVolume={progress.settings?.musicVolume ?? 50} sfxVolume={progress.settings?.sfxVolume ?? 70}
             equippedAccessories={fighters.rankedAccessories ? { ...(progress.equippedAccessories || {}), ...fighters.rankedAccessories } : progress.equippedAccessories}
             equippedSkins={fighters.rankedSkins ? { ...(progress.equippedSkins || {}), ...fighters.rankedSkins } : progress.equippedSkins}
             killFXId={progress.settings?.killFXEnabled !== false ? (progress.equippedKillFX || 'none') : 'none'}
-            matchTime={progress.settings?.matchTime ?? 240}
+            matchTime={fighters.localRules?.matchTime ?? progress.settings?.matchTime ?? 240}
             settings={progress.settings || {}}
             p1Username={userProfile.username} p1Title={userProfile.title}
             customCharsData={customCharData}
@@ -2441,7 +2486,7 @@ export default function Game() {
             )}
 
         {screen === 'team' && (
-          <TeamMode onBack={goBack} onEnd={(result) => {
+          <TeamMode onBack={goBack} initialTeamCharacters={pending?.teamPicks || [pending?.p1, pending?.p2]} initialTeamFormat={pending?.teamFormat || 'pc_cc'} matchHandicaps={pending?.matchHandicaps || null} onEnd={(result) => {
             if (result.p1Won) {
               setProgress(prev => { const next = { ...prev, charMastery: recordMasteryWin(prev.charMastery || {}, result.p1CharId || prev.favoriteId || 'yellow') }; saveProgress(next); return next; });
             }

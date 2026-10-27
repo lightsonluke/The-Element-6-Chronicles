@@ -697,9 +697,32 @@ function drawExactAttackHitboxOverlay(ctx, fighter, label) {
   ctx.shadowBlur=0;ctx.fillStyle='#FF3B5C';ctx.font='bold 9px Orbitron, sans-serif';ctx.textAlign='center';ctx.fillText(`${label} ATTACK`,lx,ly-10);ctx.restore();
 }
 
+function normalizeMatchHandicap(value = {}) {
+  const bounded = n => Math.max(0, Math.min(300, Number.isFinite(Number(n)) ? Number(n) : 100));
+  return { damageDealt: bounded(value.damageDealt), damageTaken: bounded(value.damageTaken), knockback: bounded(value.knockback), movementSpeed: bounded(value.movementSpeed), jumpHeight: bounded(value.jumpHeight) };
+}
+
+function applyMatchHandicap(attacker, defender, damageBefore, hpBefore, vxBefore, vyBefore) {
+  const a = attacker?.matchHandicap, d = defender?.matchHandicap;
+  if (!a && !d) return;
+  const dealt = (a?.damageDealt ?? 100) / 100;
+  const taken = (d?.damageTaken ?? 100) / 100;
+  const factor = dealt * taken;
+  if (Number.isFinite(Number(damageBefore)) && Number.isFinite(Number(defender.damage))) {
+    defender.damage = damageBefore + (defender.damage - damageBefore) * factor;
+    if (factor < 1 && defender.gameMode !== 'brawl' && defender.damage < 1500) defender._pendingDeath = false;
+  }
+  if (Number.isFinite(Number(hpBefore)) && Number.isFinite(Number(defender.hp))) {
+    defender.hp = Math.max(0, hpBefore - (hpBefore - defender.hp) * factor);
+  }
+  const kb = (a?.knockback ?? 100) / 100;
+  if (Number.isFinite(defender.vx)) defender.vx = vxBefore + (defender.vx - vxBefore) * kb;
+  if (Number.isFinite(defender.vy)) defender.vy = vyBefore + (defender.vy - vyBefore) * kb;
+}
+
 export default function PlatformFighter({
   p1Char, p2Char, p2IsCPU, onEnd, onAward, onRematch, selectedMap, cpuDifficulty = 'regular',
-  gameMode = 'regular', playerControls = null, dummy = false, dummyAutoRecover = false, customPlatforms = null, customSpawnPoints = null, musicVolume = 50, sfxVolume = 70,
+  gameMode = 'regular', playerControls = null, matchHandicaps = null, dummy = false, dummyAutoRecover = false, customPlatforms = null, customSpawnPoints = null, musicVolume = 50, sfxVolume = 70,
   equippedAccessories = {}, equippedSkins = {}, killFXId = 'none',
   p1Element = 'basic', p2Element = 'basic', infiniteSuper = false, lanConnection = null, lanRole = null,
   matchTime = 240, settings = {}, localScheme = null,
@@ -880,6 +903,9 @@ export default function PlatformFighter({
     if (gameMode === 'botbattle') { f1.isAI = true; f1.cpuDifficulty = cpuDifficulty; }
     if (gameMode === 'challenge') { f2.cpuDifficulty = 'honored'; f2.isAI = true; }
     f1.gameMode = gameMode; f2.gameMode = gameMode;
+    const localHandicapsOn = !!matchHandicaps?.enabled;
+    f1.matchHandicap = localHandicapsOn ? normalizeMatchHandicap(matchHandicaps.players?.[0]) : null;
+    f2.matchHandicap = localHandicapsOn ? normalizeMatchHandicap(matchHandicaps.players?.[1]) : null;
     if (gameMode === 'lowgravity') { f1.lowGravity = true; f2.lowGravity = true; }
     if (gameMode === 'sudden') {
       f1.stocks = 1; f2.stocks = 1; f1.damage = 600; f2.damage = 600;
@@ -1492,8 +1518,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         const _isSuper1 = f1.state === 'superAttack';
         const _isHeavy1 = f1.attackData && f1.attackData.isHeavy;
         stats.hits++; if (_isSuper1) stats.superHits++; if (_isHeavy1) stats.heavyHits++;
-        const _f2DmgBefore = f2.damage;
+        const _f2DmgBefore = f2.damage, _f2HpBefore = f2.hp, _f2VxBefore = f2.vx, _f2VyBefore = f2.vy;
         applyHit(f1, f2);
+        applyMatchHandicap(f1, f2, _f2DmgBefore, _f2HpBefore, _f2VxBefore, _f2VyBefore);
         if (M && M.damageMultiplier !== 1) f2.damage = _f2DmgBefore + (f2.damage - _f2DmgBefore) * M.damageMultiplier;
         if (_isSuper1) { hitstop = 14; superImpactFlash = 1.0; shakeMag = 28; sfx.superImpact(); }
         else if (_isHeavy1) { hitstop = 5; shakeMag = Math.max(shakeMag, 12); sfx.heavyHit(); }
@@ -1510,8 +1537,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         const _isSuper2 = f2.state === 'superAttack';
         const _isHeavy2 = f2.attackData && f2.attackData.isHeavy;
         p2Stats.hits++; if (_isSuper2) p2Stats.superHits++; if (_isHeavy2) p2Stats.heavyHits++;
-        const _f1DmgBefore = f1.damage;
+        const _f1DmgBefore = f1.damage, _f1HpBefore = f1.hp, _f1VxBefore = f1.vx, _f1VyBefore = f1.vy;
         applyHit(f2, f1);
+        applyMatchHandicap(f2, f1, _f1DmgBefore, _f1HpBefore, _f1VxBefore, _f1VyBefore);
         if (M && M.damageMultiplier !== 1) f1.damage = _f1DmgBefore + (f1.damage - _f1DmgBefore) * M.damageMultiplier;
         if (_isSuper2) { hitstop = 14; superImpactFlash = 1.0; shakeMag = 28; sfx.superImpact(); }
         else if (_isHeavy2) { hitstop = 5; shakeMag = Math.max(shakeMag, 12); sfx.heavyHit(); }
