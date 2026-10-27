@@ -166,8 +166,8 @@ export function getActiveSpecHitboxes(attacker) {
       if (mk === 'downHeavy' || mk === 'down' || data.isGroundPound) mk = 'dh';
       else if (mk === 'upHeavy' || mk === 'upheavy' || mk === 'aerialHeavy' || mk === 'aerial' || data.isAerialHeavy) mk = 'uh';
       else mk = 'sh';
-    } else if (mk === 'up' || mk === 'upSignature') mk = 'us';
-    else if (mk === 'down' || mk === 'downSignature') mk = 'ds';
+    } else if (mk === 'up' || mk === 'upSignature' || mk === 'aerial' || data.isRecovery) mk = 'us';   // same key the artwork uses
+    else if (mk === 'down' || mk === 'downSignature' || mk === 'downNormal') mk = 'ds';
     else mk = 'ss';
     const localBoxes = getGen2Hitboxes(attacker.char.id, mk, t, attacker.facing || 1);
     // Generation II hitboxes are authored in the same local coordinate space as
@@ -189,8 +189,8 @@ export function getActiveSpecHitboxes(attacker) {
       if (mk === 'downHeavy' || mk === 'down' || data.isGroundPound) mk = 'dh';
       else if (mk === 'upHeavy' || mk === 'upheavy' || mk === 'aerialHeavy' || mk === 'aerial' || data.isAerialHeavy) mk = 'uh';
       else mk = 'sh';
-    } else if (mk === 'up' || mk === 'upSignature') mk = 'us';
-    else if (mk === 'down' || mk === 'downSignature') mk = 'ds';
+    } else if (mk === 'up' || mk === 'upSignature' || mk === 'aerial' || data.isRecovery) mk = 'us';   // same key the artwork uses
+    else if (mk === 'down' || mk === 'downSignature' || mk === 'downNormal') mk = 'ds';
     else mk = 'ss';
     const localBoxes = getGen3Hitboxes(attacker.char.id, mk, t, attacker.facing || 1);
     const ox = Number(attacker.x) || 0, oy = Number(attacker.y) || 0;
@@ -209,8 +209,8 @@ export function getActiveSpecHitboxes(attacker) {
       if (mk === 'downHeavy' || mk === 'down' || data.isGroundPound) mk = 'dh';
       else if (mk === 'upHeavy' || mk === 'upheavy' || mk === 'aerialHeavy' || mk === 'aerial' || data.isAerialHeavy) mk = 'uh';
       else mk = 'sh';
-    } else if (mk === 'up' || mk === 'upSignature') mk = 'us';
-    else if (mk === 'down' || mk === 'downSignature') mk = 'ds';
+    } else if (mk === 'up' || mk === 'upSignature' || mk === 'aerial' || data.isRecovery) mk = 'us';   // same key the artwork uses
+    else if (mk === 'down' || mk === 'downSignature' || mk === 'downNormal') mk = 'ds';
     else mk = 'ss';
     const localBoxes = getGen4Hitboxes(attacker.char.id, mk, t, attacker.facing || 1);
     const ox = Number(attacker.x) || 0, oy = Number(attacker.y) || 0;
@@ -229,8 +229,8 @@ export function getActiveSpecHitboxes(attacker) {
       if (mk === 'downHeavy' || mk === 'down' || data.isGroundPound) mk = 'dh';
       else if (mk === 'upHeavy' || mk === 'upheavy' || mk === 'aerialHeavy' || mk === 'aerial' || data.isAerialHeavy) mk = 'uh';
       else mk = 'sh';
-    } else if (mk === 'up' || mk === 'upSignature') mk = 'us';
-    else if (mk === 'down' || mk === 'downSignature') mk = 'ds';
+    } else if (mk === 'up' || mk === 'upSignature' || mk === 'aerial' || data.isRecovery) mk = 'us';   // same key the artwork uses
+    else if (mk === 'down' || mk === 'downSignature' || mk === 'downNormal') mk = 'ds';
     else mk = 'ss';
     const localBoxes = getGen5RestHitboxes(attacker.char.id, mk, t, attacker.facing || 1);
     const ox = Number(attacker.x) || 0, oy = Number(attacker.y) || 0;
@@ -248,8 +248,8 @@ export function getActiveSpecHitboxes(attacker) {
       if (mk === 'downHeavy' || mk === 'down' || data.isGroundPound) mk = 'dh';
       else if (mk === 'upHeavy' || mk === 'upheavy' || mk === 'aerialHeavy' || mk === 'aerial' || data.isAerialHeavy) mk = 'uh';
       else mk = 'sh';
-    } else if (mk === 'up' || mk === 'upSignature') mk = 'us';
-    else if (mk === 'down' || mk === 'downSignature') mk = 'ds';
+    } else if (mk === 'up' || mk === 'upSignature' || mk === 'aerial' || data.isRecovery) mk = 'us';   // same key the artwork uses
+    else if (mk === 'down' || mk === 'downSignature' || mk === 'downNormal') mk = 'ds';
     else mk = 'ss';
     const localBoxes = getGen5Hitboxes(attacker.char.id, mk, t, attacker.facing || 1);
     const ox = Number(attacker.x) || 0, oy = Number(attacker.y) || 0;

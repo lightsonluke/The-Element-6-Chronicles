@@ -15,12 +15,14 @@ const line=(x1,y1,x2,y2,r=6)=>({shape:'capsule',x1,y1,x2,y2,r});
 const box=(x,y,w,h)=>({shape:'box',x,y,w,h});
 const circle=(x,y,r)=>({shape:'circle',x,y,r});
 export function gen1MoveKey(charId,d){
+ // Mirrors charAttackAnims.getAttackKey exactly, so the hitbox is always the move that is being drawn.
  if(d?.isGroundPound||d?.type==='groundPound')return 'groundPound';
  if(d?.isRecovery||d?.type==='recovery'||d?.recoveryAnimationKey)return 'recovery';
  if(d?.isSuper||d?.sigType==='super')return 'super';
- if(d?.isHeavy){if(['downHeavy','down','dh'].includes(d.sigType))return 'dh';if(['upHeavy','upheavy','uh'].includes(d.sigType))return 'uh';return 'sh';}
- if(['up','upSignature','us'].includes(d?.sigType))return 'us';
- if(['down','downSignature','downNormal','ds'].includes(d?.sigType))return 'ds';
+ const st=d?.sigType||'side';
+ if(d?.isHeavy){if(['downHeavy','down','dh'].includes(st))return 'dh';if(['upHeavy','upheavy','uh','aerialHeavy','aerial'].includes(st)||d.isAerialHeavy)return 'uh';return 'sh';}
+ if(['up','upSignature','us','aerial'].includes(st))return 'us';
+ if(['down','downSignature','downNormal','ds'].includes(st))return 'ds';
  return 'ss';
 }
 // Full-animation progress, not active-window-normalized progress, so collision is literally on the rendered pose.

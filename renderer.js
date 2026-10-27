@@ -5,6 +5,7 @@ import { drawStageBackground } from './stageBackgrounds.js';
 import { getMaterial } from './materials.js';
 import { getEmotePoseVars } from './emotePose.js';
 import { getGen1AttackPose } from './gen1AttackAnims.js';
+import { getGen2AttackPose } from './gen2AttackAnims.js';
 import { getResonanceAttackAction } from './resonanceConstructs.js';
 import { getAttackSpecForData } from './attackSpecs.js';
 import { drawSpecAttack, drawSpecSuper } from './attackSpecRenderer.js';
@@ -178,6 +179,17 @@ function solveFighterPose(s, frame, state, facing, emote, attackData, charData, 
       const prog = attackData.isSuper ? Math.max(0, Number(attackData.progress) || 0) :
         (held > 0 && !(Number(attackData.progress) > 0) ? held * 0.55 : Math.max(0, Number(attackData.progress) || 0));
       gen1 = getGen1AttackPose(st, prog, facing, charData.id) || null;
+    } catch (e) { gen1 = null; }
+  }
+  // Gen II: authored body choreography (arms / lean / legs / bob) for every special, same slot as Gen I.
+  if (!gen1 && charData?.id?.startsWith('g2_') && attackData && (state === 'attacking' || state === 'superAttack')) {
+    try {
+      const st = attackData.isSuper ? 'sp' : attackData.isHeavy ?
+        ((attackData.sigType === 'upHeavy' || attackData.sigType === 'upheavy' || attackData.sigType === 'aerialHeavy' || attackData.sigType === 'aerial' || attackData.isAerialHeavy) ? 'uh' :
+         (attackData.sigType === 'downHeavy' || attackData.sigType === 'down' || attackData.isGroundPound) ? 'dh' : 'sh') :
+        ((attackData.sigType === 'up' || attackData.sigType === 'upSignature' || attackData.sigType === 'aerial' || attackData.isRecovery) ? 'us' :
+         (attackData.sigType === 'down' || attackData.sigType === 'downSignature' || attackData.sigType === 'downNormal') ? 'ds' : 'ss');
+      gen1 = getGen2AttackPose(st, Math.max(0, Number(attackData.progress) || 0), facing, charData.id) || null;
     } catch (e) { gen1 = null; }
   }
   return solvePose({ s, frame, state, facing, motion, emoteVars, attack: attackData, gen1 });
