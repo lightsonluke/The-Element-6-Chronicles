@@ -1,4 +1,3 @@
-
 // Universal movement abilities shared by every fight-mode simulation.
 //
 // Rules:
@@ -6,10 +5,10 @@
 // - Grounded: only left/right dashes are allowed and they are NOT invulnerable.
 // - Airborne: all four directions become a 0.30s dodge with invulnerability.
 // - Airborne dodges consume one dodge use.
-// - Solid walls at least half a fighter tall can be wall-slid while moving into them.
-// - Touching and then leaving a wall grants two jumps and one air dodge.
-// - This can happen three times before landing.
-// - Touching a wall without leaving it does not grant resources.
+// - Solid walls at least half a fighter tall can be wall-slid.
+// - Leaving a wall restores two jumps and one dodge.
+// - Wall departure rewards can happen up to three times before landing.
+// - Touching a wall alone does not restore jumps or dodges.
 // - Landing resets the wall departure counter and restores normal resources.
 // - Sports modes are excluded; the existing identifier is "soccer".
 
@@ -215,30 +214,74 @@ function getWallContact(platforms, fighter) {
   return left ? -1 : right ? 1 : 0;
 }
 
+// Grants resources when a fighter leaves a wall.
+// Each departure can only grant resources once.
+function grantWallDepartureResources(fighter) {
+  if (!fighter.wallContactActive) return;
+
+  const grantsUsed = fighter.wallGrantsUsed || 0;
+
+  if (
+    grantsUsed <
+    MOVEMENT_ABILITY_CONFIG.maxWallJumpResets
+  ) {
+    fighter.wallGrantsUsed = grantsUsed + 1;
+
+    const maxJumps = Number.isFinite(fighter.maxJumps)
+      ? fighter.maxJumps
+      : 3;
+
+    fighter.jumpsUsed = Math.max(
+      0,
+      maxJumps - MOVEMENT_ABILITY_CONFIG.jumpsPerWallDeparture
+    );
+
+    fighter.airDodgeUses =
+      MOVEMENT_ABILITY_CONFIG.dodgesPerWallDeparture;
+  }
+
+  // Consume this departure event exactly once.
+  fighter.wallContactActive = false;
+  fighter.wallGrantPending = false;
+}
+
 export function updateMovementAbilities(fighter, inputs, platforms) {
   if (isSportsMode(fighter)) return;
 
-  // Dedicated Dash is edge-triggered; held buttons never repeat the action.
-  // Preserve the existing double-tap path and use only directional movement
-  // (not the jump action's `up` alias) to choose an air-dash direction.
+  // Dedicated Dash is edge-triggered.
   const dashPressed = !!inputs?.dash;
   const dashWasHeld = !!fighter._dashButtonHeld;
+
   fighter._dashButtonHeld = dashPressed;
 
   if (dashPressed && !dashWasHeld) {
-    let dx = inputs.left === inputs.right ? 0 : (inputs.left ? -1 : 1);
+    let dx =
+      inputs.left === inputs.right
+        ? 0
+        : (inputs.left ? -1 : 1);
+
     let dy = inputs.down ? 1 : 0;
 
     if (fighter.grounded) {
       if (dx === 0) dx = fighter.facing || 1;
+
       startDash(fighter, dx, 0);
     } else {
-      if (dx === 0 && dy === 0) dx = fighter.facing || 1;
+      if (dx === 0 && dy === 0) {
+        dx = fighter.facing || 1;
+      }
+
       const length = Math.hypot(dx, dy) || 1;
-      startDash(fighter, dx / length, dy / length);
+
+      startDash(
+        fighter,
+        dx / length,
+        dy / length
+      );
     }
   }
 
+  // Landing restores normal resources and resets the wall chain.
   if (fighter.grounded) {
     fighter.airDodgeUses = fighter.maxJumps;
     fighter.jumpsUsed = 0;
@@ -248,6 +291,29 @@ export function updateMovementAbilities(fighter, inputs, platforms) {
     fighter.wallGrantPending = false;
   }
 
+  // Detect actual physical wall contact.
+  const detectedWallSide = getWallContact(platforms, fighter);
+
+  const physicalWallContact =
+    !fighter.grounded &&
+    detectedWallSide !== 0;
+
+  // If the fighter was touching a wall but no longer is,
+  // grant the wall-departure resources.
+  if (
+    fighter.wallContactActive &&
+    !physicalWallContact
+  ) {
+    grantWallDepartureResources(fighter);
+  }
+
+  // Record wall contact, including during a dash.
+  if (physicalWallContact) {
+    fighter.wallContactActive = true;
+    fighter.wallSide = detectedWallSide;
+  }
+
+  // Do not allow directional double-taps while control is locked.
   const locked =
     fighter.hitstun > 0 ||
     fighter.landingLag > 0 ||
@@ -259,29 +325,18 @@ export function updateMovementAbilities(fighter, inputs, platforms) {
     tryDirectionalDoubleTap(fighter, inputs);
   }
 
+  // Dashing takes priority over wall sliding.
+  // Wall contact tracking above still runs during a dash.
   if (fighter.dashTimer > 0) {
     fighter.wallSlide = false;
     return;
   }
 
-  // Use actual contact only. Falling back to the previous wallSide would
-  // keep the fighter in wall-slide state after moving away, preventing the
-  // wall-departure jump reset from triggering.
-  const detectedWallSide = getWallContact(platforms, fighter);
-  const side = detectedWallSide;
-
   const touchingWall =
-    !fighter.grounded &&
-    !fighter.gravityInverted &&
-    side !== 0;
+    physicalWallContact &&
+    !fighter.gravityInverted;
 
   if (touchingWall) {
-    // Mark the start of wall contact only once.
-    if (!fighter.wallContactActive) {
-      fighter.wallContactActive = true;
-    }
-
-    fighter.wallSide = side;
     fighter.wallSlide = true;
     fighter.vx = 0;
 
@@ -296,59 +351,21 @@ export function updateMovementAbilities(fighter, inputs, platforms) {
   }
 }
 
-// Call after resolveCollisions(), so grounded and wallSide reflect
-// the current frame.
+// Called after resolveCollisions().
+// This function handles landing resets only.
+// Wall departures are detected inside updateMovementAbilities().
 export function onMovementAbilityLanded(fighter) {
-  if (isSportsMode(fighter)) {
-    return;
-  }
+  if (isSportsMode(fighter)) return;
 
-  // A normal landing fully resets the wall-jump chain.
-  if (fighter.grounded) {
-    fighter.airDodgeUses = fighter.maxJumps;
-    fighter.jumpsUsed = 0;
-    fighter.wallSlide = false;
-    fighter.wallContactActive = false;
-    fighter.wallGrantPending = false;
-    fighter.wallGrantsUsed = 0;
-    return;
-  }
+  if (!fighter.grounded) return;
 
-  const stillOnWall = fighter.wallSlide && fighter.wallSide;
+  fighter.airDodgeUses = fighter.maxJumps;
+  fighter.jumpsUsed = 0;
 
-  if (stillOnWall) {
-    fighter.wallContactActive = true;
-    return;
-  }
-
-  // We have left a wall. Grant two jumps and one dodge,
-  // up to three separate wall departures before landing.
-  if (fighter.wallContactActive) {
-    const resetsUsed = fighter.wallGrantsUsed || 0;
-
-    if (
-      resetsUsed <
-      MOVEMENT_ABILITY_CONFIG.maxWallJumpResets
-    ) {
-      fighter.wallGrantsUsed = resetsUsed + 1;
-
-      // Restore exactly two jumps.
-      fighter.jumpsUsed = Math.max(
-        0,
-        fighter.maxJumps -
-          MOVEMENT_ABILITY_CONFIG.jumpsPerWallDeparture
-      );
-
-      // Restore exactly one air dodge.
-      fighter.airDodgeUses =
-        MOVEMENT_ABILITY_CONFIG.dodgesPerWallDeparture;
-    }
-
-    // Consume the wall departure event exactly once.
-    fighter.wallContactActive = false;
-  }
-
+  fighter.wallSlide = false;
+  fighter.wallContactActive = false;
   fighter.wallGrantPending = false;
+  fighter.wallGrantsUsed = 0;
 }
 
 export function resetMovementAbilityState(fighter) {
