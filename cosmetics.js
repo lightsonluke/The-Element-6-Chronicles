@@ -418,7 +418,7 @@ function drawRedesignedAccessory(ctx, p) {
     if(type==='necklace'){ctx.save();ctx.strokeStyle=C;ctx.lineWidth=s*.035;ctx.beginPath();ctx.arc(x,torsoTopY+s*.04,s*.21,0,Math.PI);ctx.stroke();gem(x,torsoTopY+s*.25,s*.075,accent);ctx.restore();}
     else if(type==='clan_badge'){ctx.save();circle(x,torsoCY,s*.16,'#F8FAFC',C,s*.025);circle(x,torsoCY,s*.12,C,'rgba(15,23,42,.65)',s*.015);star(x,torsoCY,s*.07,'#FFFFFF');ctx.restore();}
     else if(type==='bracelet'||type==='watch'){[handL,handR].forEach(pt=>{limbBand(pt,s*.2,s*.07,C);});if(type==='watch'){round(handL.x-s*.075,handL.y-s*.06,s*.15,s*.12,s*.025,'#111827',C,s*.018);circle(handL.x,handL.y,s*.035,'#F8FAFC');line(handL.x,handL.y,handL.x+s*.025,handL.y-s*.025,C,s*.012);}}
-    else if(['gloves','claw_gauntlets'].includes(type)){[handL,handR].forEach(pt=>{ctx.save();glow(type==='claw_gauntlets'?C:0,5);circle(pt.x,pt.y,s*.105,C,'rgba(15,23,42,.75)',s*.02);round(pt.x-s*.08,pt.y-s*.045,s*.16,s*.075,s*.025,'rgba(255,255,255,.18)');if(type==='claw_gauntlets')for(let i=-1;i<=1;i++)poly([[pt.x+i*s*.045,pt.y+s*.06],[pt.x+i*s*.055,pt.y+s*.18],[pt.x+i*s*.02,pt.y+s*.09]],'#CBD5E1','#475569',s*.012);ctx.restore();});}
+    else if(['gloves','claw_gauntlets'].includes(type)){[handL,handR].forEach(pt=>{ctx.save();glow(type==='claw_gauntlets'?C:0,5);circle(pt.x,pt.y,s*.105,C,'rgba(15,23,42,.75)',s*.02);round(pt.x-s*.08,pt.y-s*.045,s*.16,s*.075,s*.025,'rgba(255,255,255,.18)');if(type==='claw_gauntlets'){round(pt.x-s*.09,pt.y+s*.025,s*.18,s*.055,s*.025,'#CBD5E1','#475569',s*.012);}ctx.restore();});}
     else if(['shoes','slayer_shoes','rocket_boots','gravity_boots','flippers','geta'].includes(type)){[footL,footR].forEach((pt,i)=>{if(type==='flippers'){ctx.save();poly([[pt.x-s*.07,pt.y-s*.02],[pt.x+s*.08,pt.y-s*.04],[pt.x+s*.22,pt.y+s*.02],[pt.x+s*.19,pt.y+s*.07],[pt.x-s*.08,pt.y+s*.06]],C,'rgba(255,255,255,.65)',s*.015);line(pt.x+s*.02,pt.y,pt.x+s*.15,pt.y+s*.02,accent,s*.018);ctx.restore();}else if(type==='geta'){round(pt.x-s*.13,pt.y-s*.025,s*.26,s*.065,s*.018,'#8B5E34','#E5C18A',s*.018);line(pt.x,pt.y-s*.01,pt.x-s*.04,pt.y-s*.09,C,s*.025);line(pt.x,pt.y-s*.01,pt.x+s*.04,pt.y-s*.09,C,s*.025);line(pt.x-s*.04,pt.y-s*.09,pt.x+s*.04,pt.y-s*.09,C,s*.025);}else drawBoot(pt,type==='rocket_boots'||type==='gravity_boots');if(type==='rocket_boots'){glow('#FF6B35',10);poly([[pt.x-s*.04,pt.y+s*.08],[pt.x,pt.y+s*.21+Math.sin(t*5+i)*s*.03],[pt.x+s*.04,pt.y+s*.08]],'#FF6B35');noGlow();}if(type==='gravity_boots'){ctx.save();ctx.strokeStyle=accent;ctx.lineWidth=s*.018;ctx.beginPath();ctx.ellipse(pt.x,pt.y+s*.13,s*.16,s*.05,0,0,Math.PI*2);ctx.stroke();ctx.restore();}});}
     else if(type==='armguards'||type==='vine_bracers'){[elbowL,elbowR].forEach(pt=>{limbBand(pt,s*.22,s*.19,C);if(type==='vine_bracers'){line(pt.x-s*.09,pt.y+s*.08,pt.x+s*.09,pt.y-s*.08,'#65A30D',s*.025);circle(pt.x+s*.05,pt.y-s*.03,s*.025,'#86EFAC');}});}
     else if(type==='kneepads'){[kneeL,kneeR].forEach(pt=>{ellipse(pt.x,pt.y,s*.12,s*.09,C,0,'rgba(255,255,255,.65)',s*.018);line(pt.x-s*.05,pt.y,pt.x+s*.05,pt.y,accent,s*.018);});}
@@ -760,11 +760,10 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
     ctx.save(); ctx.fillStyle = color; ctx.globalAlpha = 0.9;
     ctx.beginPath(); ctx.roundRect(handL.x - s * 0.09, handL.y - s * 0.09, s * 0.18, s * 0.18, 3); ctx.fill();
     ctx.beginPath(); ctx.roundRect(handR.x - s * 0.09, handR.y - s * 0.09, s * 0.18, s * 0.18, 3); ctx.fill();
-    for (let i = 0; i < 3; i++) {
-      ctx.strokeStyle = color; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(handL.x - s * 0.06 + i * s * 0.06, handL.y + s * 0.09); ctx.lineTo(handL.x - s * 0.06 + i * s * 0.06, handL.y + s * 0.17); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(handR.x - s * 0.06 + i * s * 0.06, handR.y + s * 0.09); ctx.lineTo(handR.x - s * 0.06 + i * s * 0.06, handR.y + s * 0.17); ctx.stroke();
-    }
+    // A single broad wrist plate keeps the accessory compatible with rounded stump hands.
+    ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = Math.max(1, s * 0.018);
+    ctx.beginPath(); ctx.moveTo(handL.x - s * 0.07, handL.y + s * 0.035); ctx.lineTo(handL.x + s * 0.07, handL.y + s * 0.035); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(handR.x - s * 0.07, handR.y + s * 0.035); ctx.lineTo(handR.x + s * 0.07, handR.y + s * 0.035); ctx.stroke();
     ctx.restore();
   } else if (type === 'rocket_boots') {
     ctx.save(); ctx.fillStyle = color; ctx.globalAlpha = 0.85;
