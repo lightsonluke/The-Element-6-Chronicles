@@ -121,7 +121,7 @@ function hairFront(kind, hair, trim, seed) {
 function poseFor(index, style) {
   const motion = style.motion || [0,0,0,0,0];
   const drift = motion[0] * 15, swing = motion[1] * 13, flare = style.flare || .2;
-  const P = [
+  const poses = [
     { lean: 0, head: 0, legs:[[82,119,75,143,69,164],[107,119,115,143,123,164]], arms:[[78,82,66,99,68,113],[108,82,121,96,129,108]] },
     { lean: -6-drift*4, head:-2, legs:[[82,119,68,143,57,154],[107,119,119,138,132,161]], arms:[[78,82,68,69,63,58],[108,82,123,96,133,90]] },
     { lean: -5-drift*4, head:2, legs:[[82,119,70,137,63,161],[107,119,120,144,130,152]], arms:[[78,82,66,97,63,91],[108,82,120,69,128,61]] },
@@ -130,8 +130,8 @@ function poseFor(index, style) {
     { lean: -7, head:-3, legs:[[82,119,72,129,64,144],[107,119,117,132,127,145]], arms:[[78,82,68,63,63,48],[108,82,120,63,128,48]] },
     { lean: 10, head:4, legs:[[82,119,71,143,65,163],[107,119,114,143,122,163]], arms:[[78,82,65,98,61,110],[108,82,122,99,129,111]] },
     { lean: -12, head:-4, legs:[[82,119,73,142,63,163],[107,119,120,136,131,157]], arms:[[78,82,66,91,57,96],[108,82,127,88,139,88]] },
-  ][index];
-  const base = P[index];
+  ];
+  const base = poses[index] || poses[0];
   const p = { ...base, legs: base.legs.map((leg) => leg.slice()), arms: base.arms.map((arm) => arm.slice()) };
   p.lean += index === 1 ? swing*1.6 : 0;
   p.legs[1][4] += flare*5 + drift*2;
