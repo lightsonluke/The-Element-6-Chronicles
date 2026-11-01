@@ -103,6 +103,15 @@ const FALLBACK = look('naturalCrop', 'simpleTunic', 'taper', 'simpleShoe', 'smal
 
 export function getCharacterVisualStyle(charData) {
   const id = charData?.baseCharId || charData?.id;
-  return CHARACTER_VISUALS[id] || FALLBACK;
+  const base = CHARACTER_VISUALS[id] || FALLBACK;
+  // Crossover fighters retain their parent's silhouette, but their authored
+  // palette and hair-lock pattern come from their own roster entry.
+  if (!charData?.isCrossover) return base;
+  return {
+    ...base,
+    cloth: charData.secondaryColor || base.cloth,
+    trim: charData.color || base.trim,
+    hairColor: charData.secondaryColor || base.hairColor,
+  };
 }
 

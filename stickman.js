@@ -1,17 +1,18 @@
-// stickman.js — one procedural stickman rig shared by every fighter.
+// stickman.js — articulated pose solver for the fighter sprite atlas.
 //
-// Everything is drawn as flat 2D shapes on the existing articulated stickman rig.
-// The base proportions stay stable while per-character hair, garments, shoes,
-// blunt stump hands, and movement accents provide individual silhouettes.
+// characterPainter.js supplies authored character sprites for each movement
+// state. The solver remains the source of gameplay presentation state;
+// gameplay position, timing, collision, and hurtboxes remain in the game.
 //
 // Pipeline:  solvePose()  ->  joint positions (already mirrored + scaled)
-//            paintStickman() draws those joints
+//            paintStickman() selects the matching authored sprite pose
 //            getLimbPose() in renderer.js reads the same joints for cosmetics
 //
 // Limbs are two-bone IK chains, so knees/elbows always bend the right way and
 // feet stay planted while running.  "near" = the lead limb in the guard stance
 // (screen-right when facing right), "far" = the rear limb.
 import { getCharacterVisualStyle } from './characterVisuals.js';
+import { paintFighterCharacter } from './characterPainter.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -472,22 +473,29 @@ export function solvePose(o) {
     const [runLean, armAccent, dashLean, jumpOpen, wallReach] = visualStyle.motion;
     if (wRun > 0.001) {
       const beat = Math.sin(runPh * TAU);
-      V[LEAN] += runLean * wRun;
-      V[HNX] += beat * armAccent * wRun;
-      V[HFX] -= beat * armAccent * 0.82 * wRun;
+      V[LEAN] += runLean * 1.18 * wRun;
+      V[HNX] += beat * armAccent * 1.45 * wRun;
+      V[HFX] -= beat * armAccent * 1.22 * wRun;
+      V[HEAD] -= Math.abs(beat) * runLean * 0.18 * wRun;
     }
     if (wDash > 0.001) {
-      V[LEAN] += dashLean * wDash;
-      V[HFX] -= dashLean * 0.45 * wDash;
+      V[LEAN] += dashLean * 1.30 * wDash;
+      V[HNX] -= dashLean * 0.72 * wDash;
+      V[HFX] -= dashLean * 0.88 * wDash;
+      V[HNY] += Math.abs(dashLean) * 0.25 * wDash;
     }
     if (wWall > 0.001) {
-      V[HNX] += wallReach * wWall;
-      V[HNY] -= wallReach * 0.35 * wWall;
+      V[HNX] += wallReach * 1.22 * wWall;
+      V[HNY] -= wallReach * 0.54 * wWall;
+      V[HFX] -= wallReach * 0.52 * wWall;
+      V[FNX] += wallReach * 0.18 * wWall;
     }
     if (wAir > 0.001) {
-      V[HNX] += jumpOpen * wAir;
-      V[HFX] -= jumpOpen * 0.72 * wAir;
-      V[FNX] += jumpOpen * 0.20 * wAir;
+      V[HNX] += jumpOpen * 1.18 * wAir;
+      V[HFX] -= jumpOpen * 0.92 * wAir;
+      V[FNX] += jumpOpen * 0.25 * wAir;
+      V[FFX] -= jumpOpen * 0.16 * wAir;
+      V[HEAD] -= jumpOpen * 0.08 * wAir;
     }
   }
 
@@ -535,414 +543,6 @@ export function solvePose(o) {
   return joints;
 }
 
-// ─── Painter ────────────────────────────────────────────────────────────────
-function capsule(ctx, ax, ay, ar, bx, by, br) {
-  const dx = bx - ax, dy = by - ay, d = Math.hypot(dx, dy);
-  ctx.beginPath();
-  if (d < 1e-3 || d <= Math.abs(ar - br)) { ctx.arc(d < 1e-3 || ar >= br ? ax : bx, d < 1e-3 || ar >= br ? ay : by, Math.max(ar, br), 0, TAU); ctx.fill(); return; }
-  const ang = Math.atan2(dy, dx);
-  const off = Math.acos(clamp((ar - br) / d, -1, 1));
-  ctx.arc(ax, ay, ar, ang + off, ang - off + TAU, false);
-  ctx.arc(bx, by, br, ang - off, ang + off, false);
-  ctx.closePath();
-  ctx.fill();
-}
-
-function disc(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
-
-function parseColor(color) {
-  const str = String(color || '');
-  let m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(str);
-  if (m) { let h = m[1]; if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
-  m = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i.exec(str);
-  return m ? [+m[1], +m[2], +m[3]] : null;
-}
-const rgbStr = (c) => `rgb(${c.map(v => clamp(Math.round(v), 0, 255)).join(',')})`;
-
-export function shade(color, amt) {
-  const c = parseColor(color);
-  return c ? rgbStr(c.map(v => v + amt)) : color;
-}
-
-// Arms get their own colour so they read clearly against the torso: a lighter tint of the body
-// colour (or a deeper one when the body is already very light). The rear arm is a touch dimmer than
-// the front arm, and both stay well away from the darker rear-leg shade.
-function armColors(color) {
-  const c = parseColor(color);
-  if (!c) return [color, color];
-  const lum = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
-  const tint = lum < 185
-    ? (k) => c.map(v => v + (255 - v) * k)                  // blend toward white
-    : (k) => c.map(v => v * (1 - k * 0.8));                 // very light body: go deeper instead
-  return [rgbStr(tint(0.45)), rgbStr(tint(0.30))];
-}
-
-function paintStumpHand(ctx, L, r) {
-  // Blunt, rounded hand ends by design. No fingers, nails, or glove digits.
-  const dx = L.hand[0] - L.elbow[0], dy = L.hand[1] - L.elbow[1];
-  const d = Math.hypot(dx, dy) || 1;
-  const ux = dx / d, uy = dy / d;
-  const cx = L.hand[0] + ux * r.hand * 0.10;
-  const cy = L.hand[1] + uy * r.hand * 0.10;
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, r.hand * 0.92, r.hand * 0.76, Math.atan2(dy, dx), 0, TAU);
-  ctx.fill();
-  // A short cuff seam separates the forearm from the stump without implying digits.
-  ctx.strokeStyle = shade(ctx.fillStyle, -22);
-  ctx.lineWidth = Math.max(0.8, r.hand * 0.15);
-  ctx.beginPath();
-  const px = -uy * r.hand * 0.48, py = ux * r.hand * 0.48;
-  ctx.moveTo(L.hand[0] - ux * r.hand * 0.30 + px, L.hand[1] - uy * r.hand * 0.30 + py);
-  ctx.lineTo(L.hand[0] - ux * r.hand * 0.30 - px, L.hand[1] - uy * r.hand * 0.30 - py);
-  ctx.stroke();
-}
-
-function paintLimbSet(ctx, L, r, legColor, armColor, armBehindLeg = false) {
-  // On the far side, paint the arm first so the rear leg stays visibly in front of it.
-  const drawArm = () => {
-    ctx.fillStyle = armColor;
-    capsule(ctx, L.shoulder[0], L.shoulder[1], r.shoulder, L.elbow[0], L.elbow[1], r.elbow);
-    capsule(ctx, L.elbow[0], L.elbow[1], r.elbow, L.hand[0], L.hand[1], r.handArm);
-    paintStumpHand(ctx, L, r);
-  };
-  const drawLeg = () => {
-    ctx.fillStyle = legColor;
-    capsule(ctx, L.hip[0], L.hip[1], r.hip, L.knee[0], L.knee[1], r.knee);
-    capsule(ctx, L.knee[0], L.knee[1], r.knee, L.foot[0], L.foot[1], r.foot);
-  };
-  if (armBehindLeg) { drawArm(); drawLeg(); }
-  else { drawLeg(); drawArm(); }
-}
-
-function paintBody(ctx, J, color) {
-  const r = J.r;
-  const far = shade(color, -22);
-  const [armNear, armFar] = armColors(color);
-
-  // Far (rear) limbs: darker legs, dimmer arm
-  paintLimbSet(ctx, J.far, r, far, armFar, true);
-
-  // Torso: a tapered spine from pelvis to neck
-  ctx.fillStyle = color;
-  const a = J.hip, m = J.torsoMid, b = J.shoulder;
-  let px = a[0], py = a[1], pr = r.hip;
-  for (let i = 1; i <= 8; i++) {
-    const t = i / 8, u = 1 - t;
-    const x = u * u * a[0] + 2 * u * t * (2 * m[0] - (a[0] + b[0]) / 2) + t * t * b[0];
-    const y = u * u * a[1] + 2 * u * t * (2 * m[1] - (a[1] + b[1]) / 2) + t * t * b[1];
-    const rr = lerp(r.hip, r.chest, t);
-    capsule(ctx, px, py, pr, x, y, rr);
-    px = x; py = y; pr = rr;
-  }
-  disc(ctx, J.head[0], J.head[1], J.headR);
-
-  // Near (lead) limbs
-  paintLimbSet(ctx, J.near, r, color, armNear);
-}
-
-export function paintStickman(ctx, J, color, charData = null, frame = 0) {
-  paintCharacter(ctx, J, color, charData, frame);
-}
-
-function polygon(ctx, points, fill, stroke = '#17191E', lineWidth = 1) {
-  if (!points || points.length < 3) return;
-  ctx.beginPath();
-  ctx.moveTo(points[0][0], points[0][1]);
-  for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
-  ctx.closePath();
-  ctx.fillStyle = fill;
-  ctx.fill();
-  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth; ctx.stroke(); }
-}
-
-function strokePath(ctx, points, color, width = 1, close = false) {
-  if (!points || points.length < 2) return;
-  ctx.beginPath();
-  ctx.moveTo(points[0][0], points[0][1]);
-  for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
-  if (close) ctx.closePath();
-  ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
-}
-
-function drawBackPanels(ctx, J, style, frame) {
-  if (style.cape < 0.28 && style.hem < 0.62) return;
-  const h = J.hip, f = J.facing, sway = Math.sin(frame * 0.13 + style.motion[2]) * (2 + style.cape * 2);
-  const length = 7 + style.cape * 14 + Math.max(0, style.hem - 0.6) * 8;
-  const width = 3.5 + style.flare * 4;
-  const start = [h[0] - f * J.r.hip * 0.42, h[1] - 1.5];
-  const edge = [start[0] - f * (width + sway * 0.24), start[1] + length * 0.18];
-  const tip1 = [start[0] - f * (length * 0.52), start[1] + length + sway];
-  const tip2 = [start[0] + f * (width * 0.45), start[1] + length * 0.82 + sway * 0.72];
-  polygon(ctx, [start, edge, tip1, tip2, [start[0] + f * 1.5, start[1] + 3]], shade(style.cloth, -12), '#17191E', 1.0);
-  if (style.cape > 0.55) {
-    polygon(ctx, [start, [start[0] - f * 1.3, start[1] + 2], [tip1[0] + f * 2.8, tip1[1] - 2], [tip2[0] + f * 2.2, tip2[1] - 3]], style.trim, '#17191E', 0.8);
-  }
-}
-
-function drawLegClothes(ctx, J, L, style, isFar = false) {
-  const r = J.r;
-  const trouser = isFar ? shade(style.cloth, -12) : style.cloth;
-  const short = /Short|short|splitShort|kneeShort|skirt|pleat|scallop/i.test(style.lower);
-  const wide = /wide|hak|loose|poncho|uneven|patched/i.test(style.lower);
-  const topRadius = r.thigh * (wide ? 0.79 : 0.70);
-  const kneeRadius = r.knee * (wide ? 0.76 : 0.66);
-  const shinRadius = r.knee * 0.52;
-  ctx.fillStyle = trouser;
-  capsule(ctx, L.hip[0], L.hip[1], topRadius, L.knee[0], L.knee[1], kneeRadius);
-  if (!short) capsule(ctx, L.knee[0], L.knee[1], kneeRadius, L.foot[0], L.foot[1], shinRadius);
-  // Narrow seam/panel, inset from the silhouette so the joint outline stays clear.
-  const seam = style.trim;
-  const priorAlpha = ctx.globalAlpha;
-  ctx.strokeStyle = seam; ctx.globalAlpha = priorAlpha * 0.68; ctx.lineWidth = 0.8;
-  ctx.beginPath(); ctx.moveTo(L.hip[0], L.hip[1] + 2); ctx.lineTo(L.knee[0], L.knee[1] - 1); ctx.stroke();
-  if (!short) { ctx.beginPath(); ctx.moveTo(L.knee[0], L.knee[1] + 1); ctx.lineTo(L.foot[0], L.foot[1] - 2); ctx.stroke(); }
-  ctx.globalAlpha = priorAlpha;
-  if (/reinforced|patch|kneePad|cargo|cargoSlim/i.test(style.lower)) {
-    ctx.fillStyle = style.trim;
-    ctx.fillRect(L.knee[0] - 2.1, L.knee[1] - 1.2, 4.2, 2.4);
-    ctx.strokeStyle = shade(style.trim, -25); ctx.lineWidth = 0.65; ctx.strokeRect(L.knee[0] - 2.1, L.knee[1] - 1.2, 4.2, 2.4);
-  }
-}
-
-function drawShoe(ctx, J, foot, style) {
-  const variant = style.shoe || '';
-  const scale = /oversize|broad|chunk|work|rough|platform/i.test(variant) ? 1.22 : /sleek|narrow|point|quiet|flat|low/i.test(variant) ? 0.86 : 1;
-  const len = J.r.foot * 2.6 * scale, height = J.r.foot * 1.12 * scale, facing = J.facing;
-  const x = foot[0] + facing * J.r.foot * 0.08, y = foot[1] - height * 0.33;
-  ctx.save(); ctx.translate(x, y); ctx.scale(facing, 1);
-  ctx.beginPath();
-  ctx.moveTo(-len * 0.42, -height * 0.58);
-  ctx.lineTo(len * 0.20, -height * 0.62);
-  ctx.quadraticCurveTo(len * 0.44, -height * 0.56, len * 0.50, -height * 0.08);
-  ctx.quadraticCurveTo(len * 0.52, height * 0.22, len * 0.28, height * 0.30);
-  ctx.lineTo(-len * 0.40, height * 0.30);
-  ctx.quadraticCurveTo(-len * 0.54, height * 0.18, -len * 0.46, -height * 0.12);
-  ctx.closePath();
-  ctx.fillStyle = shade(style.cloth, -7); ctx.fill();
-  ctx.strokeStyle = '#17191E'; ctx.lineWidth = 1.05; ctx.stroke();
-  ctx.strokeStyle = style.trim; ctx.lineWidth = Math.max(1, height * 0.19);
-  ctx.beginPath(); ctx.moveTo(-len * 0.42, height * 0.22); ctx.lineTo(len * 0.37, height * 0.22); ctx.stroke();
-  ctx.strokeStyle = shade(style.trim, 25); ctx.lineWidth = 0.8;
-  if (/lace|court|sprint|high|trainer/i.test(variant)) {
-    for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.moveTo(-len * 0.13, -height * (0.27 - i * 0.14)); ctx.lineTo(len * 0.12, -height * (0.22 - i * 0.14)); ctx.stroke(); }
-  } else if (/split|fork|wave|trail|sole/i.test(variant)) {
-    ctx.beginPath(); ctx.moveTo(len * 0.12, height * 0.18); ctx.lineTo(len * 0.27, height * 0.08); ctx.lineTo(len * 0.38, height * 0.18); ctx.stroke();
-  } else {
-    ctx.beginPath(); ctx.moveTo(-len * 0.20, -height * 0.20); ctx.lineTo(len * 0.14, -height * 0.22); ctx.stroke();
-  }
-  if (/high|boot|calf|winter|raised|wrapped/i.test(variant)) {
-    ctx.strokeStyle = style.trim; ctx.lineWidth = Math.max(1, height * 0.16);
-    ctx.beginPath(); ctx.moveTo(-len * 0.25, -height * 0.53); ctx.lineTo(len * 0.10, -height * 0.51); ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawSleeves(ctx, J, style) {
-  // Vest and sleeveless cuts keep exposed body color. Other tops have short
-  // fitted sleeves that stop before the elbow pivot so the rig stays readable.
-  if (/storm|fieldVest|streamer|sleeveless|grappler|heavySport|formalLongVest|geometricVest|longVest|combatVest/i.test(style.cut)) return;
-  for (const L of [J.far, J.near]) {
-    const ex = L.shoulder[0] + (L.elbow[0] - L.shoulder[0]) * 0.72;
-    const ey = L.shoulder[1] + (L.elbow[1] - L.shoulder[1]) * 0.72;
-    ctx.fillStyle = style.cloth;
-    capsule(ctx, L.shoulder[0], L.shoulder[1], J.r.shoulder * 0.78, ex, ey, J.r.elbow * 0.72);
-    const dx = L.elbow[0] - L.shoulder[0], dy = L.elbow[1] - L.shoulder[1], d = Math.hypot(dx, dy) || 1;
-    const px = -dy / d * J.r.elbow * 0.62, py = dx / d * J.r.elbow * 0.62;
-    strokePath(ctx, [[ex + px, ey + py], [ex - px, ey - py]], style.trim, 0.8);
-  }
-}
-
-function drawTorsoClothes(ctx, J, style, frame) {
-  const a = J.shoulder, b = J.hip, dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1;
-  const nx = -dy / len, ny = dx / len, downX = dx / len, downY = dy / len;
-  const top = J.r.chest * 1.42, bottom = J.r.hip * (1.35 + style.flare * 0.30);
-  const hem = 2 + style.hem * 9;
-  const bX = b[0] + downX * hem, bY = b[1] + downY * hem;
-  const front = [a[0] + nx * top, a[1] + ny * top];
-  const back = [a[0] - nx * top, a[1] - ny * top];
-  const lowFront = [bX + nx * bottom, bY + ny * bottom];
-  const lowBack = [bX - nx * bottom, bY - ny * bottom];
-  polygon(ctx, [front, back, lowBack, lowFront], style.cloth, '#17191E', 1.1);
-
-  // A separate inset panel gives each jacket, tunic, robe, or vest its own cut.
-  const open = /open|coat|robe|cloak|rain|cardigan|mantle|stage|duelist|cape|poncho|vest/i.test(style.cut);
-  if (open) {
-    const midX = (a[0] + bX) * 0.5, midY = (a[1] + bY) * 0.5;
-    polygon(ctx, [[midX - nx * top * 0.22, midY - ny * top * 0.22], [midX + nx * top * 0.22, midY + ny * top * 0.22], [bX + nx * bottom * 0.16, bY + ny * bottom * 0.16], [bX - nx * bottom * 0.16, bY - ny * bottom * 0.16]], shade(style.cloth, -20), null);
-    strokePath(ctx, [front, [midX + nx * 1.1, midY + ny * 1.1], lowFront], style.trim, 1.1);
-    strokePath(ctx, [back, [midX - nx * 1.1, midY - ny * 1.1], lowBack], style.trim, 0.85);
-  } else {
-    const seamX = a[0] + downX * len * 0.28, seamY = a[1] + downY * len * 0.28;
-    strokePath(ctx, [[seamX + nx * 1.4, seamY + ny * 1.4], [bX + nx * 1.4, bY + ny * 1.4]], style.trim, 0.9);
-  }
-
-  // Hem geometry: asymmetric or flared silhouettes are drawn from each character's own override.
-  const f = J.facing, sway = Math.sin(frame * 0.12 + style.motion[1]) * style.cape * 2.2;
-  if (style.flare > 0.42 || style.hem > 0.62) {
-    const extension = 3 + style.hem * 5;
-    const trailingX = bX - f * (4 + style.flare * 5) + sway;
-    const trailingY = bY + extension;
-    polygon(ctx, [lowBack, [bX - f * 2, bY + 1], [trailingX, trailingY], [bX + nx * bottom * 0.1, bY + extension * 0.82]], shade(style.cloth, -10), '#17191E', 0.9);
-    if (Math.abs(style.asym) > 0.15) {
-      const sideX = bX + f * style.asym * (4 + style.flare * 3);
-      polygon(ctx, [lowFront, [bX + f * style.asym * 2, bY + 1], [sideX, trailingY * 0.94], [bX + nx * bottom * 0.48, bY + extension * 0.7]], shade(style.cloth, 8), '#17191E', 0.8);
-    }
-  }
-
-  // Compact collar, shoulder and waist construction, kept clear of the head joint.
-  const collarH = /storm|ice|martial|single|vial|formal|ceremonial|high|geometric|rain|grave|tunic/i.test(style.cut) ? 3.8 : 2.2;
-  polygon(ctx, [[a[0] - nx * top * 0.58, a[1] - ny * top * 0.58], [a[0] + nx * top * 0.58, a[1] + ny * top * 0.58], [a[0] + nx * 1.1, a[1] + ny * 1.1 - collarH], [a[0] - nx * 1.1, a[1] - ny * 1.1 - collarH]], shade(style.cloth, 17), '#17191E', 0.8);
-  ctx.strokeStyle = style.trim; ctx.lineWidth = 1.25;
-  ctx.beginPath(); ctx.moveTo(b[0] - nx * bottom * 0.92, b[1] - ny * bottom * 0.92); ctx.lineTo(b[0] + nx * bottom * 0.92, b[1] + ny * bottom * 0.92); ctx.stroke();
-  ctx.fillStyle = style.trim; ctx.beginPath(); ctx.arc(b[0], b[1], Math.max(1, J.r.hip * 0.25), 0, TAU); ctx.fill();
-}
-
-function drawSleeveDetails(ctx, J, style) {
-  const wrap = /wrap|band|guard|cuff|conduct|ring|plate|bracelet|sleeve|tool|scale/i.test(style.prop);
-  if (!wrap) return;
-  for (const L of [J.far, J.near]) {
-    const dx = L.hand[0] - L.elbow[0], dy = L.hand[1] - L.elbow[1], d = Math.hypot(dx, dy) || 1;
-    const ux = dx / d, uy = dy / d, px = -uy * J.r.handArm * 0.76, py = ux * J.r.handArm * 0.76;
-    const cx = L.hand[0] - ux * J.r.hand * 0.72, cy = L.hand[1] - uy * J.r.hand * 0.72;
-    strokePath(ctx, [[cx + px, cy + py], [cx - px, cy - py]], style.trim, Math.max(1.3, J.r.handArm * 0.48));
-  }
-}
-
-function drawSignatureProp(ctx, J, style) {
-  const p = style.prop || '';
-  const f = J.facing, h = J.hip, mid = J.torsoMid, head = J.head;
-  const headProp = /Seal|Pin|Crest|Clip|Stud|Crown|Thorn|Feather|Star|Fox/i.test(p);
-  const strap = /Pouch|Satchel|Case|Spool|Strap|Radio|Bag|Document/i.test(p);
-  if (strap) {
-    strokePath(ctx, [[J.shoulder[0] - f * 2.5, J.shoulder[1] - 1], [h[0] + f * 3.8, h[1] - 2]], style.trim, Math.max(1.3, J.r.chest * 0.22));
-    const bx = h[0] - f * (J.r.hip * 1.25), by = h[1] - 1;
-    polygon(ctx, [[bx - 2.8, by - 2.4], [bx + 2.2, by - 2.1], [bx + 2.8, by + 2.4], [bx - 2.2, by + 2.2]], shade(style.cloth, 20), '#17191E', 0.85);
-  }
-  if (headProp) {
-    const x = head[0] + f * J.headR * 0.48, y = head[1] - J.headR * 0.68;
-    polygon(ctx, [[x, y - 2.2], [x + f * 1.8, y], [x, y + 2.2], [x - f * 1.8, y]], style.trim, '#17191E', 0.75);
-  }
-  if (/Pendant|Charm|Token|Medallion|Brooch|Core|Hourglass|Drop|Glass|Prayer|Bead|Bell/i.test(p)) {
-    const x = mid[0] + f * 1.2, y = mid[1] + 2.5;
-    ctx.fillStyle = style.trim; ctx.strokeStyle = '#17191E'; ctx.lineWidth = 0.7;
-    ctx.beginPath();
-    if (/Hourglass/i.test(p)) { ctx.moveTo(x - 2, y - 2.4); ctx.lineTo(x + 2, y - 2.4); ctx.lineTo(x, y); ctx.lineTo(x + 2, y + 2.4); ctx.lineTo(x - 2, y + 2.4); ctx.lineTo(x, y); }
-    else { ctx.moveTo(x, y - 2.5); ctx.lineTo(x + 2.1, y); ctx.lineTo(x, y + 2.5); ctx.lineTo(x - 2.1, y); ctx.closePath(); }
-    ctx.fill(); ctx.stroke();
-  }
-  if (/Star|Round|Badge|Token|Core|Ring|Patch|Charm|Brooch|Crest|Pin|Fox|Mask|Mirror/i.test(p)) {
-    const x = mid[0] + f * 3, y = mid[1] - 1;
-    ctx.beginPath(); ctx.arc(x, y, 2.05, 0, TAU); ctx.fillStyle = style.trim; ctx.fill();
-    ctx.strokeStyle = '#17191E'; ctx.lineWidth = 0.7; ctx.stroke();
-  }
-  if (/Vial|Conductor|Control|Token|Tool|Clock|Watch|Device|Compass|Loop|Thread/i.test(p)) {
-    const x = h[0] - f * (J.r.hip * 1.18), y = h[1] + 1;
-    ctx.fillStyle = style.trim; ctx.fillRect(x - 2, y - 2.6, 4, 5.2);
-    ctx.strokeStyle = '#17191E'; ctx.lineWidth = 0.7; ctx.strokeRect(x - 2, y - 2.6, 4, 5.2);
-    ctx.fillStyle = shade(style.trim, 35); ctx.fillRect(x - 1, y - 1.6, 2, 1.1);
-  }
-  if (/Ring|Halo|Gravity|Broken|Fox|Control|Iron/i.test(p)) {
-    const x = h[0] - f * (J.r.hip * 1.7), y = h[1] - 3;
-    ctx.beginPath(); ctx.ellipse(x, y, 3.3, 2.0, -0.35, 0, TAU); ctx.strokeStyle = style.trim; ctx.lineWidth = 1.2; ctx.stroke();
-  }
-}
-
-function drawHairBack(ctx, J, style, frame) {
-  const hair = style.hair, long = /Braid|Pony|Tail|Lock|Tendril|Tuft|Wisps|Willow/i.test(hair);
-  if (!long && !/Bun|Pair|Fox|shadowTendrils|paleLock/i.test(hair)) return;
-  const r = J.headR, h = J.head, f = J.facing, sway = Math.sin(frame * 0.09 + style.motion[1]) * (hair.includes('Braid') ? 1.7 : 1.0);
-  ctx.save(); ctx.translate(h[0], h[1]); ctx.scale(f, 1);
-  const dark = shade(style.hairColor, -16);
-  if (/Braid|Pony|Tail|Lock|Tuft|Willow/i.test(hair)) {
-    const endX = -r * (hair.includes('Twin') || hair.includes('Pair') ? 1.55 : 1.24);
-    const endY = r * (hair.includes('Low') || hair.includes('Rear') || hair.includes('Willow') ? 1.35 : 0.90) + sway;
-    ctx.beginPath(); ctx.moveTo(-r * 0.70, -r * 0.10); ctx.quadraticCurveTo(-r * 1.35, r * 0.15 + sway * 0.25, endX, endY);
-    ctx.strokeStyle = '#171519'; ctx.lineWidth = r * 0.58; ctx.lineCap = 'round'; ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-r * 0.70, -r * 0.10); ctx.quadraticCurveTo(-r * 1.35, r * 0.15 + sway * 0.25, endX, endY);
-    ctx.strokeStyle = style.hairColor; ctx.lineWidth = r * 0.42; ctx.stroke();
-    if (/Braid/i.test(hair)) {
-      for (let i = 1; i <= 4; i++) {
-        const t = i / 5, bx = -r * 0.72 - r * 0.58 * t, by = r * (0.05 + t * 1.0) + sway * t;
-        ctx.beginPath(); ctx.ellipse(bx, by, r * 0.26, r * 0.17, -0.42, 0, TAU); ctx.fillStyle = i % 2 ? dark : style.hairColor; ctx.fill();
-        ctx.strokeStyle = '#171519'; ctx.lineWidth = 0.6; ctx.stroke();
-      }
-    }
-  }
-  if (/Bun|Knot|Pair|Fox/i.test(hair)) {
-    const count = /Twin|Pair|Fox/i.test(hair) ? 2 : 1;
-    for (let i = 0; i < count; i++) {
-      const x = -r * (0.72 + i * 0.23), y = -r * (i ? 0.54 : 0.72);
-      ctx.beginPath(); ctx.arc(x, y, r * (count === 2 ? 0.36 : 0.42), 0, TAU); ctx.fillStyle = style.hairColor; ctx.fill(); ctx.strokeStyle = '#171519'; ctx.lineWidth = 0.9; ctx.stroke();
-    }
-  }
-  if (/Tendrils|shadow/i.test(hair)) {
-    for (let i = 0; i < 3; i++) {
-      ctx.beginPath(); ctx.moveTo(-r * 0.35, -r * (0.45 + i * 0.18));
-      ctx.quadraticCurveTo(-r * (1.2 + i * 0.14), -r * (0.7 - i * 0.2), -r * (1.35 + i * 0.18), r * (0.3 + i * 0.38) + sway);
-      ctx.strokeStyle = i === 1 ? style.trim : dark; ctx.lineWidth = r * 0.20; ctx.lineCap = 'round'; ctx.stroke();
-    }
-  }
-  ctx.restore();
-}
-
-function drawHairFront(ctx, J, style, charData) {
-  const r = J.headR, h = J.head, f = J.facing, hair = style.hair;
-  ctx.save(); ctx.translate(h[0], h[1]); ctx.scale(f, 1);
-  const main = style.hairColor, edge = '#171519';
-  const cap = [
-    [-r * 0.98, r * 0.22], [-r * 1.00, -r * 0.24], [-r * 0.78, -r * 0.72],
-    [-r * 0.36, -r * 0.99], [r * 0.12, -r * 0.97], [r * 0.56, -r * 0.76],
-    [r * 0.88, -r * 0.37], [r * 0.72, -r * 0.19], [r * 0.30, -r * 0.30],
-    [-r * 0.12, -r * 0.25], [-r * 0.48, -r * 0.08],
-  ];
-  polygon(ctx, cap, main, edge, 1.25);
-  if (/Spike|Quiff|Crest|Crown|Storm|Thorn|Feather|Flame|Broad|Messy|Bristle|Fade/i.test(hair)) {
-    const count = /storm|thorn|Feather|flame|broad|spike|Crest|Quiff/i.test(hair) ? 3 : 2;
-    for (let i = 0; i < count; i++) {
-      const x = -r * (0.48 - i * 0.45), y = -r * (0.82 - (i % 2) * 0.08), peak = -r * (1.42 + (i % 2) * 0.12);
-      polygon(ctx, [[x - r * 0.34, y], [x + r * 0.28, y + r * 0.10], [x + r * 0.06, peak]], main, edge, 0.9);
-    }
-  } else if (/Curl|Round|Bob|Puff|Curls|Bun|Loop|Willow/i.test(hair)) {
-    for (const [x, y, rr] of [[-0.54, -0.84, 0.31], [-0.08, -1.03, 0.32], [0.38, -0.81, 0.30]]) {
-      ctx.beginPath(); ctx.arc(r * x, r * y, r * rr, Math.PI, TAU); ctx.fillStyle = main; ctx.fill(); ctx.strokeStyle = edge; ctx.lineWidth = 0.7; ctx.stroke();
-    }
-  }
-  if (/Bob|Curtain|Fringe|Part|Cropped|Single|Undercut|Sweep|Center|Streak|Wolf|Layer|Shag|Pale|Long|Braid|Tied|Slick|Asym|Pony|Knot|Crop|Cut|Curls|Crown|Crest|Quiff|Hood|Bun|Puff|Lock|Top|Fade/i.test(hair)) {
-    const fringeX = /Curtain|Asym|Side|Fringe|Storm|Quiff|Spike|Thorn/i.test(hair) ? r * 0.62 : r * 0.34;
-    polygon(ctx, [[-r * 0.48, -r * 0.44], [r * 0.14, -r * 0.62], [fringeX, -r * 0.30], [r * 0.22, -r * 0.20], [-r * 0.12, -r * 0.29]], shade(main, -10), edge, 0.8);
-  }
-  // Fine, restrained highlight follows the hair mass; it never recolors the body.
-  strokePath(ctx, [[-r * 0.60, -r * 0.72], [-r * 0.24, -r * 0.90], [r * 0.15, -r * 0.85]], shade(style.trim, 8), Math.max(0.7, r * 0.10));
-  if (charData?.whiteEyes) {
-    strokePath(ctx, [[r * 0.40, r * 0.07], [r * 0.68, r * 0.06]], '#F5F2E8', 1.3);
-  } else {
-    ctx.beginPath(); ctx.ellipse(r * 0.48, r * 0.09, r * 0.12, r * 0.075, 0, 0, TAU); ctx.fillStyle = '#201B20'; ctx.fill();
-  }
-  ctx.restore();
-}
-
-function paintCharacter(ctx, J, color, charData, frame) {
-  const style = getCharacterVisualStyle(charData);
-  const paint = () => {
-    drawBackPanels(ctx, J, style, frame);
-    drawHairBack(ctx, J, style, frame);
-    paintBody(ctx, J, color);
-    drawLegClothes(ctx, J, J.far, style, true);
-    drawLegClothes(ctx, J, J.near, style, false);
-    drawShoe(ctx, J, J.far.foot, style);
-    drawShoe(ctx, J, J.near.foot, style);
-    drawSleeves(ctx, J, style);
-    drawTorsoClothes(ctx, J, style, frame);
-    drawSleeveDetails(ctx, J, style);
-    drawSignatureProp(ctx, J, style);
-    drawHairFront(ctx, J, style, charData);
-  };
-  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  if (J.ghosts) {
-    for (let i = J.ghosts.length - 1; i >= 0; i--) {
-      const g = J.ghosts[i]; ctx.save(); ctx.globalAlpha *= g.a; ctx.translate(g.x, g.y); paint(); ctx.restore();
-    }
-  }
-  paint();
-  ctx.restore();
+export function paintStickman(ctx, J, color, charData = null, frame = 0, state = 'idle') {
+  paintFighterCharacter(ctx, J, color, charData, frame, state);
 }

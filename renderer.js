@@ -152,7 +152,7 @@ export function drawStickman(ctx, x, y, color, facing, frame, scale = 1, isSpiri
   ctx.translate(x, y);
 
   const pose = solveFighterPose(s, frame, state, facing, emote, attackData, charData, motion);
-  paintStickman(ctx, pose, bodyColor, charData, frame);
+  paintStickman(ctx, pose, bodyColor, charData, frame, state);
 
   if (powerActive) {
     drawPowerAura(ctx, s, frame, powerAuraColor || color, powerActive, charData);

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Element 6 — Character Design Atlas</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #0c0b11; color: #f4f1fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 28px; }
+    header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 20px; margin: 0 auto 22px; max-width: 1500px; }
+    h1 { margin: 0 0 6px; font-size: clamp(24px, 3vw, 38px); letter-spacing: -.04em; }
+    p { margin: 0; color: #b8b2c5; }
+    .tools { display: flex; gap: 10px; align-items: center; }
+    input, select { border: 1px solid #514766; border-radius: 10px; background: #17141f; color: white; padding: 11px 13px; font: inherit; }
+    input { min-width: min(340px, 80vw); }
+    #roster { max-width: 1500px; margin: auto; display: grid; grid-template-columns: repeat(auto-fill,minmax(290px,1fr)); gap: 14px; }
+    article { overflow: hidden; border: 1px solid #312b3d; background: linear-gradient(145deg,#1b1722,#121018 70%); border-radius: 16px; box-shadow: 0 12px 28px #0005; }
+    .head { display:flex; align-items:center; justify-content:space-between; gap: 10px; padding: 12px 14px 8px; }
+    h2 { margin: 0; font-size: 16px; font-weight: 750; }
+    .swatch { width: 13px; height: 13px; border-radius: 50%; border: 1px solid #ffffff66; box-shadow: 0 0 13px currentColor; }
+    .pose-grid { display:grid; grid-template-columns: repeat(4,1fr); gap: 2px; padding: 4px; }
+    .pose { position:relative; height: 116px; overflow:hidden; background: radial-gradient(ellipse at 50% 78%,#2d2638 0,transparent 59%),#0d0b12; border: 1px solid #ffffff0c; border-radius: 9px; }
+    .pose::after { content: attr(data-label); position:absolute; left:6px; bottom:5px; color:#c7bfd5; font-size:9px; letter-spacing:.08em; text-transform:uppercase; text-shadow:0 1px 3px #000; }
+    .pose .cell { position:absolute; inset:0; background-repeat:no-repeat; background-size: 464px 232px; }
+    .error { max-width:900px; margin: 60px auto; padding:24px; color:#ffd7d7; background:#351c23; border:1px solid #8a394b; border-radius:12px; }
+    @media (max-width:700px) { body { padding:14px; } #roster { grid-template-columns:1fr; } .pose { height: 130px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1>Character Design Atlas</h1><p>Eight authored poses per roster entry · signature body color preserved · stump hands</p></div>
+    <div class="tools"><input id="search" type="search" placeholder="Find a character…" aria-label="Find a character"><select id="sort" aria-label="Sort roster"><option value="name">Name</option><option value="id">Roster order</option></select></div>
+  </header>
+  <main id="roster" aria-live="polite"></main>
+  <script type="module">
+    import { ALL_CHARS } from './allCharacters.js';
+    import { getCharacterSpriteSheet } from './characterPainter.js';
+    const grid=document.querySelector('#roster');
+    const search=document.querySelector('#search');
+    const sort=document.querySelector('#sort');
+    let urls=[];
+    const poses=['Idle','Run A','Run B','Dash','Wall slide','Jump','Landing','Attack'];
+    const title=c=>c.displayName||c.name||c.id;
+    const makeUrl=c=>URL.createObjectURL(new Blob([getCharacterSpriteSheet(c,c.color)],{type:'image/svg+xml'}));
+    function render(){
+      urls.forEach((url)=>URL.revokeObjectURL(url)); urls=[];
+      const q=search.value.trim().toLowerCase();
+      const chars=ALL_CHARS.filter(c=>!q||`${title(c)} ${c.id} ${c.fullName||''}`.toLowerCase().includes(q));
+      if(sort.value==='name') chars.sort((a,b)=>title(a).localeCompare(title(b)));
+      grid.replaceChildren();
+      for(const c of chars){
+        const url=makeUrl(c); urls.push(url);
+        const card=document.createElement('article');
+        const heading=document.createElement('div'); heading.className='head';
+        const h=document.createElement('h2'); h.textContent=title(c);
+        const sw=document.createElement('span'); sw.className='swatch'; sw.style.background=c.color||'#888'; sw.style.color=c.color||'#888';
+        heading.append(h,sw); card.append(heading);
+        const posesGrid=document.createElement('div'); posesGrid.className='pose-grid';
+        for(let i=0;i<8;i++){
+          const tile=document.createElement('div'); tile.className='pose'; tile.dataset.label=poses[i];
+          const cell=document.createElement('div'); cell.className='cell';
+          const x=-(i%4)*116, y=-Math.floor(i/4)*116;
+          cell.style.backgroundImage=`url("${url}")`;
+          cell.style.backgroundPosition=`${x}px ${y}px`;
+          tile.append(cell); posesGrid.append(tile);
+        }
+        card.append(posesGrid); grid.append(card);
+      }
+      if(!chars.length) grid.innerHTML='<div class="error">No matching character found.</div>';
+    }
+    search.addEventListener('input',render); sort.addEventListener('change',render); render();
+    window.addEventListener('pagehide',()=>urls.forEach((url)=>URL.revokeObjectURL(url)));
+  </script>
+</body>
+</html>

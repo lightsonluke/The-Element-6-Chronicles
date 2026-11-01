@@ -1,11 +1,12 @@
-# Gen 2 Fighter Replacement Package
+# Element 6 Character Design Files
 
-Copy the three JavaScript files in this folder into the root of your project, replacing the files with the same names.
+This is a small overlay for the supplied Element 6 project. Copy these files into the project root and replace the existing files with the same names.
 
-Included:
-- `gen2AttackAnims.js`
-- `attackSpecs.js`
-- `charAttackAnims.js`
-- `GEN2_MOVE_AUDIT.md` — scope and validation status
+## Included
 
-**Important:** this is not a fully built or gameplay-verified release. JavaScript syntax and isolated animation/hitbox sampling passed, but the production build could not be run because npm registry access failed in the environment (`EAI_AGAIN`) and dependencies were unavailable. The audit lists the remaining validation work.
+- `characterPainter.js` — builds a clear, cel-shaded side-view sprite atlas for each roster entry and selects the matching pose at runtime.
+- `characterVisuals.js` — per-character hair, clothing, footwear, accessory, palette, and movement-style definitions.
+- `stickman.js` and `renderer.js` — route the existing visual state into the matching authored pose. Physics, collision, hurtboxes, abilities, and combat values remain with the game.
+- `CharacterDesignPreview.html` — roster gallery showing idle, two run poses, dash, wall slide, jump, landing, and attack poses. Serve it from the project root so the game's ES modules can load.
+
+The sprite art preserves each character's established exposed body color. Every hand is a simple rounded stump with no fingers or thumbs.
