@@ -29,7 +29,7 @@ export const ACCEL_AIR = 0.9;
 const SIG_COOLDOWN = 0;
 const NORMAL_COOLDOWN = 8;
 const HEAVY_COOLDOWN = 0; // Heavy/signature lockout is governed by attack duration/endlag only.
-const KNOCKBACK_SCALE = 0.40; // global 60% knockback reduction for all attacks
+const KNOCKBACK_SCALE = 0.36; // another 10% reduction across legacy attacks; heavies get an extra trim below
 
 // CPU difficulty configs
 // (CPU_DIFFICULTY moved to botAI.js)
@@ -2430,7 +2430,7 @@ export function applyHit(attacker, defender) {
   const isLight = attacker.attackData.isNormal;
   const kbMul = fireHero ? 1 + Math.min(160, Math.max(0, Number(defender.damage) || 0)) * (fireHeavy ? 0.032 : 0.025) : 1 + defender.damage * 0.025;
   const kbBase = attacker.attackData.knockback || 1.0;
-  const kbFactor = isLight ? 0.16 : attacker.attackData.isHeavy ? 0.32 : 0.24;
+  const kbFactor = isLight ? 0.16 : attacker.attackData.isHeavy ? 0.28 : 0.24;
   const kb = dmg * kbFactor * kbMul * kbBase * (attacker.knockbackMul || 1) * KNOCKBACK_SCALE * (1 - (defender.knockbackReduction || 0));
   const st = attacker.attackData.sigType;
   if (attacker.attackData.resonanceAction === 'grab') {
