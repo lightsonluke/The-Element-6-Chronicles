@@ -1,18 +1,16 @@
-// stickman.js — articulated pose solver for the fighter sprite atlas.
+// stickman.js — one procedural stickman rig shared by every fighter.
 //
-// characterPainter.js supplies authored character sprites for each movement
-// state. The solver remains the source of gameplay presentation state;
-// gameplay position, timing, collision, and hurtboxes remain in the game.
+// Everything is drawn from code (no sprite images). The proportions come from the
+// reference red stickman: small round head, long thin tapered limbs, bulb hands,
+// a staggered guard stance with the lead fist up and the rear arm hanging.
 //
 // Pipeline:  solvePose()  ->  joint positions (already mirrored + scaled)
-//            paintStickman() selects the matching authored sprite pose
+//            paintStickman() draws those joints
 //            getLimbPose() in renderer.js reads the same joints for cosmetics
 //
 // Limbs are two-bone IK chains, so knees/elbows always bend the right way and
 // feet stay planted while running.  "near" = the lead limb in the guard stance
 // (screen-right when facing right), "far" = the rear limb.
-import { getCharacterVisualStyle } from './characterVisuals.js';
-import { paintFighterCharacter } from './characterPainter.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -319,7 +317,6 @@ export function solvePose(o) {
   const grounded = motion && motion.grounded !== undefined ? !!motion.grounded : state !== 'jumping';
   const attackState = state === 'attacking' || state === 'attackHold' || state === 'superAttack';
   const ev = o.emoteVars || null;
-  const visualStyle = getCharacterVisualStyle(o.charData);
   const dashTimer = Number(motion?.dashTimer) || 0;
   const dashDir = motion?.dashDir || null;               // world-space {x,y}, y < 0 = up
   const wallSide = Number(motion?.wallSide) || 0;        // fighter.js convention: -1 = wall on the right, +1 = on the left
@@ -467,38 +464,6 @@ export function solvePose(o) {
     if (ev.legROver != null) { const t = over(ev.legROver), idx = nearScreenR ? [FNX, FNY] : [FFX, FFY]; V[idx[0]] = t[0]; V[idx[1]] = V[HIP] + t[1]; }
   }
 
-  // Character-specific pose language is a rendering layer only. It adjusts the
-  // drawn limbs and torso, never the fighter position, timing, hurtbox, or physics.
-  if (!ev && !attackState) {
-    const [runLean, armAccent, dashLean, jumpOpen, wallReach] = visualStyle.motion;
-    if (wRun > 0.001) {
-      const beat = Math.sin(runPh * TAU);
-      V[LEAN] += runLean * 1.18 * wRun;
-      V[HNX] += beat * armAccent * 1.45 * wRun;
-      V[HFX] -= beat * armAccent * 1.22 * wRun;
-      V[HEAD] -= Math.abs(beat) * runLean * 0.18 * wRun;
-    }
-    if (wDash > 0.001) {
-      V[LEAN] += dashLean * 1.30 * wDash;
-      V[HNX] -= dashLean * 0.72 * wDash;
-      V[HFX] -= dashLean * 0.88 * wDash;
-      V[HNY] += Math.abs(dashLean) * 0.25 * wDash;
-    }
-    if (wWall > 0.001) {
-      V[HNX] += wallReach * 1.22 * wWall;
-      V[HNY] -= wallReach * 0.54 * wWall;
-      V[HFX] -= wallReach * 0.52 * wWall;
-      V[FNX] += wallReach * 0.18 * wWall;
-    }
-    if (wAir > 0.001) {
-      V[HNX] += jumpOpen * 1.18 * wAir;
-      V[HFX] -= jumpOpen * 0.92 * wAir;
-      V[FNX] += jumpOpen * 0.25 * wAir;
-      V[FFX] -= jumpOpen * 0.16 * wAir;
-      V[HEAD] -= jumpOpen * 0.08 * wAir;
-    }
-  }
-
   // ── Joints (local space: facing right, y down, origin = feet) ──
   const lam = V[LEAN];
   const hip = [0, V[HIP]];
@@ -543,6 +508,104 @@ export function solvePose(o) {
   return joints;
 }
 
-export function paintStickman(ctx, J, color, charData = null, frame = 0, state = 'idle') {
-  paintFighterCharacter(ctx, J, color, charData, frame, state);
+// ─── Painter ────────────────────────────────────────────────────────────────
+function capsule(ctx, ax, ay, ar, bx, by, br) {
+  const dx = bx - ax, dy = by - ay, d = Math.hypot(dx, dy);
+  ctx.beginPath();
+  if (d < 1e-3 || d <= Math.abs(ar - br)) { ctx.arc(d < 1e-3 || ar >= br ? ax : bx, d < 1e-3 || ar >= br ? ay : by, Math.max(ar, br), 0, TAU); ctx.fill(); return; }
+  const ang = Math.atan2(dy, dx);
+  const off = Math.acos(clamp((ar - br) / d, -1, 1));
+  ctx.arc(ax, ay, ar, ang + off, ang - off + TAU, false);
+  ctx.arc(bx, by, br, ang - off, ang + off, false);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function disc(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+
+function parseColor(color) {
+  const str = String(color || '');
+  let m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(str);
+  if (m) { let h = m[1]; if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
+  m = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i.exec(str);
+  return m ? [+m[1], +m[2], +m[3]] : null;
+}
+const rgbStr = (c) => `rgb(${c.map(v => clamp(Math.round(v), 0, 255)).join(',')})`;
+
+export function shade(color, amt) {
+  const c = parseColor(color);
+  return c ? rgbStr(c.map(v => v + amt)) : color;
+}
+
+// Arms get their own colour so they read clearly against the torso: a lighter tint of the body
+// colour (or a deeper one when the body is already very light). The rear arm is a touch dimmer than
+// the front arm, and both stay well away from the darker rear-leg shade.
+function armColors(color) {
+  const c = parseColor(color);
+  if (!c) return [color, color];
+  const lum = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+  const tint = lum < 185
+    ? (k) => c.map(v => v + (255 - v) * k)                  // blend toward white
+    : (k) => c.map(v => v * (1 - k * 0.8));                 // very light body: go deeper instead
+  return [rgbStr(tint(0.45)), rgbStr(tint(0.30))];
+}
+
+function paintLimbSet(ctx, L, r, legColor, armColor, armBehindLeg = false) {
+  // On the far side, paint the arm first so the rear leg stays visibly in front of it.
+  const drawArm = () => {
+    ctx.fillStyle = armColor;
+    capsule(ctx, L.shoulder[0], L.shoulder[1], r.shoulder, L.elbow[0], L.elbow[1], r.elbow);
+    capsule(ctx, L.elbow[0], L.elbow[1], r.elbow, L.hand[0], L.hand[1], r.handArm);
+    disc(ctx, L.hand[0], L.hand[1], r.hand);
+  };
+  const drawLeg = () => {
+    ctx.fillStyle = legColor;
+    capsule(ctx, L.hip[0], L.hip[1], r.hip, L.knee[0], L.knee[1], r.knee);
+    capsule(ctx, L.knee[0], L.knee[1], r.knee, L.foot[0], L.foot[1], r.foot);
+  };
+  if (armBehindLeg) { drawArm(); drawLeg(); }
+  else { drawLeg(); drawArm(); }
+}
+
+function paintBody(ctx, J, color) {
+  const r = J.r;
+  const far = shade(color, -22);
+  const [armNear, armFar] = armColors(color);
+
+  // Far (rear) limbs: darker legs, dimmer arm
+  paintLimbSet(ctx, J.far, r, far, armFar, true);
+
+  // Torso: a tapered spine from pelvis to neck
+  ctx.fillStyle = color;
+  const a = J.hip, m = J.torsoMid, b = J.shoulder;
+  let px = a[0], py = a[1], pr = r.hip;
+  for (let i = 1; i <= 8; i++) {
+    const t = i / 8, u = 1 - t;
+    const x = u * u * a[0] + 2 * u * t * (2 * m[0] - (a[0] + b[0]) / 2) + t * t * b[0];
+    const y = u * u * a[1] + 2 * u * t * (2 * m[1] - (a[1] + b[1]) / 2) + t * t * b[1];
+    const rr = lerp(r.hip, r.chest, t);
+    capsule(ctx, px, py, pr, x, y, rr);
+    px = x; py = y; pr = rr;
+  }
+  disc(ctx, J.head[0], J.head[1], J.headR);
+
+  // Near (lead) limbs
+  paintLimbSet(ctx, J.near, r, color, armNear);
+}
+
+export function paintStickman(ctx, J, color) {
+  ctx.save();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (J.ghosts) {                                          // dash afterimages, oldest first
+    for (let i = J.ghosts.length - 1; i >= 0; i--) {
+      const g = J.ghosts[i];
+      ctx.save();
+      ctx.globalAlpha *= g.a;
+      ctx.translate(g.x, g.y);
+      paintBody(ctx, J, color);
+      ctx.restore();
+    }
+  }
+  paintBody(ctx, J, color);
+  ctx.restore();
 }

@@ -146,13 +146,13 @@ export function drawStickman(ctx, x, y, color, facing, frame, scale = 1, isSpiri
   // Growth power = visually larger; shrink powers = visually smaller
   if (powerActive === 'range_boost') scale *= 1.35;
   const s = BASE_SCALE * scale;
-  // Preserve each fighter's canonical body color in every render state.
-  const bodyColor = color;
+  // One shared rig for every fighter: identity is colour + effects, never body shape.
+  const bodyColor = (powerActive === 'stat_boost' && charData?.id === 'yellow') ? '#FFFFFF' : color;
   ctx.save();
   ctx.translate(x, y);
 
   const pose = solveFighterPose(s, frame, state, facing, emote, attackData, charData, motion);
-  paintStickman(ctx, pose, bodyColor, charData, frame, state);
+  paintStickman(ctx, pose, bodyColor);
 
   if (powerActive) {
     drawPowerAura(ctx, s, frame, powerAuraColor || color, powerActive, charData);
@@ -192,7 +192,7 @@ function solveFighterPose(s, frame, state, facing, emote, attackData, charData, 
       gen1 = getGen2AttackPose(st, Math.max(0, Number(attackData.progress) || 0), facing, charData.id) || null;
     } catch (e) { gen1 = null; }
   }
-  return solvePose({ s, frame, state, facing, motion, emoteVars, attack: attackData, gen1, charData });
+  return solvePose({ s, frame, state, facing, motion, emoteVars, attack: attackData, gen1 });
 }
 
 // A shadow belongs to a real platform under the fighter, not to the sprite.
