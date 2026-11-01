@@ -1,0 +1,181 @@
+# fmt: @id|name|skin|color|superReach(L long / A area)   then 9 lines: slot arch s/a/e dmg mods
+@g1_thunder|Thunder Hero|thunder|#FFFF44|L
+us bait 5/5/10 8 C2
+ds spin 6/7/24 5 Ad
+ss lash 4/3/13 7 D7
+uh shoulder 12/3/32 12 Cb
+dh backheel 23/3/27 15 Ba
+sh spinfull 21/4/38 10 Cb
+rc spring 4/5/15 5 Fg
+sp route 27/18/57 35 C3
+gp head 5/2/14 10 C6
+@g1_water|Water Hero|water|#3399CC|L
+us arcback 9/2/13 6 D1
+ds tap 7/3/26 9 F1
+ss lash 7/4/9 5 Ca
+uh clinch 21/5/30 10 Ag
+dh kneeland 26/3/36 11 Ac
+sh cut 21/4/32 11 B3
+rc roll 9/4/19 7 Ad
+sp mark 28/10/65 33 F3
+gp tuck 10/2/29 9 D7
+@g1_ice|Ice Hero|ice|#AAEEFF|L
+us hop 9/2/22 8 Ag
+ds heel 14/7/15 7 Ec
+ss retreat 9/2/9 6 Fa
+uh spinout 15/7/26 15 E9
+dh skid 18/3/41 16 Ab
+sh overhead 18/7/38 18 A2
+rc marker 7/3/27 7 F5
+sp bend 31/17/51 27 E7
+gp past 16/6/27 10 D7
+@g1_fire|Fire Hero|fire|#FF6600|L
+us runner 10/2/13 7 A1
+ds palm 11/4/27 6 Cd
+ss twoshot 4/5/17 6 Ag
+uh upper 14/5/38 14 Cb
+dh kneeland 14/4/27 17 Ba
+sh hook 17/7/37 14 Ab
+rc spring 5/4/25 5 Fe
+sp strikes 30/15/48 30 Fb
+gp stall 15/6/31 9 B3
+@g1_grass|Grass Hero|plant|#44AA44|A
+us sidestep 8/2/22 7 A1
+ds tap 10/5/23 6 Ea
+ss lash 10/2/18 6 D4
+uh leap 18/4/29 15 Ed
+dh palms 20/5/41 16 Cb
+sh straight 15/6/40 15 A2
+rc foot 5/3/20 5 Ae
+sp hazard 31/9/62 30 Ca
+gp spread 8/5/19 10 Cd
+@g2_daigo|Daigo Ishikawa|stone|#A88A67|A
+us runner 9/3/16 9 Aa
+ds hopflick 11/4/29 6 E8
+ss feint 10/3/13 7 E6
+uh shoulder 20/6/39 16 F7
+dh skid 27/3/42 18 Ed
+sh hurl 24/8/41 14 Ba
+rc cork 7/2/21 5 Bc
+sp hazard 29/13/48 36 Df
+gp tuck 17/4/32 12 Fc
+@g2_hana|Hana Mizushima|water|#42B8FF|L
+us pull 9/5/19 7 C2
+ds wrist 8/6/22 8 E8
+ss elbow 8/6/21 6 Ag
+uh backfist 20/6/27 10 Be
+dh fist 27/7/35 17 Aa
+sh hook 22/6/29 16 Ba
+rc roll 4/2/28 7 A4
+sp decoy 27/10/40 27 Da
+gp seat 13/4/26 13 E7
+@g2_ibuki|Hollow Monk|drain|#D7E1E4|A
+us bait 8/2/14 6 A1
+ds handkick 7/7/22 7 A5
+ss hiptoss 8/3/18 5 Af
+uh shoulder 15/4/36 12 F6
+dh skid 24/7/43 17 Da
+sh lowsh 13/3/37 18 Bb
+rc tether 9/5/19 4 Aa
+sp mark 35/18/60 25 Ea
+gp seat 10/2/19 11 Dc
+@g2_itto|Itto|blade|#DDE5EA|A
+us bait 6/2/11 8 Ab
+ds rake 12/5/16 5 A6
+ss sprint 7/6/20 7 Cg
+uh upper 16/5/35 13 C4
+dh flip 21/5/43 14 E9
+sh hammer 14/6/31 16 E2
+rc burst 8/3/18 7 C8
+sp lanes 20/15/50 26 Cc
+gp past 11/6/27 10 F6
+@g2_kaito|Kaito Ren|ember|#FF5A24|A
+us runner 8/5/19 8 Fa
+ds heel 8/3/25 9 E5
+ss vault 9/3/12 5 C2
+uh feintup 18/5/35 16 Fd
+dh arcd 27/4/32 14 Cb
+sh lowsh 16/6/38 10 F8
+rc ledge 8/2/28 6 E1
+sp three 21/11/47 28 D4
+gp stall 10/6/25 12 B3
+@g2_mai|Mai Yoru|shadow|#7650A8|A
+us jumpback 6/3/15 5 F3
+ds kneeslide 10/7/21 5 E2
+ss feint 5/6/12 8 A5
+uh line 19/4/38 15 Db
+dh kneeland 26/3/31 17 E7
+sh hook 24/7/41 14 A1
+rc roll 9/4/27 3 E3
+sp hazard 27/11/41 29 A3
+gp head 17/4/19 13 Dg
+@g2_nishikawa|Nishikawa the Puppeteer|thread|#D58CFF|A
+us runner 10/5/22 9 Bb
+ds handkick 10/5/25 5 A4
+ss vault 6/5/14 9 C1
+uh clinch 13/3/26 13 Cb
+dh kneeland 18/6/43 14 Cb
+sh backkick 24/3/39 12 Ac
+rc roll 5/5/20 5 Fd
+sp route 21/17/46 23 Cd
+gp heeldn 10/2/22 10 C5
+@g2_osamu|Osamu Tsuchida|sound|#FFE38A|A
+us rollelb 7/4/10 5 D4
+ds spin 8/5/25 4 F1
+ss miss 8/2/14 5 F7
+uh pullup 14/7/33 15 D4
+dh palms 13/5/23 11 C5
+sh hammer 12/8/28 11 Bg
+rc tether 3/4/13 3 B2
+sp lanes 22/18/63 24 Ae
+gp grab 9/4/19 8 Eb
+@g2_renji|Renji Kurogane|metal|#AEB7C1|A
+us handst 12/2/16 6 Eb
+ds stamp 13/5/27 7 E5
+ss sprint 8/2/16 8 A1
+uh heeldrop 22/7/30 14 Ea
+dh flip 23/4/41 14 Dd
+sh overhead 24/8/38 12 E7
+rc marker 7/4/20 7 D2
+sp hazard 32/10/50 32 B4
+gp diag 9/5/32 12 F9
+@g2_suzu|Suzu Kaze|wind|#B8FFF2|A
+us lunge 8/3/10 7 Be
+ds kneeslide 6/7/20 8 D5
+ss vault 3/4/8 8 Bc
+uh scythe 14/4/30 10 Ed
+dh toes 12/6/27 13 Ea
+sh hammer 12/8/25 14 Dc
+rc tether 3/3/14 4 F9
+sp bend 34/13/50 33 Ed
+gp feet 7/5/17 8 Ec
+@g2_twinfoxes|The Twin Foxes|fox|#FF8A2A|A
+us arcback 3/2/14 8 Ba
+ds hip 12/3/11 6 Ac
+ss hiptoss 3/3/10 9 Db
+uh feintup 19/6/30 14 E1
+dh flip 14/8/39 11 F7
+sh cut 23/7/38 17 Ac
+rc column 5/3/11 3 B3
+sp route 31/18/56 31 B2
+gp stall 13/4/26 10 Bd
+@g2_utsuro|Utsuro|void|#7D4AA5|A
+us knee 11/5/12 6 A6
+ds kneeslide 7/5/23 8 Eg
+ss hiptoss 3/4/16 5 B6
+uh line 11/4/29 16 Fb
+dh arcd 25/5/41 14 Be
+sh spinfull 24/5/30 11 Ag
+rc current 5/2/25 3 Bf
+sp grapple 33/16/63 33 Af
+gp diag 12/3/21 10 Da
+@g2_yui|Yui Hoshikawa|light|#FFF2A8|L
+us bait 8/4/10 7 A2
+ds palm 9/4/24 7 B8
+ss retreat 3/4/12 5 E7
+uh leap 12/3/25 12 D3
+dh jumpheel 21/5/30 13 D4
+sh hammer 21/8/34 10 F7
+rc foot 3/2/15 6 Ae
+sp mark 33/18/62 29 Bd
+gp sideheel 11/4/28 7 Ag

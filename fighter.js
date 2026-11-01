@@ -11,6 +11,8 @@ import { drawWhip } from './whipRenderer.js';
 import { activateGenPower, updateGenProjectiles, onGenPowerExpire } from './genPowers.js';
 import { updateMovementAbilities, onMovementAbilityLanded, resetMovementAbilityState } from './movementAbilities.js';
 import { getAttackSpecForData, getActiveSpecHitboxes, hitboxIntersectsBody, specKnockbackVector } from './attackSpecs.js';
+import { mvTick, mvHitShapes, mvStageShare, mvLaunchFor } from './mvEngine.js';
+import { FRIC as MV_FRIC } from './mvKB.js';
 
 export const GRAVITY = 0.42;
 export const JUMP_FORCE = -14.5;
@@ -1308,7 +1310,8 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
   // ── Hitstun: smooth knockback with DI influence ──
   if (fighter.hitstun > 0) {
     fighter.hitstun--;
-    fighter.vx *= KNOCKBACK_DECAY;
+    if (fighter._mvLaunch) { const sp = Math.abs(fighter.vx); fighter.vx = sp <= MV_FRIC ? 0 : fighter.vx - Math.sign(fighter.vx) * MV_FRIC; if (fighter.hitstun <= 0) fighter._mvLaunch = null; }
+    else fighter.vx *= KNOCKBACK_DECAY;
     // Apply DI — slight steering during knockback (Brawlhalla-style)
     fighter.vx += fighter.diX * 0.15;
     fighter.vy += fighter.diY * 0.12;
@@ -1349,7 +1352,8 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
   // Attack state — can't act but still apply physics
   if (fighter.state === 'attacking' || fighter.state === 'superAttack') {
-    const fireMove = fighter.char?.id === 'g1_fire' ? fighter.attackData : null;
+    const mvOn = mvTick(fighter);
+    const fireMove = !mvOn && fighter.char?.id === 'g1_fire' ? fighter.attackData : null;
     const fireElapsed = fireMove ? Math.max(0, (Number(fireMove.duration) || 1) - fighter.attackTimer) : -1;
     // Flame's choreography includes real body displacement as well as the authored VFX.
     // Each beat is applied once at its intended frame; attack timing itself is not sped up.
@@ -2174,6 +2178,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
 
 function applyGen1MoveData(fighter) {
   const d=fighter?.attackData, id=fighter?.char?.id;
+  if (d && d._mv) return;
   if(!String(id||'').startsWith('g1_') || !d || d._gen1FrameApplied || d.isNormal || d.type==='attackHold' || d.holding) return;
   if(!(d.isHeavy || d.isSuper || d.isRecovery || d.isGroundPound || ['up','down','side','upHeavy','downHeavy','aerial','upSignature','downSignature','downNormal','upheavy','aerialHeavy'].includes(d.sigType))) return;
   const key=gen1MoveKey(id,d), frames=GEN1_TIMINGS[id]?.[key]; if(!frames) return;
@@ -2188,13 +2193,14 @@ function applyGen1MoveData(fighter) {
 }
 function updateAttackProgress(fighter) {
   if (!fighter?.attackData) return;
+  if (fighter.attackData._mv) return;                       // the move engine owns timing for roster moves
   applyGen1MoveData(fighter);
   const elapsed = fighter.attackData.duration - fighter.attackTimer;
   fighter.attackData.progress = Math.min(elapsed / fighter.attackData.duration, 1);
 }
 
 function gen1HitStage(attacker){
-  const d=attacker?.attackData; if(!d?.multiHitStages) return 0;
+  const d=attacker?.attackData; if (d?._mv) return d._mv.curStage|0; if(!d?.multiHitStages) return 0;
   const q=Number(d.progress)||0;
   if (d.isSuper) {
     const elapsed=Math.max(0,(Number(d.duration)||1)-(Number(attacker.attackTimer)||0));
@@ -2269,6 +2275,11 @@ export function checkHit(attacker, defender) {
     return false;
   }
 
+  if (attacker.attackData._mv) {
+    const mvBoxes = mvHitShapes(attacker);
+    if (!mvBoxes.length) return false;
+    try { return mvBoxes.some(hb => hitboxIntersectsBody(hb, defender)); } catch (err) { return false; }
+  }
   const p = attacker.attackData.progress;
   if (p < 0.08 || p > 0.85) return false;
 
@@ -2385,10 +2396,11 @@ export function applyHit(attacker, defender) {
   const fireDamageScale = fireHero ? 1 + Math.min(200, Math.max(0, Number(defender.damage) || 0)) * (fireHeavy ? 0.00165 : 0.0010) : 1;
   // A Gen-I super's baseline damage is split across its two authored stages:
   // setup hits establish the route/marks; the later hit carries the finisher weight.
-  const gen1SuperStage = String(attacker.char?.id || '').startsWith('g1_') && attacker.attackData.isSuper
+  const mvOn = !!attacker.attackData._mv;
+  const gen1SuperStage = !mvOn && String(attacker.char?.id || '').startsWith('g1_') && attacker.attackData.isSuper
     ? (Number(attacker.attackData.hitStage) || 0) : -1;
   const gen1SuperDamageShare = gen1SuperStage < 0 ? 1 : (gen1SuperStage === 0 ? 0.32 : 0.68);
-  const rawDmg = (attacker.attackData.damage || 10) * gen1SuperDamageShare * fireDamageScale * holdDamageMul * (attacker.damageBoost || 1) * (attacker.statPowerMul || 1);
+  const rawDmg = (attacker.attackData.damage || 10) * (mvOn ? mvStageShare(attacker) : 1) * gen1SuperDamageShare * fireDamageScale * holdDamageMul * (attacker.damageBoost || 1) * (attacker.statPowerMul || 1);
   const totalReduction = (defender.shieldAmount || 0) + (defender.statDefenseReduction || 0);
   const dmg = rawDmg * Math.max(0.1, 1 - totalReduction);
   // Super-only mode: non-super attacks deal no damage
@@ -2550,6 +2562,13 @@ export function applyHit(attacker, defender) {
   const baseStun = attacker.attackData.isHeavy ? 20 : attacker.attackData.isSuper ? 35 : isLight ? 16 : 18;
   const controlHitstunMul = attacker.statControlHitstunMul || 1;
   defender.hitstun = Math.min(Math.round((baseStun + Math.floor(dmg * 0.4)) * controlHitstunMul), 50);
+  defender._mvLaunch = null;
+  if (mvOn) {
+    const L = mvLaunchFor(attacker, defender);
+    defender.vx = L.vx; defender.vy = L.vy;
+    defender.hitstun = Math.min(50, Math.max(8, Math.round(L.hitstun * controlHitstunMul)));
+    defender._mvLaunch = { fric: MV_FRIC };
+  }
   // A third-party hit always hard-cancels the defender's current attack/charge.
   // This prevents an interrupted Gen I attack from leaking into the running/idle pose.
   defender.attackHold = null;

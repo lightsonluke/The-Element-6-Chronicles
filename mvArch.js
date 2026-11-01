@@ -1,0 +1,10 @@
+import { US } from './mvArchUS.js';
+import { DS } from './mvArchDS.js';
+import { SS } from './mvArchSS.js';
+import { UH } from './mvArchUH.js';
+import { DH } from './mvArchDH.js';
+import { SH } from './mvArchSH.js';
+import { RC } from './mvArchRC.js';
+import { GP } from './mvArchGP.js';
+import { SP } from './mvArchSP.js';
+export const ARCH = { ...US, ...DS, ...SS, ...UH, ...DH, ...SH, ...RC, ...GP, ...SP };

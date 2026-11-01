@@ -1,0 +1,47 @@
+// Side Heavy choreographies. Envelope: forward rectangle 135x65 from the lead shoulder through the full strike path.
+import { P, GUARD } from './mvCore.js';
+const K = (at, p, e) => ({ at, p, e });
+const END = (p = GUARD) => [K(2.4, p, 'io'), K(3, GUARD, 'io')];
+export const fxSH = (a, o = {}) => [
+  { k: 'blade', a, ang: o.ang || 0, abs: o.abs, len: o.len || [18, 126], r: o.r || [20, 31], u: o.u || [0, 1], ease: 'out', bend: o.bend },
+  ...(o.arc ? [{ k: 'arc', c: o.arc.c || 'sh', R: o.arc.R || [30, 46], a0: o.arc.a0, a1: o.arc.a1, tail: o.arc.tail || 90, r: [12, 18], u: [0, 1], ease: 'out' }] : []),
+];
+export const SH = {
+  'sh.overhead': { keys: [K(0, GUARD), K(0.75, P({ lean: -14, hip: -1.0, nh: { a: 132, l: 0.58 }, fh: { a: 120, l: 0.58 }, nf: [0.35, 0], ff: [-0.35, 0] }), 'in'),
+      K(1, P({ lean: 36, hip: -0.9, nh: { a: -6, l: 0.58 }, fh: { a: 6, l: 0.58 }, nf: [0.6, 0], ff: [-0.55, 0] }), 'snap'), K(1.7, P({ lean: 42, hip: -0.9, nh: { a: -18, l: 0.58 }, fh: { a: -8, l: 0.58 } }), 'out'), ...END()],
+    fx: fxSH('hands', { abs: true, ang: -4, arc: { a0: 120, a1: -10, tail: 110, R: [34, 48] } }), drive: [{ at: [0.8, 1.3], vx: 2.2 }] },
+  'sh.spinfull': { keys: [K(0, GUARD), K(0.4, P({ lean: -16, hip: -0.95, nh: { a: 190, l: 0.58 }, fh: { a: 170, l: 0.58 }, nf: [0.2, 0], ff: [-0.55, 0] }), 'out'), K(0.8, P({ lean: 12, hip: -0.9, rot: 36, nh: { a: 215, l: 0.58 }, fh: { a: 200, l: 0.58 } }), 'io'),
+      K(1, P({ lean: 34, hip: -0.9, nh: { a: 4, l: 0.58 }, fh: { a: 190, l: 0.5 }, nf: [0.65, 0], ff: [-0.5, 0] }), 'snap'), K(1.7, P({ lean: 40, nh: { a: 0, l: 0.58 } }), 'out'), ...END()],
+    fx: fxSH('nh', { abs: true, ang: 0, arc: { a0: 200, a1: 0, tail: 150, R: [34, 48] } }), drive: [{ at: [0.7, 1.2], vx: 2.4 }] },
+  'sh.cut': { keys: [K(0, GUARD), K(0.6, P({ lean: -8, hip: -0.95, dx: -0.2, nh: { a: -50, l: 0.58 }, fh: { a: 170, l: 0.5 }, nf: [0.15, 0], ff: [-0.6, 0] }), 'in'),
+      K(1, P({ lean: 30, hip: -0.9, dx: 0.2, nh: { a: 8, l: 0.58 }, fh: { a: 190, l: 0.5 }, nf: [0.65, 0], ff: [-0.5, 0] }), 'snap'), K(1.7, P({ lean: 36, hip: -0.9, dx: 0.3, nh: { a: 34, l: 0.58 } }), 'out'), ...END()],
+    fx: fxSH('nh', { abs: true, ang: 6, arc: { a0: -52, a1: 38, tail: 90, R: [34, 46] } }), drive: [{ at: [0.5, 1.1], vx: 2.6 }] },
+  'sh.hurl': { keys: [K(0, GUARD), K(0.5, P({ lean: 14, hip: -0.9, nh: { a: 4, l: 0.58 }, fh: { a: 14, l: 0.58 }, nf: [0.5, 0], ff: [-0.4, 0] }), 'out'), K(0.85, P({ lean: 24, hip: -0.85, rot: -14, nh: { a: 10, l: 0.34 }, fh: { a: 20, l: 0.34 } }), 'io'),
+      K(1, P({ lean: 40, hip: -0.9, rot: 16, nh: { a: 18, l: 0.58 }, fh: { a: 6, l: 0.58 }, nf: [0.6, 0], ff: [-0.5, 0] }), 'snap'), K(1.7, P({ lean: 46, nh: { a: 22, l: 0.58 }, fh: { a: 10, l: 0.58 } }), 'out'), ...END()],
+    fx: [{ k: 'orb', from: 'hands', to: [128, -54], via: [60, -80], r: [26, 32], u: [0, 1], ease: 'out' }, ...fxSH('hands', { abs: true, ang: 0, len: [10, 90], r: [14, 20], u: [0, 0.8] })] },
+  'sh.lowsh': { keys: [K(0, GUARD), K(0.65, P({ lean: 54, hip: -0.68, nf: { a: 30, l: 1.0 }, ff: [-0.8, 0], nh: { a: -40, l: 0.5 }, fh: { a: 200, l: 0.5 } }), 'in'),
+      K(1, P({ lean: 26, hip: -1.0, nf: [0.5, 0], ff: [-0.5, -0.05], nh: { a: 4, l: 0.58 }, fh: { a: 195, l: 0.45 } }), 'snap'), K(1.7, P({ lean: 30, hip: -1.0, nh: { a: 2, l: 0.58 } }), 'out'), ...END()],
+    fx: fxSH('nh', { abs: true, ang: 0 }), drive: [{ at: [0, 1.1], vx: 5.2 }] },
+  'sh.hook': { keys: [K(0, GUARD), K(0.65, P({ lean: 40, hip: -0.62, nh: { a: -70, l: 0.58 }, fh: { a: 190, l: 0.5 }, nf: [0.5, 0], ff: [-0.5, 0] }), 'in'),
+      K(1, P({ lean: 26, hip: -0.95, nh: { a: 10, l: 0.58 }, fh: { a: 190, l: 0.45 }, nf: [0.6, 0], ff: [-0.5, 0] }), 'snap'), K(1.7, P({ lean: 30, hip: -0.95, nh: { a: 20, l: 0.58 } }), 'out'), ...END()],
+    fx: fxSH('nh', { abs: true, ang: 6, arc: { a0: -64, a1: 24, tail: 100, R: [34, 46] } }), drive: [{ at: [0.6, 1.1], vx: 2.4 }] },
+  'sh.hammer': { keys: [K(0, GUARD), K(0.7, P({ lean: -10, hip: -1.0, nh: { a: 55, l: 0.5 }, fh: { a: 50, l: 0.5 }, nf: [0.35, 0], ff: [-0.4, 0] }), 'in'),
+      K(1, P({ lean: 26, hip: -0.92, nh: { a: -24, l: 0.5 }, fh: { a: -18, l: 0.5 }, nf: [0.55, 0], ff: [-0.5, 0] }), 'snap'), K(1.7, P({ lean: 30, hip: -0.92, nh: { a: -38, l: 0.5 }, fh: { a: -32, l: 0.5 } }), 'out'), ...END()],
+    fx: fxSH('hands', { abs: true, ang: -12, arc: { a0: 70, a1: -26, tail: 80, R: [26, 40] } }) },
+  'sh.backkick': { keys: [K(0, GUARD), K(0.7, P({ lean: -26, hip: -1.0, nf: [0.1, 0], ff: [-0.3, 0], nh: { a: 40, l: 0.5 }, fh: { a: 150, l: 0.5 }, head: -8 }), 'in'),
+      K(1, P({ lean: 34, hip: -0.95, rot: 12, nf: [0.3, 0], ff: { a: 10, l: 1.17 }, nh: { a: 200, l: 0.5 }, fh: { a: 100, l: 0.5 } }), 'snap'), K(1.7, P({ lean: 40, hip: -0.95, rot: 16, ff: { a: 4, l: 1.17 } }), 'out'), ...END()],
+    fx: fxSH('ff', { len: [18, 126], r: [20, 30] }) },
+  'sh.ram': { keys: [K(0, GUARD), K(0.6, P({ lean: 62, hip: -0.45, nf: [0.9, -0.02], ff: [-0.4, 0], nh: { a: 20, l: 0.5 }, fh: { a: 30, l: 0.5 } }), 'in'),
+      K(1, P({ lean: 34, hip: -0.95, nf: [0.5, 0], ff: [-0.5, 0], nh: { a: 10, l: 0.5 }, fh: { a: 190, l: 0.45 } }), 'snap'), K(1.7, P({ lean: 38, hip: -0.95 }), 'out'), ...END()],
+    fx: fxSH('sh', { abs: true, ang: 0, len: [14, 118], r: [24, 32] }), drive: [{ at: [0, 1], vx: 4.8 }] },
+  'sh.palmth': { keys: [K(0, GUARD), K(0.5, P({ lean: -14, hip: -0.98, dx: -0.4, nf: [0.1, 0], ff: [-0.6, 0], nh: { a: 30, l: 0.4 }, fh: { a: 130, l: 0.5 } }), 'out'),
+      K(1, P({ lean: 42, hip: -0.88, dx: 0.35, nf: [0.85, 0], ff: [-0.6, 0], nh: { a: 4, l: 0.58 }, fh: { a: 190, l: 0.5 } }), 'snap'), K(1.7, P({ lean: 46, hip: -0.88, dx: 0.42, nh: { a: 2, l: 0.58 } }), 'out'), ...END()],
+    fx: fxSH('nh', { abs: true, ang: 2, len: [10, 126], r: [20, 28] }), drive: [{ at: [0, 0.5], vx: -2 }, { at: [0.6, 1.2], vx: 4.6 }] },
+  'sh.straight': { keys: [K(0, GUARD), K(0.75, P({ lean: -14, hip: -0.98, nh: { a: 192, l: 0.58 }, fh: { a: 20, l: 0.5 }, nf: [0.4, 0], ff: [-0.6, 0] }), 'in'),
+      K(1, P({ lean: 34, hip: -0.9, nh: { a: 2, l: 0.58 }, fh: { a: 190, l: 0.45 }, nf: [0.7, 0], ff: [-0.55, 0] }), 'snap'), K(1.7, P({ lean: 40, hip: -0.9, nh: { a: 0, l: 0.58 } }), 'out'), ...END()],
+    fx: fxSH('nh', { abs: true, ang: 0, len: [10, 130], r: [18, 26] }), drive: [{ at: [0.7, 1.2], vx: 3.4 }] },
+  'sh.twofoot': { keys: [K(0, GUARD), K(0.5, P({ lean: 18, hip: -0.65, nh: { a: -30, l: 0.5 }, fh: { a: -20, l: 0.5 }, nf: [0.4, 0], ff: [-0.4, 0] }), 'in'),
+      K(0.8, P({ lean: 6, hip: -1.2, dy: -0.4, dx: 0.3, nf: { a: 60, l: 0.7 }, ff: { a: 70, l: 0.7 }, nh: { a: 60, l: 0.4 }, fh: { a: 100, l: 0.4 } }), 'out'),
+      K(1, P({ lean: -20, hip: -1.1, dy: -0.3, dx: 0.4, nf: { a: 6, l: 1.17 }, ff: { a: -6, l: 1.17 }, nh: { a: 150, l: 0.5 }, fh: { a: 180, l: 0.5 } }), 'snap'), K(1.7, P({ lean: -24, hip: -1.1, dy: -0.2, dx: 0.5, nf: { a: 2, l: 1.17 }, ff: { a: -8, l: 1.17 } }), 'out'), ...END()],
+    fx: [{ k: 'blade', a: 'nf', len: [14, 124], r: [20, 28], u: [0, 1], ease: 'out' }], drive: [{ at: [0.5, 1.4], vx: 4.2, vy: -1.2 }] },
+};

@@ -1,0 +1,200 @@
+@g3_aiko|Aiko Hone|bone|#E8E4D4|A
+us sidestep 10/4/23 9 F3
+ds ankle 11/6/28 8 F7
+ss hiptoss 5/2/16 10 Ce
+uh scythe 15/5/39 16 F4
+dh kneeland 27/7/43 18 Cd
+sh palmth 23/8/32 18 Be
+rc spring 5/4/21 6 E7
+sp strikes 21/14/44 32 Be
+gp grab 17/2/32 11 Fe
+@g3_chiyo|Chiyo Doku|venom|#8FD14F|L
+us runner 9/3/12 9 A1
+ds rake 10/5/26 7 C7
+ss rollpop 5/2/20 5 E6
+uh clinch 15/4/37 15 Ce
+dh shroll 23/3/43 18 Aa
+sh cut 14/8/41 16 D3
+rc column 8/3/20 4 C7
+sp hazard 29/16/65 24 A4
+gp past 11/5/32 13 Cg
+@g3_emi|Emi Chi|blood|#C0243A|A
+us knee 11/4/16 7 Ce
+ds hip 8/4/20 7 Dc
+ss twoshot 5/6/19 6 D7
+uh line 13/6/22 13 Fc
+dh jumpheel 19/5/30 16 D2
+sh lowsh 13/4/38 16 Dc
+rc foot 7/5/20 3 A2
+sp decoy 37/12/52 28 C4
+gp spread 9/4/27 12 Fe
+@g3_haru|Haru Garasu|glass|#BFEFFF|L
+us handst 4/4/16 8 Bc
+ds heel 9/4/15 9 Ag
+ss waist 4/2/12 9 F3
+uh scythe 13/4/29 10 E5
+dh shroll 25/7/38 16 Ag
+sh ram 14/4/29 14 B3
+rc cork 5/2/15 7 Ab
+sp route 32/15/50 36 F9
+gp spread 8/2/27 11 Cd
+@g3_kanenobu|Lord Kanenobu|command|#D8B25A|A
+us handst 11/2/16 6 B9
+ds palm 9/6/27 7 D8
+ss twoshot 5/3/9 10 D3
+uh scythe 12/4/34 16 B6
+dh skid 15/8/42 16 Fb
+sh ram 21/3/41 12 Eg
+rc cork 3/3/15 3 E2
+sp route 31/14/48 22 C2
+gp spread 14/4/22 8 De
+@g3_masaru|Masaru Hai|ash|#9A9A9A|A
+us arcback 8/5/13 7 C2
+ds palm 11/4/16 7 D1
+ss waist 6/3/17 8 Ed
+uh scythe 11/6/27 11 Ce
+dh kneeland 26/6/35 11 F3
+sh lowsh 23/5/36 14 A4
+rc spring 4/5/25 4 Ag
+sp grapple 19/9/42 23 A8
+gp diag 10/2/19 8 Fc
+@g3_nozomi|Nozomi Toge|thorn|#4FA84A|A
+us lunge 10/3/21 5 C7
+ds heel 15/7/27 9 E7
+ss vault 6/3/18 10 B3
+uh upper 16/3/31 11 Fd
+dh sweepd 25/3/31 17 Cc
+sh twofoot 16/4/40 17 C4
+rc foot 7/2/28 3 Ec
+sp route 32/14/49 33 D9
+gp spread 11/6/19 9 Fg
+@g3_ogata|Ogata|extract|#C46A3A|A
+us hop 9/4/13 9 Ce
+ds palm 9/7/19 5 D1
+ss miss 5/6/13 7 D9
+uh roll 12/5/22 16 Cc
+dh kneeland 18/7/43 12 Ff
+sh hook 24/5/32 12 F9
+rc cork 8/2/18 7 F4
+sp hazard 21/12/49 24 D9
+gp tuck 10/3/19 8 C7
+@g3_ryo|Ryo Kiri|mist|#B9C7D6|L
+us knee 6/5/16 9 Ed
+ds stamp 7/4/17 7 F2
+ss lash 4/3/12 7 D4
+uh backfist 11/5/28 12 A6
+dh flip 14/6/26 17 Eg
+sh backkick 24/7/36 14 D6
+rc marker 9/3/22 6 C3
+sp decoy 21/18/49 26 B6
+gp sideheel 8/3/27 13 E4
+@g3_souta|Souta|ash|#8C8C8C|A
+us jumpback 6/4/13 9 Aa
+ds hip 10/5/27 8 Fe
+ss lash 7/3/16 6 D8
+uh scythe 13/4/36 15 Dc
+dh backheel 23/5/43 16 A4
+sh twofoot 17/8/41 17 F2
+rc cork 9/4/19 4 D6
+sp mark 38/11/65 24 C5
+gp seat 7/3/20 8 D6
+@g3_takeshi|Takeshi Sando|sand|#D9B66A|L
+us handst 11/5/12 9 F3
+ds handkick 11/7/28 7 Fa
+ss stopgo 3/2/16 10 Cg
+uh feintup 20/3/35 16 B8
+dh skid 24/4/40 17 B2
+sh backkick 24/7/32 17 Cf
+rc burst 7/2/26 4 B6
+sp strikes 19/11/51 22 A2
+gp diag 10/5/24 9 C9
+@g4_cobalt|Cobalt|barrier|#3366FF|A
+us pull 4/3/18 5 F9
+ds rake 10/5/18 4 F4
+ss feint 4/3/15 10 C8
+uh clinch 22/4/35 16 Da
+dh jumpheel 15/6/39 16 C2
+sh ram 13/5/30 14 C2
+rc roll 8/2/14 7 Eb
+sp route 29/16/48 31 Da
+gp head 14/5/31 10 Eb
+@g4_cyan|Cyan|wind|#66DDFF|L
+us sidestep 5/3/9 6 A9
+ds handkick 10/5/11 4 Ab
+ss retreat 6/6/10 6 E9
+uh spinout 12/6/31 11 E9
+dh jumpheel 22/3/32 17 C6
+sh hook 21/3/31 10 E7
+rc sideup 4/5/16 3 E4
+sp route 33/18/56 35 Fc
+gp grab 7/3/20 10 D1
+@g4_daichi|Daichi Ishii|sound|#FFB02E|A
+us hop 10/3/16 5 Ad
+ds tap 15/3/28 7 B2
+ss hiptoss 10/4/12 5 Ab
+uh heeldrop 22/5/33 16 Aa
+dh skid 24/5/30 17 C1
+sh cut 23/3/33 10 E1
+rc marker 7/3/26 6 F2
+sp strikes 32/12/60 24 F4
+gp grab 14/2/30 10 Fc
+@g4_gold|Gold|light|#FFD83D|A
+us runner 4/2/16 8 De
+ds handkick 13/5/16 5 Aa
+ss sprint 5/3/16 6 D2
+uh line 21/5/28 16 D9
+dh palms 25/3/33 18 E7
+sh spinfull 17/6/36 10 C4
+rc sideup 7/4/14 6 Ba
+sp mark 23/11/54 35 B1
+gp tuck 12/2/24 9 B7
+@g4_graphite|Graphite|sound|#8899AA|A
+us rollelb 7/2/20 5 Be
+ds heel 14/4/16 8 Ac
+ss waist 7/3/9 10 Af
+uh feintup 12/5/38 13 Cg
+dh shroll 21/4/30 12 Ce
+sh straight 14/3/26 11 A1
+rc burst 7/2/24 4 E4
+sp grapple 33/13/50 31 Cd
+gp spread 12/3/27 9 Ce
+@g4_onyx|Onyx|shadow|#5C3C88|A
+us handst 6/3/9 8 Fa
+ds hip 11/5/12 4 Af
+ss sprint 3/3/14 6 Dc
+uh upper 14/4/21 10 Bd
+dh skid 15/8/41 14 B1
+sh hook 14/7/37 10 E4
+rc current 6/3/18 3 Fe
+sp three 27/17/47 35 D7
+gp spread 12/5/22 7 Bc
+@g4_renko|Renko Kurenai|extract|#A90024|A
+us runner 4/2/14 9 Bb
+ds spin 7/5/23 4 F5
+ss sprint 4/2/17 8 F4
+uh backfist 13/5/33 16 Ag
+dh palms 18/4/35 15 B6
+sh cut 16/3/39 15 A4
+rc blink 8/4/20 3 E5
+sp hazard 34/18/62 26 C1
+gp grab 10/2/17 8 Cc
+@g4_umber|Umber|stone|#9A5B32|A
+us cork 4/4/19 6 Dd
+ds tap 12/6/20 8 B4
+ss rollpop 7/4/15 9 E4
+uh scythe 16/5/25 13 D6
+dh fist 18/5/36 12 E8
+sh spinfull 16/7/40 11 E1
+rc ledge 9/5/25 3 E4
+sp lanes 29/14/46 34 F5
+gp feet 12/4/25 11 De
+@g4_vermilion|Vermilion|fire|#E34234|L
+us lunge 5/4/14 9 Be
+ds spin 12/3/24 5 F6
+ss elbow 3/4/16 6 C6
+uh leap 18/3/29 13 Dc
+dh palms 26/4/32 16 Fa
+sh lowsh 21/6/28 13 Fe
+rc sideup 4/5/19 6 Ed
+sp slow 24/18/46 36 Fc
+gp head 15/5/22 10 E9

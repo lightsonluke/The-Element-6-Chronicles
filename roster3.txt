@@ -1,0 +1,390 @@
+@amber|Amber|clone|#FFBB33|A
+us hop 4/2/13 5 E4
+ds hopflick 7/5/17 7 F8
+ss sprint 5/3/20 8 E1
+uh upper 18/5/38 12 D1
+dh palms 23/6/30 17 Ec
+sh ram 23/4/39 14 Ef
+rc tether 4/3/18 7 Bb
+sp strikes 31/15/60 34 D2
+gp spread 16/6/26 8 Fc
+@black|Black|thunder|#FFFF44|A
+us knee 8/4/15 8 Ec
+ds wrist 13/5/23 5 Ab
+ss elbow 3/4/12 8 Ab
+uh backfist 18/7/26 15 Ad
+dh fist 14/5/31 17 Fb
+sh cut 21/7/29 13 Cg
+rc cork 3/5/24 6 E1
+sp strikes 34/18/55 28 Ea
+gp stall 7/5/16 11 Bg
+@blue|Blue|water|#4488FF|L
+us sidestep 5/5/16 7 Ba
+ds tap 15/4/22 4 Ec
+ss retreat 3/3/20 8 C5
+uh clinch 22/7/37 14 E8
+dh jumpheel 27/8/37 17 D4
+sh hurl 24/3/35 14 De
+rc current 8/4/28 5 Aa
+sp strikes 21/16/40 35 Ad
+gp drop 15/5/28 8 De
+@cable|Cable|thunder|#66CCFF|L
+us rollelb 8/3/15 6 Eg
+ds handkick 15/5/17 5 C6
+ss retreat 4/6/11 10 C2
+uh heeldrop 19/4/25 14 A6
+dh jumpheel 14/8/39 15 Df
+sh twofoot 16/4/41 18 E2
+rc column 3/2/26 4 Cc
+sp hazard 21/16/63 30 A8
+gp drop 10/4/31 9 C4
+@controller|The Controller|psychic|#6A4FB3|A
+us cork 7/3/20 9 A2
+ds tap 13/5/20 7 F9
+ss feint 7/5/19 5 F8
+uh pullup 15/4/37 10 B2
+dh skid 20/5/35 17 C6
+sh hurl 22/7/38 14 Ea
+rc sideup 4/5/23 7 D6
+sp point 20/12/54 23 Ac
+gp seat 13/5/18 10 Aa
+@copper|Copper|time|#CC7744|A
+us hop 5/3/19 6 B1
+ds heel 11/3/27 7 Ca
+ss rollpop 4/6/18 6 C4
+uh scythe 15/6/37 13 Af
+dh arcd 21/7/37 15 A6
+sh lowsh 15/4/29 13 E5
+rc current 4/3/28 4 Fd
+sp corridor 38/13/54 24 A8
+gp spread 15/6/28 7 Cg
+@corpent|Corpent|force|#8B5A2B|A
+us handst 6/5/17 7 E9
+ds hip 15/6/29 9 Ab
+ss stopgo 6/6/21 9 Cd
+uh upper 22/3/32 16 Cc
+dh palms 20/4/43 12 B2
+sh lowsh 16/5/41 16 Af
+rc roll 6/5/29 5 F2
+sp three 38/14/62 35 Dd
+gp past 17/2/32 13 D5
+@crimson|Crimson|construct|#DC143C|L
+us rollelb 5/4/22 6 B3
+ds tap 9/3/28 7 E2
+ss lash 10/6/16 8 Cd
+uh pullup 16/4/36 12 De
+dh jumpheel 22/3/43 18 C1
+sh overhead 18/3/25 16 Be
+rc roll 4/3/15 5 E5
+sp point 36/14/53 23 Eb
+gp heeldn 17/2/22 11 Ba
+@death|Death|death|#6B5B8A|L
+us lunge 11/2/18 7 Eb
+ds spin 14/4/21 4 D8
+ss vault 3/2/12 5 F5
+uh pullup 17/6/30 12 Ab
+dh fist 19/7/43 13 F1
+sh hook 21/3/36 16 F1
+rc marker 6/3/27 5 B6
+sp corridor 22/12/58 34 E3
+gp drop 7/6/31 9 Fc
+@emerald|Emerald|phase|#33CC66|A
+us rollelb 8/5/10 8 E1
+ds ankle 11/7/26 9 F8
+ss elbow 4/2/15 6 Ag
+uh shoulder 13/5/23 15 C2
+dh jumpheel 27/4/33 12 A4
+sh ram 24/8/33 11 D4
+rc column 3/3/24 4 D6
+sp lanes 33/15/65 34 A5
+gp sideheel 7/3/22 11 F3
+@evil|Evil|void|#2A0A3A|L
+us handst 4/3/22 7 A1
+ds spin 13/5/19 4 D3
+ss retreat 5/5/16 10 C1
+uh line 12/7/39 10 Ec
+dh sweepd 27/5/43 18 E5
+sh cut 15/8/31 18 C8
+rc foot 9/5/24 4 Dg
+sp strikes 28/9/57 31 F2
+gp diag 17/5/31 13 C1
+@green|Green|stone|#44AA44|A
+us knee 12/3/20 6 Db
+ds rake 15/5/29 7 Ba
+ss waist 6/2/19 8 Cf
+uh upper 17/6/30 15 D6
+dh kneeland 22/4/43 18 F1
+sh hammer 15/6/39 15 Fd
+rc foot 7/5/25 7 B7
+sp hazard 37/12/52 30 E2
+gp stall 14/3/32 13 Ef
+@grey|Grey|barrier|#888888|A
+us jumpback 7/5/13 5 Cf
+ds stamp 9/4/24 8 B5
+ss lash 3/4/19 9 Fd
+uh backfist 15/5/38 16 C6
+dh shroll 23/5/32 16 E3
+sh hammer 19/3/25 14 F7
+rc burst 8/4/25 7 Fb
+sp decoy 33/9/52 27 A9
+gp head 8/6/20 10 B2
+@hazel|Hazel|thorn|#2D5A1B|A
+us bait 9/4/22 5 Ae
+ds spin 7/4/19 5 Cc
+ss sprint 6/4/17 6 Ae
+uh feintup 12/5/31 11 Ag
+dh arcd 24/8/33 14 E4
+sh straight 13/6/41 12 F7
+rc tether 9/3/23 5 Bf
+sp grapple 23/14/58 23 F5
+gp head 9/4/18 13 F7
+@indigo|Indigo|gravity|#4B0082|A
+us bait 12/4/18 7 A1
+ds kneeslide 9/6/19 8 Eg
+ss vault 8/4/23 7 De
+uh line 13/4/39 14 F6
+dh flip 25/8/43 18 B8
+sh backkick 17/4/41 13 F8
+rc blink 6/3/18 4 E5
+sp lanes 34/18/58 35 F6
+gp stall 17/3/21 12 C1
+@kirsten|Kirsten|fire|#FF6A24|A
+us runner 9/4/16 9 Db
+ds spin 12/5/16 4 A3
+ss stopgo 5/3/19 6 Ag
+uh roll 17/5/37 13 Fc
+dh sweepd 20/3/42 12 E6
+sh straight 24/7/41 18 A6
+rc marker 9/3/20 3 C8
+sp three 31/10/57 33 D8
+gp sideheel 7/4/25 10 Cg
+@lavender|Lavender|airsolid|#BB88DD|A
+us arcback 11/5/13 6 Ad
+ds handkick 8/5/24 5 Cc
+ss stopgo 4/4/16 9 F3
+uh roll 19/5/36 15 Ed
+dh toes 21/8/30 12 B6
+sh straight 16/4/41 14 A8
+rc blink 9/2/17 4 Ag
+sp mark 28/13/51 32 Ff
+gp grab 7/2/21 10 F4
+@life|Life|life|#67D88A|A
+us jumpback 7/3/15 9 F6
+ds heel 11/5/18 8 Ef
+ss rollpop 8/6/16 5 Ab
+uh upper 11/3/26 14 E5
+dh kneeland 23/3/27 18 D8
+sh overhead 18/8/29 17 B9
+rc foot 8/4/14 5 F3
+sp mark 19/15/62 30 Fd
+gp past 7/5/31 13 A3
+@magenta|Magenta|glue|#FF44AA|A
+us runner 11/5/14 8 Ag
+ds ankle 10/7/26 5 Ec
+ss vault 7/2/12 10 Ad
+uh feintup 12/5/30 13 Ae
+dh sweepd 27/7/35 17 Bg
+sh overhead 16/6/39 11 F7
+rc cork 4/3/26 3 Ag
+sp point 37/14/64 31 Fe
+gp past 17/5/22 9 A7
+@magneto|Magneto|metal|#777777|A
+us runner 7/3/16 5 Ba
+ds stamp 13/7/25 4 D9
+ss lash 9/2/13 9 Fe
+uh spinout 11/7/39 13 E7
+dh skid 17/6/29 11 Ab
+sh spinfull 16/5/29 13 D5
+rc roll 3/3/28 4 Dc
+sp slow 38/16/57 35 C7
+gp sideheel 11/2/21 7 Ef
+@maroon|Maroon|energy|#800000|L
+us bait 9/2/16 5 F5
+ds stamp 15/3/22 9 Ed
+ss lash 4/2/17 8 Bc
+uh roll 13/7/39 11 Bd
+dh backheel 26/8/43 14 C7
+sh ram 16/4/34 11 Da
+rc current 4/2/23 4 E9
+sp strikes 19/15/65 22 Bc
+gp diag 16/4/20 7 E1
+@mercy|Mercy|mercy|#F2E8FF|A
+us lunge 4/3/16 7 Ad
+ds ankle 11/4/23 9 F6
+ss vault 6/6/17 8 D8
+uh upper 12/5/29 10 B8
+dh shroll 18/3/43 18 C3
+sh overhead 14/8/41 12 C3
+rc column 7/5/16 7 Bg
+sp slow 36/18/57 25 F3
+gp past 11/3/32 11 Dd
+@nightmare|Nightmare|dream|#A66CFF|A
+us cork 9/3/13 7 E1
+ds wrist 10/5/21 4 Dc
+ss lash 9/3/13 7 A7
+uh spinout 17/6/29 12 F3
+dh sweepd 21/8/31 11 E2
+sh overhead 24/4/29 11 C3
+rc burst 8/4/28 3 Ae
+sp mark 26/9/46 36 F4
+gp heeldn 12/3/32 13 Bf
+@olive|Olive|growth|#808000|A
+us handst 10/5/16 9 F2
+ds rake 11/3/22 7 D2
+ss feint 3/2/13 5 Fe
+uh backfist 19/7/27 12 Eb
+dh shroll 26/8/35 12 Ac
+sh spinfull 13/7/34 15 A2
+rc current 7/3/17 7 Fb
+sp point 24/17/58 26 Fd
+gp spread 10/3/22 12 F8
+@orange|Orange|space|#FF8800|A
+us arcback 5/4/13 5 C6
+ds hip 9/7/15 5 C5
+ss hiptoss 7/5/9 6 B4
+uh leap 15/6/27 13 Cg
+dh still 18/5/43 15 F2
+sh overhead 15/7/41 18 Aa
+rc burst 9/3/24 4 D5
+sp slow 32/13/57 36 D7
+gp tuck 15/5/29 12 B8
+@pearl|Pearl|sound|#EEEEDD|A
+us pull 9/3/10 7 B7
+ds kneeslide 13/3/19 5 F8
+ss rollpop 6/3/17 6 D7
+uh spinout 11/6/30 11 B9
+dh sweepd 24/7/38 11 Ag
+sh spinfull 23/8/32 10 A1
+rc blink 7/4/24 3 B7
+sp mark 32/16/57 33 Bd
+gp grab 9/2/24 12 B7
+@pink|Pink|psychic|#FF66AA|A
+us knee 4/5/11 7 D2
+ds hopflick 11/5/17 5 Ad
+ss sprint 4/6/20 6 F9
+uh roll 13/7/38 11 Df
+dh shroll 16/3/37 12 C7
+sh overhead 13/8/34 15 Cb
+rc spring 7/4/18 4 Bd
+sp bend 38/11/63 30 C9
+gp diag 17/2/25 9 A3
+@purple|Purple|shadow|#9944CC|A
+us knee 9/4/11 5 Cd
+ds rake 8/3/16 8 A4
+ss elbow 6/5/16 5 C2
+uh leap 17/7/25 10 Fa
+dh toes 16/4/41 16 C4
+sh backkick 14/3/26 10 D6
+rc foot 4/4/20 3 Dd
+sp route 24/18/47 27 Bf
+gp spread 15/6/18 9 De
+@red|Red|fire|#FF3333|L
+us knee 11/5/18 8 B5
+ds spin 11/4/15 6 Fb
+ss sprint 3/6/11 10 A8
+uh roll 18/3/22 13 A7
+dh toes 16/6/29 17 C7
+sh ram 23/8/32 11 A1
+rc blink 6/3/19 3 Ad
+sp mark 25/11/44 27 C6
+gp spread 15/4/20 13 Cf
+@scarlet|Scarlet|spirit|#FF2400|A
+us rollelb 4/5/15 8 B2
+ds handkick 7/5/29 8 C2
+ss vault 6/2/21 10 Df
+uh spinout 22/6/32 13 A5
+dh fist 16/3/30 17 D4
+sh spinfull 17/8/38 11 Cb
+rc blink 5/2/28 3 Bc
+sp lanes 26/16/60 22 Be
+gp feet 17/4/25 13 E9
+@silver|Silver|metal|#C0C0C0|A
+us pull 10/5/11 8 F7
+ds kneeslide 11/4/24 5 Df
+ss retreat 5/4/19 10 F6
+uh scythe 19/3/34 13 Bc
+dh kneeland 27/4/32 16 C9
+sh cut 17/5/30 12 Da
+rc cork 3/2/21 5 Af
+sp route 19/18/41 22 Ca
+gp spread 8/4/19 8 F6
+@snodvor|Snodvor|ice|#A9E7FF|A
+us cork 5/3/15 6 C6
+ds wrist 9/3/23 5 C8
+ss waist 4/2/10 8 C1
+uh spinout 16/5/25 10 Bb
+dh sweepd 26/7/34 15 Bd
+sh cut 20/5/34 16 Fb
+rc foot 4/4/17 5 F6
+sp bend 19/11/59 30 D6
+gp feet 13/4/28 12 B2
+@temple|Temple|shatter|#AA6633|A
+us sidestep 6/3/11 9 E7
+ds wrist 9/7/29 5 B4
+ss twoshot 3/6/13 7 Cc
+uh shoulder 11/5/29 12 B3
+dh toes 27/6/40 16 D7
+sh hurl 14/4/41 15 F2
+rc ledge 4/3/16 5 F7
+sp lanes 32/11/54 33 F4
+gp sideheel 8/4/19 10 A7
+@turquoise|Turquoise|morph|#44CCAA|A
+us rollelb 6/2/14 9 C3
+ds wrist 9/5/18 5 Cf
+ss waist 7/2/13 6 B3
+uh leap 19/5/31 14 B7
+dh backheel 27/3/43 16 Fa
+sh backkick 15/6/41 15 E8
+rc burst 4/5/21 6 Aa
+sp corridor 25/18/49 36 Df
+gp grab 16/5/21 8 F3
+@volt|Volt|thunder|#4A62B8|A
+us arcback 8/3/12 5 B7
+ds hip 14/7/25 8 Ff
+ss twoshot 9/4/20 5 D6
+uh feintup 17/6/31 11 F1
+dh fist 24/4/29 13 E4
+sh hook 19/7/30 17 B7
+rc current 6/2/23 3 D7
+sp three 25/11/61 33 Ag
+gp drop 13/2/28 9 Ad
+@whami|Whami|potion|#C28A32|A
+us jumpback 10/5/18 5 Df
+ds tap 10/6/21 8 Ed
+ss feint 9/2/12 10 B4
+uh feintup 20/6/27 11 C1
+dh toes 21/4/29 15 B1
+sh palmth 22/3/40 15 A7
+rc sideup 8/2/24 5 E6
+sp bend 30/15/51 36 C1
+gp feet 11/6/20 7 Ef
+@white|White|wind|#EEEEEE|A
+us runner 10/5/16 9 Dd
+ds spin 10/7/19 8 D7
+ss waist 6/3/21 7 Cf
+uh shoulder 15/3/39 14 B3
+dh arcd 22/7/43 16 A6
+sh twofoot 22/7/37 10 Eb
+rc spring 6/3/22 7 Ce
+sp hazard 24/18/45 27 Dd
+gp stall 17/6/27 10 F8
+@willow|Willow|thorn|#398A3F|A
+us runner 10/3/15 6 C6
+ds wrist 13/5/24 4 Dc
+ss hiptoss 10/5/10 6 D8
+uh pullup 16/4/22 15 C8
+dh jumpheel 18/7/33 12 Ee
+sh cut 19/3/37 16 Fe
+rc marker 7/5/16 7 Da
+sp hazard 38/17/60 28 A2
+gp stall 12/5/20 11 A4
+@yellow|Yellow|energy|#FFD700|A
+us cork 8/5/12 6 B2
+ds hip 10/7/27 7 Ce
+ss waist 5/5/20 9 F4
+uh spinout 18/3/25 11 D4
+dh backheel 14/3/43 15 F1
+sh overhead 15/4/29 14 Eb
+rc ledge 5/3/28 4 Ca
+sp slow 36/9/61 24 C4
+gp head 10/3/22 11 B4

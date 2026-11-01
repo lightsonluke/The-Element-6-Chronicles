@@ -417,8 +417,17 @@ export function solvePose(o) {
   // Wall-slide layer
   if (wWall > 0.001) V = mix(V, wallV(frame), wWall);
 
-  // Attack layer (skipped while an emote plays)
-  if (!ev && attackState && o.attack) {
+  // Authored move choreography (mvEngine): the move owns every joint target for its whole
+  // duration. blend < 1 only eases the first frames in from locomotion (visual only; the
+  // hit-test solver always passes blend = 1, so hitboxes read the exact authored pose).
+  const ch = o.choreo || null;
+  if (ch && ch.v) {
+    const bl = clamp(ch.blend == null ? 1 : ch.blend, 0, 1);
+    V = bl >= 1 ? ch.v.slice() : mix(V, ch.v, bl);
+  }
+
+  // Attack layer (skipped while an emote plays or a choreography owns the body)
+  if (!ch && !ev && attackState && o.attack) {
     const a = o.attack;
     const hv = a.isHeavy ? 1.25 : 1;
     const at = attackV({ ...a, state }, frame, hv);
@@ -489,9 +498,18 @@ export function solvePose(o) {
   const arch = 0.004;
   const torsoMid = [(hip[0] + sh[0]) / 2 - Math.cos(lam) * arch, (hip[1] + sh[1]) / 2 - Math.sin(lam) * arch];
 
-  const T = (p) => [p[0] * facing * s * BODY_K, p[1] * s * BODY_K];   // mirror + scale to px
+  // Whole-body rotation about the hip + root offset (cartwheels, dives, flips, vaults).
+  const cRot = ch ? (Number(ch.rot) || 0) : 0, cDx = ch ? (Number(ch.dx) || 0) : 0, cDy = ch ? (Number(ch.dy) || 0) : 0;
+  const cBl = ch ? clamp(ch.blend == null ? 1 : ch.blend, 0, 1) : 1;
+  const RT = (p) => {
+    if (!ch) return p;
+    const r = cRot * cBl, c = Math.cos(r), sn = Math.sin(r);
+    const px = p[0] - hip[0], py = p[1] - hip[1];
+    return [hip[0] + px * c - py * sn + cDx * cBl, hip[1] + px * sn + py * c + cDy * cBl];
+  };
+  const T = (p0) => { const p = RT(p0); return [p[0] * facing * s * BODY_K, p[1] * s * BODY_K]; };   // rotate + mirror + scale to px
   const joints = {
-    s, facing, lean: lam * facing,
+    s, facing, lean: (lam + cRot * cBl) * facing,
     hip: T(hip), shoulder: T(sh), torsoMid: T(torsoMid), head: T(head), headR: P.headR * s,
     wall: wWall > 0.5 ? facing : 0,
     ghosts: (dashEnv * wDash > 0.08) ? [0.30, 0.60].map((k, i) => ({

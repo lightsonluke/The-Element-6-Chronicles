@@ -10,6 +10,7 @@ import { getResonanceAttackAction } from './resonanceConstructs.js';
 import { getAttackSpecForData } from './attackSpecs.js';
 import { drawSpecAttack, drawSpecSuper } from './attackSpecRenderer.js';
 import { solvePose, paintStickman, FIGHTER_HURTBOX, BASE_SCALE } from './stickman.js';
+import { mvChoreo, mvPaintBack, mvPaintFront, mvGhost, hasRoster as mvHasRoster } from './mvEngine.js';
 
 // Body hurtbox that matches the stickman silhouette (shared with PlatformFighter.jsx).
 export { FIGHTER_HURTBOX };
@@ -152,7 +153,13 @@ export function drawStickman(ctx, x, y, color, facing, frame, scale = 1, isSpiri
   ctx.translate(x, y);
 
   const pose = solveFighterPose(s, frame, state, facing, emote, attackData, charData, motion);
+  const mvOnBody = !!(attackData && attackData._mv && (state === 'attacking' || state === 'superAttack'));
+  if (mvOnBody) mvPaintBack(ctx, facing, attackData);
+  const mvGh = mvOnBody ? mvGhost(attackData) : 0;
+  if (mvGh) ctx.globalAlpha *= 0.16;
   paintStickman(ctx, pose, bodyColor);
+  if (mvGh) ctx.globalAlpha /= 0.16;
+  if (mvOnBody) mvPaintFront(ctx, facing, attackData);
 
   if (powerActive) {
     drawPowerAura(ctx, s, frame, powerAuraColor || color, powerActive, charData);
@@ -163,6 +170,10 @@ export function drawStickman(ctx, x, y, color, facing, frame, scale = 1, isSpiri
 
 // Gathers the optional emote / authored-attack inputs and runs the shared rig solver.
 function solveFighterPose(s, frame, state, facing, emote, attackData, charData, motion) {
+  if (attackData && attackData._mv && (state === 'attacking' || state === 'superAttack')) {
+    const choreo = mvChoreo(null, attackData);
+    if (choreo) return solvePose({ s, frame, state, facing, motion, emoteVars: null, attack: null, gen1: null, choreo });
+  }
   let emoteVars = null;
   if (emote) { try { emoteVars = getEmotePoseVars(emote.id, emote.progress, facing) || null; } catch (e) { emoteVars = null; } }
   let gen1 = null;
@@ -1018,6 +1029,7 @@ function drawResonanceConstructAttack(ctx, x, y, attack, progress, facing, color
 }
 
 export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isNormal = false, charId = '', power = null, powerActive = null) {
+  if (attack && attack._mv) return;                       // roster moves are painted by the move engine inside drawStickman
   if (attack?.resonanceFamily) {
     // The actual construct weapon is animated in-hand by drawConstructWeapon.
     // Do not draw a second unrelated generic blade/line overlay here.
@@ -1193,6 +1205,7 @@ function drawNormalAttack(ctx, x, y, attack, progress, facing, color) {
 }
 
 export function drawSuperEffect(ctx, x, y, color, progress, charName = '', charId = '', facing = 1) {
+  if (mvHasRoster(charId)) return;                        // roster supers are painted by the move engine inside drawStickman
   ctx.save();
   const isG1 = String(charId || '').startsWith('g1_');
   const isG2 = String(charId || '').startsWith('g2_');

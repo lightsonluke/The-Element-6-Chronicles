@@ -1,3 +1,4 @@
+import { mvHitShapes } from './mvEngine.js';
 import { GEN1_TIMINGS, gen1MoveKey, getGen1AttackGeometry } from './gen1AttackGeometry.js';
 // Frame-accurate attack specifications and collision geometry.
 // Generation I moves are hand-authored to match the animation shapes exactly.
@@ -152,6 +153,7 @@ function activeProgress(fighter) {
 }
 
 export function getActiveSpecHitboxes(attacker) {
+  if (attacker?.attackData?._mv) return mvHitShapes(attacker);
   const data = attacker?.attackData; if (!data) return [];
   // A confirmed hit consumes the current attack's hitbox. The animation and
   // recovery continue, but the collision shape disappears immediately.

@@ -1,4 +1,3 @@
-import { getCharacterNametag, drawOnlineNameTag, drawOfflineNameTag } from './inGameNametags.js';
 import React, { useRef, useEffect, useState } from 'react';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
@@ -6,31 +5,24 @@ import { GUARDIANS } from './guardians.js';
 import { ALL_CHARS_MAP } from './allCharacters.js';
 import { POWER_EFFECTS, getPowerEffect } from './powerEffects.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, CPU_DIFFICULTY, updateProjectiles, drawProjectiles, loseStock } from './fighter.js';
-import { getActiveSpecHitboxes } from './attackSpecs.js';
 import {
   drawStickman, drawAttackEffect, drawSuperEffect,
   drawHealthBar, drawTimer, drawPlatforms, drawBackground,
   drawHitSparks, drawDoubleJumpParticles, drawSuperFlash,
-  STAGE_MAPS, drawFighterGroundShadow, FIGHTER_HURTBOX,
+  STAGE_MAPS,
 } from './renderer.js';
-import GameCanvasPortal from './GameCanvasPortal.jsx';
-import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 import PauseMenu from './PauseMenu';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import { getKeybinds, readPlayerInput, readSinglePlayerInput, getSchemeKeybinds, getSoloKeybinds } from './keybinds.js';
 import { useClipRecorder } from './useClipRecorder.js';
-import { drawMaterialOverlay, drawMaterialStroke } from './materials.js';
-import { sanitizeFreehandStroke, buildFreehandCollisionPlatforms } from './freehandSafe.js';
-import { drawOffscreenIndicator } from './offscreenIndicator.js';
-import { drawStageBackground } from './stageBackgrounds.js';
+import { drawMaterialOverlay } from './materials.js';
 import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor, getEquippedAccessories } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { getCrossoverColor, getCrossoverAttackColor, getCrossover, getCrossoverParts } from './crossovers.js';
 import { drawKillFX } from './killFX.js';
 import { drawShikigamiFollower } from './shikigami.js';
 import { applyElement } from './elements.js';
-import { updateResonanceMatch, drawResonanceOrb, drawResonanceRangeGlow, drawConstructWeapon } from './resonanceConstructs.js';
 import { EMOTES, getEmoteById, getEmoteProgress, drawEmote } from './emotes.js';
 import { getEmoteForKey } from './emoteSlots.js';
 import { getActiveEvent } from './events.js';
@@ -48,17 +40,10 @@ const H = 720;
 
 const MAP_PLATFORMS = {
   splitcity: [
-    // Main platform: visual artwork remains fixed at its original position.
-    // Collision top is 8px higher; side boundaries are inset 6px from the artwork
-    // edges, and the bottom follows the rendered PNG bottom (~y=694).
-    { x: 129, y: 327, w: 1022, h: 282, _visualX: 75, _visualY: 370, _visualW: 1130,
-      material: 'split_city_joined', _forceSolid: true, _splitCityMain: true },
-    // Moving platform uses the exact thin platform PNG in public/art/stages/split-city.
-    // The collision is a 16-unit one-way top surface only; the renderer draws the
-    // complete texture at its natural aspect ratio. 1/180 yields 45 sec per direction
-    // with the horizontal triangle-wave motion in movingPlatforms.js.
-    { x: 570, y: 218, w: 195, h: 31, material: 'split_city_moving', _splitCityMoving: true,
-      move: { type: 'horizontal', distance: 700, speed: 1 / 180, phase: 0 } },
+    { x: 40,   y: 620, w: 1200, h: 48 },
+    { x: 120,  y: 440, w: 360,  h: 20 },
+    { x: 800,  y: 440, w: 360,  h: 20 },
+    { x: 460,  y: 270, w: 360,  h: 20 },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
   basic: [
@@ -574,155 +559,9 @@ function getComboMoveType(attackData) {
   return null;
 }
 
-function stageMotionOffset(motion, elapsedSeconds) {
-  if (!motion || motion.enabled === false) return { x: 0, y: 0 };
-  const dirMap = {
-    left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1],
-    upLeft: [-0.7071, -0.7071], upRight: [0.7071, -0.7071],
-    downLeft: [-0.7071, 0.7071], downRight: [0.7071, 0.7071],
-  };
-  const stepOffset = (step, localTime) => {
-    const [dx, dy] = dirMap[step?.direction] || [1, 0];
-    const distance = Math.max(0, Number(step?.distance) || 0);
-    const speed = Math.max(0.001, Number(step?.speed) || 100);
-    const duration = Math.max(0.001, distance / speed);
-    return { dx, dy, distance, duration, t: Math.min(duration, Math.max(0, localTime)) };
-  };
-  const chain = Array.isArray(motion.chain) && motion.chain.length ? motion.chain : null;
-  if (motion.mode === 'chain' && chain) {
-    const total = chain.reduce((sum, step) => sum + stepOffset(step, 0).duration, 0);
-    if (!motion.loop && elapsedSeconds >= total) {
-      let x = 0, y = 0;
-      for (const step of chain) { const q = stepOffset(step, stepOffset(step, 0).duration); x += q.dx * q.distance; y += q.dy * q.distance; }
-      return { x, y };
-    }
-    let t = total > 0 ? elapsedSeconds % total : 0;
-    let x = 0, y = 0;
-    for (const step of chain) {
-      const q = stepOffset(step, 0);
-      const use = Math.min(q.duration, t);
-      x += q.dx * q.speed * use;
-      y += q.dy * q.speed * use;
-      t -= use;
-      if (t <= 0) break;
-    }
-    return { x, y };
-  }
-  const [dx, dy] = dirMap[motion.direction] || [1, 0];
-  const distance = Math.max(0, Number(motion.distance) || 0);
-  const speed = Math.max(0.001, Number(motion.speed) || 100);
-  const duration = Math.max(0.001, distance / speed);
-  if (motion.loop === false && elapsedSeconds >= duration * 2) return { x: dx * distance, y: dy * distance };
-  const phase = (elapsedSeconds % (duration * 2)) / duration;
-  const amount = phase <= 1 ? phase : 2 - phase;
-  return { x: dx * distance * amount, y: dy * distance * amount };
-}
-
-function getMovingPerimeter(perimeter, elapsedSeconds) {
-  const base = perimeter || {};
-  const motions = base.motions || {};
-  const leftO = stageMotionOffset(motions.left, elapsedSeconds);
-  const rightO = stageMotionOffset(motions.right, elapsedSeconds);
-  const topO = stageMotionOffset(motions.top, elapsedSeconds);
-  const bottomO = stageMotionOffset(motions.bottom, elapsedSeconds);
-  return {
-    enabled: base.enabled !== false,
-    left: Number(base.left ?? -500) + leftO.x,
-    right: Number(base.right ?? (W + 500)) + rightO.x,
-    top: Number(base.top ?? -600) + topO.y,
-    bottom: Number(base.bottom ?? (H + 450)) + bottomO.y,
-    // Preserve vertical/horizontal movement for every configured wall.  The
-    // editor allows all eight directions, so don't silently discard an axis.
-    leftY: leftO.y,
-    rightY: rightO.y,
-    topX: topO.x,
-    bottomX: bottomO.x,
-  };
-}
-
-function cloneTrainingValue(value, seen = new WeakSet()) {
-  if (value === null || typeof value !== 'object') return value;
-  if (seen.has(value)) return null;
-  seen.add(value);
-  if (Array.isArray(value)) return value.map(v => cloneTrainingValue(v, seen));
-  const out = {};
-  for (const [k, v] of Object.entries(value)) {
-    if (k === 'char' || k === '_allOpponents' || k === '_lastHitBy' || k === 'dotTargets' || k === 'target') continue;
-    if (typeof v === 'function') continue;
-    out[k] = cloneTrainingValue(v, seen);
-  }
-  return out;
-}
-function restoreTrainingValue(target, snapshot) {
-  if (!target || !snapshot) return;
-  for (const k of Object.keys(target)) {
-    if (k === 'char' || k === '_allOpponents') continue;
-    if (!(k in snapshot)) delete target[k];
-  }
-  for (const [k, v] of Object.entries(snapshot)) {
-    if (k === 'char' || k === '_allOpponents') continue;
-    target[k] = v;
-  }
-}
-function drawTrainingHitbox(ctx, x, y, w, h, label) {
-  ctx.save();
-  ctx.strokeStyle = 'rgba(255,80,80,.9)';
-  ctx.fillStyle = 'rgba(255,80,80,.12)';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([6, 4]);
-  ctx.fillRect(x - w / 2, y - h / 2, w, h);
-  ctx.strokeRect(x - w / 2, y - h / 2, w, h);
-  ctx.setLineDash([]);
-  if (label) { ctx.font = '10px monospace'; ctx.fillStyle = '#ff7777'; ctx.fillText(label, x - w / 2, y - h / 2 - 3); }
-  ctx.restore();
-}
-
-
-function drawExactAttackHitboxOverlay(ctx, fighter, label) {
-  if (!fighter?.attackData) return;
-  let boxes = [];
-  try { boxes = getActiveSpecHitboxes(fighter) || []; } catch (err) { return; }
-  if (!boxes.length) return;
-  ctx.save(); ctx.lineWidth=2; ctx.strokeStyle='#FF3B5C'; ctx.fillStyle='rgba(255,59,92,0.10)'; ctx.shadowColor='#FF3B5C'; ctx.shadowBlur=8;
-  for (const hb of boxes) {
-    ctx.beginPath();
-    if (hb.shape === 'circle') ctx.arc(hb.x, hb.y, hb.r, 0, Math.PI * 2);
-    else if (hb.shape === 'box') ctx.rect(hb.x - hb.w / 2, hb.y - hb.h / 2, hb.w, hb.h);
-    else if (hb.shape === 'capsule') { const dx=hb.x2-hb.x1,dy=hb.y2-hb.y1,len=Math.hypot(dx,dy)||1,nx=-dy/len*hb.r,ny=dx/len*hb.r;ctx.moveTo(hb.x1+nx,hb.y1+ny);ctx.lineTo(hb.x2+nx,hb.y2+ny);ctx.arc(hb.x2,hb.y2,hb.r,Math.atan2(ny,nx),Math.atan2(-ny,-nx));ctx.lineTo(hb.x1-nx,hb.y1-ny);ctx.arc(hb.x1,hb.y1,hb.r,Math.atan2(-ny,-nx),Math.atan2(ny,nx));ctx.closePath(); }
-    else if (hb.shape === 'polygon' && hb.points?.length) { ctx.moveTo(hb.points[0][0],hb.points[0][1]); for(let i=1;i<hb.points.length;i++)ctx.lineTo(hb.points[i][0],hb.points[i][1]);ctx.closePath(); }
-    else continue;
-    ctx.fill();ctx.stroke();
-  }
-  const first=boxes[0],lx=first.x??first.points?.[0]?.[0]??first.x1??fighter.x,ly=first.y??first.points?.[0]?.[1]??first.y1??fighter.y-60;
-  ctx.shadowBlur=0;ctx.fillStyle='#FF3B5C';ctx.font='bold 9px Orbitron, sans-serif';ctx.textAlign='center';ctx.fillText(`${label} ATTACK`,lx,ly-10);ctx.restore();
-}
-
-function normalizeMatchHandicap(value = {}) {
-  const bounded = n => Math.max(0, Math.min(300, Number.isFinite(Number(n)) ? Number(n) : 100));
-  return { damageDealt: bounded(value.damageDealt), damageTaken: bounded(value.damageTaken), knockback: bounded(value.knockback), movementSpeed: bounded(value.movementSpeed), jumpHeight: bounded(value.jumpHeight) };
-}
-
-function applyMatchHandicap(attacker, defender, damageBefore, hpBefore, vxBefore, vyBefore) {
-  const a = attacker?.matchHandicap, d = defender?.matchHandicap;
-  if (!a && !d) return;
-  const dealt = (a?.damageDealt ?? 100) / 100;
-  const taken = (d?.damageTaken ?? 100) / 100;
-  const factor = dealt * taken;
-  if (Number.isFinite(Number(damageBefore)) && Number.isFinite(Number(defender.damage))) {
-    defender.damage = damageBefore + (defender.damage - damageBefore) * factor;
-    if (factor < 1 && defender.gameMode !== 'brawl' && defender.damage < 1500) defender._pendingDeath = false;
-  }
-  if (Number.isFinite(Number(hpBefore)) && Number.isFinite(Number(defender.hp))) {
-    defender.hp = Math.max(0, hpBefore - (hpBefore - defender.hp) * factor);
-  }
-  const kb = (a?.knockback ?? 100) / 100;
-  if (Number.isFinite(defender.vx)) defender.vx = vxBefore + (defender.vx - vxBefore) * kb;
-  if (Number.isFinite(defender.vy)) defender.vy = vyBefore + (defender.vy - vyBefore) * kb;
-}
-
 export default function PlatformFighter({
   p1Char, p2Char, p2IsCPU, onEnd, onAward, onRematch, selectedMap, cpuDifficulty = 'regular',
-  gameMode = 'regular', playerControls = null, matchHandicaps = null, dummy = false, dummyAutoRecover = false, customPlatforms = null, customSpawnPoints = null, musicVolume = 50, sfxVolume = 70,
+  gameMode = 'regular', dummy = false, dummyAutoRecover = false, customPlatforms = null, customSpawnPoints = null, musicVolume = 50, sfxVolume = 70,
   equippedAccessories = {}, equippedSkins = {}, killFXId = 'none',
   p1Element = 'basic', p2Element = 'basic', infiniteSuper = false, lanConnection = null, lanRole = null,
   matchTime = 240, settings = {}, localScheme = null,
@@ -740,28 +579,16 @@ export default function PlatformFighter({
   shapeshiftMode = false,
   p1Team = null,
   p2Team = null,
-  customStageConfig = null,
-  stageCamera = null,
-  killPerimeter = null,
-  trainingMode = false,
-  trainingController = null,
-  onTrainingSettings = null,
-  trainingSettingsOverlay = null,
-  canvasHostMode = null,
 }) {
   const canvasRef = useRef(null);
   const gameRef = useRef(null);
   const keysRef = useRef({});
   const remoteInputRef = useRef(null);
-  const lanRemoteStateRef = useRef(null);
   const [winner, setWinner] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [countdown, setCountdown] = useState(3);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
-  const trainingHistoryRef = useRef([]);
-  const trainingCursorRef = useRef(-1);
-  const trainingInitializedRef = useRef(false);
   const lastResultAwardedRef = useRef(false); // guards against double-paying the same match (rematch vs exit)
   const onMoveRef = useRef(onMove);
   onMoveRef.current = onMove;
@@ -776,21 +603,6 @@ export default function PlatformFighter({
   botShikigamiRef.current = _mergedShik;
 
   const mapId = customPlatforms ? 'custom' : (selectedMap || 'splitcity');
-
-  // Normalize every saved custom-stage field at the match boundary.  A stage
-  // can come from local saves, older saves, or World Stages, so the runtime
-  // must not assume one exact object shape.
-  const rawStageConfig = (customStageConfig && typeof customStageConfig === 'object' && !Array.isArray(customStageConfig))
-    ? customStageConfig
-    : {};
-  const stageConfig = rawStageConfig;
-  const activeStageCamera = stageCamera || stageConfig.stageCamera || {
-    zoom: stageConfig.cameraZoom || 1,
-    motion: stageConfig.cameraMotion || null,
-  };
-  const _killPerimeterCandidate = killPerimeter || stageConfig.killPerimeter || null;
-  const activeKillPerimeter = _killPerimeterCandidate?.enabled === false ? null : _killPerimeterCandidate;
-  const activeBackdrop = stageConfig.backdrop || null;
   const activeEvent = getActiveEvent();
   // Event stage support — use event stage platforms
   let eventPlatforms = null;
@@ -798,25 +610,7 @@ export default function PlatformFighter({
     eventPlatforms = activeEvent.eventStage.platforms;
   }
   const platforms = (() => {
-    // IMPORTANT: moving/destructible platforms are mutated by the match loop.
-    // Never run a match directly against the saved stage array or the editor's
-    // saved data can be changed by gameplay.
-    let source = customPlatforms || eventPlatforms || applyStageMaterials(MAP_PLATFORMS[mapId] || MAP_PLATFORMS.splitcity, mapId);
-    // Rebuild freehand collision geometry from the bounded stroke data instead
-    // of trusting legacy saved stages that may contain thousands of tiny
-    // _freehandSegment entries. This keeps old stages playable too.
-    if (customStageConfig && Array.isArray(customStageConfig.freehandStrokes)) {
-      const normalPlatforms = (Array.isArray(source) ? source : []).filter(p => !p?._freehandSegment);
-      const safeStrokes = customStageConfig.freehandStrokes.map(st => sanitizeFreehandStroke(st)).filter(Boolean);
-      source = [...normalPlatforms, ...buildFreehandCollisionPlatforms(safeStrokes)];
-    }
-    let p = Array.isArray(source)
-      ? source.map(platform => ({
-          ...platform,
-          move: platform?.move ? { ...platform.move, chain: Array.isArray(platform.move.chain) ? platform.move.chain.map(step => ({ ...step })) : platform.move.chain } : platform?.move,
-          motion: platform?.motion ? { ...platform.motion, chain: Array.isArray(platform.motion.chain) ? platform.motion.chain.map(step => ({ ...step })) : platform.motion.chain } : platform?.motion,
-        }))
-      : [];
+    let p = customPlatforms || eventPlatforms || applyStageMaterials(MAP_PLATFORMS[mapId] || MAP_PLATFORMS.splitcity, mapId);
     // Sandbox: "Upside Down" — flip the stage so the floor becomes the ceiling.
     // Gravity & jumps stay normal, so all existing collision/landing logic works
     // unchanged; fighters simply stand on the (now top) platforms and fall "down".
@@ -844,9 +638,7 @@ export default function PlatformFighter({
   useEffect(() => {
     if (!lanConnection) return;
     lanConnection.onMessage((msg) => {
-      if (!msg) return;
-      if (msg.type === 'input' && msg.input) remoteInputRef.current = msg.input;
-      if (msg.type === 'state' && msg.state) lanRemoteStateRef.current = msg.state;
+      if (msg && msg.type === 'input' && msg.input) remoteInputRef.current = msg.input;
     });
   }, [lanConnection]);
 
@@ -879,15 +671,6 @@ export default function PlatformFighter({
     const p2Spawn = customSpawnPoints && customSpawnPoints[1] ? { x: customSpawnPoints[1].x, y: customSpawnPoints[1].y } : { x: 1000, y: defaultSpawnY };
     const f1 = createFighter(char1, p1Spawn.x, p1Spawn.y, 1);
     const f2 = createFighter(char2, p2Spawn.x, p2Spawn.y, -1);
-    if (activeKillPerimeter) {
-      f1._customBlastZone = { ...activeKillPerimeter };
-      f2._customBlastZone = { ...activeKillPerimeter };
-      f1._customBlastZoneDisabled = false;
-      f2._customBlastZoneDisabled = false;
-    } else if (_killPerimeterCandidate?.enabled === false) {
-      f1._customBlastZoneDisabled = true;
-      f2._customBlastZoneDisabled = true;
-    }
     if (customSpawnPoints && customSpawnPoints[0]) f1.respawnPoint = { x: customSpawnPoints[0].x, y: customSpawnPoints[0].y };
     if (customSpawnPoints && customSpawnPoints[1]) f2.respawnPoint = { x: customSpawnPoints[1].x, y: customSpawnPoints[1].y };
     f1.grounded = true; f2.grounded = true;
@@ -903,9 +686,6 @@ export default function PlatformFighter({
     if (gameMode === 'botbattle') { f1.isAI = true; f1.cpuDifficulty = cpuDifficulty; }
     if (gameMode === 'challenge') { f2.cpuDifficulty = 'honored'; f2.isAI = true; }
     f1.gameMode = gameMode; f2.gameMode = gameMode;
-    const localHandicapsOn = !!matchHandicaps?.enabled;
-    f1.matchHandicap = localHandicapsOn ? normalizeMatchHandicap(matchHandicaps.players?.[0]) : null;
-    f2.matchHandicap = localHandicapsOn ? normalizeMatchHandicap(matchHandicaps.players?.[1]) : null;
     if (gameMode === 'lowgravity') { f1.lowGravity = true; f2.lowGravity = true; }
     if (gameMode === 'sudden') {
       f1.stocks = 1; f2.stocks = 1; f1.damage = 600; f2.damage = 600;
@@ -915,29 +695,11 @@ export default function PlatformFighter({
     }
     if (gameMode === 'hp' || gameMode === 'brawl') { f1.hp = 450; f2.hp = 450; }
 
-    if (trainingMode && trainingController) {
-      trainingController.historyLimit = 900;
-      trainingController.frame = 0;
-      trainingController.paused = false;
-      trainingController.stepDelta = 0;
-      trainingController.resetDamage = () => { f2.damage = Number(trainingController.damageResetValue ?? 0); f2.hitstun = 0; f2.state = 'idle'; };
-      trainingController.resetPosition = () => { f2.x = trainingController.positionReset?.x ?? p2Spawn.x; f2.y = trainingController.positionReset?.y ?? p2Spawn.y; f2.vx = 0; f2.vy = 0; f2.grounded = true; };
-      trainingController.capturePosition = () => { trainingController.positionReset = { x: f2.x, y: f2.y }; };
-      trainingController.stepBack = () => { trainingController.stepDelta = -1; trainingController.paused = true; };
-      trainingController.stepForward = () => { trainingController.stepDelta = 1; trainingController.paused = true; };
-      trainingController.togglePause = () => { trainingController.paused = !trainingController.paused; };
-      trainingController.setCharacters = null;
-      trainingHistoryRef.current = [];
-      trainingCursorRef.current = -1;
-      trainingInitializedRef.current = true;
-    }
     let timer = gameMode === 'sudden' ? 240 : (matchTime > 0 ? matchTime : (gameMode === 'time' ? 180 : 240));
     if (gameMode === 'time' && matchTime > 0) timer = matchTime;
     if (matchTime === 0 && gameMode !== 'sudden') timer = 99999;
     if (comboMode) { timer = 99999; f1.stocks = 999; f2.stocks = 999; }
     let lastTime = performance.now();
-    // Per-match Resonance state: one shared orb, consumed by the first successful activation.
-    const resonanceMatch = { frame: 0, orb: null, spawnWait: 300 + Math.random() * 240 };
     // Normalized sandbox mods — applied every frame to alter physics/combat
     const M = mods ? { damageMultiplier: 1, gravity: 1, jumpHeight: 1, movementSpeed: 1, superChargeRate: 1, powerCooldownRate: 1, slowMotion: 1, respawnTime: 1, infiniteJumps: false, infiniteStocks: false, infiniteHP: false, infinitePower: false, freezeAI: false, cpuBehavior: 'balanced', ...mods } : null;
     let superFlash1 = null, superFlash2 = null;
@@ -959,16 +721,12 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
     // Emote state is stored on each fighter: f.emote = { id, timer, maxTimer, progress }
   // Set by the keydown handler, updated each frame in the game loop.
     // Sandbox hazard zones + knockback items — prefer stage-placed, else auto-generate from toggles
-    let sbHazards = (Array.isArray(customHazards) && customHazards.length > 0)
-      ? buildHazardsFromStage(customHazards.map(h => ({ ...h, move: h?.move ? { ...h.move } : h?.move })))
-      : ((mods?.brHazards) ? buildSandboxHazards(platforms, W, H) : null);
-    let sbObjects = (Array.isArray(customObjects) && customObjects.length > 0)
-      ? buildObjectsFromStage(customObjects.map(o => ({ ...o })))
-      : ((mods?.brItems) ? buildSandboxObjects(platforms) : null);
+    let sbHazards = (customHazards && customHazards.length > 0) ? buildHazardsFromStage(customHazards) : ((mods?.brHazards) ? buildSandboxHazards(platforms, W, H) : null);
+    let sbObjects = (customObjects && customObjects.length > 0) ? buildObjectsFromStage(customObjects) : ((mods?.brItems) ? buildSandboxObjects(platforms) : null);
     let combo1 = { count: 0, timer: 0, displayTimer: 0 }; // P1's combo on P2
     let combo2 = { count: 0, timer: 0, displayTimer: 0 }; // P2's combo on P1
 
-    gameRef.current = { f1, f2, timer, running: true, superFlash1, superFlash2, camX, camY, camZoom, shakeX, shakeY, shakeMag, stageStartTime: performance.now() };
+    gameRef.current = { f1, f2, timer, running: true, superFlash1, superFlash2, camX, camY, camZoom, shakeX, shakeY, shakeMag };
 
     const finish = (p1Won) => {
       if (!gameRef.current) return;
@@ -993,11 +751,11 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         const _emoteMode = lanConnection ? 'online' : (!p2IsCPU && !dummy) ? 'coop' : 'solo';
         if (_emoteMode === 'coop' && ['1','2','3','4','5'].includes(e.key)) {
           const emote = getEmoteForKey(e.key, equippedEmotes, 2, 'coop');
-          if (emote && f2.grounded && !f2.emote) f2.emote = { id: emote.id, timer: emote.duration, maxTimer: emote.duration, progress: 0, key: e.key, _questAwaitingMove: true };
+          if (emote && f2.grounded && !f2.emote) f2.emote = { id: emote.id, timer: emote.duration, maxTimer: emote.duration, progress: 0, key: e.key };
         } else {
           const _key = _emoteMode === 'coop' && ['6','7','8','9','0'].includes(e.key) ? e.key : e.key;
           const emote = getEmoteForKey(e.key, equippedEmotes, 1, _emoteMode);
-          if (emote && f1.grounded && !f1.emote) f1.emote = { id: emote.id, timer: emote.duration, maxTimer: emote.duration, progress: 0, key: e.key, _questAwaitingMove: true };
+          if (emote && f1.grounded && !f1.emote) f1.emote = { id: emote.id, timer: emote.duration, maxTimer: emote.duration, progress: 0, key: e.key };
         }
       }
       if (!['F5', 'F12'].includes(e.key)) e.preventDefault();
@@ -1017,45 +775,11 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
     const loop = (now) => {
       if (!gameRef.current?.running) return;
       // Soft pause: in LAN/online play the game continues while you stand still behind the overlay
-      const trainingPaused = trainingMode && trainingController?.paused;
-      if ((pausedRef.current || trainingPaused) && !lanConnection) {
-        const delta = trainingMode && trainingController ? Number(trainingController.stepDelta || 0) : 0;
-        if (delta !== 0) {
-          const history = trainingHistoryRef.current;
-          const nextIndex = Math.max(0, Math.min(history.length - 1, (trainingCursorRef.current < 0 ? history.length - 1 : trainingCursorRef.current) + delta));
-          const snap = history[nextIndex];
-          if (snap) { restoreTrainingValue(f1, snap.f1); restoreTrainingValue(f2, snap.f2); platforms.splice(0, platforms.length, ...(snap.platforms || [])); }
-          trainingCursorRef.current = nextIndex;
-          trainingController.stepDelta = 0;
-        }
-        requestAnimationFrame(loop); return;
-      }
+      if (pausedRef.current && !lanConnection) { requestAnimationFrame(loop); return; }
 
       const dt = Math.min((now - lastTime) / 1000, 0.05) * (M?.slowMotion || 1);
       lastTime = now;
       const { f1, f2 } = gameRef.current;
-      // LAN guests use the host's periodic checkpoint as an automatic recovery
-      // point. Prediction continues between checkpoints, so a brief packet stall
-      // no longer permanently desynchronizes the two fighters.
-      if (lanConnection && lanRole !== 'host' && lanRemoteStateRef.current) {
-        const snap = lanRemoteStateRef.current;
-        if (snap.f1 && snap.f2) {
-          const restore = (target, source) => {
-            Object.keys(source).forEach(k => {
-              if (k === 'char' || k === 'loadout') return;
-              try { target[k] = source[k]; } catch (_) {}
-            });
-          };
-          restore(f1, snap.f1); restore(f2, snap.f2);
-          if (Number.isFinite(snap.timer)) gameRef.current.timer = snap.timer;
-          if (Number.isFinite(snap.coins1)) coinsCollected1 = snap.coins1;
-          if (Number.isFinite(snap.coins2)) coinsCollected2 = snap.coins2;
-          if (Array.isArray(snap.platforms)) {
-            platforms.splice(0, platforms.length, ...snap.platforms.map(pl => ({ ...pl })));
-          }
-          lanRemoteStateRef.current = null;
-        }
-      }
       gameRef.current.timer -= dt;
 
       if (gameRef.current.timer <= 0 || f1.stocks <= 0 || f2.stocks <= 0) {
@@ -1063,38 +787,16 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         if (f1.stocks <= 0 && f2.stocks <= 0) p1Won = null;
         else if (f1.stocks <= 0) p1Won = false;
         else if (f2.stocks <= 0) p1Won = true;
-        else if (f1.stocks !== f2.stocks) p1Won = f1.stocks > f2.stocks;
-        // A timed fight is decided by stocks first, then the lower damage
-        // percentage.  Only an exact tie is a draw.
-        else if (gameRef.current.timer <= 0) {
-          p1Won = f1.damage < f2.damage ? true : f2.damage < f1.damage ? false : null;
-        } else p1Won = null;
+        else p1Won = f1.stocks > f2.stocks ? true : f2.stocks > f1.stocks ? false : null;
         // Coin battle: winner is whoever has more coins
         if (gameMode === 'coin') {
           p1Won = coinsCollected1 > coinsCollected2 ? true : coinsCollected2 > coinsCollected1 ? false : null;
         }
-        // Stock KOs use sudden death. A genuine 0:00 tie is a draw.
+        // Tie → sudden death (no draws allowed)
         if (p1Won === null && !gameRef.current._suddenDeath) {
-          if (gameRef.current.timer <= 0) { finish(null); return; }
           gameRef.current._suddenDeath = true;
           f1.stocks = 1; f2.stocks = 1; f1.damage = 600; f2.damage = 600;
           if (gameMode === 'hp' || gameMode === 'brawl') { f1.hp = 450; f2.hp = 450; }
-    if (trainingMode && trainingController) {
-      trainingController.historyLimit = 900;
-      trainingController.frame = 0;
-      trainingController.paused = false;
-      trainingController.stepDelta = 0;
-      trainingController.resetDamage = () => { f2.damage = Number(trainingController.damageResetValue ?? 0); f2.hitstun = 0; f2.state = 'idle'; };
-      trainingController.resetPosition = () => { f2.x = trainingController.positionReset?.x ?? p2Spawn.x; f2.y = trainingController.positionReset?.y ?? p2Spawn.y; f2.vx = 0; f2.vy = 0; f2.grounded = true; };
-      trainingController.capturePosition = () => { trainingController.positionReset = { x: f2.x, y: f2.y }; };
-      trainingController.stepBack = () => { trainingController.stepDelta = -1; trainingController.paused = true; };
-      trainingController.stepForward = () => { trainingController.stepDelta = 1; trainingController.paused = true; };
-      trainingController.togglePause = () => { trainingController.paused = !trainingController.paused; };
-      trainingController.setCharacters = null;
-      trainingHistoryRef.current = [];
-      trainingCursorRef.current = -1;
-      trainingInitializedRef.current = true;
-    }
           gameRef.current.timer = 120;
           return;
         }
@@ -1115,29 +817,8 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         left: kb.left || gp.left, right: kb.right || gp.right,
         jump: kb.jump || gp.jump, up: kb.up || gp.up, down: kb.down || gp.down,
         sig: kb.sig || gp.sig, power: kb.power || gp.power,
-        superMove: kb.superMove || gp.superMove, heavy: kb.heavy || gp.heavy, dash: !!kb.dash || !!gp.dash,
+        superMove: kb.superMove || gp.superMove, heavy: kb.heavy || gp.heavy,
       } : kb;
-      // Explicit per-player assignments are exclusive: no accidental keyboard +
-      // controller input merging, and an unconnected assigned controller stays idle.
-      const assignedInput = (playerIndex) => {
-        const slot = playerControls?.[playerIndex];
-        if (!slot || slot.kind !== 'player' || !slot.control) return null;
-        const control = String(slot.control);
-        if (control.startsWith('Controller ')) {
-          const match = control.match(/^Controller\s+(\d+)/);
-          const gp = match ? readGamepadInput(Math.max(0, Number(match[1]) - 1)) : null;
-          return gp ? { ...gp } : { left:false,right:false,jump:false,up:false,down:false,sig:false,power:false,superMove:false,heavy:false,dash:false };
-        }
-        if (control === 'Keyboard · WASD') return readPlayerInput(k, _kb.p2);
-        if (control === 'Keyboard · Arrows') return readPlayerInput(k, _kb.p1);
-        if (control.startsWith('Custom keyboard')) {
-          const label = control.split('·').slice(1).join('·').trim();
-          const idx = (settings?.customControls || []).findIndex(cc => cc?.name === label);
-          if (idx >= 0) { const profile = settings?.customControls?.[idx]; const base = playerIndex === 0 ? _kb.p1 : _kb.p2; return readPlayerInput(k, { ...base, ...(profile?.[playerIndex === 0 ? 'p1' : 'p2'] || profile?.p1 || {}) }); }
-          return { left:false,right:false,jump:false,up:false,down:false,sig:false,power:false,superMove:false,heavy:false,dash:false };
-        }
-        return null;
-      };
       let p1In, p2In;
       if (lanConnection) {
         // Each device reads its own chosen scheme; remote input arrives already parsed
@@ -1153,48 +834,15 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           p2In = localRaw;
         }
         lanConnection.sendMessage({ type: 'input', input: localRaw });
-        if (lanRole === 'host' && (f1.frame || 0) % 4 === 0) {
-          const cleanFighter = f => {
-            const out = {};
-            for (const [key, value] of Object.entries(f || {})) {
-              if (key === 'char' || key === 'loadout') continue;
-              try { JSON.stringify(value); out[key] = value; } catch (_) {}
-            }
-            return out;
-          };
-          lanConnection.sendMessage({
-            type: 'state',
-            state: {
-              f1: cleanFighter(f1), f2: cleanFighter(f2),
-              timer: gameRef.current.timer, coins1: coinsCollected1, coins2: coinsCollected2,
-              platforms: platforms.map(pl => ({ ...pl })),
-            },
-          });
-        }
       } else {
         const soloPlay = p2IsCPU || dummy; // only one human player (P1)
-        const assignedP1 = assignedInput(0);
         p1In = gameMode === 'botbattle'
           ? updateAI(f1, f2, cpuDifficulty, platforms, 1 + ((settings.aiAggression ?? 50) - 50) / 100)
-          : (assignedP1 || mergeGp(soloPlay && _soloKb ? readPlayerInput(k, _soloKb)
+          : mergeGp(soloPlay && _soloKb ? readPlayerInput(k, _soloKb)
              : soloPlay ? readSinglePlayerInput(k, _kb.p1, _kb.p2)
-             : readPlayerInput(k, _kb.p1), gp1));
+             : readPlayerInput(k, _kb.p1), gp1);
         p2In = dummy ? (() => {
           const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
-          if (trainingMode && trainingController) {
-            const source = p1In || NO_INPUT;
-            const mode = trainingController.botMode || 'dummy';
-            if (mode === 'mimic' || mode === 'mirror') {
-              const out = { ...source };
-              if (mode === 'mirror') { const l = out.left; out.left = !!out.right; out.right = !!l; }
-              return out;
-            }
-            if (trainingController.repeatJump) {
-              const out = { ...NO_INPUT };
-              if (f2.grounded && (f2.frame % Math.max(20, Number(trainingController.jumpInterval || 45)) < 5)) out.jump = true;
-              return out;
-            }
-          }
           if (!dummyAutoRecover) return NO_INPUT;
           // Auto-recover dummy: stays completely still while safely grounded on the
           // main platform. It ONLY triggers recovery movement once it has been knocked
@@ -1212,7 +860,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           if (f2.y > 460 && f2.recoveryCooldown <= 0) { inp.up = true; inp.sig = true; }
           return inp;
         })()
-          : (p2IsCPU ? (M?.freezeAI ? { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false } : updateAI(f2, f1, cpuDifficulty, platforms, 1 + ((settings.aiAggression ?? 50) - 50) / 100)) : (assignedInput(1) || mergeGp(readPlayerInput(k, _kb.p2), gp2)));
+          : (p2IsCPU ? (M?.freezeAI ? { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false } : updateAI(f2, f1, cpuDifficulty, platforms, 1 + ((settings.aiAggression ?? 50) - 50) / 100)) : mergeGp(readPlayerInput(k, _kb.p2), gp2));
       }
 
       // Brawl mode: only light attacks (sig) allowed
@@ -1278,31 +926,8 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
 
       if (hitstop > 0) { hitstop--; } else {
       applyMovingPlatforms(platforms, now, [f1, f2]);
-      if (activeKillPerimeter) {
-        const zone = getMovingPerimeter(activeKillPerimeter, (now - gameRef.current.stageStartTime) / 1000);
-        f1._customBlastZone = zone; f2._customBlastZone = zone;
-      }
-      if (trainingMode && trainingController) {
-        const c = trainingController;
-        if (!c.positionReset) c.positionReset = { x: f2.x, y: f2.y };
-        const quiet = f2.grounded && Math.abs(f2.vx || 0) < 0.15 && !f2.attackData && !f2.hitstun;
-        c.quietFrames = quiet ? (c.quietFrames || 0) + 1 : 0;
-        if (c.damageResetEnabled && ((c.damageResetTimer > 0 && f1.frame % Math.max(1, c.damageResetTimer) === 0) || (c.resetWhenGrounded && c.quietFrames >= 180))) f2.damage = Number(c.damageResetValue ?? 0);
-        if (c.positionResetEnabled && ((c.positionResetTimer > 0 && f1.frame % Math.max(1, c.positionResetTimer) === 0) || (c.positionResetWhenGrounded && c.quietFrames >= 180))) { f2.x = c.positionReset.x; f2.y = c.positionReset.y; f2.vx = 0; f2.vy = 0; f2.grounded = true; }
-      }
-      // Resonance activation/deactivation is resolved before combat input is consumed.
-      // Every mode hosted by PlatformFighter receives the same match-level rules.
-      updateResonanceMatch(resonanceMatch, [f1, f2], [p1In, p2In], platforms, W, H, dt);
       updateFighter(f1, p1In, platforms, W, H, f2);
       updateFighter(f2, p2In, platforms, W, H, f1);
-      if (trainingMode && trainingController) {
-        const hist = trainingHistoryRef.current;
-        if (trainingCursorRef.current >= 0 && trainingCursorRef.current < hist.length - 1) hist.splice(trainingCursorRef.current + 1);
-        hist.push({ f1: cloneTrainingValue(f1), f2: cloneTrainingValue(f2), platforms: cloneTrainingValue(platforms) });
-        if (hist.length > (trainingController.historyLimit || 900)) hist.shift();
-        trainingCursorRef.current = hist.length - 1;
-        trainingController.frame = f1.frame;
-      }
       // Update emote timers — cancel if airborne, decrement timer, update progress
       [f1, f2].forEach(f => {
         if (f.emote && f.emote.timer > 0) {
@@ -1310,19 +935,6 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           else { f.emote.timer--; f.emote.progress = 1 - f.emote.timer / f.emote.maxTimer; if (f.emote.timer <= 0) { if (f.emote.key && keysRef.current[f.emote.key]) { f.emote.timer = f.emote.maxTimer; } else { f.emote = null; } } }
         }
       });
-      // Daily quest: count an emote followed by actual movement.
-      // Emotes lock movement while active, so the first movement input after
-      // the emote finishes is the unambiguous "emote before moving" event.
-      [f1, f2].forEach((f, idx) => {
-        if (!f.emote && f._questAwaitingMove) {
-          const inp = idx === 0 ? p1In : p2In;
-          if (inp && (inp.left || inp.right || inp.jump)) {
-            f.moveStats.emoteBeforeMove = (f.moveStats.emoteBeforeMove || 0) + 1;
-            f._questAwaitingMove = false;
-          }
-        }
-      });
-
       // High Five — requires shikigami; cancel if none equipped
       [f1, f2].forEach(f => {
         if (f.emote?.id === 'highfive' && !f.emote._checked) {
@@ -1368,22 +980,6 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         // Infinite HP — keep HP full in hp/brawl modes; in regular mode prevent 700% KO death
         if (M.infiniteHP) {
           if (gameMode === 'hp' || gameMode === 'brawl') { f1.hp = 450; f2.hp = 450; }
-    if (trainingMode && trainingController) {
-      trainingController.historyLimit = 900;
-      trainingController.frame = 0;
-      trainingController.paused = false;
-      trainingController.stepDelta = 0;
-      trainingController.resetDamage = () => { f2.damage = Number(trainingController.damageResetValue ?? 0); f2.hitstun = 0; f2.state = 'idle'; };
-      trainingController.resetPosition = () => { f2.x = trainingController.positionReset?.x ?? p2Spawn.x; f2.y = trainingController.positionReset?.y ?? p2Spawn.y; f2.vx = 0; f2.vy = 0; f2.grounded = true; };
-      trainingController.capturePosition = () => { trainingController.positionReset = { x: f2.x, y: f2.y }; };
-      trainingController.stepBack = () => { trainingController.stepDelta = -1; trainingController.paused = true; };
-      trainingController.stepForward = () => { trainingController.stepDelta = 1; trainingController.paused = true; };
-      trainingController.togglePause = () => { trainingController.paused = !trainingController.paused; };
-      trainingController.setCharacters = null;
-      trainingHistoryRef.current = [];
-      trainingCursorRef.current = -1;
-      trainingInitializedRef.current = true;
-    }
           else { f1._pendingDeath = false; f2._pendingDeath = false; if (f1.damage > 650) f1.damage = 650; if (f2.damage > 650) f2.damage = 650; }
         }
         // Infinite power — power always ready and never disabled
@@ -1518,9 +1114,8 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         const _isSuper1 = f1.state === 'superAttack';
         const _isHeavy1 = f1.attackData && f1.attackData.isHeavy;
         stats.hits++; if (_isSuper1) stats.superHits++; if (_isHeavy1) stats.heavyHits++;
-        const _f2DmgBefore = f2.damage, _f2HpBefore = f2.hp, _f2VxBefore = f2.vx, _f2VyBefore = f2.vy;
+        const _f2DmgBefore = f2.damage;
         applyHit(f1, f2);
-        applyMatchHandicap(f1, f2, _f2DmgBefore, _f2HpBefore, _f2VxBefore, _f2VyBefore);
         if (M && M.damageMultiplier !== 1) f2.damage = _f2DmgBefore + (f2.damage - _f2DmgBefore) * M.damageMultiplier;
         if (_isSuper1) { hitstop = 14; superImpactFlash = 1.0; shakeMag = 28; sfx.superImpact(); }
         else if (_isHeavy1) { hitstop = 5; shakeMag = Math.max(shakeMag, 12); sfx.heavyHit(); }
@@ -1537,9 +1132,8 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         const _isSuper2 = f2.state === 'superAttack';
         const _isHeavy2 = f2.attackData && f2.attackData.isHeavy;
         p2Stats.hits++; if (_isSuper2) p2Stats.superHits++; if (_isHeavy2) p2Stats.heavyHits++;
-        const _f1DmgBefore = f1.damage, _f1HpBefore = f1.hp, _f1VxBefore = f1.vx, _f1VyBefore = f1.vy;
+        const _f1DmgBefore = f1.damage;
         applyHit(f2, f1);
-        applyMatchHandicap(f2, f1, _f1DmgBefore, _f1HpBefore, _f1VxBefore, _f1VyBefore);
         if (M && M.damageMultiplier !== 1) f1.damage = _f1DmgBefore + (f1.damage - _f1DmgBefore) * M.damageMultiplier;
         if (_isSuper2) { hitstop = 14; superImpactFlash = 1.0; shakeMag = 28; sfx.superImpact(); }
         else if (_isHeavy2) { hitstop = 5; shakeMag = Math.max(shakeMag, 12); sfx.heavyHit(); }
@@ -1623,7 +1217,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const g = gameRef.current;
       const fdx = Math.abs(f2.x - f1.x), fdy = Math.abs(f2.y - f1.y);
       const zoomMul = settings.cameraZoom === 'close' ? 1.15 : settings.cameraZoom === 'far' ? 0.85 : 1.0;
-      const stageZoom = activeStageCamera?.zoom != null ? Number(activeStageCamera.zoom) : (settings.stageZoom != null ? settings.stageZoom : 1.0);
+      const stageZoom = settings.stageZoom != null ? settings.stageZoom : 1.0;
       let targetZoom = Math.max(0.60, Math.min(0.95, 0.95 - fdx / 1200 - fdy / 1000));
       const spreadX = fdx + 280;
       const spreadY = fdy + 280;
@@ -1631,46 +1225,25 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       const fitZoomY = H / Math.max(spreadY, 200);
       const fitZoom = Math.min(fitZoomX, fitZoomY);
       targetZoom = Math.min(targetZoom, Math.max(0.50, fitZoom));
-      const constructCameraLock = !!(f1.resonanceActive || f2.resonanceActive || f1.resonanceActivationFrames > 0 || f2.resonanceActivationFrames > 0);
-      targetZoom *= zoomMul * (Number.isFinite(stageZoom) && stageZoom > 0 ? Math.max(0.75, Math.min(1.25, stageZoom)) : 1.0);
-      // Construct activation must never drive the camera into a shrinking/invalid transform.
-      // Hold a stable framing while a construct is active, and sanitize fighter coordinates.
-      targetZoom = constructCameraLock ? 0.88 : (Number.isFinite(targetZoom) ? Math.max(0.65, Math.min(1.0, targetZoom)) : 0.82);
-      if (!Number.isFinite(g.camZoom) || g.camZoom < 0.65 || g.camZoom > 1.0) g.camZoom = targetZoom;
-      g.camZoom += (targetZoom - g.camZoom) * 0.08;
-      if (hitstop > 0) g.camZoom = Math.min(1.0, g.camZoom + 0.006);
-      g.camZoom = Number.isFinite(g.camZoom) ? Math.max(0.65, Math.min(1.0, g.camZoom)) : 0.82;
-      const safeX1 = Number.isFinite(f1.x) ? f1.x : W * 0.35;
-      const safeX2 = Number.isFinite(f2.x) ? f2.x : W * 0.65;
-      const safeY1 = Number.isFinite(f1.y) ? f1.y : H * 0.55;
-      const safeY2 = Number.isFinite(f2.y) ? f2.y : H * 0.55;
-      const midX = (safeX1 + safeX2) / 2;
-      const midY = ((safeY1 + safeY2) / 2) - 70;
-      const targetCamX = Number.isFinite(midX) ? (midX - W / 2) * (1 - g.camZoom) * 0.35 : 0;
-      const targetCamY = Number.isFinite(midY) ? (midY - H / 2) * (1 - g.camZoom) * 0.35 : 0;
-      const stageCamMotion = stageMotionOffset(activeStageCamera?.motion, (now - g.stageStartTime) / 1000);
-      g.camX += (targetCamX + stageCamMotion.x - g.camX) * 0.07;
-      g.camY += (targetCamY + stageCamMotion.y - g.camY) * 0.07;
+      targetZoom *= zoomMul * stageZoom;
+      g.camZoom += (targetZoom - g.camZoom) * 0.05;
+      if (hitstop > 0) g.camZoom += 0.015;
+      const midX = (f1.x + f2.x) / 2;
+      const midY = ((f1.y + f2.y) / 2) - 70;
+      const targetCamX = (midX - W / 2) * (1 - g.camZoom) * 0.35;
+      const targetCamY = (midY - H / 2) * (1 - g.camZoom) * 0.35;
+      g.camX += (targetCamX - g.camX) * 0.07;
+      g.camY += (targetCamY - g.camY) * 0.07;
       if (settings.reducedMotion || settings.screenShake === false) { g.shakeX = 0; g.shakeY = 0; g.shakeMag = 0; shakeMag = 0; }
       else { g.shakeMag = Math.max(g.shakeMag, shakeMag); if (g.shakeMag > 0.3) { g.shakeX = (Math.random() - 0.5) * g.shakeMag; g.shakeY = (Math.random() - 0.5) * g.shakeMag; g.shakeMag *= 0.72; shakeMag = g.shakeMag; } else { g.shakeX = 0; g.shakeY = 0; g.shakeMag = 0; shakeMag = 0; } }
 
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, W, H);
       ctx.restore();
 
-      // Parallax backdrop: it follows camera movement more slowly than the stage.
-      // Overscan prevents empty edges from appearing as the camera moves.
-      // This applies to built-in stages and custom-stage backdrops alike.
-      ctx.save();
-      ctx.translate(-g.camX * 0.18 * g.camZoom, -g.camY * 0.18 * g.camZoom);
-      ctx.translate(W / 2, H / 2);
-      ctx.scale(1.35, 1.35);
-      ctx.translate(-W / 2, -H / 2);
-      if (activeBackdrop) drawStageBackground(ctx, W, H, f1.frame, activeBackdrop, activeEvent?.color, null);
-      else drawBackground(ctx, W, H, f1.frame, mapId, activeEvent?.color);
-      ctx.restore();
+      // Backdrop fills the full canvas in screen space (no camera transform) so it never leaves gaps
+      drawBackground(ctx, W, H, f1.frame, mapId, activeEvent?.color);
       drawModeTint(ctx, W, H, gameMode);
 
       if (superImpactFlash > 0) {
@@ -1687,19 +1260,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       ctx.scale(g.camZoom, g.camZoom);
       ctx.translate(-W / 2 - g.camX, -H / 2 - g.camY);
 
-      // Render-only offset for Split City's moving platform. Keep the original
-      // platform objects untouched so physics, collision, and landing height stay the same.
-      const visualPlatforms = mapId === 'splitcity'
-        ? platforms.map(p => p?._splitCityMoving ? { ...p, y: p.y - 19 } : p)
-        : platforms;
-      drawPlatforms(ctx, visualPlatforms, f1.frame, mapId);
-      if (Array.isArray(stageConfig.freehandStrokes)) {
-        stageConfig.freehandStrokes.slice(0, 64).forEach(stroke => {
-          const safe = sanitizeFreehandStroke(stroke);
-          if (!safe) return;
-          try { drawMaterialStroke(ctx, safe, f1.frame); } catch {}
-        });
-      }
+      drawPlatforms(ctx, platforms, f1.frame, mapId);
       // Sandbox hazard zones + knockback items
       if (sbHazards) drawSBHazards(ctx, sbHazards, f1.frame);
       if (sbObjects) drawSBObjects(ctx, sbObjects, f1.frame);
@@ -1711,24 +1272,15 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       ctx.shadowColor = '#FF0000'; ctx.shadowBlur = 8;
       const _largeMaps = new Set(['grandarena', 'skycitadel', 'colossalcoliseum', 'infiniteexpanse']);
       const _isLarge = _largeMaps.has(mapId);
-      const _defaultZone = { left: _isLarge ? -800 : -500, right: _isLarge ? W + 800 : W + 500, top: _isLarge ? -800 : -600, bottom: _isLarge ? H + 600 : H + 450 };
-      const _zone = activeKillPerimeter
-        ? getMovingPerimeter(activeKillPerimeter, (now - g.stageStartTime) / 1000)
-        : (_killPerimeterCandidate?.enabled === false ? null : _defaultZone);
-      if (_zone) {
-        const BLAST_L = _zone.left, BLAST_R = _zone.right, BLAST_T = _zone.top, BLAST_B = _zone.bottom;
-        ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_R, BLAST_T); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_B); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_L, BLAST_B); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(BLAST_R, BLAST_T); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
-      }
+      const BLAST_L = _isLarge ? -800 : -500, BLAST_R = _isLarge ? W + 800 : W + 500, BLAST_T = _isLarge ? -800 : -600, BLAST_B = _isLarge ? H + 600 : H + 450;
+      ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_R, BLAST_T); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_B); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(BLAST_L, BLAST_T); ctx.lineTo(BLAST_L, BLAST_B); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(BLAST_R, BLAST_T); ctx.lineTo(BLAST_R, BLAST_B); ctx.stroke();
       ctx.setLineDash([]); ctx.shadowBlur = 0; ctx.restore();
       }
 
-      // Split City is rendered from its supplied platform artwork inside
-      // drawPlatforms. Do not paint a generic material rectangle over it.
-      if (mapId !== 'splitcity') platforms.forEach(p => { if (!p?._freehandSegment) drawMaterialOverlay(ctx, p, f1.frame); });
-      drawResonanceOrb(ctx, resonanceMatch.orb, resonanceMatch.frame);
+      platforms.forEach(p => drawMaterialOverlay(ctx, p, f1.frame));
       // Visual indicator for erased platforms
       platforms.forEach(p => {
         if (p._deleted > 0) {
@@ -1741,14 +1293,15 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       });
 
       const drawFighter = (f, slot) => {
-        if (resonanceMatch.orb) drawResonanceRangeGlow(ctx, f, resonanceMatch.orb, resonanceMatch.frame);
         const effId = f.char.baseCharId || f.char.id;
         const renderChar = f.char.baseCharId ? { ...f.char, id: f.char.baseCharId } : f.char;
         const flashing = f.invincible > 0 && Math.floor(f.frame / 4) % 2 === 0;
         const crossoverColors = getCrossoverColor(f.char.id, equippedCrossovers);
         const renderColor = crossoverColors ? crossoverColors.primary : (getCharRenderColor(effId, equippedSkins) || f.char.color);
         if (!flashing) {
-          drawFighterGroundShadow(ctx, f, platforms, mapId);
+          ctx.save(); ctx.globalAlpha = 0.2 + Math.sin(f.frame * 0.07) * 0.05;
+          ctx.fillStyle = renderColor; ctx.beginPath();
+          ctx.ellipse(f.x, f.y + 3, 32, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
         }
         drawDoubleJumpParticles(ctx, f.doubleJumpParticles || []);
         const fScale = gameMode === 'brawl' ? 1.6 : 1;
@@ -1757,7 +1310,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           ctx.save(); ctx.globalAlpha = 0.5;
           drawStickman(ctx, f._clone.x, f._clone.y, renderColor, f._clone.facing || f.facing, f._clone.frame, fScale, renderChar.isSpirit, 'idle', renderChar, null);
           ctx.globalAlpha = 0.6; ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 10px Orbitron'; ctx.textAlign = 'center';
-          drawOfflineNameTag(ctx, f._clone.x, f._clone.y - 72 * fScale, f.char);
+          ctx.fillText(f.char.name, f._clone.x, f._clone.y - 72 * fScale);
           ctx.restore();
         }
         if (!flashing) {
@@ -1770,13 +1323,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         }
         // Shikigami — purely cosmetic floating companion (behind + above the fighter)
         drawShikigamiFollower(ctx, f, botShikigamiRef.current?.[effId], f.frame, fScale);
-        if (!flashing) {
-          // Motion drives the rise/fall jump pose and the distance-matched run cycle; the memo
-          // (one per fighter) smooths transitions between idle / run / air / attack poses.
-          const rigMotion = { vx: f.vx, vy: f.vy, grounded: f.grounded, dashTimer: f.dashTimer, dashDir: f.dashDirection, wallSlide: f.wallSlide, wallSide: f.wallSide, hitSide: f._hitSide || 0, memo: (f._rigMemo = f._rigMemo || {}) };
-          drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote, f.attackData, rigMotion);
-        }
-        if (!flashing && f.resonanceActive) { try { drawConstructWeapon(ctx, f, fScale); } catch (error) { console.error('[Resonance Constructs] Weapon render failed safely:', error); } }
+        if (!flashing) drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote, f.attackData);
         if (!flashing) {
           const skinParts = getSkinParts(effId, equippedSkins);
           const accs = getEquippedAccessories(botAccessoriesRef.current, effId);
@@ -1787,16 +1334,13 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           // Crossover custom parts (e.g. The King of Fire's crown of fire)
           getCrossoverParts(f.char.id, equippedCrossovers).filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote));
         }
-        if (f.attackData && (f.state === 'attacking' || f.state === 'attackHold')) {
-          // Negative visual progress is reserved for Gen I's authored charging stance.
-          const visualProgress = f.attackData.holding
-            ? (-1 - Math.max(0, Math.min(1, f.attackData.holdProgress || 0)))
-            : f.attackData.progress;
+        if (f.attackData && f.state === 'attacking') {
+          // Per-move crossover colors: signatures vs heavy attacks
           const moveColor = f.attackData.isHeavy ? crossoverColors?.heavy : crossoverColors?.sig;
           const crossoverAttackColor = getCrossoverAttackColor(f.char.id, equippedCrossovers);
-          drawAttackEffect(ctx, f.x, f.y, f.attackData, visualProgress, f.facing, moveColor || crossoverAttackColor || f.attackData.color || renderColor, f.attackData.isNormal, effId, f.char.power, f.powerActive);
+          drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, moveColor || crossoverAttackColor || f.attackData.color || renderColor, f.attackData.isNormal, effId, f.char.power, f.powerActive);
         }
-        if (!f.resonanceActive && f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, crossoverColors?.super || renderColor, f.attackData.progress, f.char.superMove?.name, effId, f.facing);
+        if (f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, crossoverColors?.super || renderColor, f.attackData.progress, f.char.superMove?.name, effId);
         if (f.hitEffects) f.hitEffects = f.hitEffects.filter(he => drawHitSparks(ctx, he.x, he.y, he.color, f.frame, he.spawnFrame));
         // Nametag (toggleable)
         if (settings.showNametags !== false) {
@@ -1813,10 +1357,11 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         if (cxName) { ctx.fillStyle = '#FFD700'; ctx.font = 'bold 7px Orbitron, sans-serif'; ctx.fillText(cxName.toUpperCase(), f.x, f.y - 70); }
         ctx.restore();
         }
+        if (f.sigCooldown > 0) { const cdPct = 1 - f.sigCooldown / 28; ctx.fillStyle = '#222'; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 10, 40, 4, 2); ctx.fill(); ctx.fillStyle = f.char.color; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 10, 40 * cdPct, 4, 2); ctx.fill(); }
+        if (f.heavyCooldown > 0) { const cdPct = 1 - f.heavyCooldown / 32; ctx.fillStyle = '#222'; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 16, 40, 3, 2); ctx.fill(); ctx.fillStyle = '#FFD700'; ctx.beginPath(); ctx.roundRect(f.x - 20, f.y + 16, 40 * cdPct, 3, 2); ctx.fill(); }
       };
 
-      // Fighters are rendered at the end of the world pass below so stage/platform
-      // artwork can never be painted over them.
+      drawFighter(f1, 1); drawFighter(f2, 2);
       // Shapeshift switch flash effect
       [f1, f2].forEach(f => {
         if (f._shapeshiftFlash > 0) {
@@ -1856,19 +1401,6 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         }
         ctx.shadowBlur = 0; ctx.restore();
       };
-      if (settings.hitboxes === true) {
-        const drawFighterBox = (f, label) => {
-          // Hurtbox is sized to the stickman silhouette (FIGHTER_HURTBOX); attack hitboxes are the
-          // exact authored circles/capsules/polygons used by collision.
-          drawTrainingHitbox(ctx, f.x, f.y + FIGHTER_HURTBOX.centerY, FIGHTER_HURTBOX.w, FIGHTER_HURTBOX.h, label);
-          if (f.attackData && (f.state === 'attacking' || f.state === 'superAttack')) {
-            // Attack hitbox guides are intentionally hidden; only the optional fighter hurtbox remains.
-          }
-        };
-        drawFighterBox(f1, 'P1'); drawFighterBox(f2, 'P2');
-        (sbObjects || []).forEach(o => drawTrainingHitbox(ctx, o.x, o.y, o.w || 24, o.h || 24, 'ITEM'));
-        Object.values(sbHazards || {}).flat().forEach(h => drawTrainingHitbox(ctx, h.x, h.y, h.w || 40, h.h || 40, 'HAZARD'));
-      }
       if (settings.comboCounter !== false) { drawCombo(combo1, f2, char1.color); drawCombo(combo2, f1, char2.color); }
 
       // Draw emote name labels (only in non-botbattle modes)
@@ -1938,15 +1470,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           ctx.fillText('◆', c.x, c.y + 3);
         });
       }
-      // Final world-space draw: fighters go on top of every stage/platform layer.
-      drawFighter(f1, 1);
-      drawFighter(f2, 2);
       ctx.restore();
-
-      [f1, f2].forEach(f => {
-        if (f.stocks <= 0) return;
-        drawOffscreenIndicator(ctx, { x: f.x, y: f.y - 45, color: f.char?.color, cameraX: g.camX, cameraY: g.camY, zoom: g.camZoom, width: W, height: H });
-      });
 
       drawTimer(ctx, W, gameRef.current.timer);
 
@@ -2080,7 +1604,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       document.removeEventListener('visibilitychange', onWakeVis);
       releaseWakeLock();
     };
-  }, [gameStarted, p1Char, p2Char, p2IsCPU, mapId, cpuDifficulty, gameMode, dummy, customStageConfig, stageCamera, killPerimeter, customPlatforms, customSpawnPoints, customHazards, customObjects, trainingMode]);
+  }, [gameStarted, p1Char, p2Char, p2IsCPU, mapId, cpuDifficulty, gameMode, dummy]);
 
   // Suppress controller menu-nav while a match is actively running; re-enable
   // when paused or finished so the player can click buttons with the controller.
@@ -2090,39 +1614,26 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
   }, [winner]);
 
   return (
-    <div className="el6-match-viewport relative flex flex-col items-center w-full">
-      <GameCanvasPortal gameMode={canvasHostMode || null}>
-        <canvas
-                ref={canvasRef} width={W} height={H}
-                className="el6-match-canvas el6-fight-canvas"
-                style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(100vw, calc(100dvh * 16 / 9))', height: 'min(100dvh, calc(100vw * 9 / 16))', maxWidth: 'none', maxHeight: 'none', aspectRatio: '16 / 9', zIndex: 0 }}
-              />
-      </GameCanvasPortal>
+    <div className="relative flex flex-col items-center gap-2 w-full">
+      <div className="flex justify-between w-full px-1 max-w-[1280px]">
+        <button onClick={() => gameMode !== 'challenge' && finishQuit()}
+          className={`px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs ${gameMode === 'challenge' ? 'opacity-30 cursor-not-allowed' : 'hover:opacity-80'}`}>
+          {gameMode === 'challenge' ? 'No Retreat' : <><GameIcon emoji="←" size={14} /> Menu</>}
+        </button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }}
+          className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">Pause (ESC)</button>
+      </div>
+      <canvas
+        ref={canvasRef} width={W} height={H}
+        className="border-2 border-border rounded-lg shadow-2xl w-full"
+        style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
+      />
       {countdown > 0 && !settings.hideCountdown && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      <MatchPauseButtonPortal>
-        <div className="el6-match-control-layer fixed top-3 right-3 flex items-center gap-2 pointer-events-auto">
-          {trainingMode && onTrainingSettings && (
-            <button
-              onClick={onTrainingSettings}
-              className="px-3 py-1 bg-secondary/90 text-secondary-foreground rounded font-body text-xs hover:opacity-90"
-            >
-              SETTINGS
-            </button>
-          )}
-          <button
-            onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }}
-            className="px-3 py-1 bg-secondary/90 text-secondary-foreground rounded font-body text-xs hover:opacity-90"
-          >
-            PAUSE (ESC)
-          </button>
-        </div>
-      </MatchPauseButtonPortal>
-      {paused && !winner && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={gameMode === 'challenge' ? () => { pausedRef.current = false; setPaused(false); } : finishQuit} /></MatchPausePortal>}
-      {trainingMode && !winner && trainingSettingsOverlay}
+      {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={gameMode === 'challenge' ? () => { pausedRef.current = false; setPaused(false); } : finishQuit} />}
       {winner && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/78 rounded-lg gap-5">
           <span className="text-5xl font-heading text-accent drop-shadow-lg">{winner === 'Draw' ? 'DRAW!' : `${winner} WINS!`}</span>
