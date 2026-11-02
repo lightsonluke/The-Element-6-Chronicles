@@ -599,9 +599,7 @@ function sup_cable(ctx, x, y, p, c, W, H) {
 
 function sup_snodvor(ctx, x, y, p, c, W, H) {
   const a = 1 - p;
-  // Blizzard — snow and ice filling screen
-  ctx.globalAlpha = a * 0.2; ctx.fillStyle = '#AAEEFF';
-  ctx.fillRect(0, 0, W, H);
+  // Blizzard — local snow and ice effects keep the stage visible.
   // Snow particles
   for (let i = 0; i < 50; i++) {
     const sx = (i * 47 + p * 200) % W;
@@ -644,10 +642,7 @@ function sup_kirsten(ctx, x, y, p, c, W, H) {
 
 function sup_volt(ctx, x, y, p, c, W, H) {
   const a = 1 - p;
-  // Concussive lightning blast from sky
-  if (p < 0.15) {
-    ctx.globalAlpha = (0.15 - p) / 0.15 * 0.5; ctx.fillStyle = c; ctx.fillRect(0, 0, W, H);
-  }
+  // Concussive lightning blast from the sky, without a screen tint.
   // Lightning bolt from top
   ctx.globalAlpha = a * 0.9; ctx.strokeStyle = c; ctx.lineWidth = 5; ctx.shadowColor = c; ctx.shadowBlur = 25;
   ctx.beginPath(); ctx.moveTo(x, 0);
@@ -689,8 +684,7 @@ function sup_temple(ctx, x, y, p, c, W, H) {
 
 function sup_nightmare(ctx, x, y, p, c, W, H) {
   const a = 1 - p;
-  // Nightmare haze — dark tendrils and fear
-  ctx.globalAlpha = a * 0.3; ctx.fillStyle = c; ctx.fillRect(0, 0, W, H);
+  // Nightmare tendrils and fear remain local to the action.
   // Tendrils
   for (let i = 0; i < 12; i++) {
     const ang = (i / 12) * Math.PI * 2 + p * 2;
@@ -830,9 +824,7 @@ function sup_life(ctx, x, y, p, c, W, H) {
 
 function sup_death(ctx, x, y, p, c, W, H) {
   const a = 1 - p;
-  // Closure pulse — silence and endings
-  ctx.globalAlpha = a * 0.3; ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, W, H);
-  // Closing rings
+  // Closure pulse — local closing rings, with the stage still visible.
   for (let r = 0; r < 5; r++) {
     const rp = p - r * 0.1; if (rp < 0 || rp > 1) continue;
     ctx.globalAlpha = a * (0.5 - r * 0.08); ctx.strokeStyle = r === 0 ? '#FFFFFF' : c; ctx.lineWidth = 3;
@@ -1154,8 +1146,7 @@ function sup_g2_utsuro(ctx, x, y, p, c, W, H) {
 
 function sup_g3_takeshi(ctx, x, y, p, c, W, H) {
   const a = 1 - p;
-  // Sandstorm
-  ctx.globalAlpha = a * 0.2; ctx.fillStyle = c; ctx.fillRect(0, 0, W, H);
+  // Sandstorm particles and pillars, without a full-screen wash.
   for (let i = 0; i < 40; i++) {
     const sx = (i * 47 + p * 300) % W;
     const sy = (i * 73 + p * 200) % H;
@@ -1260,8 +1251,7 @@ function sup_g3_masaru(ctx, x, y, p, c, W, H) {
 
 function sup_g3_ryo(ctx, x, y, p, c, W, H) {
   const a = 1 - p;
-  // Mist veil — cloud multi-strike
-  ctx.globalAlpha = a * 0.3; ctx.fillStyle = c; ctx.fillRect(0, 0, W, H);
+  // Mist strikes stay as local marks instead of tinting the full viewport.
   for (let i = 0; i < 8; i++) {
     const phase = p - i * 0.06; if (phase < 0 || phase > 0.9) continue;
     const sx = x + Math.sin(i * 11) * 180;

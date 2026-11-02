@@ -270,10 +270,8 @@ export function paintSuperBack(ctx, m, t) {
   if (t > T - 6 && S.act === 2) return;
   const darkIn = clamp(t / (s * 0.55)), darkOut = S.act === 2 ? 1 - clamp((t - s - a) / (e * 0.7)) : 1, dk = darkIn * darkOut;
   ctx.save();
-  // spotlight darkening around the whole action (drawn behind the fighter)
-  const g = ctx.createRadialGradient(60, -50, 40, 60, -50, 760); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, rgba(darken(S.pal[3], 0.55), 0.55 * dk));
-  ctx.fillStyle = g; ctx.fillRect(-900, -760, 2400, 1000);
-  // ground glow ellipse
+  // Keep the stage background untouched. Only draw effects close to the fighter.
+  // Local ground glow ellipse
   const gl = ctx.createRadialGradient(0, 0, 4, 0, 0, 90 + 40 * S.k); gl.addColorStop(0, rgba(S.pal[1], 0.65 * dk)); gl.addColorStop(1, rgba(S.pal[0], 0));
   ctx.fillStyle = gl; ctx.beginPath(); ctx.ellipse(0, 2, 90 + 40 * S.k, 16 + 6 * S.k, 0, 0, TAU); ctx.fill();
   // buildup: rotating rings + rising element column behind the body
@@ -310,7 +308,7 @@ export function paintSuperFront(ctx, m, t, o = {}) {
     for (let i = 0; i < 22; i++) { const ang = i * TAU / 22 + nz(S.seed, i) * 0.2, r0 = 40 + 50 * nz(S.seed + S.f, i), r1 = r0 + 90 + 150 * (1 - sub);
       ctx.strokeStyle = rgba(i % 3 ? S.pal[1] : '#ffffff', 0.55 * (1 - sub) + 0.15); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0 * 0.7); ctx.lineTo(cx + Math.cos(ang) * r1, cy + Math.sin(ang) * r1 * 0.7); ctx.stroke(); }
     if (sub < 0.35) { const k = 1 - sub / 0.35; ctx.strokeStyle = rgba('#ffffff', 0.8 * k); ctx.lineWidth = 5 * k + 1; ctx.beginPath(); ctx.ellipse(cx, cy, 30 + 120 * (1 - k), (30 + 120 * (1 - k)) * 0.7, 0, 0, TAU); ctx.stroke(); ctx.strokeStyle = rgba(S.pal[0], 0.7 * k); ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(cx, cy, 20 + 150 * (1 - k), (20 + 150 * (1 - k)) * 0.7, 0, 0, TAU); ctx.stroke(); }
-    if (stage === nS - 1) { const k = Math.max(0, 1 - sub * 1.4); ctx.fillStyle = rgba('#ffffff', 0.28 * k); ctx.fillRect(-900, -700, 2400, 900); burst(ctx, cx + 70, cy, 1.0 * k + 0.2, { ...S, seed: S.seed + 3 }); }
+    if (stage === nS - 1) { const k = Math.max(0, 1 - sub * 1.4); burst(ctx, cx + 70, cy, 1.0 * k + 0.2, { ...S, seed: S.seed + 3 }); }
   } else {
     const age = t - (s + a - 1);                                            // finale afterglow: shock rings + falling debris
     if (age < 14) {

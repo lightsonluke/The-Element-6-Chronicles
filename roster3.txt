@@ -273,8 +273,8 @@ us knee 9/4/11 5 Cd
 ds rake 8/3/16 8 A4
 ss elbow 6/5/16 5 C2
 uh leap 17/7/25 10 Fa
-dh toes 16/4/41 16 C4
-sh backkick 14/3/26 10 D6
+dh toes 16/4/43 16 C4
+sh backkick 14/3/31 10 D6
 rc foot 4/4/20 3 Dd
 sp route 24/18/47 27 Bf
 gp spread 15/6/18 9 De

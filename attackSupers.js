@@ -788,29 +788,26 @@ export function drawUnique(ctx, x, y, p, cfg) {
       }
     }
   } else if (uniqueType === 'freezeWall') {
-    // Rising water wall that freezes mid-attack
+    // Local rising water arcs that freeze mid-attack; leave the stage background clear.
     const wallH = p * 350;
-    ctx.globalAlpha = a * 0.4;
-    const grad = ctx.createLinearGradient(0, y, 0, y - wallH);
-    grad.addColorStop(0, color + 'AA');
-    grad.addColorStop(1, 'transparent');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, y - wallH, W, wallH);
+    ctx.save(); ctx.globalAlpha = a * 0.4; ctx.strokeStyle = color; ctx.lineWidth = 4;
+    for (let ring = 0; ring < 3; ring++) {
+      const spread = 40 + p * 150 + ring * 22;
+      ctx.beginPath(); ctx.ellipse(x, y - wallH * 0.45, spread, Math.max(10, spread * 0.22), 0, Math.PI, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
     // Water particles
     for (let i = 0; i < 18; i++) {
-      const wx = (i * 67 + p * 300) % W;
+      const wx = x + Math.sin(i * 5.3 + p * 4) * (45 + p * 125);
       ctx.globalAlpha = a * 0.6;
       particle(ctx, wx, y - wallH * (0.3 + Math.sin(i) * 0.3), 11, color, p, i);
     }
     // Freezing effect
     if (p > 0.4) {
-      ctx.globalAlpha = a * 0.3;
-      ctx.fillStyle = '#AAEEFF';
-      ctx.fillRect(0, y - wallH, W, wallH * 0.3);
       // Ice crystals
       ctx.fillStyle = '#FFFFFF'; ctx.globalAlpha = a * 0.5;
       for (let i = 0; i < 20; i++) {
-        const ix = (i * 60) % W;
+        const ix = x - 120 + i * 12;
         ctx.beginPath();
         ctx.moveTo(ix, y - wallH); ctx.lineTo(ix + 5, y - wallH - 20); ctx.lineTo(ix + 10, y - wallH); ctx.fill();
       }

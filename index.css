@@ -1162,3 +1162,175 @@ body.el6-gameplay-active {
   z-index: 2147483647 !important;
   pointer-events: auto !important;
 }
+
+/* Clean competitive-fighter menu pass for non-home, non-character-select UI.
+   The visual direction follows Brawlhalla's clear menu hierarchy: flat
+   surfaces, compact cards, strong labels and restrained interaction feedback. */
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) {
+  --font-heading: 'Rajdhani', sans-serif;
+  --border: 213 22% 80%;
+  --input: 213 22% 80%;
+  --e6-ui-glow: transparent;
+  padding: clamp(.55rem, 1.4vw, 1.1rem);
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt))::before { display: none; }
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(.bg-card, [class*='bg-card/'], .bg-popover) {
+  border-color: hsl(var(--border) / .9) !important;
+  border-radius: .45rem !important;
+  background-color: hsl(var(--card) / .98) !important;
+  background-image: none !important;
+  box-shadow: 0 2px 8px hsl(var(--background) / .12) !important;
+  backdrop-filter: none !important;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border) {
+  border-color: hsl(var(--border) / .9) !important;
+  border-radius: .45rem !important;
+  background-image: none !important;
+  box-shadow: 0 2px 8px hsl(var(--background) / .12) !important;
+  backdrop-filter: none !important;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(h1, h2, h3, .font-heading) {
+  letter-spacing: .025em;
+  text-shadow: none !important;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(button, [role='button'], a[role='button']) {
+  border-radius: .35rem;
+  box-shadow: none;
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: .025em;
+  transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(button, [role='button'], a[role='button']):hover:not(:disabled) {
+  transform: none;
+  border-color: hsl(var(--primary) / .8);
+  box-shadow: none;
+  filter: none;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(button, [role='button']):focus-visible,
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(input, select, textarea):focus-visible {
+  outline: 2px solid hsl(var(--accent)) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px hsl(var(--accent) / .18) !important;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-screen-eyebrow {
+  color: hsl(var(--primary));
+  font: 700 .72rem/1.1 'Rajdhani', sans-serif;
+  letter-spacing: .09em;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-back-button {
+  border-radius: .35rem;
+  border-color: hsl(var(--border));
+  background: hsl(var(--secondary));
+  font: 700 .9rem/1 'Rajdhani', sans-serif;
+  letter-spacing: .04em;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-shop-intro,
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-browser-header {
+  border-radius: .45rem;
+  border-color: hsl(var(--border));
+  background: hsl(var(--card));
+  box-shadow: none;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-shop-tabs {
+  border-radius: .4rem;
+  background: hsl(var(--secondary));
+  box-shadow: none;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-shop-tabs > button {
+  border-radius: .3rem;
+  font: 700 .82rem/1 'Rajdhani', sans-serif;
+  letter-spacing: .035em;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-shop-tabs > button[aria-selected='true'] {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: none;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-shop-preview-row > :last-child {
+  border-radius: .45rem;
+  border-color: hsl(var(--border)) !important;
+  background: hsl(var(--card)) !important;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-shop-screen .grid > :is(.bg-card, button.bg-card, div.rounded-xl) {
+  border-radius: .4rem;
+  background: hsl(var(--card));
+  box-shadow: 0 2px 7px hsl(var(--background) / .12);
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-shop-screen .grid > :is(div.rounded-xl, button.bg-card):hover {
+  transform: translateY(-1px);
+  border-color: hsl(var(--primary) / .8);
+  box-shadow: 0 3px 10px hsl(var(--background) / .16);
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-settings-header {
+  background: hsl(var(--background) / .96) !important;
+  backdrop-filter: none !important;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-settings-screen > :is(.bg-card, section.bg-card) {
+  border-radius: .45rem !important;
+  background: hsl(var(--card)) !important;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-settings-screen > :is(.bg-card, section.bg-card) h3 {
+  color: hsl(var(--foreground));
+  letter-spacing: .035em;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile {
+  min-height: 96px !important;
+  border-radius: .4rem;
+  border-color: hsl(var(--border));
+  background: hsl(var(--card));
+  box-shadow: 0 2px 7px hsl(var(--background) / .12);
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile:hover,
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile:focus-visible {
+  transform: none;
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / .07);
+  box-shadow: inset 3px 0 hsl(var(--primary));
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile-mark {
+  border-radius: .35rem;
+  background: hsl(var(--primary) / .1);
+  color: hsl(var(--primary));
+  text-shadow: none;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile-title { font: 700 1.2rem/1.05 'Rajdhani', sans-serif; }
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile-kicker,
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile-action,
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-section-heading > span {
+  font: 700 .75rem/1.1 'Rajdhani', sans-serif;
+  letter-spacing: .05em;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-section-featured { border-color: hsl(var(--border)); }
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile-featured {
+  border-color: hsl(var(--border));
+  background: hsl(var(--card));
+}
+.dark .e6-unified-ui:not(:has(.e6-character-select-exempt)) {
+  --background: 220 32% 9%;
+  --foreground: 210 25% 95%;
+  --card: 220 25% 15%;
+  --card-foreground: 210 25% 95%;
+  --popover: 220 25% 15%;
+  --popover-foreground: 210 25% 95%;
+  --secondary: 218 24% 22%;
+  --secondary-foreground: 210 25% 92%;
+  --muted: 218 24% 19%;
+  --muted-foreground: 214 15% 68%;
+  --border: 214 23% 30%;
+  --input: 214 23% 30%;
+}
+html:not(.dark) .e6-unified-ui:not(:has(.e6-character-select-exempt)) {
+  --background: 210 35% 96%;
+  --foreground: 218 38% 13%;
+  --card: 0 0% 100%;
+  --card-foreground: 218 38% 13%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 218 38% 13%;
+  --secondary: 210 25% 89%;
+  --secondary-foreground: 218 38% 17%;
+  --muted: 210 25% 92%;
+  --muted-foreground: 216 17% 40%;
+  --border: 213 23% 82%;
+  --input: 213 23% 82%;
+}

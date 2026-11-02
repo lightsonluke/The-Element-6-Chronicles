@@ -203,13 +203,7 @@ export function motionDown(ctx, x, y, p, facing, range, particle, color, isHeavy
 
 export function motionSuper(ctx, x, y, p, particle, color, theme) {
   const a = 1 - p;
-  // Screen flash at start
-  if (p < 0.12) {
-    ctx.globalAlpha = (0.12 - p) / 0.12 * 0.5;
-    ctx.fillStyle = color; ctx.fillRect(0, 0, 1200, 700);
-  }
-
-  // Theme-specific stage-wide effect
+  // Theme effects stay around the action; the gameplay background is never tinted.
   const fam = theme;
   if (fam === 'fire' || fam === 'ash' || fam === 'explosive') {
     // Sweeping firestorm — horizontal sweep
@@ -225,30 +219,27 @@ export function motionSuper(ctx, x, y, p, particle, color, theme) {
       }
     }
   } else if (fam === 'water' || fam === 'venom' || fam === 'blood' || fam === 'potion' || fam === 'serum') {
-    // Rising tidal wall that sweeps across
+    // Local rising wave arcs replace the old full-width translucent wall.
     const wallH = p * 350;
-    ctx.globalAlpha = a * 0.4;
-    const grad = ctx.createLinearGradient(0, y, 0, y - wallH);
-    grad.addColorStop(0, color + 'AA');
-    grad.addColorStop(1, 'transparent');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, y - wallH, 1200, wallH);
+    ctx.save(); ctx.globalAlpha = a * 0.38; ctx.strokeStyle = color; ctx.lineWidth = 4;
+    for (let ring = 0; ring < 3; ring++) {
+      const spread = 38 + p * 150 + ring * 18;
+      ctx.beginPath(); ctx.ellipse(x, y - wallH * 0.45, spread, Math.max(10, spread * 0.22), 0, Math.PI, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
     for (let i = 0; i < 18; i++) {
-      const wx = (i * 67 + p * 300) % 1200;
+      const wx = x + Math.sin(i * 5.3 + p * 4) * (45 + p * 125);
       ctx.globalAlpha = a * 0.6;
       particle(ctx, wx, y - wallH * (0.3 + Math.sin(i) * 0.3), 11, color, p, i);
     }
   } else if (fam === 'ice' || fam === 'blizzard' || fam === 'glass') {
-    // Flash-freeze — crystalline particles + freeze sweep
+    // Flash-freeze — localized crystalline particles, with no screen overlay.
     for (let i = 0; i < 30; i++) {
       const sx = (i * 41 + Math.sin(i * 3) * 80) % 1200;
       const sy = (i * 19) % 450 + 50;
       ctx.globalAlpha = a * (1 - p * 0.5) * 0.6;
       particle(ctx, sx, sy, 13 * (1 - p * 0.3), color, p, i);
     }
-    ctx.globalAlpha = a * 0.2;
-    ctx.fillStyle = color + '30';
-    ctx.fillRect(0, 0, 1200 * Math.min(p * 1.5, 1), 700);
   } else if (fam === 'shadow' || fam === 'drain' || fam === 'nightmare' || fam === 'corruption' || fam === 'silence') {
     // Multiple dark strikes from different angles
     for (let i = 0; i < 8; i++) {
