@@ -43,6 +43,10 @@ function init(fighter, ad) {
   ensureAverages();
   const key = charKey(fighter); if (!key) return false;
   const slot = slotOf(ad); if (!slot) return false;
+  // Purple's original Shadow Dash, Smoke Drop, and Rising Shadow stay on the
+  // legacy character data and animation path; his other moves use the Move Engine.
+  if ((fighter.char?.id === 'purple' || fighter.char?.baseCharId === 'purple') &&
+      !fighter.resonanceActive && ['us', 'sh', 'dh'].includes(slot)) return false;
   const m = buildMove(key, slot); if (!m) return false;
   const [s, a, e] = m.fr;
   ad._mv = { m, f: -1, phase: 'run', diveF: 0, landed: false, dive: false, curStage: 0, did: {}, ghost: 0, ox: fighter.x, oy: fighter.y, total: s + a + e, sc: fighter.renderScale || 1 };

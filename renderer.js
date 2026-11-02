@@ -169,13 +169,21 @@ export function drawStickman(ctx, x, y, color, facing, frame, scale = 1, isSpiri
 }
 
 // Gathers the optional emote / authored-attack inputs and runs the shared rig solver.
+function isLegacyPurpleMove(charId, attackData) {
+  if (charId !== 'purple' || !attackData || attackData.resonanceFamily) return false;
+  if (attackData.isHeavy) return ['heavy', 'downHeavy', 'down'].includes(attackData.sigType);
+  return !attackData.isNormal && !attackData.isSuper && !attackData.isRecovery &&
+    ['up', 'upSignature'].includes(attackData.sigType);
+}
+
 function solveFighterPose(s, frame, state, facing, emote, attackData, charData, motion) {
   if (attackData && attackData._mv && (state === 'attacking' || state === 'superAttack')) {
     const choreo = mvChoreo(null, attackData);
     if (choreo) return solvePose({ s, frame, state, facing, motion, emoteVars: null, attack: null, gen1: null, choreo });
   }
   if (attackData && !attackData.holding && attackData.type !== 'attackHold' &&
-      (state === 'attacking' || state === 'superAttack') && mvHasRoster(charData?.id)) {
+      (state === 'attacking' || state === 'superAttack') && mvHasRoster(charData?.id) &&
+      !isLegacyPurpleMove(charData?.id, attackData)) {
     // Roster characters use only the Move Engine pose; do not layer legacy Gen I–V body animation under it.
     return solvePose({ s, frame, state, facing, motion, emoteVars: null, attack: null, gen1: null });
   }
@@ -1034,7 +1042,7 @@ function drawResonanceConstructAttack(ctx, x, y, attack, progress, facing, color
 }
 
 export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isNormal = false, charId = '', power = null, powerActive = null) {
-  if (attack && (attack._mv || mvHasRoster(charId))) return; // never stack legacy attack art over a roster move
+  if (attack && (attack._mv || (mvHasRoster(charId) && !isLegacyPurpleMove(charId, attack)))) return; // never stack legacy art over a Move Engine move
   if (attack?.resonanceFamily) {
     // The actual construct weapon is animated in-hand by drawConstructWeapon.
     // Do not draw a second unrelated generic blade/line overlay here.
