@@ -509,3 +509,173 @@ button:focus-visible, [role='button']:focus-visible, input:focus-visible, select
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+/* ========================================================================
+   UNIFIED NON-EXEMPT UI
+   Applied by Game.jsx only to redesigned menus, utility screens, overlays,
+   and results. Home and character-selection screens never receive this class.
+   Theme values continue to come from the active light/dark theme tokens.
+   ======================================================================== */
+.e6-unified-ui {
+  --e6-ui-panel: hsl(var(--card) / .88);
+  --e6-ui-panel-raised: hsl(var(--popover) / .94);
+  --e6-ui-line: hsl(var(--border) / .82);
+  --e6-ui-glow: hsl(var(--primary) / .20);
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  width: 100%;
+  color: hsl(var(--foreground));
+  text-rendering: optimizeLegibility;
+}
+.e6-unified-ui::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 42rem 24rem at 8% 0%, var(--e6-ui-glow), transparent 76%),
+    radial-gradient(ellipse 32rem 20rem at 100% 100%, hsl(var(--accent) / .08), transparent 78%);
+}
+.e6-unified-ui:has(.e6-character-select-exempt)::before { display: none; }
+.e6-unified-ui :is(.bg-card, [class*='bg-card/'], .bg-popover) {
+  background-color: var(--e6-ui-panel) !important;
+  border-color: var(--e6-ui-line);
+  box-shadow: 0 14px 36px hsl(var(--background) / .24), inset 0 1px hsl(var(--foreground) / .035);
+  backdrop-filter: blur(12px) saturate(1.08);
+}
+.e6-unified-ui :is(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border) {
+  border-color: var(--e6-ui-line);
+  box-shadow: 0 12px 32px hsl(var(--background) / .20), inset 0 1px hsl(var(--foreground) / .035);
+}
+.e6-unified-ui :is(h1, h2, h3) {
+  text-wrap: balance;
+  line-height: 1.15;
+}
+.e6-unified-ui :is(button, [role='button'], a[role='button']) {
+  min-height: 42px;
+  touch-action: manipulation;
+  scroll-margin-block: .75rem;
+}
+.e6-unified-ui :is(button, [role='button'], a[role='button']):is([class~='w-6'], [class~='w-7'], [class~='w-8'], [class~='w-9'], [class~='h-6'], [class~='h-7'], [class~='h-8'], [class~='h-9']) {
+  min-height: 0;
+}
+.e6-unified-ui :is(button, [role='button']):focus-visible,
+.e6-unified-ui :is(input, select, textarea):focus-visible {
+  outline: 3px solid hsl(var(--accent)) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px hsl(var(--accent) / .15), 0 0 20px hsl(var(--primary) / .30);
+}
+.e6-unified-ui :is(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+  min-height: 42px;
+  max-width: 100%;
+  border: 1px solid var(--e6-ui-line);
+  border-radius: .65rem;
+  background-color: hsl(var(--background) / .55);
+  color: hsl(var(--foreground));
+  padding-inline: .8rem;
+  accent-color: hsl(var(--primary));
+}
+.e6-unified-ui textarea { min-height: 7rem; padding-block: .65rem; }
+.e6-unified-ui :is(input, textarea)::placeholder { color: hsl(var(--muted-foreground) / .88); }
+.e6-unified-ui [role='tablist'] {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+.e6-unified-ui :is([role='dialog'], [aria-modal='true']) {
+  max-height: calc(100dvh - max(24px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.e6-unified-ui :is(.fixed.inset-0.z-50, .fixed.inset-0[class*='z-']) > div {
+  max-height: calc(100dvh - max(24px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.e6-unified-ui :is(.overflow-y-auto, .overflow-auto) {
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / .55) hsl(var(--background) / .35);
+}
+.e6-unified-ui :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar { width: 8px; height: 8px; }
+.e6-unified-ui :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: hsl(var(--primary) / .55);
+  background-clip: padding-box;
+}
+.e6-unified-ui .e6-character-select-exempt :is(.bg-card, [class*='bg-card/'], .bg-popover) {
+  background-color: revert-layer !important;
+  border-color: revert-layer;
+  box-shadow: revert-layer;
+  backdrop-filter: revert-layer;
+}
+.e6-unified-ui .e6-character-select-exempt :is(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border) {
+  border-color: revert-layer;
+  box-shadow: revert-layer;
+}
+.e6-unified-ui .e6-character-select-exempt :is(button, [role='button'], a[role='button']) { min-height: revert-layer; }
+.e6-unified-ui .e6-character-select-exempt :is(button, [role='button']):focus-visible,
+.e6-unified-ui .e6-character-select-exempt :is(input, select, textarea):focus-visible {
+  outline: revert-layer !important;
+  outline-offset: revert-layer;
+  box-shadow: revert-layer;
+}
+.e6-unified-ui .e6-character-select-exempt :is(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+  min-height: revert-layer;
+  border: revert-layer;
+  border-radius: revert-layer;
+  background-color: revert-layer;
+  color: revert-layer;
+  padding-inline: revert-layer;
+}
+.e6-unified-ui .e6-character-select-exempt [role='tablist'] { max-width: revert-layer; overflow-x: revert-layer; }
+@media (max-width: 640px) {
+  .e6-unified-ui { padding-inline: max(.75rem, env(safe-area-inset-left)); }
+  .e6-unified-ui :is([role='dialog'], [aria-modal='true']) {
+    width: min(100%, calc(100vw - 1.5rem));
+  }
+  .e6-unified-ui :is(button, [role='button'], a[role='button']) { min-height: 44px; }
+  .e6-shop-tabs, .e6-equip-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding-block: .2rem;
+    scrollbar-width: thin;
+  }
+  .e6-shop-tabs > *, .e6-equip-tabs > * { flex: 0 0 auto; }
+  .e6-shop-preview-row, .e6-equip-preview { flex-direction: column; align-items: stretch; }
+  .e6-shop-preview-row > .w-56 { width: 100%; flex: 0 0 auto; }
+  .e6-shop-preview-row > :last-child { min-width: 0; width: 100%; }
+  .e6-character-swatch-grid { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
+  .e6-unified-ui .grid { min-width: 0; }
+}
+
+.e6-character-swatch { width: 44px; height: 44px; min-height: 44px !important; }
+.e6-character-swatch-grid { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
+.e6-shop-preview-row > .w-56 { flex: 0 0 14rem; }
+.e6-equip-tabs { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
+
+/* All active-mode pause controls share one safe-area-aware anchor. Several
+   older sport screens carry legacy corner-placement classes; this final rule
+   normalizes those without moving quit or other match controls. */
+.el6-match-pause-button,
+.el6-sport-pause-top-center,
+.el6-sport-pause-bottom-right,
+.el6-rockclimb-pause-bottom-right,
+.el6-banger-pause-button {
+  position: fixed !important;
+  inset: auto auto auto max(12px, env(safe-area-inset-left)) !important;
+  top: max(12px, env(safe-area-inset-top)) !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  width: max-content !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  z-index: 2147483647 !important;
+  pointer-events: auto !important;
+}

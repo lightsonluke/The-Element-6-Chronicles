@@ -7,7 +7,7 @@ import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { createFighter, updateFighter, checkHit, applyHit, loseStock } from './fighter.js';
-import { drawStickman, drawAttackEffect, drawSuperEffect, drawHealthBar, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawFighterGroundShadow, drawSplitCityPlatformForeground } from './renderer.js';
+import { drawStickman, drawAttackEffect, drawSuperEffect, drawPlayerStatusIndicator, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawFighterGroundShadow, drawSplitCityPlatformForeground } from './renderer.js';
 import { getKeybinds, readPlayerInput } from './keybinds.js';
 import { readGamepadInput } from './controllerProfiles.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
@@ -21,7 +21,6 @@ import { sfx } from './sfx.js';
 import PauseMenu from './PauseMenu.jsx';
 import { useClipRecorder } from './useClipRecorder.js';
 import { SeqNum, SnapshotBuffer, ConnectionState, NetDiagnostics, serializeFighter, applyRemoteHit } from './netCore.js';
-import GameIcon from "./GameIcon.jsx";
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 const mergeGp = (kb, gp) => gp ? {
@@ -45,7 +44,7 @@ const SNAPSHOT_DELAY = 2;       // interpolation delay in ticks
 const DISCONNECT_TIMEOUT = 10000;
 const RECONNECT_WINDOW = 15000;
 
-export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLoadout, oppLoadout, myElo, oppElo, myUsername = 'YOU', oppUsername = 'OPPONENT', sfxVolume = 70, musicVolume = 50, settings = {}, onEnd, equippedEmotes = {} }) {
+export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLoadout, oppLoadout, myUsername = 'YOU', oppUsername = 'OPPONENT', sfxVolume = 70, musicVolume = 50, settings = {}, onEnd, equippedEmotes = {} }) {
   const canvasRef = useRef(null);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
@@ -360,14 +359,14 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
 
       ctx.restore();
 
-      // HUD
-      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, H - 80, W, 80);
-      drawHealthBar(ctx, 40, H - 66, localF.damage, 280, myCharData.color, isHost ? `${myCharData.name} (YOU)` : myCharData.name, localF.stocks);
-      drawHealthBar(ctx, W - 320, H - 66, remote.damage || 0, 280, oppCharData.color, isHost ? oppCharData.name : `${oppCharData.name} (YOU)`, remote.stocks);
-      ctx.fillStyle = '#FFD700'; ctx.font = 'bold 12px Orbitron'; ctx.textAlign = 'center';
-      ctx.fillText(mode === 'ranked' ? 'ONLINE RANKED' : mode === 'soccer' ? 'ONLINE SOCCER' : 'ONLINE UNRANKED', W / 2, H - 50);
-      ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '9px Orbitron';
-      ctx.fillText(`ELO ${myElo || 1000} vs ${oppElo || 1000}`, W / 2, H - 36);
+      // The server/host fighter snapshots remain the source of truth for the
+      // compact participant indicators.
+      const hostFighter = isHost ? localF : remote;
+      const guestFighter = isHost ? remote : localF;
+      const hostCharacter = isHost ? myCharData : oppCharData;
+      const guestCharacter = isHost ? oppCharData : myCharData;
+      drawPlayerStatusIndicator(ctx, { x: W - 220, y: 42, playerNumber: 1, color: hostCharacter.color, name: hostCharacter.name, stats: `STK ${Math.max(0, hostFighter.stocks)} · ${Math.floor(hostFighter.damage || 0)}%` });
+      drawPlayerStatusIndicator(ctx, { x: W - 220, y: 76, playerNumber: 2, color: guestCharacter.color, name: guestCharacter.name, stats: `STK ${Math.max(0, guestFighter.stocks)} · ${Math.floor(guestFighter.damage || 0)}%` });
 
       // Reconnecting overlay
       if (conn.isReconnecting) {
@@ -440,9 +439,8 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
 
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
-      <div className="flex justify-between w-full px-1 max-w-[1280px]">
-        <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Forfeit</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-controller-pause-trigger px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
+      <div className="w-full px-1 max-w-[1280px]">
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80">⏸ PAUSE (ESC)</button>
       </div>
       <GameCanvasPortal>
         <canvas ref={canvasRef} width={W} height={H}

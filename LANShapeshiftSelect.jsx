@@ -3,7 +3,7 @@ import { ALL_CHARS, ALL_CHARS_MAP } from './allCharacters.js';
 import { ERA_OPTIONS, ALIGNMENTS, getPowerName, filterCharacters, sortByEra } from './charSelectHelpers.js';
 import { getCharLevelData, getUnlockedElements, ELEMENTS } from './elements.js';
 import { SHIKIGAMI } from './shikigami.js';
-import { ACCESSORIES, getEquippedAccessoryIds } from './cosmetics.js';
+import { ACCESSORIES, isAccessoryCompatible, getEquippedAccessoryIds } from './cosmetics.js';
 import { sfx } from './sfx.js';
 import GameIcon from "./GameIcon.jsx";
 
@@ -86,14 +86,14 @@ export default function LANShapeshiftSelect({
   // Accessory selection for active slot
   const equippedAccIds = activeCharId ? getEquippedAccessoryIds(equippedAccessories, activeCharId) : [];
   const ownedAccs = useMemo(() => ACCESSORIES.filter(a => (ownedAccessories || []).includes(a.id)), [ownedAccessories]);
-  const shownAccs = ownedAccs.filter(a => !a.exclusiveTo || a.exclusiveTo === activeCharId);
+  const shownAccs = ownedAccs.filter(a => isAccessoryCompatible(a, activeCharId));
 
   // Shikigami for active slot
   const currentShikigami = activeCharId ? (equippedShikigami?.[activeCharId] || null) : null;
   const ownedShiks = SHIKIGAMI.filter(s => (ownedShikigami || []).includes(s.id));
 
   return (
-    <div className="flex flex-col gap-2 w-full max-w-5xl mx-auto">
+    <div className="e6-character-select-exempt flex flex-col gap-2 w-full max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-heading text-foreground tracking-wider">{title}</h2>

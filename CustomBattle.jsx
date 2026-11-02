@@ -5,8 +5,8 @@ import { createFighter, updateFighter, checkHit, applyHit, updateAI, updateProje
 import { getKeybinds, readPlayerInput, readSinglePlayerInput } from './keybinds.js';
 import { POWER_EFFECTS, getPowerEffect } from './powerEffects.js';
 import {
-  drawStickman, drawAttackEffect, drawSuperEffect, drawHealthBar,
-  drawTimer, drawPlatforms, drawBackground, drawHitSparks,
+  drawStickman, drawAttackEffect, drawSuperEffect,
+  drawTimer, drawPlayerStatusIndicator, drawPlatforms, drawBackground, drawHitSparks,
   drawDoubleJumpParticles, drawSuperFlash, STAGE_MAPS,
 } from './renderer.js';
 import GameCanvasPortal from './GameCanvasPortal.jsx';
@@ -650,24 +650,22 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
 
       superFlashes = superFlashes.filter(sf => { sf.progress += dt * 0.55; drawSuperFlash(ctx, W, H, sf.name, sf.color, sf.progress); return sf.progress < 1; });
 
-      // HUD (background hidden when stock boxes are hidden)
-      const hudHeight = fs.length <= 4 ? 80 : 110;
-      if (!settings?.hideStockBoxes) {
-        ctx.fillStyle = 'rgba(0,0,0,0.72)'; ctx.fillRect(0, H - hudHeight, W, hudHeight);
-      }
-      const barW = fs.length <= 4 ? 150 : 120;
-      const totalBarW = fs.length * (barW + 8);
-      const startX = (W - totalBarW) / 2;
+      // Compact slot-ordered indicators keep all fighter status in the top-right.
       fs.forEach((f, i) => {
-        const bx = startX + i * (barW + 8);
-        const by = H - hudHeight + (i % 2 === 0 ? 8 : (hudHeight > 80 ? 35 : 30));
-        drawHealthBar(ctx, bx + barW / 2, by, f.damage, 240, f.char.color, `P${i + 1} ${f.char.name}`, f.stocks, null, 0, 0, 'left', false, settings?.hideStockBoxes);
+        drawPlayerStatusIndicator(ctx, {
+          x: W - 220,
+          y: 42 + i * 32,
+          playerNumber: Number.isInteger(f.playerIndex) ? f.playerIndex + 1 : i + 1,
+          color: f.char.color,
+          name: f.char.name,
+          stats: `STK ${Math.max(0, f.stocks)} · ${Math.floor(f.damage)}%`,
+        });
       });
 
       // Power & Super bars for P1
       if (fs[0] && fs[0].stocks > 0) {
-        drawPowerBar(ctx, fs[0], startX, H - 20, 80, 5);
-        drawSuperMeter(ctx, fs[0], startX + 90, H - 20, 80, 5);
+        drawPowerBar(ctx, fs[0], 16, H - 20, 80, 5);
+        drawSuperMeter(ctx, fs[0], 106, H - 20, 80, 5);
       }
 
       // Kill feed
@@ -699,7 +697,7 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="flex justify-between w-full px-1 max-w-[1280px]">
         <button onClick={finishQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Menu</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-controller-pause-trigger px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80">⏸ PAUSE (ESC)</button>
       </div>
       <GameCanvasPortal>
         <canvas ref={canvasRef} width={W} height={H} className="border-2 border-border rounded-lg shadow-2xl w-full" style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />

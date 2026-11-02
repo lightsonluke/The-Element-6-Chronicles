@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
-import { ACCESSORIES, getAccessory, drawAccessory, accessoriesFor, isBehindAccessory, resolveAccColor, getEquippedAccessories, getEquippedAccessoryIds } from './cosmetics.js';
+import { getAccessory, drawAccessory, accessoriesFor, isAccessoryCompatible, isBehindAccessory, resolveAccColor, getEquippedAccessories, getEquippedAccessoryIds } from './cosmetics.js';
 import { drawSportChar } from './sportDraw.jsx';
 import { shopSkinsForChar as skinsForChar, getSkin, getSkinParts, getCharRenderColor, RARITY_COLORS } from './skins.js';
 import { KILL_FX, getKillFX, drawKillFX } from './killFX.js';
@@ -39,7 +39,8 @@ const SHOP_SORTED = [...ALL].sort((a, b) => shopCharOrder(a) - shopCharOrder(b))
 export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin, onBuyKillFX, onEquipKillFX, onBuyCharacter, onBuyPack, onEquipTitle, onBuyCrossover, onEquipCrossover, onBuyShikigami, onEquipShikigami, onBuyEmote, onBack }) {
   const [selected, setSelected] = useState(progress?.favoriteId || HEROES[0].id);
   const [tryOn, setTryOn] = useState(null); // accessory id being previewed
-  const [justBought, setJustBought] = useState(null); // post-buy "equip in shop" overlay
+  const [pendingPurchase, setPendingPurchase] = useState(null);
+  const [justBought, setJustBought] = useState(null);
   const [shopTab, setShopTab] = useState('accessories');
   const [paidCategory, setPaidCategory] = useState('Featured');
   const [eraFilter, setEraFilter] = useState('all');
@@ -56,10 +57,20 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
   // Reset try-on when switching characters
   useEffect(() => { setTryOn(null); }, [selected]);
 
+  // Only show the equip prompt after the saved progress reflects ownership.
+  useEffect(() => {
+    if (!pendingPurchase?.isOwned?.(progress)) return;
+    setJustBought(pendingPurchase);
+    setPendingPurchase(null);
+  }, [pendingPurchase, progress]);
+
   useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
 
   const equippedIds = getEquippedAccessoryIds(equipped, char?.id);
   const equippedAccs = getEquippedAccessories(equipped, char?.id);
+  const rawEquippedForCharacter = equipped[char?.id];
+  const rawEquippedIds = Array.isArray(rawEquippedForCharacter) ? rawEquippedForCharacter : rawEquippedForCharacter ? [rawEquippedForCharacter] : [];
+  const incompatibleAccessories = rawEquippedIds.map(id => getAccessory(id)).filter(a => a && !isAccessoryCompatible(a, char?.id));
   const shownAccessory = tryOn ? getAccessory(tryOn) : equippedAccs[0] || null;
   const available = accessoriesFor(selected);
   const equippedSkinId = equippedSkins[char?.id];
@@ -67,7 +78,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
   const previewSkinParts = equippedSkinId ? getSkinParts(char?.id, equippedSkins) : [];
 
   return (
-    <div className="w-full max-w-4xl flex flex-col gap-4">
+    <div className="e6-shop-screen w-full max-w-4xl flex flex-col gap-4">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-heading text-accent tracking-wider">SHOP</h2>
@@ -76,7 +87,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
         <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
       </div>
 
-      <div className="flex gap-2">
+      <div className="e6-shop-tabs flex gap-2">
         <button onClick={() => setShopTab('accessories')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'accessories' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>ACCESSORIES</button>
         <button onClick={() => setShopTab('kits')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'kits' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>KITS</button>
         <button onClick={() => setShopTab('killfx')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'killfx' ? 'bg-destructive text-destructive-foreground' : 'bg-secondary text-secondary-foreground'}`}>KILL FX</button>
@@ -90,17 +101,17 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
       </div>
 
       {['accessories', 'kits'].includes(shopTab) && (
-      <div className="flex gap-4">
+      <div className="e6-shop-preview-row flex gap-4">
         {/* Character picker */}
         <div className="w-56">
           <p className="text-[10px] font-heading text-muted-foreground mb-1">EQUIP ON</p>
           <div className="mb-1">
             <EraTabBar selectedEra={eraFilter} onEraChange={setEraFilter} compact />
           </div>
-          <div className="grid grid-cols-6 gap-1 max-h-56 overflow-y-auto">
+          <div className="e6-character-swatch-grid grid gap-1 max-h-56 overflow-y-auto">
             {(eraFilter === 'all' ? ALL : getRosterForEra(eraFilter)).map(c => (
               <button key={c.id} onClick={() => setSelected(c.id)}
-                className={`w-8 h-8 rounded-full border-2 ${selected === c.id ? 'border-accent' : 'border-border'}`}
+                className={`e6-character-swatch w-11 h-11 rounded-full border-2 ${selected === c.id ? 'border-accent' : 'border-border'}`}
                 style={{ backgroundColor: c.color }} title={c.name} />
             ))}
           </div>
@@ -117,6 +128,11 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
           ) : (
             <p className="text-xs text-muted-foreground font-body mt-1">No accessory equipped — click one to try on</p>
           )}
+          {incompatibleAccessories.length > 0 && (
+            <p className="mt-2 text-[10px] text-amber-300 text-center" role="status">
+              {incompatibleAccessories.map(a => a.name).join(', ')} {incompatibleAccessories.length === 1 ? 'only fits another character' : 'only fit other characters'} and are hidden from this preview. The saved loadout is unchanged.
+            </p>
+          )}
         </div>
       </div>
       )}
@@ -128,7 +144,6 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {available.filter(a => !a.exclusiveTo || a.exclusiveTo === selected).sort((a, b) => (a.id === 'clan_badge' ? -1 : b.id === 'clan_badge' ? 1 : 0)).map(a => {
             const isOwned = owned.includes(a.id);
-            const isEquipped = equipped[char?.id] === a.id;
             const isTrying = tryOn === a.id;
             return (
               <div key={a.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center cursor-pointer transition ${isTrying ? 'border-accent' : 'border-border'}`}
@@ -140,7 +155,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
                 {isOwned ? (
                   <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
                 ) : (
-                  <button onClick={(e) => { e.stopPropagation(); if (coins >= a.price) { onBuy(a.id); setJustBought({ label: a.name, equip: () => onEquip(char.id, a.id) }); } }}
+                  <button onClick={(e) => { e.stopPropagation(); if (coins >= a.price) { onBuy(a.id); setPendingPurchase({ label: a.name, equip: () => onEquip(char.id, a.id), isOwned: p => (p?.ownedAccessories || []).includes(a.id) }); } }}
                     disabled={coins < a.price}
                     className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= a.price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
                     BUY
@@ -173,7 +188,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
                 {isOwned ? (
                   <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
                 ) : (
-                  <button onClick={(e) => { e.stopPropagation(); if (coins >= a.price) { onBuy(a.id); setJustBought({ label: a.name, equip: () => onEquip(char.id, a.id) }); } }}
+                  <button onClick={(e) => { e.stopPropagation(); if (coins >= a.price) { onBuy(a.id); setPendingPurchase({ label: a.name, equip: () => onEquip(char.id, a.id), isOwned: p => (p?.ownedAccessories || []).includes(a.id) }); } }}
                     disabled={coins < a.price}
                     className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= a.price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
                     BUY
@@ -241,7 +256,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
                 {isOwned ? (
                   <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
                 ) : (
-                  <button onClick={() => { if (coins >= k.price) { onBuyKillFX(k.id); setJustBought({ label: k.name, equip: () => onEquipKillFX(k.id) }); } }}
+                  <button onClick={() => { if (coins >= k.price) { onBuyKillFX(k.id); setPendingPurchase({ label: k.name, equip: () => onEquipKillFX(k.id), isOwned: p => (p?.ownedKillFX || []).includes(k.id) }); } }}
                     disabled={coins < k.price}
                     className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= k.price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
                     BUY
@@ -283,7 +298,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
                 {isOwned ? (
                   <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
                 ) : (
-                  <button onClick={() => { if (coins >= cx.price) { onBuyCrossover?.(cx.id); setJustBought({ label: cx.name, equip: () => onEquipCrossover?.(cx.charId, cx.id) }); } }}
+                  <button onClick={() => { if (coins >= cx.price) { onBuyCrossover?.(cx.id); setPendingPurchase({ label: cx.name, equip: () => onEquipCrossover?.(cx.charId, cx.id), isOwned: p => (p?.ownedCrossovers || []).includes(cx.id) }); } }}
                     disabled={coins < cx.price}
                     className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= cx.price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
                     BUY
@@ -314,7 +329,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
                 {isOwned ? (
                   <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
                 ) : (
-                  <button onClick={() => { if (coins >= s.price) { onBuyShikigami?.(s.id); setJustBought({ label: s.name, equip: () => onEquipShikigami?.(char?.id, s.id) }); } }}
+                  <button onClick={() => { if (coins >= s.price) { onBuyShikigami?.(s.id); setPendingPurchase({ label: s.name, equip: () => onEquipShikigami?.(char?.id, s.id), isOwned: p => (p?.ownedShikigami || []).includes(s.id) }); } }}
                     disabled={coins < s.price}
                     className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= s.price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
                     BUY
@@ -346,7 +361,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
                 ) : (
                   <>
                     <p className="text-[10px] text-accent font-heading mb-2">{e.price} <GameIcon emoji="◆" size={14} /></p>
-                    <button onClick={() => { if (coins >= e.price) { onBuyEmote?.(e.id); setJustBought({ label: e.name, equip: () => {} }); } }}
+                    <button onClick={() => { if (coins >= e.price) { onBuyEmote?.(e.id); setPendingPurchase({ label: e.name, equip: () => {}, isOwned: p => (p?.ownedEmotes || []).includes(e.id) }); } }}
                       disabled={coins < e.price}
                       className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= e.price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
                       BUY

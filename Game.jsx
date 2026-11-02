@@ -79,7 +79,7 @@ import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { ERAS } from './eras.js';
 import { charPrice } from './charPrices.js';
-import { getAccessory, accessoriesFor, ACCESSORIES } from './cosmetics.js';
+import { getAccessory, accessoriesFor, isAccessoryCompatible, ACCESSORIES } from './cosmetics.js';
 import { getSkin, skinsForChar, SKINS } from './skins.js';
 import { CROSSOVERS, getCrossover } from './crossovers.js';
 import { getKillFX, KILL_FX as KILL_FX_LIST } from './killFX.js';
@@ -214,6 +214,9 @@ function flushCloudSave() {
 const ALL = [...ALL_CHARS];
 
 const TOUCH_SCREENS = ['fighting', 'soccer', 'sports', 'training', 'tutorial', 'lan', 'team', 'customrooms', 'experimental', 'sportslobby', 'onlinesportsmatch'];
+// These screens are intentionally outside the menu redesign system. Their
+// presentation is an explicit exception and must remain visually unchanged.
+const UI_REDESIGN_EXEMPT_SCREENS = new Set(['menu', 'charSelect', 'hubcharselect', 'shapeshiftSelect']);
 
 function detectMobileOrTablet() {
   if (typeof navigator === 'undefined') return false;
@@ -681,6 +684,7 @@ export default function Game() {
     });
   };
   const equipAccessory = (charId, accId) => {
+    if (!charId || (accId && !isAccessoryCompatible(accId, charId))) return;
     setProgress(prev => {
       const eq = { ...(prev.equippedAccessories || {}) };
       // Migrate legacy single-value format to array
@@ -2025,6 +2029,7 @@ export default function Game() {
   };
 
   const customStagesList = (progress.customStages || []).map(s => s.platforms || s);
+  const useUnifiedUi = !UI_REDESIGN_EXEMPT_SCREENS.has(screen);
 
   return (
     <div
@@ -2060,7 +2065,10 @@ export default function Game() {
         ))}
       </div>
 
-      <div className="relative z-10 w-full flex flex-col items-center my-auto">
+      <div
+        className={`relative z-10 w-full flex flex-col items-center my-auto${useUnifiedUi ? ' e6-unified-ui' : ''}`}
+        data-e6-screen={screen}
+      >
         {tokenFlash && (
           <div className="fixed top-4 right-4 z-50 bg-accent text-accent-foreground px-4 py-2 rounded-lg font-heading text-sm shadow-2xl animate-pulse">
             +{formatNumber(tokenFlash)} <GameIcon emoji="◆" size={14} /> Element 6 Tokens!

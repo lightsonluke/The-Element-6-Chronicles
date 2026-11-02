@@ -12,6 +12,8 @@ import { observeBot, botSkill } from './botIntelligence.js';
 import { drawMinimap, drawOnDeck } from './baseballOverlay.jsx';
 import GameIcon from "./GameIcon.jsx";
 import { toggleElementFullscreen } from './fullscreen.js';
+import PauseMenu from './PauseMenu.jsx';
+import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 const charFor = (id, element) => {
@@ -63,6 +65,8 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
   const { equippedAccessories: mergedAccessories } = mergeBotCosmetics(equippedAccessories, {}, _botIds);
   const [countdown, setCountdown] = useState(3);
   const [started, setStarted] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
   const keysRef = useRef({});
   const gpRef = useRef({ 0: {}, 1: {} });
   const gpPrevRef = useRef({ 0: {}, 1: {} });
@@ -275,7 +279,8 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
       const rk = resolveKey(e.key);
       const k = rk.toLowerCase(); keysRef.current[k] = true;
       if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: true });
-      if (e.key === 'Escape') { onQuit?.(); return; }
+      if (e.key === 'Escape') { pausedRef.current = !pausedRef.current; keysRef.current = {}; setPaused(pausedRef.current); return; }
+      if (pausedRef.current && !remoteKeysProc.current) return;
       if (['F5', 'F12'].includes(e.key)) return;
       const s = st.current;
       const humanBatting = s.batting === 1;  // P1 bats when batting===1
@@ -343,6 +348,10 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
         for (const slot of [0, 1]) {
           const gp = readGamepadInput(slot);
           gpRef.current[slot] = gp || {};
+          if (pausedRef.current) {
+            gpPrevRef.current[slot] = gp ? { sig: gp.sig, heavy: gp.heavy, power: gp.power } : {};
+            continue;
+          }
           if (gp) {
             const prev = gpPrevRef.current[slot] || {};
             // P1 = slot 0, P2 = slot 1 (slot 1 acts as P1 alt when vs CPU)
@@ -411,17 +420,20 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
         raf = requestAnimationFrame(loop);
         return;
       }
-      const s = st.current; s.frame++;
-      const dt = 1/60;
-      const mult = DIFF_MUL[difficulty] || 1;
-      update(s, dt, mult);
-      if (onStateExportRef.current) onStateExportRef.current(s);
+      const s = st.current;
+      if (!pausedRef.current || lanConnection || isOnlineHost) {
+        s.frame++;
+        const dt = 1/60;
+        const mult = DIFF_MUL[difficulty] || 1;
+        update(s, dt, mult);
+        if (onStateExportRef.current) onStateExportRef.current(s);
+      }
       draw(ctx, s, p1Chars, p2Chars, p1Jersey, p2Jersey, p1Elements, p2Elements, equippedSkins, mergedAccessories);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [started, p1Chars, p2Chars, p1Jersey, p2Jersey, p1Elements, p2Elements, difficulty, equippedSkins, equippedAccessories]);
+  }, [started, p1Chars, p2Chars, p1Jersey, p2Jersey, p1Elements, p2Elements, difficulty, equippedSkins, equippedAccessories, lanConnection, isOnlineHost]);
 
   // ── Update ──
   function update(s, dt, mult) {
@@ -1093,6 +1105,10 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
 
   return (
     <div ref={fullscreenRef} className="relative flex flex-col items-center gap-2 w-full">
+      <MatchPauseButtonPortal>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; keysRef.current = {}; setPaused(pausedRef.current); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs">{paused ? 'RESUME' : 'PAUSE'}</button>
+      </MatchPauseButtonPortal>
+      {paused && <MatchPausePortal><PauseMenu online={Boolean(lanConnection || remoteState || isOnlineHost)} onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></MatchPausePortal>}
 <button onClick={() => toggleElementFullscreen(fullscreenRef.current)} className="absolute top-3 right-3 z-50 px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">FULLSCREEN</button>
       <div className="w-full flex items-center justify-between gap-2 flex-wrap">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] font-body text-white/80 px-2">

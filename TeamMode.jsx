@@ -4,7 +4,7 @@ import { ALL_CHARS } from './allCharacters.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, updateProjectiles, drawProjectiles, loseStock } from './fighter.js';
 import { getKeybinds, readPlayerInput, readSinglePlayerInput } from './keybinds.js';
 import { readGamepadInput } from './controllerProfiles.js';
-import { drawStickman, drawAttackEffect, drawSuperEffect, drawHealthBar, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawSuperFlash } from './renderer.js';
+import { drawStickman, drawAttackEffect, drawSuperEffect, drawPlayerStatusIndicator, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawSuperFlash } from './renderer.js';
 import { drawOffscreenIndicator } from './offscreenIndicator.js';
 import { POWER_EFFECTS, getPowerEffect } from './powerEffects.js';
 import { withCustomChars } from './characterNumber.js';
@@ -585,26 +585,26 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
         drawOffscreenIndicator(ctx, { x: f.x, y: f.y - 45, color: f.char?.color || TEAM_COLORS[f.team], cameraX: camX, cameraY: camY, zoom: camZoom, width: W, height: H });
       });
 
-      // HUD — team stock counts (background hidden when stock boxes are hidden)
-      if (!settings?.hideStockBoxes) {
-        ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, H - 80, W, 80);
-      }
-
-      const t1Stocks = f1.stocks + f2.stocks;
-      const t2Stocks = f3.stocks + f4.stocks;
-
-      ctx.fillStyle = TEAM_COLORS[1]; ctx.font = 'bold 18px Orbitron'; ctx.textAlign = 'left';
-      ctx.fillText(`TEAM RED  ${t1Stocks}`, 40, H - 50);
-      ctx.textAlign = 'right'; ctx.fillStyle = TEAM_COLORS[2];
-      ctx.fillText(`${t2Stocks}  TEAM BLUE`, W - 40, H - 50);
-
-      drawHealthBar(ctx, 280, H - 66, f1.damage, 200, c1.color, c1.name, f1.stocks, null, 0, 0, 'left', false, settings?.hideStockBoxes);
-      drawHealthBar(ctx, 540, H - 66, f2.damage, 200, c2.color, c2.name, f2.stocks, null, 0, 0, 'left', false, settings?.hideStockBoxes);
-      drawHealthBar(ctx, W - 540, H - 66, f3.damage, 200, c3.color, c3.name, f3.stocks, null, 0, 0, 'left', false, settings?.hideStockBoxes);
-      drawHealthBar(ctx, W - 280, H - 66, f4.damage, 200, c4.color, c4.name, f4.stocks, null, 0, 0, 'left', false, settings?.hideStockBoxes);
-
-      ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '10px Orbitron'; ctx.textAlign = 'center';
-      ctx.fillText(matchTime === 0 ? '∞' : `${Math.ceil(gameRef.current.timer)}s`, W / 2, H - 50);
+      // Compact player HUD, in slot order. Circle color comes from the actual
+      // character; the number keeps team members distinguishable at a glance.
+      const statusPlayers = [
+        { fighter: f1, char: c1, team: 'RED' },
+        { fighter: f2, char: c2, team: 'RED' },
+        { fighter: f3, char: c3, team: 'BLUE' },
+        { fighter: f4, char: c4, team: 'BLUE' },
+      ];
+      statusPlayers.forEach(({ fighter, char, team }, index) => drawPlayerStatusIndicator(ctx, {
+        x: W - 220,
+        y: 42 + index * 32,
+        playerNumber: index + 1,
+        color: char.color,
+        name: `${team} ${char.name}`,
+        stats: `STK ${Math.max(0, fighter.stocks)} · ${Math.floor(fighter.damage)}%`,
+      }));
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = 'bold 18px Orbitron'; ctx.textAlign = 'right';
+      ctx.fillText(matchTime === 0 ? '∞' : `${Math.ceil(gameRef.current.timer)}s`, W - 18, 32);
+      ctx.restore();
 
       // Power & Super bars for P1
       if (f1.stocks > 0) {
@@ -652,9 +652,8 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
 
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
-      <div className="flex justify-between w-full px-1 max-w-[1280px]">
-        <button onClick={finishQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Menu</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-controller-pause-trigger px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">Pause (ESC)</button>
+      <div className="w-full px-1 max-w-[1280px]">
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80">PAUSE (ESC)</button>
       </div>
       <GameCanvasPortal>
         <canvas ref={canvasRef} width={W} height={H}

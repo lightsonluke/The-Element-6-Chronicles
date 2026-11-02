@@ -14,7 +14,7 @@ import React, { useRef, useEffect, useState } from 'react';
 
 import { ALL_CHARS } from './allCharacters.js';
 import { createFighter, updateFighter, updateProjectiles, updateAI, checkHit, applyHit, loseStock, drawProjectiles, platformNavigate } from './fighter.js';
-import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles, drawBackground } from './renderer.js';
+import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles, drawBackground, drawPlayerStatusIndicator } from './renderer.js';
 import { getEquippedAccessories, drawAccessory, isBehindAccessory, resolveAccColor } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { drawShikigamiFollower } from './shikigami.js';
@@ -66,7 +66,6 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
   const [winner, setWinner] = useState(null); // { name, charId, placement, eliminations, duration, realCount, botCount }
   const [iAmEliminated, setIAmEliminated] = useState(false);
   const [myPlacement, setMyPlacement] = useState(null);
-  const [hud, setHud] = useState({ alive: 0, time: 0, zonePhase: 0, outside: false, damage: 0, super: 0 });
   const equippedShikigamiRef = useRef(equippedShikigami);
   equippedShikigamiRef.current = equippedShikigami;
   // Generate random cosmetics for bot fighters
@@ -731,40 +730,32 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
 
       // ── HUD (screen space) ──
       const aliveCount = aliveList().length;
-      const myFighter = fighters.find(f => f._userId === myUserId);
-      const myDmg = myFighter?.damage ?? 0;
-      const mySuper = myFighter?.superMeter ?? 0;
       const outside = target ? (target.x < z.leftX || target.x > z.rightX) : false;
-      if (frameCount % 6 === 0) setHud({ alive: aliveCount, time: Math.round(matchTime), zonePhase: 0, outside, damage: myDmg, super: mySuper });
 
-      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, VIEW_W, 44);
-      ctx.fillStyle = '#FFD700'; ctx.font = 'bold 18px Orbitron'; ctx.textAlign = 'left';
-      ctx.fillText(`PLAYERS REMAINING: ${aliveCount}`, 16, 30);
-      ctx.fillStyle = '#fff'; ctx.font = '12px Orbitron'; ctx.textAlign = 'right';
+      ctx.fillStyle = '#FFD700'; ctx.font = 'bold 11px Orbitron'; ctx.textAlign = 'right';
       const mm = Math.floor(matchTime / 60), ss = Math.floor(matchTime % 60);
+      ctx.fillText(`ALIVE ${aliveCount}`, VIEW_W - 250, 24);
+      ctx.fillStyle = outside ? '#FF5555' : '#77EEA0';
+      ctx.fillText(outside ? 'OUTSIDE ZONE' : 'IN ZONE', VIEW_W - 130, 24);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 18px Orbitron';
       ctx.fillText(`${mm}:${ss.toString().padStart(2, '0')}`, VIEW_W - 16, 26);
-      ctx.fillStyle = outside ? '#FF4444' : '#44FF88'; ctx.font = '10px Orbitron';
-      ctx.fillText(outside ? '⚠ OUTSIDE ZONE' : 'IN ZONE', VIEW_W - 16, 40);
 
-      // local damage % bar bottom (500% = death)
-      const myDmgPct = Math.min(1, myDmg / 500);
-      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, VIEW_H - 54, 320, 54);
-      ctx.fillStyle = myDmgPct < 0.5 ? '#44DD66' : myDmgPct < 0.8 ? '#FFAA22' : '#FF4444';
-      ctx.fillRect(12, VIEW_H - 44, 296 * myDmgPct, 18);
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(12, VIEW_H - 44, 296, 18);
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 11px Orbitron'; ctx.textAlign = 'left';
-      ctx.fillText(`DMG ${Math.round(myDmg)}%`, 18, VIEW_H - 30);
-      // super meter
-      ctx.fillStyle = '#333'; ctx.fillRect(12, VIEW_H - 22, 296, 10);
-      ctx.fillStyle = '#CC66FF'; ctx.fillRect(12, VIEW_H - 22, 296 * Math.min(1, mySuper / 100), 10);
+      // Actual participant slots, including eliminated players, stay visible
+      // in one compact top-right stack.
+      fighters.forEach((fighter, index) => drawPlayerStatusIndicator(ctx, {
+        x: VIEW_W - 220,
+        y: 42 + index * 32,
+        playerNumber: Number.isInteger(fighter.playerIndex) ? fighter.playerIndex + 1 : index + 1,
+        color: fighter.char?.color,
+        name: fighter._name || fighter.char?.name,
+        stats: `STK ${Math.max(0, fighter.stocks)} · ${Math.floor(fighter.damage || 0)}%`,
+      }));
 
-      // zone phase indicator
-      ctx.fillStyle = 'rgba(255,80,80,0.9)'; ctx.font = 'bold 11px Orbitron'; ctx.textAlign = 'center';
-      ctx.fillText(`ZONE CRUSHING`, VIEW_W / 2, 30);
-
-      // ── Minimap (top-right corner — whole map + only my position dot) ──
+      // The small map stays separate from the participant rows and keeps the
+      // player's position and shrinking safe zone visible.
       const MM_W = 160, MM_H = Math.round(MM_W * (BR_H / BR_W));
-      const MM_X = VIEW_W - MM_W - 8, MM_Y = 50;
+      const MM_X = 16, MM_Y = VIEW_H - MM_H - 16;
       const mmScale = MM_W / BR_W;
       ctx.save();
       ctx.beginPath(); ctx.rect(MM_X, MM_Y, MM_W, MM_H); ctx.clip();
@@ -853,7 +844,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           <p className="text-[10px] text-muted-foreground font-body">Use ← → or A / D to switch players</p>
         </div>
       )}
-      <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-controller-pause-trigger absolute top-3 right-3 z-10 px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs">PAUSE (ESC)</button>
+      <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs">PAUSE (ESC)</button>
       {paused && !winner && <PauseMenu online onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
       {reconnecting && !winner && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">

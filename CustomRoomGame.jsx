@@ -7,7 +7,7 @@ import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, updateProjectiles, loseStock, CPU_DIFFICULTY } from './fighter.js';
-import { drawStickman, drawAttackEffect, drawSuperEffect, drawHealthBar, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawFighterGroundShadow, drawSplitCityPlatformForeground } from './renderer.js';
+import { drawStickman, drawAttackEffect, drawSuperEffect, drawTimer, drawPlayerStatusIndicator, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawFighterGroundShadow, drawSplitCityPlatformForeground } from './renderer.js';
 import { drawOffscreenIndicator } from './offscreenIndicator.js';
 import { getKeybinds, readPlayerInput } from './keybinds.js';
 import { readGamepadInput } from './controllerProfiles.js';
@@ -265,6 +265,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
           vx: Math.round(f.vx * 10) / 10, vy: Math.round(f.vy * 10) / 10,
           facing: f.facing, frame: f.frame,
           state: f.state, grounded: f.grounded, damage: f.damage, stocks: f.stocks,
+          playerSlot: f.playerSlot,
           superMeter: f.superMeter, powerActive: f.powerActive, invincible: f.invincible,
           charId: f.char.id, playerName: f.playerName, attackData: f.attackData ? {
             type: f.attackData.type, progress: f.attackData.progress, name: f.attackData.name,
@@ -552,19 +553,21 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         drawOffscreenIndicator(ctx, { x: f.x, y: f.y - 45, color: charData.color, cameraX: -camX, cameraY: -camY, zoom: camZoom, width: W, height: H });
       });
 
-      // HUD — fighter stock/damage bars
-      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, 10 + renderFighters.filter(f => (isHost ? f.stocks > 0 : (f.stocks ?? 0) > 0)).length * 22);
+      // Compact top-right status list follows room slot order and uses the
+      // current authoritative/interpolated fighter values.
       renderFighters.forEach((f, i) => {
         const charData = isHost ? f.char : getCharData(f.charId);
         if (!charData) return;
         const stocks = isHost ? f.stocks : (f.stocks ?? 0);
-        if (stocks <= 0) return;
-        const y = 4 + i * 22;
-        const w = Math.min(180, W / Math.max(renderFighters.length, 1) - 8);
-        const x = 8 + i * (w + 4);
-        const loadout = isHost ? f.loadout : (players[i]?.loadout || {});
-        const color = getCharRenderColor(charData.id, loadout?.equippedSkins) || charData.color;
-        drawHealthBar(ctx, x, y, isHost ? f.damage : (f.damage || 0), w, color, f.playerName || charData.name, stocks);
+        const slot = Number.isInteger(f.playerSlot) ? f.playerSlot : i;
+        drawPlayerStatusIndicator(ctx, {
+          x: W - 220,
+          y: 42 + i * 32,
+          playerNumber: slot + 1,
+          color: charData.color,
+          name: f.playerName || charData.name,
+          stats: `STK ${Math.max(0, stocks)} · ${Math.floor(isHost ? f.damage : (f.damage || 0))}%`,
+        });
       });
 
       // Emote labels
@@ -572,14 +575,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         if (f.emote) drawEmote(ctx, f.x, f.y, f.emote.id, f.emote.timer, f.emote.maxTimer, f.frame || 0);
       });
 
-      // Timer
-      if (isHost) {
-        ctx.fillStyle = '#FFD700'; ctx.font = 'bold 14px Orbitron'; ctx.textAlign = 'center';
-        ctx.fillText(`${Math.ceil(timer)}s`, W / 2, 18);
-      } else if (stateSource) {
-        ctx.fillStyle = '#FFD700'; ctx.font = 'bold 14px Orbitron'; ctx.textAlign = 'center';
-        ctx.fillText(`${stateSource.timer || 0}s`, W / 2, 18);
-      }
+      drawTimer(ctx, W, isHost ? timer : (stateSource?.timer || 0));
 
       if (!isHost && !remoteState) {
         ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, W, H);
@@ -662,9 +658,8 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
 
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
-      <div className="flex justify-between w-full px-1 max-w-[1280px]">
-        <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Leave</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
+      <div className="w-full px-1 max-w-[1280px]">
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80">⏸ PAUSE (ESC)</button>
       </div>
       <GameCanvasPortal>
         <canvas ref={canvasRef} width={W} height={H}
@@ -677,7 +672,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && !winner && <PauseMenu online={!!lanConnection} onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
+      {paused && !winner && <PauseMenu online onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
       {lanConnection && lanConnection.stalled && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-lg z-50">
           <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mb-3" />

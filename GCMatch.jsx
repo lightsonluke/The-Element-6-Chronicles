@@ -6,7 +6,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 import { ALL_CHARS_MAP } from './allCharacters.js';
 import { createFighter, updateFighter, updateProjectiles, checkHit, applyHit, updateAI, loseStock } from './fighter.js';
-import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles } from './renderer.js';
+import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles, drawPlayerStatusIndicator, drawCompactPlayerMeters } from './renderer.js';
 import { updateResonanceMatch, drawResonanceOrb, drawResonanceRangeGlow, getConstructAttackGeometry, drawConstructWeapon } from './resonanceConstructs.js';
 import { drawProjectiles } from './projectileRenderer.js';
 import { drawStageBackground } from './stageBackgrounds.js';
@@ -36,20 +36,6 @@ const TIME_LIMIT = 360; // 6 minutes
 const SUPER_MAX = 400; // 4x harder super buildup
 const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
 
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.arcTo(x + w, y, x + w, y + r, r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-  ctx.lineTo(x + r, y + h);
-  ctx.arcTo(x, y + h, x, y + h - r, r);
-  ctx.lineTo(x, y + r);
-  ctx.arcTo(x, y, x + r, y, r);
-  ctx.closePath();
-}
-
 function hexToRgba(hex, a) {
   if (!hex || !hex.startsWith('#')) return `rgba(100,100,200,${a})`;
   const n = parseInt(hex.slice(1), 16);
@@ -63,133 +49,20 @@ const mergeGp = (kb, gp) => gp ? {
   superMove: kb.superMove || gp.superMove, heavy: kb.heavy || gp.heavy,
 } : kb;
 
-// ── Big custom HUD for Grand Circuit ──
-function drawGCHUD(ctx, f1, f2, c1, c2, col1, col2, matchTime, hideStocks) {
-  const pad = 14;
-  const boxW = 440;
-  const boxH = 96;
-
-  // ── P1 (left) ──
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  roundRect(ctx, pad, pad, boxW, boxH, 10); ctx.fill();
-  ctx.strokeStyle = col1; ctx.lineWidth = 3; ctx.stroke();
-
-  ctx.textAlign = 'left';
-  ctx.fillStyle = col1;
-  ctx.font = 'bold 24px Orbitron, sans-serif';
-  ctx.fillText(c1.name.toUpperCase(), pad + 14, pad + 32);
-
-  // P1 stocks
-  if (!hideStocks) {
-  for (let i = 0; i < f1.stocks; i++) {
-    ctx.fillStyle = col1;
-    ctx.shadowColor = col1; ctx.shadowBlur = 10;
-    ctx.beginPath(); ctx.arc(pad + 22 + i * 26, pad + 60, 11, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-  }
-  }
-
-  // P1 damage
-  const d1 = Math.floor(f1.damage);
-  const dc1 = d1 > 350 ? '#FF4444' : d1 > 200 ? '#FFAA44' : '#FFFFFF';
-  ctx.fillStyle = dc1;
-  ctx.font = 'bold 36px Rajdhani, sans-serif';
-  ctx.fillText(d1 + '%', pad + 130, pad + 68);
-
-  // P1 super bar
-  const sbX = pad + 220, sbY = pad + 52, sbW = 200, sbH = 16;
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  roundRect(ctx, sbX, sbY, sbW, sbH, 4); ctx.fill();
-  const sp1 = Math.min(1, f1.superMeter / f1.maxSuper);
-  ctx.fillStyle = sp1 >= 1 ? '#FFDD44' : '#9966FF';
-  if (sp1 >= 1) { ctx.shadowColor = '#FFDD44'; ctx.shadowBlur = 12; }
-  roundRect(ctx, sbX, sbY, sbW * sp1, sbH, 4); ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
-  roundRect(ctx, sbX, sbY, sbW, sbH, 4); ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Rajdhani, sans-serif';
-  ctx.fillText('SUPER', sbX + 2, sbY - 4);
-
-  // P1 power bar
-  const pbX = pad + 220, pbY = pad + 76, pbW = 200, pbH = 12;
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  roundRect(ctx, pbX, pbY, pbW, pbH, 3); ctx.fill();
-  const pwrReady1 = f1.powerCooldown <= 0;
-  const pwrPct1 = pwrReady1 ? 1 : 1 - f1.powerCooldown / (f1._maxPowerCooldown || 300);
-  ctx.fillStyle = pwrReady1 ? '#44FF66' : '#666688';
-  roundRect(ctx, pbX, pbY, pbW * pwrPct1, pbH, 3); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
-  roundRect(ctx, pbX, pbY, pbW, pbH, 3); ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 11px Rajdhani, sans-serif';
-  ctx.fillText('POWER', pbX + 2, pbY - 3);
-
-  // ── P2 (right, mirrored) ──
-  const p2X = W - pad - boxW;
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  roundRect(ctx, p2X, pad, boxW, boxH, 10); ctx.fill();
-  ctx.strokeStyle = col2; ctx.lineWidth = 3; ctx.stroke();
-
-  ctx.textAlign = 'right';
-  ctx.fillStyle = col2;
-  ctx.font = 'bold 24px Orbitron, sans-serif';
-  ctx.fillText(c2.name.toUpperCase(), p2X + boxW - 14, pad + 32);
-
-  // P2 stocks (right-aligned)
-  if (!hideStocks) {
-  for (let i = 0; i < f2.stocks; i++) {
-    ctx.fillStyle = col2;
-    ctx.shadowColor = col2; ctx.shadowBlur = 10;
-    ctx.beginPath(); ctx.arc(p2X + boxW - 22 - i * 26, pad + 60, 11, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-  }
-  }
-
-  // P2 damage
-  const d2 = Math.floor(f2.damage);
-  const dc2 = d2 > 350 ? '#FF4444' : d2 > 200 ? '#FFAA44' : '#FFFFFF';
-  ctx.fillStyle = dc2;
-  ctx.font = 'bold 36px Rajdhani, sans-serif';
-  ctx.fillText(d2 + '%', p2X + boxW - 130, pad + 68);
-
-  // P2 super bar (fills from right)
-  const sb2X = p2X + 20, sb2Y = pad + 52, sb2W = 200, sb2H = 16;
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  roundRect(ctx, sb2X, sb2Y, sb2W, sb2H, 4); ctx.fill();
-  const sp2 = Math.min(1, f2.superMeter / f2.maxSuper);
-  ctx.fillStyle = sp2 >= 1 ? '#FFDD44' : '#9966FF';
-  if (sp2 >= 1) { ctx.shadowColor = '#FFDD44'; ctx.shadowBlur = 12; }
-  roundRect(ctx, sb2X + sb2W * (1 - sp2), sb2Y, sb2W * sp2, sb2H, 4); ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
-  roundRect(ctx, sb2X, sb2Y, sb2W, sb2H, 4); ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Rajdhani, sans-serif';
-  ctx.fillText('SUPER', sb2X + sb2W - 2, sb2Y - 4);
-
-  // P2 power bar
-  const pb2X = p2X + 20, pb2Y = pad + 76, pb2W = 200, pb2H = 12;
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  roundRect(ctx, pb2X, pb2Y, pb2W, pb2H, 3); ctx.fill();
-  const pwrReady2 = f2.powerCooldown <= 0;
-  const pwrPct2 = pwrReady2 ? 1 : 1 - f2.powerCooldown / (f2._maxPowerCooldown || 300);
-  ctx.fillStyle = pwrReady2 ? '#44FF66' : '#666688';
-  roundRect(ctx, pb2X + pb2W * (1 - pwrPct2), pb2Y, pb2W * pwrPct2, pb2H, 3); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
-  roundRect(ctx, pb2X, pb2Y, pb2W, pb2H, 3); ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 11px Rajdhani, sans-serif';
-  ctx.fillText('POWER', pb2X + pb2W - 2, pb2Y - 3);
-
-  // ── Timer (center) ──
+// Compact player-and-match HUD for Grand Circuit.
+function drawGCHUD(ctx, f1, f2, c1, c2, matchTime) {
+  drawPlayerStatusIndicator(ctx, { x: W - 220, y: 42, playerNumber: 1, color: c1.color, name: c1.name, stats: `STK ${Math.max(0, f1.stocks)} · ${Math.floor(f1.damage)}%` });
+  drawPlayerStatusIndicator(ctx, { x: W - 220, y: 76, playerNumber: 2, color: c2.color, name: c2.name, stats: `STK ${Math.max(0, f2.stocks)} · ${Math.floor(f2.damage)}%` });
+  drawCompactPlayerMeters(ctx, f1, 16, H - 28);
+  drawCompactPlayerMeters(ctx, f2, W - 124, H - 28);
   const mins = Math.floor(Math.max(0, matchTime) / 60);
   const secs = Math.floor(Math.max(0, matchTime) % 60);
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  roundRect(ctx, W / 2 - 55, pad, 110, 54, 10); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = matchTime < 30 ? '#FF4444' : '#fff';
-  ctx.font = 'bold 30px Orbitron, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${mins}:${secs.toString().padStart(2, '0')}`, W / 2, pad + 38);
+  ctx.save();
+  ctx.fillStyle = matchTime < 30 ? '#FF6666' : '#FFFFFF';
+  ctx.font = 'bold 24px Orbitron, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(`${mins}:${secs.toString().padStart(2, '0')}`, W - 18, 32);
+  ctx.restore();
 }
 
 export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme, p2Scheme, cpuDifficulty = 'regular', settings = {}, equippedAccessories = {}, equippedSkins = {}, equippedShikigami = {}, p1Element = 'basic', p2Element = 'basic', sfxVolume = 70, musicVolume = 50, isFinalMatch = false, onEnd, equippedEmotes = {} }) {
@@ -419,7 +292,7 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
       drawF(f1, c1, true);
       drawF(f2, c2, false);
 
-      drawGCHUD(ctx, f1, f2, c1, c2, col1, col2, matchTime, settings?.hideStockBoxes);
+      drawGCHUD(ctx, f1, f2, c1, c2, matchTime);
 
       requestAnimationFrame(loop);
     };

@@ -1697,11 +1697,88 @@ export function drawTimer(ctx, canvasWidth, seconds) {
   ctx.shadowColor = urgent ? '#FF4444' : '#FFFFFF';
   ctx.shadowBlur = urgent ? 18 : 6;
   ctx.fillStyle = urgent ? '#FF6666' : '#FFFFFF';
-  ctx.font = `bold 32px Orbitron, sans-serif`;
-  ctx.textAlign = 'center';
+  ctx.font = `bold 24px Orbitron, sans-serif`;
+  ctx.textAlign = 'right';
   const mins = Math.floor(Math.max(0, seconds) / 60);
   const secs = Math.floor(Math.max(0, seconds) % 60);
-  ctx.fillText(`${mins}:${secs.toString().padStart(2, '0')}`, canvasWidth / 2, 40);
+  ctx.fillText(`${mins}:${secs.toString().padStart(2, '0')}`, canvasWidth - 18, 32);
+  ctx.restore();
+}
+
+// Small, screen-space match status row used by active fight HUDs. The circle
+// uses the fighter's configured character color; the adjacent P# identifies
+// the actual local/server slot independently of that color.
+export function drawPlayerStatusIndicator(ctx, { x, y, playerNumber, color, stats, name = '' }) {
+  const width = 204;
+  const height = 29;
+  const safeColor = color || '#D7D8E0';
+  ctx.save();
+  ctx.fillStyle = 'rgba(6, 8, 20, 0.42)';
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, 8);
+  ctx.fill();
+  ctx.strokeStyle = `${safeColor}88`;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = safeColor;
+  ctx.beginPath();
+  ctx.arc(x + 14, y + height / 2, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.82)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255,255,255,.96)';
+  ctx.font = 'bold 10px Orbitron, sans-serif';
+  ctx.fillText(`P${playerNumber}`, x + 28, y + height / 2, 25);
+
+  const nameX = x + 55;
+  ctx.fillStyle = 'rgba(255,255,255,.62)';
+  ctx.font = '600 8px Rajdhani, sans-serif';
+  ctx.fillText(String(name || '').toUpperCase(), nameX, y + height / 2, 54);
+
+  ctx.fillStyle = 'rgba(255,255,255,.94)';
+  ctx.font = 'bold 9px Orbitron, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(String(stats || ''), x + width - 8, y + height / 2, width - 116);
+  ctx.restore();
+}
+
+// Compact power/super meters preserve the combat resource feedback while
+// keeping the stock and damage indicator free of large player panels.
+export function drawCompactPlayerMeters(ctx, fighter, x, y) {
+  if (!fighter) return;
+  const width = 108;
+  const labelWidth = 24;
+  const barWidth = width - labelWidth;
+  const barHeight = 5;
+  const powerMax = Math.max(1, fighter._maxPowerCooldown || 1);
+  const power = fighter.powerCooldown > 0
+    ? Math.max(0, Math.min(1, 1 - fighter.powerCooldown / powerMax))
+    : 1;
+  const superValue = Math.max(0, Math.min(1, (fighter.superMeter || 0) / Math.max(1, fighter.maxSuper || 1)));
+
+  ctx.save();
+  ctx.font = 'bold 8px Orbitron, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  [['PWR', power, fighter.char?.color || '#7EE6A5'], ['SUP', superValue, '#FFD36A']].forEach(([label, value, color], index) => {
+    const rowY = y + index * 11;
+    ctx.fillStyle = 'rgba(5,8,20,.55)';
+    ctx.beginPath(); ctx.roundRect(x + labelWidth, rowY, barWidth, barHeight, 2); ctx.fill();
+    if (value > 0) {
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = value >= 1 ? 5 : 0;
+      ctx.beginPath(); ctx.roundRect(x + labelWidth, rowY, barWidth * value, barHeight, 2); ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    ctx.fillStyle = 'rgba(255,255,255,.72)';
+    ctx.fillText(label, x, rowY + barHeight / 2);
+  });
   ctx.restore();
 }
 

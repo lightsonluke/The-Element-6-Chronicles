@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
-import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor, getEquippedAccessories, getEquippedAccessoryIds } from './cosmetics.js';
+import { getAccessory, isAccessoryCompatible, drawAccessory, isBehindAccessory, resolveAccColor, getEquippedAccessories, getEquippedAccessoryIds } from './cosmetics.js';
 import { getSkin, getSkinParts, RARITY_COLORS } from './skins.js';
 import { getKillFX, drawKillFX } from './killFX.js';
 import { CROSSOVERS, getCrossover, getCrossoverColor, getCrossoverParts } from './crossovers.js';
@@ -71,10 +71,17 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
   const charOwnedAccessories = [
     ...ownedAccessories.map(id => getAccessory(id)),
     ...(clanBadge ? [clanBadge] : []),
-  ].filter(a => a && (!a.exclusiveTo || a.exclusiveTo === selectedChar));
+  ].filter(a => a && isAccessoryCompatible(a, selectedChar));
+  const rawEquippedAccessories = equippedAccessories[selectedChar];
+  const rawEquippedAccessoryIds = Array.isArray(rawEquippedAccessories)
+    ? rawEquippedAccessories
+    : rawEquippedAccessories ? [rawEquippedAccessories] : [];
+  const incompatibleEquippedAccessories = rawEquippedAccessoryIds
+    .map(id => getAccessory(id))
+    .filter(accessory => accessory && !isAccessoryCompatible(accessory, selectedChar));
 
   return (
-    <div className="w-full max-w-5xl flex flex-col gap-4">
+    <div className="e6-equip-screen w-full max-w-5xl flex flex-col gap-4">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -85,7 +92,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
       </div>
 
       {/* Sub-tabs */}
-      <div className="flex gap-1">
+      <div className="e6-equip-tabs flex gap-1">
         <button onClick={() => setSubTab('gear')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'gear' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>GEAR / ACCESSORIES</button>
         <button onClick={() => setSubTab('killfx')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'killfx' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>KILL FX</button>
         <button onClick={() => setSubTab('crossovers')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'crossovers' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>CROSSOVERS</button>
@@ -98,7 +105,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
 
       {/* Character preview (only for skins/gear) */}
       {showCharSelector && (
-      <div className="bg-card/80 border border-border rounded-xl p-4 flex items-center gap-4">
+      <div className="e6-equip-preview bg-card/80 border border-border rounded-xl p-4 flex items-center gap-4">
         <EquipPreviewCanvas char={char} skinColor={equippedSkins[selectedChar] ? getSkin(equippedSkins[selectedChar])?.color : null}
           skinParts={equippedSkins[selectedChar] ? getSkinParts(selectedChar, equippedSkins) : []}
           accessories={getEquippedAccessories(equippedAccessories, selectedChar)}
@@ -134,6 +141,11 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
               );
             })}
           </div>
+          {incompatibleEquippedAccessories.length > 0 && (
+            <p className="mt-2 text-[10px] text-amber-300" role="status">
+              {incompatibleEquippedAccessories.map(accessory => accessory.name).join(', ')} {incompatibleEquippedAccessories.length === 1 ? 'is' : 'are'} saved for a different character and hidden in this preview. The saved loadout has not been changed.
+            </p>
+          )}
         </div>
       </div>
       )}

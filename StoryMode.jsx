@@ -85,6 +85,8 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
   const [screen,setScreen]=useState('save');
   const [selectedSave,setSelectedSave]=useState(null);
   const [showSettings,setShowSettings]=useState(false), [showPause,setShowPause]=useState(false), [pauseTab,setPauseTab]=useState('map'), [cutscene,setCutscene]=useState(null), [battle,setBattle]=useState(null), [message,setMessage]=useState(''), [epilogue,setEpilogue]=useState(false);
+  const pauseRef=useRef(false);
+  pauseRef.current=showPause||showSettings||Boolean(cutscene);
   const [activeNode,setActiveNode]=useState(null);
   const [bounty,setBounty]=useState(null);
   const [slots,setSlots]=useState(()=>{
@@ -162,7 +164,7 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
     }
   },[activeNode,battle,book,hero,save]);
 
-  useEffect(()=>{if(screen!=='game')return; const kd=e=>{keysRef.current[e.key]=true;keysRef.current[e.key.toLowerCase()]=true;if(e.key==='Escape')setShowPause(v=>!v);if(e.key==='e'||e.key==='Enter')interact();if(e.key==='Tab'){e.preventDefault();setShowPause(v=>!v)}};const ku=e=>{keysRef.current[e.key]=false;keysRef.current[e.key.toLowerCase()]=false};window.addEventListener('keydown',kd);window.addEventListener('keyup',ku);return()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku)}},[screen,interact]);
+  useEffect(()=>{if(screen!=='game')return; const kd=e=>{if(e.key==='Escape'||e.key==='Tab'){e.preventDefault();keysRef.current={};setShowPause(v=>!v);return}if(pauseRef.current)return;keysRef.current[e.key]=true;keysRef.current[e.key.toLowerCase()]=true;if(e.key==='e'||e.key==='Enter')interact()};const ku=e=>{keysRef.current[e.key]=false;keysRef.current[e.key.toLowerCase()]=false};window.addEventListener('keydown',kd);window.addEventListener('keyup',ku);return()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku)}},[screen,interact]);
 
   useEffect(()=>{
     if(screen!=='game'||battle)return;
@@ -172,7 +174,7 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
     const world={platforms,nodes}; stateRef.current={player:p,nodes,world,running:true};
     let last=performance.now();
     const loop=(now)=>{
-      if(!stateRef.current?.running)return;const dt=Math.min(2,(now-last)/16.67);last=now;p.frame++;
+      if(!stateRef.current?.running)return;if(pauseRef.current){last=now;rafRef.current=requestAnimationFrame(loop);return}const dt=Math.min(2,(now-last)/16.67);last=now;p.frame++;
       const gp=readGamepadInput(0);if(gp?.confirm&&!gpConfirmRef.current)interact();gpConfirmRef.current=!!gp?.confirm;const k=keysRef.current;p.vx=((k.ArrowLeft||k.a||gp?.left)?-SPEED:(k.ArrowRight||k.d||gp?.right)?SPEED:0);if(p.vx)p.facing=Math.sign(p.vx);
       if((k.ArrowUp||k.w||k[' ']||gp?.jump)&&p.grounded){p.vy=J;p.grounded=false;keysRef.current.ArrowUp=false;keysRef.current.w=false;keysRef.current[' ']=false}
       p.vy=Math.min(12,p.vy+G*dt);p.x+=p.vx*dt;p.y+=p.vy*dt;p.grounded=false;
@@ -216,6 +218,7 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
   if(battle)return <StoryBattle heroId={save.currentHeroId} villainId={battle.opponent} enemyIds={battle.enemyIds} stageId={battle.stage} difficulty={battle.difficulty} battleTitle={battle.title} storyStocks={battle.stocks} storyTime={battle.time} narrativeLoss={battle.kind==='narrative-loss'} onEnd={finishBattle} equippedAccessories={equippedAccessories} equippedSkins={equippedSkins} equippedShikigami={equippedShikigami} equippedEmotes={equippedEmotes}/>;
 
   return <div ref={fullRef} className="relative w-full flex flex-col items-center gap-2 text-white">
+    <button onClick={()=>{keysRef.current={};setShowPause(v=>!v)}} aria-label={showPause?'Resume story':'Pause story'} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs">{showPause?'RESUME':'PAUSE'}</button>
     <div className="w-full max-w-[960px] flex items-center justify-between px-2 py-1"><div><span className="text-[10px] tracking-[.3em] text-white/35">BOOK {book.number}</span><h2 className="font-heading text-lg tracking-widest">{book.title}</h2><span className="text-[10px] text-white/45">{book.hub} • {role.anchor?'ANCHOR HERO':'SECONDARY ROLE: '+role.role}</span></div><div className="flex items-center gap-2"><span className="text-xs text-white/60">Progress {percent}%</span><button onClick={()=>setShowSettings(true)} className="px-3 py-1.5 bg-white/10 rounded-lg text-xs">SETTINGS</button><button onClick={()=>{persist({currentX:stateRef.current?.player.x,currentY:stateRef.current?.player.y});onBack?.()}} className="px-3 py-1.5 bg-white/10 rounded-lg text-xs">MENU</button></div></div>
     <div className="relative w-full max-w-[960px]"><canvas ref={canvasRef} width={W} height={H} className="w-full border border-white/10 rounded-xl shadow-2xl"/><div className="absolute top-3 left-3 text-[10px] text-white/50">← → / A D MOVE • SPACE / ↑ JUMP • E INTERACT • ESC/TAB CHANGE HERO</div><div className="absolute top-3 right-3 flex gap-2 text-xs"><span className="px-2 py-1 rounded bg-black/50">◆ {save.collectedShards||0}</span><span className="px-2 py-1 rounded bg-black/50">Residue {save.residue||0}</span></div>{message&&<div className="absolute bottom-16 left-1/2 -translate-x-1/2 px-5 py-2 rounded-lg bg-black/75 border border-white/15 text-xs font-heading tracking-widest">{message}</div>}</div>
     {showPause&&<StoryPauseOverlay tab={pauseTab} setTab={setPauseTab} save={save} book={book} hero={hero} percent={percent} onSettings={()=>{setShowPause(false);setShowSettings(true)}} onClose={()=>setShowPause(false)} onExit={()=>{persist({currentX:stateRef.current?.player.x,currentY:stateRef.current?.player.y});setShowPause(false);onBack?.()}}/>}

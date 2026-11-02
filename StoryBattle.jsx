@@ -11,7 +11,7 @@ import {
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 import {
   drawStickman, drawAttackEffect, drawSuperEffect,
-  drawHealthBar, drawTimer, drawPlatforms, drawBackground,
+  drawTimer, drawPlayerStatusIndicator, drawPlatforms, drawBackground,
   drawHitSparks, drawSuperFlash
 } from './renderer.js';
 import { drawOffscreenIndicator } from './offscreenIndicator.js';
@@ -368,9 +368,9 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
 
       // ── HUD ──
       if (isMulti) {
-        drawMultiHUD(ctx, pTeam, eTeam, W, H, battleTitle, settings?.hideStockBoxes);
+        drawMultiHUD(ctx, pTeam, eTeam, W, H);
       } else {
-        drawSoloHUD(ctx, pTeam[0], eTeam[0], W, H, settings?.hideStockBoxes);
+        drawSoloHUD(ctx, pTeam[0], eTeam[0], W);
       }
 
       requestAnimationFrame(loop);
@@ -401,7 +401,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
         {battleTitle && <span className="text-[10px] font-heading text-accent tracking-wider">{battleTitle}</span>}
         <span className="text-[10px] text-muted-foreground font-body">Arrows · , sig · ,+ '↑' recovery · . power · l side heavy · l+ '↓' down/pound · / super</span>
       </div>
-      <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-controller-pause-trigger absolute top-3 right-3 z-20 px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
+      <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
       {paused && <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 pointer-events-none"><div className="bg-card border-2 border-accent rounded-xl px-8 py-6 text-center"><p className="font-heading text-3xl text-accent">PAUSED</p><p className="text-xs text-muted-foreground mt-2">Press ESC or P to resume.</p></div></div>}
       <GameCanvasPortal>
         <canvas ref={canvasRef} width={W} height={H} className="border-2 border-destructive/50 rounded-lg shadow-2xl" style={{ maxWidth: '100%' }} />
@@ -424,129 +424,34 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
 }
 
 // ── 1v1 HUD (unchanged from original) ─────────────────────────────────────────
-function drawSoloHUD(ctx, f1, f2, W, H, hideStocks) {
+function drawSoloHUD(ctx, f1, f2, W) {
   const hero = f1.char, villain = f2.char;
-  if (!hideStocks) {
-    ctx.fillStyle = 'rgba(0,0,0,0.68)';
-    ctx.fillRect(0, H - 68, W, 68);
-    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, H - 68);
-    ctx.lineTo(W, H - 68);
-    ctx.stroke();
-  }
-
-  drawHealthBar(ctx, 220, H - 58, f1.damage, 200, hero.color, hero.name, f1.stocks, null, 0, 0, 'left', false, hideStocks);
-  drawHealthBar(ctx, W - 220, H - 58, f2.damage, 200, villain.color, villain.name, f2.stocks, null, 0, 0, 'left', false, hideStocks);
-
+  drawPlayerStatusIndicator(ctx, { x: W - 220, y: 42, playerNumber: 1, color: hero.color, name: hero.name, stats: `STK ${Math.max(0, f1.stocks)} · ${Math.floor(f1.damage)}%` });
+  drawPlayerStatusIndicator(ctx, { x: W - 220, y: 76, playerNumber: 2, color: villain.color, name: villain.name, stats: `STK ${Math.max(0, f2.stocks)} · ${Math.floor(f2.damage)}%` });
   drawPowerBar(ctx, f1, 40, H - 22, 100, 6);
   drawPowerBar(ctx, f2, W - 140, H - 22, 100, 6);
   drawSuperMeter(ctx, f1, 40, H - 10);
   drawSuperMeter(ctx, f2, W - 140, H - 10);
-
-  ctx.fillStyle = villain.color;
-  ctx.font = 'bold 14px Orbitron';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${villain.name} — ${villain.title}`, W / 2, H - 54);
 }
 
 // ── Multi-fighter HUD ─────────────────────────────────────────────────────────
-function drawMultiHUD(ctx, pTeam, eTeam, W, H, battleTitle, hideStocks) {
-  if (!hideStocks) {
-    ctx.fillStyle = 'rgba(0,0,0,0.72)';
-    ctx.fillRect(0, H - 72, W, 72);
-    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, H - 72);
-    ctx.lineTo(W, H - 72);
-    ctx.stroke();
-  }
-
-  // Player team (left)
-  const pBarW = Math.min(130, (W * 0.40) / Math.max(pTeam.length, 1));
-  pTeam.forEach((f, i) => {
-    drawCompactBar(ctx, 8 + i * (pBarW + 4), H - 62, pBarW, f, false, hideStocks);
-  });
-
-  // Enemy team (right, reversed so first enemy is rightmost)
-  const eBarW = Math.min(130, (W * 0.40) / Math.max(eTeam.length, 1));
-  eTeam.forEach((f, i) => {
-    const x = W - 8 - (i + 1) * (eBarW + 4);
-    drawCompactBar(ctx, x, H - 62, eBarW, f, true, hideStocks);
+function drawMultiHUD(ctx, pTeam, eTeam, W, H) {
+  let slot = 1;
+  [...pTeam, ...eTeam].forEach(f => {
+    drawPlayerStatusIndicator(ctx, {
+      x: W - 220,
+      y: 42 + (slot - 1) * 32,
+      playerNumber: slot,
+      color: f.char.color,
+      name: `${slot <= pTeam.length ? 'ALLY' : 'ENEMY'} ${f.char.name}`,
+      stats: `STK ${Math.max(0, f.stocks)} · ${Math.floor(f.damage)}%`,
+    });
+    slot += 1;
   });
 
   // Player power + super bars
   drawPowerBar(ctx, pTeam[0], 40, H - 22, 100, 6);
   drawSuperMeter(ctx, pTeam[0], 40, H - 10);
-
-  // Battle title at top center
-  if (battleTitle) {
-    ctx.fillStyle = '#FFD700';
-    ctx.shadowColor = '#FFD700';
-    ctx.shadowBlur = 8;
-    ctx.font = 'bold 13px Orbitron';
-    ctx.textAlign = 'center';
-    ctx.fillText(battleTitle, W / 2, H - 50);
-    ctx.shadowBlur = 0;
-  }
-}
-
-function drawCompactBar(ctx, x, y, w, fighter, isEnemy, hideStocks) {
-  if (hideStocks) return; // hide stock boxes = hide the entire compact bar including background
-  const h = 10;
-  ctx.fillStyle = 'rgba(8,8,18,0.88)';
-  ctx.beginPath();
-  ctx.roundRect(x - 3, y - 13, w + 6, h + 32, 5);
-  ctx.fill();
-  ctx.strokeStyle = (fighter.char.color || '#888') + '44';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.fillStyle = '#111122';
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, 3);
-  ctx.fill();
-
-  const dmgPct = Math.min(fighter.damage / 200, 1);
-  const dmgColor = dmgPct < 0.3 ? '#44FF88' : dmgPct < 0.6 ? '#FFFF44' : dmgPct < 0.85 ? '#FF8844' : '#FF2222';
-  ctx.fillStyle = dmgColor;
-  ctx.beginPath();
-  ctx.roundRect(x, y, w * dmgPct, h, 3);
-  ctx.fill();
-
-  // Name
-  ctx.fillStyle = fighter.char.color || '#FFF';
-  ctx.font = 'bold 8px Orbitron';
-  ctx.textAlign = isEnemy ? 'right' : 'left';
-  ctx.fillText(fighter.char.name.toUpperCase(), isEnemy ? x + w : x, y - 4);
-
-  // Damage %
-  ctx.fillStyle = '#FFF';
-  ctx.font = 'bold 10px Orbitron';
-  ctx.fillText(`${Math.floor(fighter.damage)}%`, isEnemy ? x + w : x, y + h + 11);
-
-  // Stock dots — render one per starting stock (reconciled with story's villain-stocks)
-  if (!hideStocks) {
-  const totalStocks = Math.min(fighter.maxStocks || 3, 8);
-  for (let i = 0; i < totalStocks; i++) {
-    const sx = isEnemy ? x + w - 5 - i * 7 : x + 5 + i * 7;
-    const sy = y + h + 20;
-    if (i < fighter.stocks) {
-      ctx.fillStyle = fighter.char.color || '#FFF';
-      ctx.beginPath();
-      ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      ctx.strokeStyle = '#333';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(sx, sy, 2, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-  }
-  }
 }
 
 function drawPowerBar(ctx, fighter, bx, by, w, h) {

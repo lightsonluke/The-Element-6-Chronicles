@@ -3,13 +3,11 @@ import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { ALL_CHARS_MAP } from './allCharacters.js';
-import { POWER_EFFECTS, getPowerEffect } from './powerEffects.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, CPU_DIFFICULTY, updateProjectiles, drawProjectiles, loseStock } from './fighter.js';
 import {
   drawStickman, drawAttackEffect, drawSuperEffect,
-  drawHealthBar, drawTimer, drawPlatforms, drawBackground,
+  drawTimer, drawPlayerStatusIndicator, drawCompactPlayerMeters, drawPlatforms, drawBackground,
   drawHitSparks, drawDoubleJumpParticles, drawSuperFlash,
-  STAGE_MAPS,
 } from './renderer.js';
 import PauseMenu from './PauseMenu';
 import { music } from './music.js';
@@ -565,7 +563,6 @@ export default function PlatformFighter({
   equippedAccessories = {}, equippedSkins = {}, killFXId = 'none',
   p1Element = 'basic', p2Element = 'basic', infiniteSuper = false, lanConnection = null, lanRole = null,
   matchTime = 240, settings = {}, localScheme = null,
-  p1Username = null, p1Title = null,
   customCharsData = {},
   equippedCrossovers = {},
   equippedShikigami = {},
@@ -1474,68 +1471,23 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
 
       drawTimer(ctx, W, gameRef.current.timer);
 
-      // Top-right: profile title + username (always visible)
-      if (!settings.hideTopUsername && (p1Username || p1Title)) {
-        ctx.save();
-        ctx.textAlign = 'right';
-        const ux = W - 16;
-        let uy = 22;
-        if (p1Title) {
-          ctx.font = 'bold 12px Orbitron, sans-serif';
-          ctx.fillStyle = '#FFD700';
-          ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 6;
-          ctx.fillText(p1Title.toUpperCase(), ux, uy);
-          ctx.shadowBlur = 0;
-          uy += 18;
-        }
-        if (p1Username) {
-          ctx.font = 'bold 14px Orbitron, sans-serif';
-          ctx.fillStyle = '#FFFFFF';
-          ctx.shadowColor = '#000000'; ctx.shadowBlur = 4;
-          ctx.fillText(p1Username, ux, uy);
-          ctx.shadowBlur = 0;
-        }
-        ctx.restore();
-      }
-
       if (gameRef.current.superFlash1) { const sf = gameRef.current.superFlash1; sf.progress += dt * 0.55; drawSuperFlash(ctx, W, H, sf.name, sf.color, sf.progress); if (sf.progress >= 1) gameRef.current.superFlash1 = null; }
       if (gameRef.current.superFlash2) { const sf = gameRef.current.superFlash2; sf.progress += dt * 0.55; drawSuperFlash(ctx, W, H, sf.name, sf.color, sf.progress); if (sf.progress >= 1) gameRef.current.superFlash2 = null; }
 
-      // Bottom HUD — background bar hidden when stock boxes are hidden
-      if (!settings.hideStockBoxes) {
-        ctx.fillStyle = 'rgba(0,0,0,0.68)'; ctx.fillRect(0, H - 80, W, 80);
-        ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(0, H - 80); ctx.lineTo(W, H - 80); ctx.stroke();
-      }
+      // Compact upper-right player HUD. Values are read from the active fighter
+      // state each frame, so stocks and damage stay authoritative.
+      const statusText = (fighter, coinsCollected) => {
+        if (gameMode === 'hp' || gameMode === 'brawl') return `STK ${Math.max(0, fighter.stocks)} · HP ${Math.max(0, Math.ceil(fighter.hp || 0))}`;
+        if (gameMode === 'coin') return `◆ ${coinsCollected} · STK ${Math.max(0, fighter.stocks)} · ${Math.floor(fighter.damage)}%`;
+        return `STK ${Math.max(0, fighter.stocks)} · ${Math.floor(fighter.damage)}%`;
+      };
+      drawPlayerStatusIndicator(ctx, { x: W - 220, y: 42, playerNumber: 1, color: f1.char.color, name: f1.char.name, stats: statusText(f1, coinsCollected1) });
+      drawPlayerStatusIndicator(ctx, { x: W - 220, y: 76, playerNumber: 2, color: f2.char.color, name: f2.char.name, stats: statusText(f2, coinsCollected2) });
+      drawCompactPlayerMeters(ctx, f1, 16, H - 28);
+      drawCompactPlayerMeters(ctx, f2, W - 124, H - 28);
 
-      if (gameMode === 'brawl') {
-        drawHpBar(ctx, W / 2 - 130, H - 66, f1.hp, f1.char.color, f1.char.name, f1.stocks);
-        drawHpBar(ctx, W / 2 + 130, H - 66, f2.hp, f2.char.color, f2.char.name, f2.stocks);
-      } else if (gameMode === 'hp') {
-        drawHpBar(ctx, 280, H - 66, f1.hp, f1.char.color, f1.char.name, f1.stocks);
-        drawHpBar(ctx, W - 280, H - 66, f2.hp, f2.char.color, f2.char.name, f2.stocks);
-      } else {
-        const p1Label = gameMode === 'botbattle' ? 'CPU 1' : f1.char.name;
-        const p2Label = gameMode === 'botbattle' ? 'CPU 2' : f2.char.name;
-        const p1Cx = equippedCrossovers[f1.char.id] ? getCrossover(equippedCrossovers[f1.char.id]) : null;
-        const p2Cx = equippedCrossovers[f2.char.id] ? getCrossover(equippedCrossovers[f2.char.id]) : null;
-        const p1Eff = getPowerEffect(f1.char.baseCharId || f1.char.id, f1.char);
-        const p2Eff = getPowerEffect(f2.char.baseCharId || f2.char.id, f2.char);
-        const p1Pwr = f1.powerCooldown <= 0 ? 1 : (1 - f1.powerCooldown / ((p1Eff?.cooldown || 5) * 60));
-        const p2Pwr = f2.powerCooldown <= 0 ? 1 : (1 - f2.powerCooldown / ((p2Eff?.cooldown || 5) * 60));
-        drawHealthBar(ctx, 30, H - 66, f1.damage, 240, f1.char.color, p1Label, f1.stocks, p1Cx?.name, p1Pwr, f1.superMeter / f1.maxSuper, 'left', false, settings.hideStockBoxes);
-        drawHealthBar(ctx, W - 30, H - 66, f2.damage, 240, f2.char.color, p2Label, f2.stocks, p2Cx?.name, p2Pwr, f2.superMeter / f2.maxSuper, 'right', false, settings.hideStockBoxes);
-      }
-
-      if (!settings.hideStageAndMode) {
-      const mapObj = STAGE_MAPS.find(m => m.id === mapId);
-      ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.font = '11px Orbitron, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(mapId === 'custom' ? 'CUSTOM STAGE' : (mapObj?.name || ''), W / 2, H - 64);
-      const modeObj = GAME_MODES.find(m => m.id === gameMode);
-      ctx.fillStyle = 'rgba(255,215,0,0.5)'; ctx.font = '9px Orbitron'; ctx.fillText(modeObj?.name || '', W / 2, H - 50);
-      }
-      // FPS counter
-      if (settings.showFPS) { ctx.fillStyle = 'rgba(0,255,0,0.6)'; ctx.font = '10px monospace'; ctx.textAlign = 'left'; ctx.fillText(`${Math.round(1 / Math.max(dt, 0.001))} FPS`, 10, 14); }
+      // FPS is an opt-in diagnostic, kept small and away from the play area.
+      if (settings.showFPS) { ctx.fillStyle = 'rgba(0,255,0,0.6)'; ctx.font = '10px monospace'; ctx.textAlign = 'left'; ctx.fillText(`${Math.round(1 / Math.max(dt, 0.001))} FPS`, 12, 18); }
 
       // Shapeshift mode — team roster indicator (bottom center)
       if (shapeshiftMode) {
@@ -1615,13 +1567,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
 
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
-      <div className="flex justify-between w-full px-1 max-w-[1280px]">
-        <button onClick={() => gameMode !== 'challenge' && finishQuit()}
-          className={`px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs ${gameMode === 'challenge' ? 'opacity-30 cursor-not-allowed' : 'hover:opacity-80'}`}>
-          {gameMode === 'challenge' ? 'No Retreat' : <><GameIcon emoji="←" size={14} /> Menu</>}
-        </button>
+      <div className="w-full px-1 max-w-[1280px]">
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }}
-          className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">Pause (ESC)</button>
+          className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80">PAUSE (ESC)</button>
       </div>
       <canvas
         ref={canvasRef} width={W} height={H}
@@ -1655,17 +1603,6 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
   }
 }
 
-function drawHpBar(ctx, x, y, hp, color, name, stocks) {
-  const max = 150; const w = 200; const pct = Math.max(0, hp) / max;
-  const bx = x - w / 2;
-  ctx.fillStyle = '#111122'; ctx.beginPath(); ctx.roundRect(bx, y, w, 14, 4); ctx.fill();
-  const c = pct > 0.5 ? '#44FF88' : pct > 0.25 ? '#FFCC44' : '#FF4444';
-  ctx.fillStyle = c; ctx.beginPath(); ctx.roundRect(bx, y, w * pct, 14, 4); ctx.fill();
-  ctx.fillStyle = '#FFF'; ctx.font = 'bold 10px Rajdhani'; ctx.textAlign = 'left';
-  ctx.fillText(`${name}  HP ${Math.ceil(Math.max(0, hp))}`, bx + 4, y + 10);
-  ctx.textAlign = 'right';   ctx.fillText('x' + Math.max(0, stocks), bx + w - 4, y + 10);
-}
-
 const MODE_TINTS = {
   regular: null, time: 'rgba(40,80,200,0.10)', hp: 'rgba(40,180,80,0.10)',
   superonly: 'rgba(255,200,40,0.12)', sudden: 'rgba(220,40,40,0.14)',
@@ -1676,8 +1613,4 @@ function drawModeTint(ctx, w, h, mode) {
   const t = MODE_TINTS[mode];
   if (!t) return;
   ctx.fillStyle = t; ctx.fillRect(0, 0, w, h);
-  if (mode) {
-    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.font = 'bold 11px Orbitron'; ctx.textAlign = 'right';
-    ctx.fillText(mode.toUpperCase(), w - 10, 60);
-  }
 }

@@ -10,7 +10,7 @@ import {
   drawAttackEffect,
   drawBackground,
   drawDoubleJumpParticles,
-  drawHealthBar,
+  drawPlayerStatusIndicator,
   drawHitSparks,
   drawPlatforms,
   drawSplitCityPlatformForeground,
@@ -72,8 +72,6 @@ export default function RollbackOnlineFight({
   oppChar,
   myLoadout = {},
   oppLoadout = {},
-  myElo,
-  oppElo,
   stageId = 'splitcity',
   stocks = 3,
   onRoundFinished,
@@ -237,18 +235,8 @@ export default function RollbackOnlineFight({
       drawSplitCityPlatformForeground(ctx, getOnlineStagePlatforms(sharedStage) || ONLINE_PLATFORMS, sharedStage);
       ctx.restore();
 
-      ctx.fillStyle = 'rgba(0,0,0,0.72)';
-      ctx.fillRect(0, ONLINE_STAGE_HEIGHT - 80, ONLINE_STAGE_WIDTH, 80);
-      drawHealthBar(ctx, 40, ONLINE_STAGE_HEIGHT - 66, hostFighter.damage, 280, hostCharacter.color, `${isHost ? myUsername : oppUsername} · ${hostCharacter.name}`, hostFighter.stocks);
-      drawHealthBar(ctx, ONLINE_STAGE_WIDTH - 320, ONLINE_STAGE_HEIGHT - 66, guestFighter.damage, 280, guestCharacter.color, `${!isHost ? myUsername : oppUsername} · ${guestCharacter.name}`, guestFighter.stocks);
-      ctx.fillStyle = '#FFD700';
-      ctx.font = 'bold 12px Orbitron';
-      ctx.textAlign = 'center';
-      ctx.fillText(mode === 'ranked' ? 'ONLINE RANKED · ROLLBACK' : 'ONLINE UNRANKED · ROLLBACK', ONLINE_STAGE_WIDTH / 2, ONLINE_STAGE_HEIGHT - 50);
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      ctx.font = '9px Orbitron';
-      ctx.fillText(`ELO ${myElo || 1000} vs ${oppElo || 1000}`, ONLINE_STAGE_WIDTH / 2, ONLINE_STAGE_HEIGHT - 34);
-      ctx.fillText(`STAGE: ${String(sharedStage).replace(/_/g, ' ').toUpperCase()}`, ONLINE_STAGE_WIDTH / 2, ONLINE_STAGE_HEIGHT - 18);
+      drawPlayerStatusIndicator(ctx, { x: ONLINE_STAGE_WIDTH - 220, y: 42, playerNumber: 1, color: hostCharacter.color, name: hostCharacter.name, stats: `STK ${Math.max(0, hostFighter.stocks)} · ${Math.floor(hostFighter.damage || 0)}%` });
+      drawPlayerStatusIndicator(ctx, { x: ONLINE_STAGE_WIDTH - 220, y: 76, playerNumber: 2, color: guestCharacter.color, name: guestCharacter.name, stats: `STK ${Math.max(0, guestFighter.stocks)} · ${Math.floor(guestFighter.damage || 0)}%` });
 
       if (showDiagnosticsRef.current && session) {
         const stats = session.getStats();
@@ -518,7 +506,7 @@ export default function RollbackOnlineFight({
           <span className="text-[10px] font-heading text-accent">{connectionText}</span>
           <span className="text-[9px] text-muted-foreground font-body">Your device controls your selected fighter. Use Arrows, WASD, or your Settings custom control preset.</span>
         </div>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80">⏸ PAUSE (ESC)</button>
       </div>
       {networkError && <p className="text-xs text-destructive font-body">{networkError}</p>}
       {resyncing && <div className="absolute inset-0 z-20 grid place-items-center bg-black/70 font-heading text-accent text-2xl">RESYNCING MATCH…</div>}

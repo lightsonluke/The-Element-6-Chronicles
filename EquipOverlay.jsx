@@ -3,7 +3,7 @@ import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { getCharLevelData } from './elements.js';
-import { ACCESSORIES, accessoriesFor, getAccessory } from './cosmetics.js';
+import { ACCESSORIES, accessoriesFor, getAccessory, isAccessoryCompatible } from './cosmetics.js';
 import { skinsForChar, getSkin } from './skins.js';
 import { KILL_FX as KILL_FX_LIST, getKillFX } from './killFX.js';
 import { PROFILE_TITLES } from './profileTitles.js';
@@ -29,7 +29,7 @@ export default function EquipOverlay({ progress, customCharsData = {}, onApply, 
   const equippedSkin = progress?.equippedSkins?.[charId];
   const equippedAccs = progress?.equippedAccessories || {};
   const ownedAccs = (progress?.ownedAccessories || []).filter(id => {
-    const a = getAccessory(id); return !a || !a.charId || a.charId === charId || accessoriesFor(charId).some(x => x.id === id);
+    const a = getAccessory(id); return a && isAccessoryCompatible(a, charId);
   });
   const ownedFX = progress?.ownedKillFX || [];
   const equippedFX = progress?.equippedKillFX || 'none';

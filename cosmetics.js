@@ -175,11 +175,20 @@ ACCESSORIES.push({
   return getEventAccessory(id) || getEventBattlePassAccessory(id);
 }
 
-// Returns accessories available for a given character.
-// ALL accessories are available to EVERY character (gens 1–5) — the exclusiveTo
-// field is now ignored for shop availability.
+// Character locked cosmetics stay attached to their intended character in the
+// shop, equipment UI, and every gameplay renderer. Unmarked accessories remain
+// universal. Character identity and built-in appearance continue to come from
+// the character roster/renderers; ACCESSORIES contains optional player gear.
+export function isAccessoryCompatible(accessoryOrId, charId) {
+  const accessory = typeof accessoryOrId === 'string' ? getAccessory(accessoryOrId) : accessoryOrId;
+  if (!accessory || !charId) return Boolean(accessory);
+  const restrictedTo = accessory.exclusiveTo || accessory.charId;
+  return !restrictedTo || restrictedTo === charId;
+}
+
+// Returns only accessories available to a given character.
 export function accessoriesFor(charId) {
-  return ACCESSORIES;
+  return ACCESSORIES.filter(accessory => isAccessoryCompatible(accessory, charId));
 }
 
 // Returns the list of equipped accessories for a character as accessory objects.
@@ -187,17 +196,17 @@ export function accessoriesFor(charId) {
 export function getEquippedAccessories(equippedAccessories, charId) {
   const val = equippedAccessories?.[charId];
   if (!val) return [];
-  if (Array.isArray(val)) return val.map(id => getAccessory(id)).filter(Boolean);
+  if (Array.isArray(val)) return val.map(id => getAccessory(id)).filter(acc => isAccessoryCompatible(acc, charId));
   const acc = getAccessory(val);
-  return acc ? [acc] : [];
+  return isAccessoryCompatible(acc, charId) ? [acc] : [];
 }
 
 // Returns the array of equipped accessory IDs for a character.
 export function getEquippedAccessoryIds(equippedAccessories, charId) {
   const val = equippedAccessories?.[charId];
   if (!val) return [];
-  if (Array.isArray(val)) return val.filter(Boolean);
-  return val ? [val] : [];
+  const ids = Array.isArray(val) ? val.filter(Boolean) : [val];
+  return ids.filter(id => isAccessoryCompatible(id, charId));
 }
 
 // Draws all equipped accessories for one layer ('behind' or front).

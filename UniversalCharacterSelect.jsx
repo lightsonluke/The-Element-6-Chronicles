@@ -6,7 +6,7 @@ import { ALL_CHARS, ALL_CHARS_MAP } from './allCharacters.js';
 import { getCharLevelData, getUnlockedElements, applyElement, ELEMENTS } from './elements.js';
 import { CROSSOVERS, crossoversForChar } from './crossovers.js';
 import { SHIKIGAMI } from './shikigami.js';
-import { ACCESSORIES, getEquippedAccessoryIds } from './cosmetics.js';
+import { ACCESSORIES, isAccessoryCompatible, getEquippedAccessoryIds } from './cosmetics.js';
 import { sfx } from './sfx.js';
 import { ERA_OPTIONS, ALIGNMENTS, getAlignment, getEraAccent, getEraLabel, getPowerName, filterCharacters, sortByEra, STAT_KEYS, getStatTotal, getRealName, getNameColor } from './charSelectHelpers.js';
 import CharacterPedestal from './CharacterPedestal.jsx';
@@ -205,7 +205,7 @@ function AccessorySection({ ownedAccessories, equippedAccessories, onEquipAccess
   if (owned.length === 0 || !onEquipAccessory || !selectedCharId) return null;
   const equippedIds = getEquippedAccessoryIds(equippedAccessories, selectedCharId);
   // Show owned accessories that are either generic or exclusive to this character
-  const shown = owned.filter(a => !a.exclusiveTo || a.exclusiveTo === selectedCharId);
+  const shown = owned.filter(a => isAccessoryCompatible(a, selectedCharId));
   if (shown.length === 0) return null;
   return (
     <div className="bg-card/50 border border-border rounded-lg p-1.5">
@@ -498,7 +498,7 @@ export default function UniversalCharacterSelect({
   const selectedIds = activePlayerCount === 1 || rankedRandom ? [p1] : picks.slice(0, activePlayerCount);
 
   return (
-    <div className="el6-character-select-scroll flex flex-col gap-2 w-full max-w-6xl mx-auto h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] overflow-y-auto overflow-x-hidden overscroll-contain pr-2 pb-28" tabIndex={-1}>
+    <div className="e6-character-select-exempt el6-character-select-scroll flex flex-col gap-2 w-full max-w-6xl mx-auto h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] overflow-y-auto overflow-x-hidden overscroll-contain pr-2 pb-28" tabIndex={-1}>
       {enableMatchSettings && <MatchSettingsOverlay open={settingsOpen} onClose={() => setSettingsOpen(false)} config={{ ...matchConfig, customControls: settings?.customControls || [], characterNames: picks.slice(0, activePlayerCount).map(id => ALL_CHARS.find(c => c.id === id)?.name || id) }} onChange={handleMatchConfigChange} />}
       {/* Header */}
       <div className="flex justify-between items-center">
