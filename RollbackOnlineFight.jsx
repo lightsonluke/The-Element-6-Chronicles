@@ -235,8 +235,8 @@ export default function RollbackOnlineFight({
       drawSplitCityPlatformForeground(ctx, getOnlineStagePlatforms(sharedStage) || ONLINE_PLATFORMS, sharedStage);
       ctx.restore();
 
-      drawPlayerStatusIndicator(ctx, { x: ONLINE_STAGE_WIDTH - 220, y: 42, playerNumber: 1, color: hostCharacter.color, name: hostCharacter.name, stats: `STK ${Math.max(0, hostFighter.stocks)} · ${Math.floor(hostFighter.damage || 0)}%` });
-      drawPlayerStatusIndicator(ctx, { x: ONLINE_STAGE_WIDTH - 220, y: 76, playerNumber: 2, color: guestCharacter.color, name: guestCharacter.name, stats: `STK ${Math.max(0, guestFighter.stocks)} · ${Math.floor(guestFighter.damage || 0)}%` });
+      drawPlayerStatusIndicator(ctx, { x: ONLINE_STAGE_WIDTH - 246, y: 42, playerNumber: 1, color: hostCharacter.color, name: hostCharacter.name, fighter: hostFighter, stocks: hostFighter.stocks, damage: hostFighter.damage });
+      drawPlayerStatusIndicator(ctx, { x: ONLINE_STAGE_WIDTH - 246, y: 96, playerNumber: 2, color: guestCharacter.color, name: guestCharacter.name, fighter: guestFighter, stocks: guestFighter.stocks, damage: guestFighter.damage });
 
       if (showDiagnosticsRef.current && session) {
         const stats = session.getStats();

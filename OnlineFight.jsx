@@ -120,7 +120,7 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
     const remote = {
       x: oppSpawnX, y: 572, vx: 0, vy: 0, facing: oppSpawnFace,
       frame: 0, state: 'idle', grounded: true, damage: 0, stocks: 3,
-      attackData: null, superMeter: 0, powerActive: false, invincible: 0, charId: oppChar,
+      attackData: null, superMeter: 0, powerCooldown: 0, _maxPowerCooldown: 0, powerActive: false, invincible: 0, charId: oppChar,
     };
 
     let tick = 0;
@@ -312,6 +312,7 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
         remote.facing = interpState.facing; remote.frame = interpState.frame; remote.state = interpState.state;
         remote.grounded = interpState.grounded; remote.damage = interpState.damage; remote.stocks = interpState.stocks;
         remote.superMeter = interpState.superMeter; remote.powerActive = interpState.powerActive;
+        remote.powerCooldown = interpState.powerCooldown; remote._maxPowerCooldown = interpState._maxPowerCooldown;
         remote.invincible = interpState.invincible; remote.attackData = interpState.attackData;
         remote.charId = interpState.charId || oppChar;
         remote.emote = interpState.emote || null;
@@ -365,8 +366,8 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
       const guestFighter = isHost ? remote : localF;
       const hostCharacter = isHost ? myCharData : oppCharData;
       const guestCharacter = isHost ? oppCharData : myCharData;
-      drawPlayerStatusIndicator(ctx, { x: W - 220, y: 42, playerNumber: 1, color: hostCharacter.color, name: hostCharacter.name, stats: `STK ${Math.max(0, hostFighter.stocks)} · ${Math.floor(hostFighter.damage || 0)}%` });
-      drawPlayerStatusIndicator(ctx, { x: W - 220, y: 76, playerNumber: 2, color: guestCharacter.color, name: guestCharacter.name, stats: `STK ${Math.max(0, guestFighter.stocks)} · ${Math.floor(guestFighter.damage || 0)}%` });
+      drawPlayerStatusIndicator(ctx, { x: W - 246, y: 42, playerNumber: 1, color: hostCharacter.color, name: hostCharacter.name, fighter: hostFighter, stocks: hostFighter.stocks, damage: hostFighter.damage });
+      drawPlayerStatusIndicator(ctx, { x: W - 246, y: 96, playerNumber: 2, color: guestCharacter.color, name: guestCharacter.name, fighter: guestFighter, stocks: guestFighter.stocks, damage: guestFighter.damage });
 
       // Reconnecting overlay
       if (conn.isReconnecting) {

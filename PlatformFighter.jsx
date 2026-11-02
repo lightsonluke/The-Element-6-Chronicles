@@ -1252,11 +1252,18 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       drawModeTint(ctx, W, H, gameMode);
 
       if (superImpactFlash > 0) {
-        ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.fillStyle = `rgba(255,255,255,${superImpactFlash * 0.5})`;
-        ctx.fillRect(0, 0, W, H);
-        ctx.restore();
+        // Keep the super impact cue around the fighter; the stage itself stays unchanged.
+        const impactFighter = fs.find(f => f.superAttack || (f.attackData?.isSuper && f.attackData.progress > 0.72));
+        if (impactFighter) {
+          ctx.save();
+          ctx.globalAlpha = Math.min(0.65, superImpactFlash * 0.65);
+          ctx.strokeStyle = impactFighter.char?.color || '#FFFFFF';
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.arc(impactFighter.x, impactFighter.y - 28, 24 + (1 - superImpactFlash) * 36, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
         superImpactFlash = Math.max(0, superImpactFlash - dt * 4);
       }
 
@@ -1485,14 +1492,12 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       // Compact upper-right player HUD. Values are read from the active fighter
       // state each frame, so stocks and damage stay authoritative.
       const statusText = (fighter, coinsCollected) => {
-        if (gameMode === 'hp' || gameMode === 'brawl') return `STK ${Math.max(0, fighter.stocks)} · HP ${Math.max(0, Math.ceil(fighter.hp || 0))}`;
-        if (gameMode === 'coin') return `◆ ${coinsCollected} · STK ${Math.max(0, fighter.stocks)} · ${Math.floor(fighter.damage)}%`;
-        return `STK ${Math.max(0, fighter.stocks)} · ${Math.floor(fighter.damage)}%`;
+        if (gameMode === 'hp' || gameMode === 'brawl') return `HP ${Math.max(0, Math.ceil(fighter.hp || 0))}`;
+        if (gameMode === 'coin') return `◆ ${coinsCollected}`;
+        return '';
       };
-      drawPlayerStatusIndicator(ctx, { x: W - 220, y: 42, playerNumber: 1, color: f1.char.color, name: f1.char.name, stats: statusText(f1, coinsCollected1) });
-      drawPlayerStatusIndicator(ctx, { x: W - 220, y: 76, playerNumber: 2, color: f2.char.color, name: f2.char.name, stats: statusText(f2, coinsCollected2) });
-      drawCompactPlayerMeters(ctx, f1, 16, H - 28);
-      drawCompactPlayerMeters(ctx, f2, W - 124, H - 28);
+      drawPlayerStatusIndicator(ctx, { x: W - 246, y: 42, playerNumber: 1, color: f1.char.color, name: f1.char.name, stats: statusText(f1, coinsCollected1), fighter: f1, stocks: f1.stocks, damage: f1.damage });
+      drawPlayerStatusIndicator(ctx, { x: W - 246, y: 96, playerNumber: 2, color: f2.char.color, name: f2.char.name, stats: statusText(f2, coinsCollected2), fighter: f2, stocks: f2.stocks, damage: f2.damage });
 
       // FPS is an opt-in diagnostic, kept small and away from the play area.
       if (settings.showFPS) { ctx.fillStyle = 'rgba(0,255,0,0.6)'; ctx.font = '10px monospace'; ctx.textAlign = 'left'; ctx.fillText(`${Math.round(1 / Math.max(dt, 0.001))} FPS`, 12, 18); }

@@ -594,23 +594,19 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
         { fighter: f4, char: c4, team: 'BLUE' },
       ];
       statusPlayers.forEach(({ fighter, char, team }, index) => drawPlayerStatusIndicator(ctx, {
-        x: W - 220,
-        y: 42 + index * 32,
+        x: W - 246,
+        y: 42 + index * 54,
         playerNumber: index + 1,
         color: char.color,
         name: `${team} ${char.name}`,
-        stats: `STK ${Math.max(0, fighter.stocks)} · ${Math.floor(fighter.damage)}%`,
+        fighter,
+        stocks: fighter.stocks, damage: fighter.damage,
       }));
       ctx.save();
       ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = 'bold 18px Orbitron'; ctx.textAlign = 'right';
       ctx.fillText(matchTime === 0 ? '∞' : `${Math.ceil(gameRef.current.timer)}s`, W - 18, 32);
       ctx.restore();
 
-      // Power & Super bars for P1
-      if (f1.stocks > 0) {
-        drawPowerBar(ctx, f1, 200, H - 20, 80, 5);
-        drawSuperMeter(ctx, f1, 200, H - 10, 80, 5);
-      }
 
       // Kill feed
       killFeed = killFeed.filter(kf => {

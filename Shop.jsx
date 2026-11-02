@@ -78,26 +78,30 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
   const previewSkinParts = equippedSkinId ? getSkinParts(char?.id, equippedSkins) : [];
 
   return (
-    <div className="e6-shop-screen w-full max-w-4xl flex flex-col gap-4">
-      <div className="flex justify-between items-center">
+    <div className="e6-shop-screen w-full max-w-5xl flex flex-col gap-5">
+      <div className="e6-shop-intro flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-heading text-accent tracking-wider">SHOP</h2>
-          <p className="text-xs text-muted-foreground font-body">Element 6 Tokens: <span className="text-accent font-heading">{formatNumber(coins)}</span> <GameIcon emoji="◆" size={14} /></p>
+          <p className="e6-screen-eyebrow">ELEMENT 6 · ITEM EXCHANGE</p>
+          <h2 className="text-3xl font-heading text-accent tracking-wider">THE SHOP</h2>
+          <p className="text-sm text-muted-foreground font-body mt-1">Browse cosmetics, fighters, and rewards for your collection.</p>
         </div>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <div className="e6-shop-actions">
+          <div className="e6-token-wallet"><span>YOUR TOKENS</span><strong>{formatNumber(coins)} <GameIcon emoji="◆" size={14} /></strong></div>
+          <button onClick={onBack} className="e6-back-button"><GameIcon emoji="←" size={16} /> BACK</button>
+        </div>
       </div>
 
-      <div className="e6-shop-tabs flex gap-2">
-        <button onClick={() => setShopTab('accessories')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'accessories' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>ACCESSORIES</button>
-        <button onClick={() => setShopTab('kits')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'kits' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>KITS</button>
-        <button onClick={() => setShopTab('killfx')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'killfx' ? 'bg-destructive text-destructive-foreground' : 'bg-secondary text-secondary-foreground'}`}>KILL FX</button>
-        <button onClick={() => setShopTab('characters')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'characters' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>CHARACTERS</button>
-        <button onClick={() => setShopTab('titles')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'titles' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon emoji="🏷️" size={14} /> TITLES</button>
-        <button onClick={() => setShopTab('crossovers')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'crossovers' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon emoji="🔀" size={14} /> CROSSOVERS</button>
-        <button onClick={() => setShopTab('shikigami')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'shikigami' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>🪶 SHIKIGAMI</button>
-        <button onClick={() => setShopTab('emotes')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'emotes' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>EMOTES</button>
-        <button onClick={() => setShopTab('paid')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'paid' ? 'bg-primary text-primary-foreground' : 'bg-primary/50 text-primary-foreground'}`}><GameIcon emoji="💰" size={14} /> PAID</button>
-        <button onClick={() => setShopTab('donate')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'donate' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon emoji="💖" size={14} /> DONATE</button>
+      <div className="e6-shop-tabs flex gap-2" role="tablist" aria-label="Shop categories">
+        <button role="tab" aria-selected={shopTab === 'accessories'} onClick={() => setShopTab('accessories')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'accessories' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>ACCESSORIES</button>
+        <button role="tab" aria-selected={shopTab === 'kits'} onClick={() => setShopTab('kits')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'kits' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>KITS</button>
+        <button role="tab" aria-selected={shopTab === 'killfx'} onClick={() => setShopTab('killfx')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'killfx' ? 'bg-destructive text-destructive-foreground' : 'bg-secondary text-secondary-foreground'}`}>KILL FX</button>
+        <button role="tab" aria-selected={shopTab === 'characters'} onClick={() => setShopTab('characters')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'characters' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>CHARACTERS</button>
+        <button role="tab" aria-selected={shopTab === 'titles'} onClick={() => setShopTab('titles')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'titles' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon emoji="🏷️" size={14} /> TITLES</button>
+        <button role="tab" aria-selected={shopTab === 'crossovers'} onClick={() => setShopTab('crossovers')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'crossovers' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon emoji="🔀" size={14} /> CROSSOVERS</button>
+        <button role="tab" aria-selected={shopTab === 'shikigami'} onClick={() => setShopTab('shikigami')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'shikigami' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>🪶 SHIKIGAMI</button>
+        <button role="tab" aria-selected={shopTab === 'emotes'} onClick={() => setShopTab('emotes')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'emotes' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>EMOTES</button>
+        <button role="tab" aria-selected={shopTab === 'paid'} onClick={() => setShopTab('paid')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'paid' ? 'bg-primary text-primary-foreground' : 'bg-primary/50 text-primary-foreground'}`}><GameIcon emoji="💰" size={14} /> PAID</button>
+        <button role="tab" aria-selected={shopTab === 'donate'} onClick={() => setShopTab('donate')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'donate' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon emoji="💖" size={14} /> DONATE</button>
       </div>
 
       {['accessories', 'kits'].includes(shopTab) && (

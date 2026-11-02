@@ -653,20 +653,16 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
       // Compact slot-ordered indicators keep all fighter status in the top-right.
       fs.forEach((f, i) => {
         drawPlayerStatusIndicator(ctx, {
-          x: W - 220,
-          y: 42 + i * 32,
+          x: W - 246,
+          y: 42 + i * 54,
           playerNumber: Number.isInteger(f.playerIndex) ? f.playerIndex + 1 : i + 1,
           color: f.char.color,
           name: f.char.name,
-          stats: `STK ${Math.max(0, f.stocks)} · ${Math.floor(f.damage)}%`,
+          fighter: f,
+          stocks: f.stocks, damage: f.damage,
         });
       });
 
-      // Power & Super bars for P1
-      if (fs[0] && fs[0].stocks > 0) {
-        drawPowerBar(ctx, fs[0], 16, H - 20, 80, 5);
-        drawSuperMeter(ctx, fs[0], 106, H - 20, 80, 5);
-      }
 
       // Kill feed
       killFeed = killFeed.filter(kf => {

@@ -659,6 +659,239 @@ button:focus-visible, [role='button']:focus-visible, input:focus-visible, select
 .e6-shop-preview-row > .w-56 { flex: 0 0 14rem; }
 .e6-equip-tabs { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
 
+/* Major non-exempt screen refresh. These rules stay inside the redesigned UI
+   shell, so the home and character-select presentations remain untouched. */
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) {
+  --e6-ui-glow: hsl(var(--primary) / .27);
+  padding: clamp(.5rem, 1.7vw, 1.35rem);
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt))::before {
+  background:
+    radial-gradient(ellipse 48rem 27rem at 6% 0%, hsl(var(--primary) / .22), transparent 74%),
+    radial-gradient(ellipse 40rem 26rem at 96% 100%, hsl(var(--accent) / .13), transparent 76%),
+    linear-gradient(135deg, hsl(var(--background) / .18), transparent 55%);
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(h1, h2) {
+  letter-spacing: .09em;
+  text-shadow: 0 0 25px hsl(var(--primary) / .22);
+}
+.e6-screen-eyebrow {
+  margin: 0 0 .35rem;
+  color: hsl(var(--primary));
+  font: 700 .62rem/1.2 Orbitron, sans-serif;
+  letter-spacing: .19em;
+  text-transform: uppercase;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(.bg-card, [class*='bg-card/'], .bg-popover) {
+  border-radius: 1rem;
+  background-image: linear-gradient(145deg, hsl(var(--foreground) / .035), transparent 55%);
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(button, [role='button'], a[role='button']) {
+  border-radius: .72rem;
+  transition: transform 150ms ease, border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(button, [role='button'], a[role='button']):hover:not(:disabled) {
+  box-shadow: 0 8px 24px hsl(var(--background) / .26), 0 0 18px hsl(var(--primary) / .12);
+}
+.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(button, [role='button'], a[role='button']):active:not(:disabled) {
+  transform: translateY(1px) scale(.99);
+}
+.e6-back-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  border: 1px solid hsl(var(--border) / .85);
+  background: linear-gradient(145deg, hsl(var(--secondary) / .94), hsl(var(--background) / .78));
+  color: hsl(var(--foreground));
+  padding: .55rem 1rem;
+  font: 700 .78rem Orbitron, sans-serif;
+  letter-spacing: .08em;
+}
+
+/* Shop becomes a real storefront: wallet, scrollable category rail, preview
+   stage and item-card catalogue are visually distinct but retain their flows. */
+.e6-shop-screen { max-width: min(100%, 78rem); gap: 1.1rem; }
+.e6-shop-intro {
+  gap: 1rem;
+  border: 1px solid hsl(var(--border) / .66);
+  border-radius: 1.25rem;
+  padding: clamp(1rem, 2.2vw, 1.65rem);
+  background: linear-gradient(110deg, hsl(var(--card) / .92), hsl(var(--primary) / .09) 58%, hsl(var(--accent) / .08));
+  box-shadow: inset 0 1px hsl(var(--foreground) / .06), 0 18px 50px hsl(var(--background) / .24);
+}
+.e6-shop-actions { display: flex; align-items: center; gap: .8rem; }
+.e6-token-wallet {
+  display: grid;
+  gap: .2rem;
+  min-width: 8.5rem;
+  border: 1px solid hsl(var(--accent) / .43);
+  border-radius: .85rem;
+  padding: .55rem .8rem;
+  background: hsl(var(--background) / .48);
+}
+.e6-token-wallet span { color: hsl(var(--muted-foreground)); font: 700 .56rem Orbitron, sans-serif; letter-spacing: .14em; }
+.e6-token-wallet strong { color: hsl(var(--accent)); font: 800 1rem Orbitron, sans-serif; }
+.e6-shop-tabs {
+  border: 1px solid hsl(var(--border) / .8);
+  border-radius: 1rem;
+  padding: .42rem;
+  background: hsl(var(--background) / .48);
+}
+.e6-shop-tabs > button {
+  flex: 0 0 auto;
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: .65rem;
+  padding: .55rem .8rem;
+  color: hsl(var(--muted-foreground));
+  font: 700 .62rem Orbitron, sans-serif;
+  letter-spacing: .04em;
+}
+.e6-shop-tabs > button:hover { color: hsl(var(--foreground)); background: hsl(var(--foreground) / .07); }
+.e6-shop-tabs > button[aria-selected='true'] {
+  border-color: hsl(var(--primary) / .58);
+  background: linear-gradient(140deg, hsl(var(--primary) / .24), hsl(var(--accent) / .12));
+  color: hsl(var(--foreground));
+  box-shadow: inset 0 1px hsl(var(--foreground) / .09), 0 0 14px hsl(var(--primary) / .1);
+}
+.e6-shop-preview-row > div:first-child {
+  border: 1px solid hsl(var(--border) / .7);
+  border-radius: 1rem;
+  padding: .8rem;
+  background: hsl(var(--card) / .74);
+}
+.e6-shop-preview-row > :last-child {
+  min-height: 17rem;
+  border-color: hsl(var(--primary) / .42) !important;
+  background: radial-gradient(ellipse at 50% 44%, hsl(var(--primary) / .16), hsl(var(--card) / .90) 65%) !important;
+}
+.e6-shop-screen .grid > .bg-card,
+.e6-shop-screen .grid > button.bg-card,
+.e6-shop-screen .grid > div.rounded-xl {
+  position: relative;
+  min-width: 0;
+  border: 1px solid hsl(var(--border) / .76);
+  border-radius: 1rem;
+  background: linear-gradient(150deg, hsl(var(--card) / .96), hsl(var(--background) / .54));
+  box-shadow: inset 0 1px hsl(var(--foreground) / .05), 0 14px 32px hsl(var(--background) / .22);
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.e6-shop-screen .grid > div.rounded-xl:hover,
+.e6-shop-screen .grid > button.bg-card:hover {
+  transform: translateY(-3px);
+  border-color: hsl(var(--accent) / .7);
+  box-shadow: 0 18px 35px hsl(var(--background) / .34), 0 0 22px hsl(var(--primary) / .12);
+}
+.e6-shop-screen .grid > :is(div, button) :is(.font-heading.text-xs, .text-sm.font-heading) { line-height: 1.35; }
+
+/* Settings reads as a grouped control room instead of one long generic form. */
+.e6-settings-screen { max-width: min(100%, 68rem); gap: .85rem; padding-bottom: 1rem; }
+.e6-settings-header {
+  margin-inline: -.5rem;
+  padding: .9rem 1rem !important;
+  border-bottom: 1px solid hsl(var(--border) / .66);
+  background: linear-gradient(100deg, hsl(var(--background) / .96), hsl(var(--primary) / .07), hsl(var(--background) / .9)) !important;
+}
+.e6-settings-screen > :is(.bg-card, section.bg-card) {
+  position: relative;
+  border: 1px solid hsl(var(--border) / .74) !important;
+  border-radius: 1rem !important;
+  padding: clamp(1rem, 2vw, 1.4rem) !important;
+  background: linear-gradient(145deg, hsl(var(--card) / .94), hsl(var(--background) / .46)) !important;
+}
+.e6-settings-screen > :is(.bg-card, section.bg-card) h3 {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin-bottom: 1rem;
+  padding-bottom: .65rem;
+  border-bottom: 1px solid hsl(var(--border) / .6);
+  color: hsl(var(--primary));
+  letter-spacing: .12em;
+}
+.e6-settings-screen :is(input[type='range'], input[type='checkbox'], input[type='radio']) { accent-color: hsl(var(--primary)); }
+
+/* Mode browsing has dedicated large tiles; other mode browsers inherit the
+   shared panel, typography and focus language above. */
+.e6-mode-browser { max-width: min(100%, 76rem); gap: clamp(1rem, 2vw, 1.5rem); }
+.e6-mode-browser-header,
+.e6-mode-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
+.e6-mode-browser-header {
+  border: 1px solid hsl(var(--border) / .65);
+  border-radius: 1.3rem;
+  padding: clamp(1.1rem, 2.8vw, 2rem);
+  background: linear-gradient(110deg, hsl(var(--card) / .94), hsl(var(--primary) / .14) 62%, hsl(var(--accent) / .1));
+  box-shadow: inset 0 1px hsl(var(--foreground) / .06), 0 20px 55px hsl(var(--background) / .26);
+}
+.e6-mode-browser-header h2 { margin: 0; font-size: clamp(1.55rem, 3.6vw, 2.45rem); }
+.e6-mode-section { display: grid; gap: .75rem; }
+.e6-mode-section-heading { padding-inline: .25rem; }
+.e6-mode-section-heading h3 { margin: 0; color: hsl(var(--foreground)); font: 800 1.12rem Orbitron, sans-serif; }
+.e6-mode-section-heading > span { color: hsl(var(--muted-foreground)); font: 700 .58rem Orbitron, sans-serif; letter-spacing: .14em; }
+.e6-mode-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+.e6-mode-tile {
+  display: grid;
+  min-width: 0;
+  min-height: 118px !important;
+  grid-template-columns: 3.1rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .9rem;
+  border: 1px solid hsl(var(--border) / .78);
+  border-radius: 1rem;
+  padding: 1rem;
+  background: linear-gradient(138deg, hsl(var(--card) / .97), hsl(var(--background) / .56));
+  color: hsl(var(--foreground));
+  text-align: left;
+  box-shadow: inset 0 1px hsl(var(--foreground) / .045), 0 12px 32px hsl(var(--background) / .2);
+  transition: transform 170ms ease, border-color 170ms ease, background 170ms ease, box-shadow 170ms ease;
+}
+.e6-mode-tile:hover, .e6-mode-tile:focus-visible {
+  transform: translateY(-3px);
+  border-color: hsl(var(--primary) / .85);
+  background: linear-gradient(138deg, hsl(var(--primary) / .16), hsl(var(--card) / .96) 58%);
+  box-shadow: 0 18px 38px hsl(var(--background) / .3), 0 0 24px hsl(var(--primary) / .16);
+}
+.e6-mode-tile-mark {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border: 1px solid hsl(var(--primary) / .4);
+  border-radius: .9rem;
+  background: hsl(var(--primary) / .1);
+  color: hsl(var(--primary));
+  font-size: 1.65rem;
+  text-shadow: 0 0 16px hsl(var(--primary) / .36);
+}
+.e6-mode-tile-content { display: grid; min-width: 0; gap: .2rem; }
+.e6-mode-tile-kicker { color: hsl(var(--muted-foreground)); font: 700 .52rem Orbitron, sans-serif; letter-spacing: .14em; }
+.e6-mode-tile-title { overflow: hidden; color: hsl(var(--foreground)); font: 800 .98rem Orbitron, sans-serif; text-overflow: ellipsis; }
+.e6-mode-tile-description { color: hsl(var(--muted-foreground)); font: 500 .8rem/1.35 Rajdhani, sans-serif; }
+.e6-mode-tile-action { align-self: end; color: hsl(var(--primary)); font: 700 .55rem Orbitron, sans-serif; white-space: nowrap; }
+.e6-mode-tile-action span { display: inline-block; transition: transform 150ms ease; }
+.e6-mode-tile:hover .e6-mode-tile-action span { transform: translateX(3px); }
+.e6-mode-section-featured { border-top: 1px solid hsl(var(--border) / .62); padding-top: 1.2rem; }
+.e6-mode-tile-featured { border-color: hsl(var(--accent) / .36); background: linear-gradient(138deg, hsl(var(--accent) / .09), hsl(var(--card) / .96) 55%); }
+
+@media (max-width: 760px) {
+  .e6-shop-intro { align-items: flex-start; }
+  .e6-shop-actions { align-items: flex-end; flex-direction: column-reverse; }
+  .e6-token-wallet { min-width: auto; text-align: right; }
+  .e6-mode-grid { grid-template-columns: minmax(0, 1fr); }
+  .e6-mode-browser-header { align-items: flex-start; }
+  .e6-mode-tile { grid-template-columns: 2.7rem minmax(0, 1fr); }
+  .e6-mode-tile-mark { width: 2.6rem; height: 2.6rem; }
+  .e6-mode-tile-action { grid-column: 2; justify-self: end; }
+}
+@media (max-width: 480px) {
+  .e6-shop-intro { flex-direction: column; }
+  .e6-shop-actions { width: 100%; align-items: center; flex-direction: row; justify-content: space-between; }
+  .e6-mode-browser-header { flex-direction: column; align-items: stretch; }
+  .e6-mode-browser-header .e6-back-button { align-self: flex-start; }
+}
+
 /* Active gameplay canvases fill the browser viewport. Their backing stores
    resize at device pixel ratio while a uniform logical camera keeps stage
    geometry intact; excess aspect-ratio space gets a stage-derived backdrop. */

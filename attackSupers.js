@@ -24,11 +24,6 @@ export function drawFromSky(ctx, x, y, p, cfg) {
   const particle = getP(particleName);
   const a = 1 - p;
 
-  // Screen flash
-  if (p < 0.1) {
-    ctx.globalAlpha = (0.1 - p) / 0.1 * 0.5;
-    ctx.fillStyle = color; ctx.fillRect(0, 0, W, H);
-  }
 
   const count = boltCount || 1;
   for (let b = 0; b < count; b++) {
@@ -99,11 +94,6 @@ export function drawSweep(ctx, x, y, p, cfg) {
   const sweepH = height || 300;
   const dir = direction || 1;
 
-  // Screen flash
-  if (p < 0.1) {
-    ctx.globalAlpha = (0.1 - p) / 0.1 * 0.4;
-    ctx.fillStyle = color; ctx.fillRect(0, 0, W, H);
-  }
 
   // Sweeping wall
   for (let w = 0; w < 5; w++) {
@@ -152,11 +142,6 @@ export function drawEngulf(ctx, x, y, p, cfg) {
   const particle = getP(particleName);
   const a = 1 - p;
 
-  // Screen flash
-  if (p < 0.1) {
-    ctx.globalAlpha = (0.1 - p) / 0.1 * 0.5;
-    ctx.fillStyle = color; ctx.fillRect(0, 0, W, H);
-  }
 
   if (effectType === 'freeze' || effectType === 'freezeBurst' || effectType === 'blizzard') {
     // Flash-freeze / blizzard — crystalline particles across screen
@@ -166,10 +151,6 @@ export function drawEngulf(ctx, x, y, p, cfg) {
       ctx.globalAlpha = a * (1 - p * 0.4) * 0.6;
       particle(ctx, sx, sy, 14 * (1 - p * 0.3), color, p, i);
     }
-    // Freeze sweep
-    ctx.globalAlpha = a * 0.2;
-    ctx.fillStyle = color + '40';
-    ctx.fillRect(0, 0, W * Math.min(p * 1.5, 1), H);
     // Ice crystals on ground
     ctx.fillStyle = color; ctx.globalAlpha = a * 0.4;
     for (let i = 0; i < 20; i++) {
@@ -417,11 +398,6 @@ export function drawMultiStrike(ctx, x, y, p, cfg) {
   const a = 1 - p;
   const num = count || 6;
 
-  // Screen flash
-  if (p < 0.1) {
-    ctx.globalAlpha = (0.1 - p) / 0.1 * 0.4;
-    ctx.fillStyle = color; ctx.fillRect(0, 0, W, H);
-  }
 
   for (let i = 0; i < num; i++) {
     const phase = p - i * 0.08;
@@ -527,11 +503,6 @@ export function drawCombo(ctx, x, y, p, cfg) {
   const num = count || 8;
   const spd = speed || 1.5;
 
-  // Screen flash
-  if (p < 0.1) {
-    ctx.globalAlpha = (0.1 - p) / 0.1 * 0.4;
-    ctx.fillStyle = color; ctx.fillRect(0, 0, W, H);
-  }
 
   // Rapid strikes
   for (let i = 0; i < num; i++) {
@@ -584,11 +555,6 @@ export function drawBurst(ctx, x, y, p, cfg) {
   const a = 1 - p;
   const sz = sizeMul || 1.5;
 
-  // Screen flash
-  if (p < 0.1) {
-    ctx.globalAlpha = (0.1 - p) / 0.1 * 0.6;
-    ctx.fillStyle = color; ctx.fillRect(0, 0, W, H);
-  }
 
   // Core fireball
   const coreR = 120 * sz * p;
@@ -637,11 +603,6 @@ export function drawConstruct(ctx, x, y, p, cfg) {
   const particle = getP(particleName);
   const a = 1 - p;
 
-  // Screen flash
-  if (p < 0.1) {
-    ctx.globalAlpha = (0.1 - p) / 0.1 * 0.4;
-    ctx.fillStyle = color; ctx.fillRect(0, 0, W, H);
-  }
 
   if (shape === 'barrier' || shape === 'barrierSlam') {
     // Stone/metal barrier rising then slamming
@@ -796,11 +757,6 @@ export function drawUnique(ctx, x, y, p, cfg) {
   const particle = getP(particleName);
   const a = 1 - p;
 
-  // Screen flash
-  if (p < 0.1) {
-    ctx.globalAlpha = (0.1 - p) / 0.1 * 0.5;
-    ctx.fillStyle = color; ctx.fillRect(0, 0, W, H);
-  }
 
   if (uniqueType === 'overgrowth' || uniqueType === 'thornOvergrowth' || uniqueType === 'rootOvergrowth' || uniqueType === 'poisonOvergrowth') {
     // Overgrowth — vines/roots engulfing the stage

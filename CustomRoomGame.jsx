@@ -266,7 +266,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
           facing: f.facing, frame: f.frame,
           state: f.state, grounded: f.grounded, damage: f.damage, stocks: f.stocks,
           playerSlot: f.playerSlot,
-          superMeter: f.superMeter, powerActive: f.powerActive, invincible: f.invincible,
+          superMeter: f.superMeter, powerCooldown: f.powerCooldown, _maxPowerCooldown: f._maxPowerCooldown, powerActive: f.powerActive, invincible: f.invincible,
           charId: f.char.id, playerName: f.playerName, attackData: f.attackData ? {
             type: f.attackData.type, progress: f.attackData.progress, name: f.attackData.name,
             color: f.attackData.color, isNormal: f.attackData.isNormal, isHeavy: f.attackData.isHeavy,
@@ -433,7 +433,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
             Object.assign(rf, {
               x: sf.x, y: sf.y, vx: sf.vx, vy: sf.vy, facing: sf.facing, frame: sf.frame,
               state: sf.state, grounded: sf.grounded, damage: sf.damage, stocks: sf.stocks,
-              superMeter: sf.superMeter, powerActive: sf.powerActive, invincible: sf.invincible,
+              superMeter: sf.superMeter, powerCooldown: sf.powerCooldown, _maxPowerCooldown: sf._maxPowerCooldown, powerActive: sf.powerActive, invincible: sf.invincible,
               attackData: sf.attackData, emote: sf.emote, playerName: sf.playerName,
             });
           }
@@ -469,6 +469,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
               }
               rf.facing = sf.facing; rf.frame = sf.frame; rf.state = sf.state;
               rf.damage = sf.damage; rf.stocks = sf.stocks; rf.superMeter = sf.superMeter;
+              rf.powerCooldown = sf.powerCooldown; rf._maxPowerCooldown = sf._maxPowerCooldown;
               rf.powerActive = sf.powerActive; rf.invincible = sf.invincible;
               rf.charId = sf.charId; rf.playerName = sf.playerName; rf.attackData = sf.attackData;
             }
@@ -561,12 +562,13 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         const stocks = isHost ? f.stocks : (f.stocks ?? 0);
         const slot = Number.isInteger(f.playerSlot) ? f.playerSlot : i;
         drawPlayerStatusIndicator(ctx, {
-          x: W - 220,
-          y: 42 + i * 32,
+          x: W - 246,
+          y: 42 + i * 54,
           playerNumber: slot + 1,
           color: charData.color,
           name: f.playerName || charData.name,
-          stats: `STK ${Math.max(0, stocks)} · ${Math.floor(isHost ? f.damage : (f.damage || 0))}%`,
+          fighter: f,
+          stocks, damage: f.damage,
         });
       });
 

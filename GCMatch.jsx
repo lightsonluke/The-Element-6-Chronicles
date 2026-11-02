@@ -51,10 +51,8 @@ const mergeGp = (kb, gp) => gp ? {
 
 // Compact player-and-match HUD for Grand Circuit.
 function drawGCHUD(ctx, f1, f2, c1, c2, matchTime) {
-  drawPlayerStatusIndicator(ctx, { x: W - 220, y: 42, playerNumber: 1, color: c1.color, name: c1.name, stats: `STK ${Math.max(0, f1.stocks)} · ${Math.floor(f1.damage)}%` });
-  drawPlayerStatusIndicator(ctx, { x: W - 220, y: 76, playerNumber: 2, color: c2.color, name: c2.name, stats: `STK ${Math.max(0, f2.stocks)} · ${Math.floor(f2.damage)}%` });
-  drawCompactPlayerMeters(ctx, f1, 16, H - 28);
-  drawCompactPlayerMeters(ctx, f2, W - 124, H - 28);
+  drawPlayerStatusIndicator(ctx, { x: W - 246, y: 42, playerNumber: 1, color: c1.color, name: c1.name, fighter: f1, stocks: f1.stocks, damage: f1.damage });
+  drawPlayerStatusIndicator(ctx, { x: W - 246, y: 96, playerNumber: 2, color: c2.color, name: c2.name, fighter: f2, stocks: f2.stocks, damage: f2.damage });
   const mins = Math.floor(Math.max(0, matchTime) / 60);
   const secs = Math.floor(Math.max(0, matchTime) % 60);
   ctx.save();

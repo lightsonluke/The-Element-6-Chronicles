@@ -426,12 +426,8 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
 // ── 1v1 HUD (unchanged from original) ─────────────────────────────────────────
 function drawSoloHUD(ctx, f1, f2, W) {
   const hero = f1.char, villain = f2.char;
-  drawPlayerStatusIndicator(ctx, { x: W - 220, y: 42, playerNumber: 1, color: hero.color, name: hero.name, stats: `STK ${Math.max(0, f1.stocks)} · ${Math.floor(f1.damage)}%` });
-  drawPlayerStatusIndicator(ctx, { x: W - 220, y: 76, playerNumber: 2, color: villain.color, name: villain.name, stats: `STK ${Math.max(0, f2.stocks)} · ${Math.floor(f2.damage)}%` });
-  drawPowerBar(ctx, f1, 40, H - 22, 100, 6);
-  drawPowerBar(ctx, f2, W - 140, H - 22, 100, 6);
-  drawSuperMeter(ctx, f1, 40, H - 10);
-  drawSuperMeter(ctx, f2, W - 140, H - 10);
+  drawPlayerStatusIndicator(ctx, { x: W - 246, y: 42, playerNumber: 1, color: hero.color, name: hero.name, fighter: f1, stocks: f1.stocks, damage: f1.damage });
+  drawPlayerStatusIndicator(ctx, { x: W - 246, y: 96, playerNumber: 2, color: villain.color, name: villain.name, fighter: f2, stocks: f2.stocks, damage: f2.damage });
 }
 
 // ── Multi-fighter HUD ─────────────────────────────────────────────────────────
@@ -439,19 +435,17 @@ function drawMultiHUD(ctx, pTeam, eTeam, W, H) {
   let slot = 1;
   [...pTeam, ...eTeam].forEach(f => {
     drawPlayerStatusIndicator(ctx, {
-      x: W - 220,
-      y: 42 + (slot - 1) * 32,
+      x: W - 246,
+      y: 42 + (slot - 1) * 54,
       playerNumber: slot,
       color: f.char.color,
       name: `${slot <= pTeam.length ? 'ALLY' : 'ENEMY'} ${f.char.name}`,
-      stats: `STK ${Math.max(0, f.stocks)} · ${Math.floor(f.damage)}%`,
+      fighter: f,
+      stocks: f.stocks, damage: f.damage,
     });
     slot += 1;
   });
 
-  // Player power + super bars
-  drawPowerBar(ctx, pTeam[0], 40, H - 22, 100, 6);
-  drawSuperMeter(ctx, pTeam[0], 40, H - 10);
 }
 
 function drawPowerBar(ctx, fighter, bx, by, w, h) {

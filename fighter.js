@@ -1089,6 +1089,7 @@ function executeGen1HeldAttack(fighter, hold) {
     // 1 = the full four-second charge. This is used by applyHit() for the damage bonus.
     holdCharge: Math.min(1, hold.frames / hold.maxFrames),
     isHeavy,
+    ...(!isHeavy ? { _signatureEndLagRemaining: 3 } : {}),
     ...(fireFrames ? { startupFrames: fireFrames[0], activeFrames: fireFrames[1], endlagFrames: fireFrames[2] } : {}),
   };
   if (!isHeavy && sigType === 'up' && hold.wasAirborne) {
@@ -1395,7 +1396,10 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
     }
     // Reduced friction during attacks so you slide a bit (Brawlhalla momentum)
     fighter.vx *= fighter.grounded ? 0.88 : 0.96;
-    if (fighter.attackTimer <= 0) {
+    if (fighter.attackTimer <= 0 && fighter.attackData?._signatureEndLagRemaining > 0) {
+      fighter.attackData._signatureEndLagRemaining--;
+      fighter.attackTimer = 1;
+    } else if (fighter.attackTimer <= 0) {
       fighter.state = fighter.grounded ? 'idle' : 'jumping';
       fighter.attackData = null;
     }
@@ -1705,7 +1709,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
           const refDur = gen1ReferenceDuration(fighter.char.id, sigType, false, false);
           const dur = refDur || Math.min(sig.duration, 20);
           fighter.attackTimer = dur;
-          fighter.attackData = { ...sig, duration: dur, sigType, hitApplied: false, progress: 0, ...(fighter.char.id === 'g1_fire' ? (sigType === 'up' ? { startupFrames:10, activeFrames:2, endlagFrames:13 } : sigType === 'down' ? { startupFrames:11, activeFrames:4, endlagFrames:27 } : { startupFrames:4, activeFrames:5, endlagFrames:17 }) : {}) };
+          fighter.attackData = { ...sig, duration: dur, sigType, hitApplied: false, progress: 0, _signatureEndLagRemaining: 3, ...(fighter.char.id === 'g1_fire' ? (sigType === 'up' ? { startupFrames:10, activeFrames:2, endlagFrames:13 } : sigType === 'down' ? { startupFrames:11, activeFrames:4, endlagFrames:27 } : { startupFrames:4, activeFrames:5, endlagFrames:17 }) : {}) };
           fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
           fighter.sigCooldown = 0;
           fighter.vy = 0;

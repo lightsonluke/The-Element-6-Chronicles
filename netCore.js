@@ -252,6 +252,8 @@ export function serializeFighter(f, charId) {
     damage: Math.round(f.damage * 10) / 10,
     stocks: f.stocks,
     superMeter: Math.round(f.superMeter),
+    powerCooldown: Math.max(0, Number(f.powerCooldown) || 0),
+    _maxPowerCooldown: Math.max(0, Number(f._maxPowerCooldown) || 0),
     powerActive: f.powerActive,
     invincible: f.invincible,
     // Defensive / stat fields — needed so the opponent can compute hit damage

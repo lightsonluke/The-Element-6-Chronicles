@@ -751,23 +751,21 @@ export function drawSuperFlash(ctx, canvasW, canvasH, name, color, progress) {
   const t = progress / 0.45;
   const alpha = t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85;
   ctx.save();
-  ctx.globalAlpha = alpha;
-
-  // Screen tint
-  ctx.fillStyle = color + '22';
-  ctx.fillRect(0, 0, canvasW, canvasH);
-
-  // Name text
+  ctx.globalAlpha = alpha * 0.9;
+  // Keep the callout compact and transparent so the stage remains visible.
   ctx.textAlign = 'center';
   ctx.shadowColor = color;
-  ctx.shadowBlur = 30;
+  ctx.shadowBlur = 12;
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `bold 38px Orbitron, sans-serif`;
-  ctx.fillText(name?.toUpperCase() || 'SUPER', canvasW / 2, canvasH / 2 - 10);
-
-  ctx.fillStyle = color;
-  ctx.font = `bold 16px Orbitron, sans-serif`;
-  ctx.fillText('SUPER MOVE', canvasW / 2, canvasH / 2 + 18);
+  ctx.font = `bold 18px Orbitron, sans-serif`;
+  ctx.fillText(name?.toUpperCase() || 'SUPER', canvasW / 2, canvasH * 0.22, Math.min(canvasW - 32, 360));
+  ctx.globalAlpha *= 0.75;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(canvasW / 2 - 54, canvasH * 0.22 + 8);
+  ctx.lineTo(canvasW / 2 + 54, canvasH * 0.22 + 8);
+  ctx.stroke();
 
   ctx.shadowBlur = 0;
   ctx.restore();
@@ -1708,76 +1706,115 @@ export function drawTimer(ctx, canvasWidth, seconds) {
 // Small, screen-space match status row used by active fight HUDs. The circle
 // uses the fighter's configured character color; the adjacent P# identifies
 // the actual local/server slot independently of that color.
-export function drawPlayerStatusIndicator(ctx, { x, y, playerNumber, color, stats, name = '' }) {
-  const width = 204;
-  const height = 29;
-  const safeColor = color || '#D7D8E0';
+function mixRgb(a, b, amount) {
+  const parse = value => {
+    const hex = String(value || '').replace('#', '');
+    const full = hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex;
+    const n = Number.parseInt(full, 16);
+    return Number.isFinite(n) ? [(n >> 16) & 255, (n >> 8) & 255, n & 255] : [255, 255, 255];
+  };
+  const aa = parse(a), bb = parse(b);
+  return `rgb(${aa.map((v, i) => Math.round(v + (bb[i] - v) * amount)).join(',')})`;
+}
+
+function stockDamageColor(damage) {
+  const stops = [[0, '#FFFFFF'], [40, '#36E77B'], [100, '#FFE34D'], [180, '#FF3D43'], [320, '#4B061B']];
+  const value = Math.max(0, Math.min(320, Number(damage) || 0));
+  for (let i = 1; i < stops.length; i++) {
+    if (value <= stops[i][0]) {
+      const [from, fromColor] = stops[i - 1];
+      const [to, toColor] = stops[i];
+      return mixRgb(fromColor, toColor, (value - from) / (to - from));
+    }
+  }
+  return stops[stops.length - 1][1];
+}
+
+export function drawPlayerStatusIndicator(ctx, { x, y, playerNumber, color, stats = '', name = '', fighter = null, stocks: stockCount, damage: damageValue }) {
+  const width = 238;
+  const height = 50;
+  const safeColor = color || fighter?.char?.color || '#D7D8E0';
+  const statText = String(stats || '');
+  const stocks = fighter?.stocks ?? stockCount;
+  const damage = fighter?.damage ?? damageValue ?? 0;
+  const secondary = statText.replace(/^[·|]\s*|\s*[·|]$/g, '').trim();
   ctx.save();
-  ctx.fillStyle = 'rgba(6, 8, 20, 0.42)';
+  ctx.fillStyle = 'rgba(6, 8, 20, 0.46)';
   ctx.beginPath();
-  ctx.roundRect(x, y, width, height, 8);
+  ctx.roundRect(x, y, width, height, 12);
   ctx.fill();
-  ctx.strokeStyle = `${safeColor}88`;
+  ctx.strokeStyle = 'rgba(255,255,255,.14)';
   ctx.lineWidth = 1;
   ctx.stroke();
 
+  // The circle uses the configured character color; the stock numeral itself
+  // tracks damage continuously through the white→green→maroon ramp.
   ctx.fillStyle = safeColor;
   ctx.beginPath();
-  ctx.arc(x + 14, y + height / 2, 8, 0, Math.PI * 2);
+  ctx.arc(x + 27, y + height / 2, 20, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,.82)';
+  ctx.strokeStyle = 'rgba(255,255,255,.78)';
   ctx.lineWidth = 1;
   ctx.stroke();
+  if (stocks != null) {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = stockDamageColor(damage);
+    ctx.font = '900 25px Orbitron, sans-serif';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(3,5,12,.88)';
+    ctx.shadowColor = 'rgba(0,0,0,.42)';
+    ctx.shadowBlur = 4;
+    const stockLabel = String(Math.max(0, Math.floor(Number(stocks) || 0)));
+    ctx.strokeText(stockLabel, x + 27, y + height / 2 + 1);
+    ctx.fillText(stockLabel, x + 27, y + height / 2 + 1);
+    ctx.shadowBlur = 0;
+  }
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
+  ctx.fillStyle = safeColor;
+  ctx.font = 'bold 8px Orbitron, sans-serif';
+  ctx.fillText(`P${playerNumber}`, x + 54, y + 13, 23);
   ctx.fillStyle = 'rgba(255,255,255,.96)';
-  ctx.font = 'bold 10px Orbitron, sans-serif';
-  ctx.fillText(`P${playerNumber}`, x + 28, y + height / 2, 25);
+  ctx.font = '700 10px Rajdhani, sans-serif';
+  ctx.fillText(String(name || '').toUpperCase(), x + 79, y + 13, 88);
 
-  const nameX = x + 55;
-  ctx.fillStyle = 'rgba(255,255,255,.62)';
-  ctx.font = '600 8px Rajdhani, sans-serif';
-  ctx.fillText(String(name || '').toUpperCase(), nameX, y + height / 2, 54);
+  if (fighter) drawCompactPlayerMeters(ctx, fighter, x + 171, y + 8, 56);
 
-  ctx.fillStyle = 'rgba(255,255,255,.94)';
+  const damageLabel = fighter?.damage != null || damageValue != null ? `${Math.floor(Math.max(0, Number(damage) || 0))}%` : '';
+  const lowerLabel = [damageLabel, secondary].filter(Boolean).join('  ·  ');
+  ctx.fillStyle = 'rgba(255,255,255,.82)';
   ctx.font = 'bold 9px Orbitron, sans-serif';
-  ctx.textAlign = 'right';
-  ctx.fillText(String(stats || ''), x + width - 8, y + height / 2, width - 116);
+  ctx.fillText(lowerLabel, x + 55, y + 35, width - 65);
   ctx.restore();
 }
 
-// Compact power/super meters preserve the combat resource feedback while
-// keeping the stock and damage indicator free of large player panels.
-export function drawCompactPlayerMeters(ctx, fighter, x, y) {
+// Two compact, unlabeled meters sit beside the fighter name. Super is always
+// above power; power follows the character's configured color.
+export function drawCompactPlayerMeters(ctx, fighter, x, y, requestedWidth = 62) {
   if (!fighter) return;
-  const width = 108;
-  const labelWidth = 24;
-  const barWidth = width - labelWidth;
-  const barHeight = 5;
-  const powerMax = Math.max(1, fighter._maxPowerCooldown || 1);
-  const power = fighter.powerCooldown > 0
+  const barWidth = requestedWidth;
+  const barHeight = 4;
+  const hasPowerState = Number.isFinite(Number(fighter.powerCooldown));
+  const powerMax = Math.max(1, fighter._maxPowerCooldown || fighter.powerCooldown || 300);
+  const power = !hasPowerState ? 0 : fighter.powerCooldown > 0
     ? Math.max(0, Math.min(1, 1 - fighter.powerCooldown / powerMax))
     : 1;
   const superValue = Math.max(0, Math.min(1, (fighter.superMeter || 0) / Math.max(1, fighter.maxSuper || 1)));
 
   ctx.save();
-  ctx.font = 'bold 8px Orbitron, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  [['PWR', power, fighter.char?.color || '#7EE6A5'], ['SUP', superValue, '#FFD36A']].forEach(([label, value, color], index) => {
-    const rowY = y + index * 11;
-    ctx.fillStyle = 'rgba(5,8,20,.55)';
-    ctx.beginPath(); ctx.roundRect(x + labelWidth, rowY, barWidth, barHeight, 2); ctx.fill();
+  [['#FFD447', superValue], [fighter.char?.color || '#7EE6A5', power]].forEach(([color, value], index) => {
+    const rowY = y + index * 8;
+    ctx.fillStyle = 'rgba(5,8,20,.72)';
+    ctx.beginPath(); ctx.roundRect(x, rowY, barWidth, barHeight, 2); ctx.fill();
     if (value > 0) {
       ctx.fillStyle = color;
       ctx.shadowColor = color;
-      ctx.shadowBlur = value >= 1 ? 5 : 0;
-      ctx.beginPath(); ctx.roundRect(x + labelWidth, rowY, barWidth * value, barHeight, 2); ctx.fill();
+      ctx.shadowBlur = value >= 1 ? 4 : 0;
+      ctx.beginPath(); ctx.roundRect(x, rowY, barWidth * value, barHeight, 2); ctx.fill();
       ctx.shadowBlur = 0;
     }
-    ctx.fillStyle = 'rgba(255,255,255,.72)';
-    ctx.fillText(label, x, rowY + barHeight / 2);
   });
   ctx.restore();
 }

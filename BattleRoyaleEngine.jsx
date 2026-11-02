@@ -744,12 +744,13 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
       // Actual participant slots, including eliminated players, stay visible
       // in one compact top-right stack.
       fighters.forEach((fighter, index) => drawPlayerStatusIndicator(ctx, {
-        x: VIEW_W - 220,
-        y: 42 + index * 32,
+        x: VIEW_W - 246,
+        y: 42 + index * 54,
         playerNumber: Number.isInteger(fighter.playerIndex) ? fighter.playerIndex + 1 : index + 1,
         color: fighter.char?.color,
         name: fighter._name || fighter.char?.name,
-        stats: `STK ${Math.max(0, fighter.stocks)} · ${Math.floor(fighter.damage || 0)}%`,
+        fighter,
+        stocks: fighter.stocks, damage: fighter.damage,
       }));
 
       // The small map stays separate from the participant rows and keeps the
