@@ -659,6 +659,122 @@ button:focus-visible, [role='button']:focus-visible, input:focus-visible, select
 .e6-shop-preview-row > .w-56 { flex: 0 0 14rem; }
 .e6-equip-tabs { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
 
+/* Active gameplay canvases fill the browser viewport. Intrinsic canvas
+   coordinates stay untouched; object-fit crops the view on unusual aspect
+   ratios instead of distorting characters and stage geometry. */
+html.el6-gameplay-active,
+body.el6-gameplay-active {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+.el6-game-canvas-host,
+#el6-volleyball-canvas-host {
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  overflow: hidden !important;
+  background: #06040f !important;
+}
+.el6-game-canvas-host > canvas,
+.el6-game-canvas-host canvas,
+#el6-volleyball-canvas-host > canvas.el6-volleyball-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  min-width: 100vw !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+  z-index: 1 !important;
+}
+.el6-game-canvas-host[data-match-active="true"],
+#el6-volleyball-canvas-host[data-match-active="true"] {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+}
+
+/* Platform Fighter and Story Mode render outside the shared match portal. */
+.el6-gameplay-shell {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  overflow: hidden !important;
+  z-index: 5 !important;
+  background: #06040f !important;
+}
+.el6-gameplay-shell > canvas.el6-fullscreen-gameplay-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+.el6-gameplay-shell > :not(canvas) {
+  position: relative;
+  z-index: 2;
+}
+.el6-story-gameplay-screen {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  overflow: hidden !important;
+  z-index: 5 !important;
+  background: #07050f !important;
+}
+.el6-story-gameplay-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
 /* All active-mode pause controls share one safe-area-aware anchor. Several
    older sport screens carry legacy corner-placement classes; this final rule
    normalizes those without moving quit or other match controls. */

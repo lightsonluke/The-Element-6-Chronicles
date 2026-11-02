@@ -13,6 +13,7 @@ import StoryEpilogue from './StoryEpilogue.jsx';
 import { STORY_BOOKS, BOOK_ROLE_RULES, CANON_LOCKS, STORY_SAVE_SLOTS, ALL_STORY_HERO_IDS, defaultStoryProgress, mergeStoryProgress, calculateStoryProgress, getChapterIndex, canonicalTextForChapter } from './storyModeOverhaul.js';
 import { music } from './music.js';
 import { readGamepadInput } from './controllerProfiles.js';
+import { acquireGameplayViewport } from './gameplayViewport.js';
 
 const W=960, H=560, G=0.48, J=-11, SPEED=4.1;
 const SAVE_VERSION=4;
@@ -123,6 +124,10 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
   const deleteSave=(slot)=>{const ns=[...slots];ns[slot]=null;setSlots(ns);try{localStorage.setItem('element6_story_slots_v4',JSON.stringify(ns))}catch{}};
 
   useEffect(()=>{ if(screen!=='game')return; music.play('story'); return()=>music.stop() },[screen]);
+  useEffect(()=>{
+    if(screen!=='game'||battle)return undefined;
+    return acquireGameplayViewport();
+  },[screen,battle]);
 
   const beginMatch=useCallback((m, isBounty=false)=>{
     const opponent=m.enemyIds?.[0]||findCharacterByTitle(m.title);
@@ -217,10 +222,10 @@ export default function StoryMode({ onBack, progress, onUnlockHero, onUnlockVill
   if(epilogue)return <StoryEpilogue onBack={()=>setEpilogue(false)}/>;
   if(battle)return <StoryBattle heroId={save.currentHeroId} villainId={battle.opponent} enemyIds={battle.enemyIds} stageId={battle.stage} difficulty={battle.difficulty} battleTitle={battle.title} storyStocks={battle.stocks} storyTime={battle.time} narrativeLoss={battle.kind==='narrative-loss'} onEnd={finishBattle} equippedAccessories={equippedAccessories} equippedSkins={equippedSkins} equippedShikigami={equippedShikigami} equippedEmotes={equippedEmotes}/>;
 
-  return <div ref={fullRef} className="relative w-full flex flex-col items-center gap-2 text-white">
+  return <div ref={fullRef} className="el6-story-gameplay-screen relative w-full flex flex-col items-center gap-2 text-white">
     <button onClick={()=>{keysRef.current={};setShowPause(v=>!v)}} aria-label={showPause?'Resume story':'Pause story'} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs">{showPause?'RESUME':'PAUSE'}</button>
-    <div className="w-full max-w-[960px] flex items-center justify-between px-2 py-1"><div><span className="text-[10px] tracking-[.3em] text-white/35">BOOK {book.number}</span><h2 className="font-heading text-lg tracking-widest">{book.title}</h2><span className="text-[10px] text-white/45">{book.hub} • {role.anchor?'ANCHOR HERO':'SECONDARY ROLE: '+role.role}</span></div><div className="flex items-center gap-2"><span className="text-xs text-white/60">Progress {percent}%</span><button onClick={()=>setShowSettings(true)} className="px-3 py-1.5 bg-white/10 rounded-lg text-xs">SETTINGS</button><button onClick={()=>{persist({currentX:stateRef.current?.player.x,currentY:stateRef.current?.player.y});onBack?.()}} className="px-3 py-1.5 bg-white/10 rounded-lg text-xs">MENU</button></div></div>
-    <div className="relative w-full max-w-[960px]"><canvas ref={canvasRef} width={W} height={H} className="w-full border border-white/10 rounded-xl shadow-2xl"/><div className="absolute top-3 left-3 text-[10px] text-white/50">← → / A D MOVE • SPACE / ↑ JUMP • E INTERACT • ESC/TAB CHANGE HERO</div><div className="absolute top-3 right-3 flex gap-2 text-xs"><span className="px-2 py-1 rounded bg-black/50">◆ {save.collectedShards||0}</span><span className="px-2 py-1 rounded bg-black/50">Residue {save.residue||0}</span></div>{message&&<div className="absolute bottom-16 left-1/2 -translate-x-1/2 px-5 py-2 rounded-lg bg-black/75 border border-white/15 text-xs font-heading tracking-widest">{message}</div>}</div>
+    <div className="relative z-20 w-full flex items-center justify-between px-4 py-2 pl-20"><div><span className="text-[10px] tracking-[.3em] text-white/55">BOOK {book.number}</span><h2 className="font-heading text-lg tracking-widest">{book.title}</h2><span className="text-[10px] text-white/65">{book.hub} • {role.anchor?'ANCHOR HERO':'SECONDARY ROLE: '+role.role}</span></div><div className="flex items-center gap-2"><span className="text-xs text-white/75">Progress {percent}%</span><button onClick={()=>setShowSettings(true)} className="px-3 py-1.5 bg-black/55 border border-white/20 rounded-lg text-xs">SETTINGS</button><button onClick={()=>{persist({currentX:stateRef.current?.player.x,currentY:stateRef.current?.player.y});onBack?.()}} className="px-3 py-1.5 bg-black/55 border border-white/20 rounded-lg text-xs">MENU</button></div></div>
+    <div className="absolute inset-0"><canvas ref={canvasRef} width={W} height={H} className="el6-story-gameplay-canvas"/><div className="absolute top-24 left-4 text-[10px] text-white/65 drop-shadow">← → / A D MOVE • SPACE / ↑ JUMP • E INTERACT • ESC/TAB CHANGE HERO</div><div className="absolute top-24 right-4 flex gap-2 text-xs"><span className="px-2 py-1 rounded bg-black/60">◆ {save.collectedShards||0}</span><span className="px-2 py-1 rounded bg-black/60">Residue {save.residue||0}</span></div>{message&&<div className="absolute bottom-16 left-1/2 -translate-x-1/2 px-5 py-2 rounded-lg bg-black/75 border border-white/15 text-xs font-heading tracking-widest">{message}</div>}</div>
     {showPause&&<StoryPauseOverlay tab={pauseTab} setTab={setPauseTab} save={save} book={book} hero={hero} percent={percent} onSettings={()=>{setShowPause(false);setShowSettings(true)}} onClose={()=>setShowPause(false)} onExit={()=>{persist({currentX:stateRef.current?.player.x,currentY:stateRef.current?.player.y});setShowPause(false);onBack?.()}}/>}
     {showSettings&&<StorySettingsOverlay unlockedIds={unlockedIds} currentHeroId={save.currentHeroId} onChangeHero={changeHero} onClose={()=>setShowSettings(false)}/>} 
     {cutscene&&<StoryCutscene text={cutscene.id==='cold_open'?'THE SHATTERING — THE STORY BEGINS':beatText(cutscene.id)} book={cutscene.book} canon={CANON_LOCKS.has(cutscene.id)||/sacrifice|mountain|evil|succession/.test(cutscene.id)} hero={hero} onDone={()=>{

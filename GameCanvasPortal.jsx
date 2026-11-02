@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { acquireGameplayViewport } from './gameplayViewport.js';
 
 const HOST_ID = 'el6-game-canvas-host';
 
@@ -32,9 +33,11 @@ export default function GameCanvasPortal({ children, gameMode = null }) {
   useEffect(() => {
     if (!host) return undefined;
     host.dataset.matchActive = 'true';
+    const releaseViewport = acquireGameplayViewport();
     return () => {
       delete host.dataset.matchActive;
       delete host.dataset.gameMode;
+      releaseViewport();
     };
   }, [host]);
 

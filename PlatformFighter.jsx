@@ -31,6 +31,7 @@ import { buildHazardsFromStage, buildObjectsFromStage } from './stageHazards.js'
 import { mergeBotCosmetics } from './botCosmetics.js';
 import { readGamepadInput } from './controllerProfiles.js';
 import GameIcon from "./GameIcon.jsx";
+import { acquireGameplayViewport } from './gameplayViewport.js';
 
 // Bigger stages — 1280x720 internal resolution (canvas scales to fill the screen via CSS)
 const W = 1280;
@@ -590,6 +591,8 @@ export default function PlatformFighter({
   const onMoveRef = useRef(onMove);
   onMoveRef.current = onMove;
   useClipRecorder(canvasRef);
+
+  useEffect(() => acquireGameplayViewport(), []);
 
   // Generate random cosmetics for bot fighter
   const botCharIds = p2IsCPU && p2Char ? [p2Char] : [];
@@ -1566,14 +1569,14 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
   }, [winner]);
 
   return (
-    <div className="relative flex flex-col items-center gap-2 w-full">
+    <div className="el6-gameplay-shell relative flex flex-col items-center gap-2 w-full">
       <div className="w-full px-1 max-w-[1280px]">
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }}
           className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80">PAUSE (ESC)</button>
       </div>
       <canvas
         ref={canvasRef} width={W} height={H}
-        className="border-2 border-border rounded-lg shadow-2xl w-full"
+        className="el6-fullscreen-gameplay-canvas border-2 border-border rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
       />
       {countdown > 0 && !settings.hideCountdown && (
