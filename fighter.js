@@ -2569,6 +2569,24 @@ export function applyHit(attacker, defender) {
     defender.hitstun = Math.min(50, Math.max(8, Math.round(L.hitstun * controlHitstunMul)));
     defender._mvLaunch = { fric: MV_FRIC };
   }
+  // Leave a small combo window after the attacker recovers. Count any active
+  // frames still remaining, then add 10–17% of the move's endlag as extra stun.
+  const ad = attacker.attackData;
+  const moveSlot = ad._mv?.m?.slot || ad.mvSlot;
+  const isHeavyMove = !!ad.isHeavy || !!ad.isGroundPound || ['uh', 'dh', 'sh', 'gp'].includes(moveSlot);
+  const isSignatureMove = !ad.isNormal && !ad.isSuper && !ad.isRecovery && (
+    ['us', 'ds', 'ss'].includes(moveSlot) ||
+    ['up', 'down', 'side', 'upSignature', 'downSignature', 'sideSignature'].includes(ad.sigType)
+  );
+  const stunRatio = isHeavyMove ? 1.10 : isSignatureMove ? 1.17 : 1.12;
+  const rawEndlag = Number(ad._mv?.m?.fr?.[2] ?? ad.endlagFrames);
+  const moveEndlag = Number.isFinite(rawEndlag) ? Math.max(0, rawEndlag) : 0;
+  const remainingLockout = Math.max(0, Number(attacker.attackTimer) || 0, moveEndlag);
+  const endlagBasis = moveEndlag > 0 ? moveEndlag : remainingLockout;
+  if (remainingLockout > 0) {
+    const comboStun = Math.ceil((remainingLockout + endlagBasis * (stunRatio - 1)) * controlHitstunMul);
+    defender.hitstun = Math.max(defender.hitstun, comboStun);
+  }
   // A third-party hit always hard-cancels the defender's current attack/charge.
   // This prevents an interrupted Gen I attack from leaking into the running/idle pose.
   defender.attackHold = null;
