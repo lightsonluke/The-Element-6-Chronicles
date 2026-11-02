@@ -4,7 +4,7 @@ import { ARCH } from './mvArch.js';
 
 const cache = new Map();
 export const SLOTS = ['us', 'ds', 'ss', 'uh', 'dh', 'sh', 'rc', 'sp', 'gp'];
-const STARTUP_MUL = { us: 0.90, ds: 0.90, ss: 0.90, uh: 0.86, dh: 0.86, sh: 0.86, rc: 0.90, sp: 0.96, gp: 0.90 };
+const STARTUP_MUL = { us: 0.90, ds: 0.90, ss: 0.90, uh: 0.86, dh: 0.86, sh: 0.86, rc: 0.90, sp: 0.80, gp: 0.90 };
 
 export function hasRoster(charId) { return !!ROSTER[charId]; }
 
@@ -19,7 +19,8 @@ export function buildMove(charId, slot) {
   const startupMul = STARTUP_MUL[slot] || 0.90;
   const [authoredStartup, active, authoredEndlag] = rec.fr;
   const startup = Math.min(authoredStartup, Math.max(4, Math.round(authoredStartup * startupMul)));
-  const endlag = Math.min(authoredEndlag, Math.max(2, Math.floor(authoredEndlag * 0.86)));
+  const endlagMul = slot === 'sp' ? 0.76 : 0.86;
+  const endlag = Math.min(authoredEndlag, Math.max(2, Math.floor(authoredEndlag * endlagMul)));
   const fr = [startup, active, endlag];
   let def = ARCH[rec.arch];
   if (typeof def === 'function') def = def({ fr, skin: rc.skin, mods: rec.mods, charId, reach: rc.reach });

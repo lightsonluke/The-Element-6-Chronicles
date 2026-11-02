@@ -1340,7 +1340,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           const crossoverAttackColor = getCrossoverAttackColor(f.char.id, equippedCrossovers);
           drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, moveColor || crossoverAttackColor || f.attackData.color || renderColor, f.attackData.isNormal, effId, f.char.power, f.powerActive);
         }
-        if (f.attackData && f.state === 'superAttack') drawSuperEffect(ctx, f.x, f.y, crossoverColors?.super || renderColor, f.attackData.progress, f.char.superMove?.name, effId);
+        if (f.attackData && f.state === 'superAttack' && !f.attackData._mv) drawSuperEffect(ctx, f.x, f.y, crossoverColors?.super || renderColor, f.attackData.progress, f.char.superMove?.name, effId);
         if (f.hitEffects) f.hitEffects = f.hitEffects.filter(he => drawHitSparks(ctx, he.x, he.y, he.color, f.frame, he.spawnFrame));
         // Nametag (toggleable)
         if (settings.showNametags !== false) {

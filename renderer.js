@@ -174,6 +174,11 @@ function solveFighterPose(s, frame, state, facing, emote, attackData, charData, 
     const choreo = mvChoreo(null, attackData);
     if (choreo) return solvePose({ s, frame, state, facing, motion, emoteVars: null, attack: null, gen1: null, choreo });
   }
+  if (attackData && !attackData.holding && attackData.type !== 'attackHold' &&
+      (state === 'attacking' || state === 'superAttack') && mvHasRoster(charData?.id)) {
+    // Roster characters use only the Move Engine pose; do not layer legacy Gen I–V body animation under it.
+    return solvePose({ s, frame, state, facing, motion, emoteVars: null, attack: null, gen1: null });
+  }
   let emoteVars = null;
   if (emote) { try { emoteVars = getEmotePoseVars(emote.id, emote.progress, facing) || null; } catch (e) { emoteVars = null; } }
   let gen1 = null;
@@ -1029,7 +1034,7 @@ function drawResonanceConstructAttack(ctx, x, y, attack, progress, facing, color
 }
 
 export function drawAttackEffect(ctx, x, y, attack, progress, facing, color, isNormal = false, charId = '', power = null, powerActive = null) {
-  if (attack && attack._mv) return;                       // roster moves are painted by the move engine inside drawStickman
+  if (attack && (attack._mv || mvHasRoster(charId))) return; // never stack legacy attack art over a roster move
   if (attack?.resonanceFamily) {
     // The actual construct weapon is animated in-hand by drawConstructWeapon.
     // Do not draw a second unrelated generic blade/line overlay here.
