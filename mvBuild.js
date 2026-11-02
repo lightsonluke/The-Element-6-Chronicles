@@ -4,8 +4,6 @@ import { ARCH } from './mvArch.js';
 
 const cache = new Map();
 export const SLOTS = ['us', 'ds', 'ss', 'uh', 'dh', 'sh', 'rc', 'sp', 'gp'];
-const STARTUP_MUL = { us: 0.90, ds: 0.90, ss: 0.90, uh: 0.86, dh: 0.86, sh: 0.86, rc: 0.90, sp: 0.80, gp: 0.90 };
-
 export function hasRoster(charId) { return !!ROSTER[charId]; }
 
 export function buildMove(charId, slot) {
@@ -14,12 +12,11 @@ export function buildMove(charId, slot) {
   if (m) return m;
   const rc = ROSTER[charId]; if (!rc) return null;
   const rec = rc.moves[slot]; if (!rec) return null;
-  // Trim slow windups a little and shorten recovery without changing the active window.
-  // Heavy starts get a slightly larger trim; supers keep most of their authored buildup.
-  const startupMul = STARTUP_MUL[slot] || 0.90;
+  // Keep authored startup and active frames. Shorten only recovery so attacks
+  // retain their original timing but become actionable sooner afterward.
   const [authoredStartup, active, authoredEndlag] = rec.fr;
-  const startup = Math.min(authoredStartup, Math.max(4, Math.round(authoredStartup * startupMul)));
-  const endlagMul = slot === 'sp' ? 0.76 : 0.86;
+  const startup = authoredStartup;
+  const endlagMul = slot === 'sp' ? 0.50 : ['uh', 'dh', 'sh'].includes(slot) ? 0.62 : 0.68;
   const endlag = Math.min(authoredEndlag, Math.max(2, Math.floor(authoredEndlag * endlagMul)));
   const fr = [startup, active, endlag];
   let def = ARCH[rec.arch];
