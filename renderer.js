@@ -188,7 +188,7 @@ function solveFighterPose(s, frame, state, facing, emote, attackData, charData, 
     return solvePose({ s, frame, state, facing, motion, emoteVars: null, attack: null, gen1: null });
   }
   let emoteVars = null;
-  if (emote) { try { emoteVars = getEmotePoseVars(emote.id, emote.progress, facing) || null; } catch (e) { emoteVars = null; } }
+  if (emote) { try { emoteVars = getEmotePoseVars(emote.id, emote.progress, facing, charData) || null; } catch (e) { emoteVars = null; } }
   let gen1 = null;
   if (charData?.id?.startsWith('g1_') && attackData && (state === 'attacking' || state === 'superAttack')) {
     try {
@@ -641,10 +641,10 @@ function drawWeapon(ctx, weapon, color, facing, limbW) {
 // Animated limb positions (relative to the fighter's feet at 0,0) so cosmetics can attach to
 // the real moving arms/legs. Reads the same rig the renderer paints, so they never disagree.
 // "left"/"right" are screen sides; the lead (guard-side) limbs are on the side the fighter faces.
-export function getLimbPose(frame, state = 'idle', facing = 1, scale = 1, powerActive, emote, motion = null, attackData = null) {
+export function getLimbPose(frame, state = 'idle', facing = 1, scale = 1, powerActive, emote, motion = null, attackData = null, charData = null) {
   if (powerActive === 'range_boost') scale *= 1.35;
   const s = BASE_SCALE * scale;
-  const J = solveFighterPose(s, frame, state, facing, emote, attackData, null, motion);
+  const J = solveFighterPose(s, frame, state, facing, emote, attackData, charData, motion);
   const nearIsRight = (facing < 0 ? -1 : 1) > 0;
   const Lm = nearIsRight ? J.far : J.near, Rm = nearIsRight ? J.near : J.far;
   const pt = (p) => ({ x: p[0], y: p[1] });

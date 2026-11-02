@@ -40,17 +40,17 @@ export function drawSportChar(ctx, x, y, char, opts = {}) {
   if (!jersey) {
     const skinParts = getSkinParts(char?.id, equippedSkins);
     const acc = getAccessory(equippedAccessories[char?.id]);
-    skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, x, y, p.type, p.color, frame, scale, char?.id, state, facing, powerActive));
-    if (acc && isBehindAccessory(acc.type)) drawAccessory(ctx, x, y, acc.type, resolveAccColor(acc, char), frame, scale, char?.id, state, facing, powerActive);
+    skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, x, y, p.type, p.color, frame, scale, char?.id, state, facing, powerActive, emote));
+    if (acc && isBehindAccessory(acc.type)) drawAccessory(ctx, x, y, acc.type, resolveAccColor(acc, char), frame, scale, char?.id, state, facing, powerActive, emote);
   }
   drawStickman(ctx, x, y, color, facing, frame, scale, char?.isSpirit, state, char, powerActive, noWeapon, null, emote, attackData, motion);
   if (!jersey) {
     const skinParts = getSkinParts(char?.id, equippedSkins);
     const acc = getAccessory(equippedAccessories[char?.id]);
-    skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, x, y, p.type, p.color, frame, scale, char?.id, state, facing, powerActive));
-    if (acc && !isBehindAccessory(acc.type)) drawAccessory(ctx, x, y, acc.type, resolveAccColor(acc, char), frame, scale, char?.id, state, facing, powerActive);
+    skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, x, y, p.type, p.color, frame, scale, char?.id, state, facing, powerActive, emote));
+    if (acc && !isBehindAccessory(acc.type)) drawAccessory(ctx, x, y, acc.type, resolveAccColor(acc, char), frame, scale, char?.id, state, facing, powerActive, emote);
   }
-  if (jersey) drawSportJersey(ctx, x, y, color, char?.id, sport, frame, scale, state, facing, teamColor, motion);
+  if (jersey) drawSportJersey(ctx, x, y, color, char?.id, sport, frame, scale, state, facing, teamColor, motion, emote, char);
 }
 
 const SPORT_ACCENTS = {
@@ -58,8 +58,8 @@ const SPORT_ACCENTS = {
   tennis: '#FFFFFF', track: '#FFD700', basketball: '#222222', dodgeball: '#FF6600',
 };
 
-export function drawSportJersey(ctx, x, y, color, charId, sport, frame = 0, scale = 1, state = 'idle', facing = 1, teamColor, motion = null) {
-  const pose = getLimbPose(frame, state, facing, scale, null, null, motion);
+export function drawSportJersey(ctx, x, y, color, charId, sport, frame = 0, scale = 1, state = 'idle', facing = 1, teamColor, motion = null, emote = null, charData = null) {
+  const pose = getLimbPose(frame, state, facing, scale, null, emote, motion, null, charData);
   const s = pose.s;
   const num = getCharNumber(charId);
   const accent = SPORT_ACCENTS[sport] || '#FFFFFF';

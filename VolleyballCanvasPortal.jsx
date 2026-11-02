@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { observeResponsiveCanvasHost } from './responsiveGameCanvas.js';
 
 const HOST_ID = 'el6-volleyball-canvas-host';
 
@@ -31,7 +32,9 @@ function getHost() {
 export default function VolleyballCanvasPortal({ children }) {
   const host = getHost();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (!host) return undefined;
+    const releaseCanvases = observeResponsiveCanvasHost(host);
     host?.setAttribute('data-match-active', 'true');
     document.documentElement.classList.add('el6-volleyball-active');
     document.body.classList.add('el6-volleyball-active');
@@ -39,6 +42,7 @@ export default function VolleyballCanvasPortal({ children }) {
       host?.removeAttribute('data-match-active');
       document.documentElement.classList.remove('el6-volleyball-active');
       document.body.classList.remove('el6-volleyball-active');
+      releaseCanvases();
     };
   }, [host]);
 

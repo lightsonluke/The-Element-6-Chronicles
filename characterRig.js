@@ -5,13 +5,13 @@ import { getEmotePoseVars } from './emotePose.js';
 const rotate = (x, y, angle) => ({ x: x * Math.cos(angle) - y * Math.sin(angle), y: x * Math.sin(angle) + y * Math.cos(angle) });
 const midpoint = (a, b, amount = .5) => ({ x: a.x + (b.x - a.x) * amount, y: a.y + (b.y - a.y) * amount });
 
-export function getCharacterRig(frame = 0, state = 'idle', facing = 1, scale = 1, powerActive = null, emote = null) {
+export function getCharacterRig(frame = 0, state = 'idle', facing = 1, scale = 1, powerActive = null, emote = null, charData = null) {
   if (powerActive === 'range_boost') scale *= 1.35;
   const s = 42 * scale;
   let bob = 0, lean = 0, leftArm = .08, rightArm = -.08, leftLeg = -.09, rightLeg = .09;
   const time = frame * .18;
   if (emote) {
-    const pose = getEmotePoseVars(emote.id, emote.progress, facing);
+    const pose = getEmotePoseVars(emote.id, emote.progress, facing, charData);
     if (pose) { bob = pose.bob || 0; lean = pose.lean || 0; leftArm += (pose.armSwingL || 0) + (pose.punchArmL || 0); rightArm += (pose.armSwingR || 0) + (pose.punchArmR || 0); leftLeg += pose.legLOver ?? -(pose.legSwing || 0); rightLeg += pose.legROver ?? (pose.legSwing || 0); }
   } else if (state === 'moving' || state === 'running') {
     const stride = Math.sin(time); bob = -Math.abs(stride) * 2.7; lean = facing * .11;
@@ -48,7 +48,7 @@ function foot(ctx, point, angle, s, color) {
 }
 
 export function drawElement6Rig(ctx, frame, color, facing, state, charData, powerActive, emote, scale = 1) {
-  const rig = getCharacterRig(frame, state, facing, scale, powerActive, emote);
+  const rig = getCharacterRig(frame, state, facing, scale, powerActive, emote, charData);
   const ap = charData?.appearance || {}, torsoColor = ap.torso || color, headColor = ap.head || torsoColor;
   const armL = ap.armL || torsoColor, armR = ap.armR || torsoColor, legL = ap.legL || torsoColor, legR = ap.legR || torsoColor;
   ctx.save(); ctx.shadowColor = torsoColor; ctx.shadowBlur = 10;

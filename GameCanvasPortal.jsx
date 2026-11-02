@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { acquireGameplayViewport } from './gameplayViewport.js';
+import { observeResponsiveCanvasHost } from './responsiveGameCanvas.js';
 
 const HOST_ID = 'el6-game-canvas-host';
 
@@ -30,13 +31,15 @@ export default function GameCanvasPortal({ children, gameMode = null }) {
   const host = getHost();
 
   // Keep hooks unconditional so server rendering / hydration does not change hook order.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!host) return undefined;
     host.dataset.matchActive = 'true';
     const releaseViewport = acquireGameplayViewport();
+    const releaseCanvases = observeResponsiveCanvasHost(host);
     return () => {
       delete host.dataset.matchActive;
       delete host.dataset.gameMode;
+      releaseCanvases();
       releaseViewport();
     };
   }, [host]);

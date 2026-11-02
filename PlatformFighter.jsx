@@ -32,6 +32,7 @@ import { mergeBotCosmetics } from './botCosmetics.js';
 import { readGamepadInput } from './controllerProfiles.js';
 import GameIcon from "./GameIcon.jsx";
 import { acquireGameplayViewport } from './gameplayViewport.js';
+import { observeResponsiveCanvas } from './responsiveGameCanvas.js';
 
 // Bigger stages — 1280x720 internal resolution (canvas scales to fill the screen via CSS)
 const W = 1280;
@@ -592,7 +593,11 @@ export default function PlatformFighter({
   onMoveRef.current = onMove;
   useClipRecorder(canvasRef);
 
-  useEffect(() => acquireGameplayViewport(), []);
+  useEffect(() => {
+    const releaseViewport = acquireGameplayViewport();
+    const releaseCanvas = observeResponsiveCanvas(canvasRef.current);
+    return () => { releaseCanvas(); releaseViewport(); };
+  }, []);
 
   // Generate random cosmetics for bot fighter
   const botCharIds = p2IsCPU && p2Char ? [p2Char] : [];

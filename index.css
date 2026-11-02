@@ -659,9 +659,9 @@ button:focus-visible, [role='button']:focus-visible, input:focus-visible, select
 .e6-shop-preview-row > .w-56 { flex: 0 0 14rem; }
 .e6-equip-tabs { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
 
-/* Active gameplay canvases fill the browser viewport. Intrinsic canvas
-   coordinates stay untouched; object-fit crops the view on unusual aspect
-   ratios instead of distorting characters and stage geometry. */
+/* Active gameplay canvases fill the browser viewport. Their backing stores
+   resize at device pixel ratio while a uniform logical camera keeps stage
+   geometry intact; excess aspect-ratio space gets a stage-derived backdrop. */
 html.el6-gameplay-active,
 body.el6-gameplay-active {
   width: 100% !important;
@@ -675,7 +675,7 @@ body.el6-gameplay-active {
   align-items: stretch !important;
   justify-content: stretch !important;
   overflow: hidden !important;
-  background: #06040f !important;
+  background: var(--el6-gameplay-backdrop, #06040f) !important;
 }
 .el6-game-canvas-host > canvas,
 .el6-game-canvas-host canvas,
@@ -695,8 +695,9 @@ body.el6-gameplay-active {
   max-width: none !important;
   max-height: none !important;
   aspect-ratio: auto !important;
-  object-fit: cover !important;
+  object-fit: fill !important;
   object-position: center center !important;
+  background: transparent !important;
   border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -705,6 +706,16 @@ body.el6-gameplay-active {
   transform: none !important;
   z-index: 1 !important;
 }
+.el6-game-canvas-host > canvas.el6-gameplay-backdrop,
+#el6-volleyball-canvas-host > canvas.el6-gameplay-backdrop,
+.el6-gameplay-shell > canvas.el6-gameplay-backdrop,
+.el6-story-gameplay-screen canvas.el6-gameplay-backdrop {
+  z-index: 0 !important;
+  filter: blur(24px) brightness(.52) saturate(.82) !important;
+  transform: scale(1.06) !important;
+  transform-origin: center !important;
+  pointer-events: none !important;
+}
 .el6-game-canvas-host[data-match-active="true"],
 #el6-volleyball-canvas-host[data-match-active="true"] {
   position: fixed !important;
@@ -712,6 +723,11 @@ body.el6-gameplay-active {
   width: 100vw !important;
   height: 100vh !important;
   height: 100dvh !important;
+  background: var(--el6-gameplay-backdrop, #06040f) !important;
+}
+.el6-game-canvas-host[data-match-active="true"] > canvas,
+#el6-volleyball-canvas-host[data-match-active="true"] > canvas {
+  background: transparent !important;
 }
 
 /* Platform Fighter and Story Mode render outside the shared match portal. */
@@ -735,7 +751,7 @@ body.el6-gameplay-active {
   max-width: none !important;
   max-height: none !important;
   aspect-ratio: auto !important;
-  object-fit: cover !important;
+  object-fit: fill !important;
   object-position: center center !important;
   border: 0 !important;
   border-radius: 0 !important;
@@ -768,11 +784,129 @@ body.el6-gameplay-active {
   max-width: none !important;
   max-height: none !important;
   aspect-ratio: auto !important;
-  object-fit: cover !important;
+  object-fit: fill !important;
   object-position: center center !important;
   border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
+  z-index: 1 !important;
+}
+
+/* Shared Element 6 account, auth, and access-state styling. */
+.e6-auth-layout {
+  --e6-auth-line: rgba(160, 174, 205, .2);
+  --e6-auth-surface: rgba(13, 17, 32, .88);
+  --e6-auth-text: #f4f4fb;
+  --e6-auth-muted: #a8aec1;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  color: var(--e6-auth-text);
+  background:
+    radial-gradient(ellipse at 50% 12%, rgba(124, 79, 255, .2), transparent 42%),
+    radial-gradient(ellipse at 88% 82%, rgba(32, 173, 204, .12), transparent 38%),
+    #070914;
+}
+.e6-auth-layout::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  opacity: .2;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(183, 196, 228, .07) 1px, transparent 1px), linear-gradient(90deg, rgba(183, 196, 228, .07) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black, transparent 88%);
+}
+.e6-auth-wrap { position: relative; z-index: 1; }
+.e6-auth-mark {
+  color: #fff;
+  border: 1px solid rgba(207, 193, 255, .35);
+  background: linear-gradient(145deg, rgba(142, 104, 255, .48), rgba(45, 58, 105, .52));
+  box-shadow: 0 0 32px rgba(122, 94, 255, .22), inset 0 1px rgba(255, 255, 255, .2);
+}
+.e6-auth-kicker {
+  margin: 0 0 .55rem;
+  color: #c8a9ff;
+  font: 700 .67rem/1.2 Orbitron, sans-serif;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+.e6-auth-title { color: #fff; font-family: Orbitron, sans-serif; text-wrap: balance; }
+.e6-auth-subtitle, .e6-auth-footer { color: var(--e6-auth-muted); }
+.e6-auth-panel {
+  border: 1px solid var(--e6-auth-line);
+  background: linear-gradient(155deg, rgba(20, 25, 44, .96), var(--e6-auth-surface));
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .48), inset 0 1px rgba(255, 255, 255, .07);
+  backdrop-filter: blur(18px);
+}
+.e6-auth-panel label { color: #dce1f0; font-size: .85rem; }
+.e6-auth-panel input:not([type="checkbox"]), .e6-auth-panel input[type="text"], .e6-auth-panel input[type="email"], .e6-auth-panel input[type="password"] {
+  color: #f7f8fc;
+  border: 1px solid rgba(169, 180, 212, .22);
+  background: rgba(5, 8, 19, .7);
+  border-radius: .75rem;
+}
+.e6-auth-panel input::placeholder { color: #858ca2; }
+.e6-auth-panel input:focus-visible { outline: 2px solid rgba(171, 132, 255, .8); outline-offset: 2px; }
+.e6-auth-panel button { transition: transform .16s ease, border-color .16s ease, filter .16s ease; }
+.e6-auth-panel button:hover:not(:disabled) { filter: brightness(1.12); }
+.e6-auth-panel button:focus-visible, .e6-auth-footer a:focus-visible, .e6-auth-panel a:focus-visible { outline: 2px solid #c8a9ff; outline-offset: 3px; }
+.e6-auth-footer a { color: #d3baff; }
+.e6-auth-guidance { color: #bdc4d8; border: 1px solid rgba(165, 178, 213, .15); background: rgba(5, 8, 19, .48); }
+.e6-account-panel {
+  padding: 1.15rem;
+  color: #f4f4fb;
+  border: 1px solid rgba(160, 174, 205, .2);
+  border-radius: 1rem;
+  background: linear-gradient(145deg, rgba(24, 27, 48, .96), rgba(12, 16, 30, .94));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .06);
+}
+.e6-auth-section-title { margin: 0 0 .45rem; color: #f8f7ff; font: 700 .88rem Orbitron, sans-serif; letter-spacing: .045em; }
+.e6-account-copy { color: #a8aec1; font-size: .78rem; line-height: 1.5; }
+.e6-account-copy strong { color: #f4f4fb; }
+.e6-account-code { color: #d3baff; font: 700 .78rem Orbitron, sans-serif; letter-spacing: .08em; }
+.e6-auth-tabs { display: flex; gap: .5rem; margin: 0 0 .85rem; }
+.e6-auth-tabs button, .e6-auth-secondary {
+  min-height: 42px;
+  padding: .55rem .8rem;
+  color: #c7ccdc;
+  border: 1px solid rgba(160, 174, 205, .2);
+  border-radius: .65rem;
+  background: rgba(255, 255, 255, .04);
+  font: 700 .67rem Orbitron, sans-serif;
+  letter-spacing: .045em;
+}
+.e6-auth-tabs button { flex: 1; }
+.e6-auth-tabs button.is-active, .e6-auth-submit {
+  color: #fff;
+  border: 1px solid rgba(197, 169, 255, .52);
+  background: linear-gradient(110deg, #6549bd, #49388b);
+  box-shadow: 0 8px 22px rgba(79, 54, 160, .2);
+}
+.e6-auth-input {
+  width: 100%;
+  min-height: 44px;
+  padding: .65rem .8rem;
+  color: #f7f8fc;
+  border: 1px solid rgba(169, 180, 212, .22);
+  border-radius: .7rem;
+  background: rgba(5, 8, 19, .7);
+  font: inherit;
+}
+.e6-auth-input::placeholder { color: #858ca2; }
+.e6-auth-input:focus-visible, .e6-auth-submit:focus-visible, .e6-auth-secondary:focus-visible, .e6-auth-tabs button:focus-visible { outline: 2px solid #c8a9ff; outline-offset: 2px; }
+.e6-auth-submit, .e6-auth-secondary { min-height: 42px; padding: .6rem .85rem; border-radius: .7rem; font: 700 .68rem Orbitron, sans-serif; letter-spacing: .045em; }
+.e6-auth-submit:disabled { cursor: not-allowed; opacity: .5; }
+.e6-auth-secondary:hover:not(:disabled), .e6-auth-tabs button:hover { border-color: rgba(197, 169, 255, .5); }
+.e6-account-message { color: #c8cfe1; font-size: .75rem; line-height: 1.5; }
+@media (max-width: 480px) {
+  .e6-auth-layout { padding-top: max(1.5rem, env(safe-area-inset-top)); padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+  .e6-auth-title { font-size: 1.6rem; }
+  .e6-auth-panel { padding: 1.15rem; }
 }
 
 /* All active-mode pause controls share one safe-area-aware anchor. Several

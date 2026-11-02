@@ -11,6 +11,7 @@
 //   legR  — right leg absolute angle
 //
 // Facing is handled by mirroring: when facing left, left/right arms swap and negate.
+import { getCharacterPresentation } from './characterPresentation.js';
 
 const PI = Math.PI;
 const HALF_PI = PI / 2;
@@ -49,7 +50,7 @@ function mirror(pose, facing) {
 
 // ── Main entry: get emote pose vars ──
 // Returns { bob, lean, armSwingL, armSwingR, legSwing, punchArmL, punchArmR, legLOver, legROver }
-export function getEmotePoseVars(emoteId, progress, facing) {
+export function getEmotePoseVars(emoteId, progress, facing, character = null) {
   const fn = EMOTE_POSES[emoteId];
   if (!fn) return null;
   // Keep every named emote on the same 0→1 timeline in matches and previews.
@@ -58,6 +59,124 @@ export function getEmotePoseVars(emoteId, progress, facing) {
   const t = Math.max(0, Math.min(1, Number(progress) || 0));
   const raw = fn(t, facing);
   const p = mirror(raw, facing);
+  // Every gesture eases cleanly through neutral at both ends. The expressive
+  // identity layer below is bounded by the same envelope, so it cannot strand
+  // a fighter in an elemental flourish when the emote timer expires.
+  const smooth = value => { const n = Math.max(0, Math.min(1, value)); return n * n * (3 - 2 * n); };
+  const edge = smooth(t / 0.12) * smooth((1 - t) / 0.14);
+  p.bob *= edge; p.lean *= edge;
+  p.armL *= edge; p.armR *= edge; p.legL *= edge; p.legR *= edge;
+
+  const identity = getCharacterPresentation(character);
+  const pulse = Math.sin((t * 2.1 + identity.phase) * PI * 2);
+  const wave = Math.sin((t * 1.25 + identity.phase * 0.62) * PI * 2);
+  const force = edge * identity.flourish;
+  const power = identity.temperament === 'calm' ? 0.68 : identity.temperament === 'bold' ? 1.18 : 1;
+  switch (identity.element) {
+    case 'fire':
+      p.bob -= Math.abs(pulse) * 1.15 * force * power;
+      p.lean += pulse * 0.035 * force * power;
+      p.armR += wave * 0.09 * force;
+      break;
+    case 'water':
+      p.lean += wave * 0.055 * force;
+      p.armL += pulse * 0.055 * force;
+      p.armR -= pulse * 0.055 * force;
+      p.legL += wave * 0.035 * force;
+      p.legR -= wave * 0.035 * force;
+      break;
+    case 'wind':
+      p.bob -= pulse * 1.35 * force * identity.speed;
+      p.lean += wave * 0.045 * force;
+      p.legL += pulse * 0.055 * force;
+      p.legR -= pulse * 0.055 * force;
+      break;
+    case 'lightning':
+      p.lean += pulse * 0.052 * force;
+      p.armL += Math.sin(t * PI * 8 + identity.phase) * 0.07 * force;
+      p.armR -= Math.sin(t * PI * 8 + identity.phase) * 0.07 * force;
+      break;
+    case 'frost':
+      p.lean += wave * 0.028 * force;
+      p.armL += pulse * 0.035 * force;
+      p.armR += pulse * 0.035 * force;
+      break;
+    case 'plant':
+      p.lean += wave * 0.06 * force;
+      p.armL += Math.sin(t * PI * 2 + identity.phase) * 0.065 * force;
+      p.armR += Math.sin(t * PI * 2 + identity.phase + 0.8) * 0.065 * force;
+      break;
+    case 'earth': case 'metal':
+      p.bob += Math.max(0, pulse) * 0.9 * force;
+      p.lean *= 0.88;
+      p.armL *= 0.94; p.armR *= 0.94;
+      break;
+    case 'shadow':
+      p.lean += wave * 0.04 * force;
+      p.armL -= 0.035 * force;
+      p.armR += 0.035 * force;
+      break;
+    case 'space':
+      p.lean += Math.sin((t * 1.7 + identity.phase) * PI * 2) * 0.05 * force;
+      p.armL += pulse * 0.07 * force;
+      p.armR -= wave * 0.07 * force;
+      break;
+    case 'time':
+      p.lean += pulse * 0.025 * force;
+      p.bob += wave * 0.85 * force;
+      break;
+    case 'light': case 'spirit':
+      p.bob -= Math.max(0, pulse) * 0.95 * force;
+      p.armL -= 0.035 * force;
+      p.armR += 0.035 * force;
+      break;
+    case 'mind':
+      p.lean += pulse * 0.035 * force;
+      p.armL += wave * 0.065 * force;
+      p.armR -= wave * 0.065 * force;
+      break;
+    default:
+      p.lean += pulse * 0.025 * force;
+  }
+  // Canon weapons and era language provide a second, character-specific layer:
+  // reach weapons arc, blades cut cleanly, guards stay composed, and brawlers
+  // hit the beat. The bounded envelope above keeps every flourish readable and
+  // returns each pose to the neutral rig at the start and end of the emote.
+  const eraStyle = [1.08, 1.12, 0.9, 0.94, 1][identity.generation - 1] || 1;
+  const weaponForce = force * eraStyle;
+  switch (identity.weaponFamily) {
+    case 'blade':
+      p.lean += wave * 0.024 * weaponForce;
+      p.armR += pulse * 0.035 * weaponForce;
+      break;
+    case 'reach':
+      p.lean += pulse * 0.026 * weaponForce;
+      p.armL -= wave * 0.03 * weaponForce;
+      p.armR += wave * 0.03 * weaponForce;
+      break;
+    case 'ranged':
+      p.lean -= wave * 0.02 * weaponForce;
+      p.armL += pulse * 0.025 * weaponForce;
+      break;
+    case 'guard':
+      p.lean *= 0.94;
+      p.bob *= 0.94;
+      p.armL += 0.018 * weaponForce;
+      break;
+    case 'brawler':
+      p.bob -= Math.abs(pulse) * 0.65 * weaponForce;
+      p.lean += pulse * 0.022 * weaponForce;
+      break;
+    default:
+      p.lean += wave * 0.012 * weaponForce;
+  }
+  // A stable per-character phase makes shared emotes resolve into distinct
+  // timing without introducing randomness or changing input/gameplay state.
+  p.armL += Math.sin(t * PI * 2 + identity.phase * PI * 2) * 0.014 * weaponForce;
+  p.armR -= Math.sin(t * PI * 2 + identity.phase * PI * 2) * 0.014 * weaponForce;
+  if (identity.temperament === 'steady') { p.bob *= 0.9; p.lean *= 0.88; }
+  if (identity.temperament === 'playful') p.bob -= Math.abs(wave) * 0.8 * force;
+  if (identity.temperament === 'bold') p.lean += pulse * 0.018 * force;
   // Convert absolute arm angles to punchArm values
   // armAngleL = -0.28 + finalArmL = -0.28 + armSwingL + punchArmL
   // We set armSwingL = 0, so punchArmL = armL - (-0.28) = armL + 0.28

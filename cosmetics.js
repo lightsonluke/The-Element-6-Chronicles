@@ -6,6 +6,9 @@
 import { getCharNumber, getCharName } from './characterNumber.js';
 import { getEventAccessory, getEventBattlePassAccessory } from './events.js';
 import { getLimbPose } from './renderer.js';
+import { ALL_CHARS_MAP } from './allCharacters.js';
+import { getCharacterPresentation } from './characterPresentation.js';
+import { OLD_GEN_CHARS } from './eras.js';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
@@ -104,7 +107,7 @@ export const ACCESSORIES = [
 
   // Auto-generate exclusive accessories for every character (headband, gloves, shoes, cape)
   // Each character gets at least 5 exclusive accessories total (jersey + 4 here + any lore items)
-  const _ALL_CHARS_FOR_ACC = [...HEROES, ...VILLAINS, ...GUARDIANS];
+  const _ALL_CHARS_FOR_ACC = [...OLD_GEN_CHARS, ...HEROES, ...VILLAINS, ...GUARDIANS];
   _ALL_CHARS_FOR_ACC.forEach(c => {
   ACCESSORIES.push(
    { id: `acc_${c.id}_headband`, name: `${c.name} Headband`, price: 80, type: 'headband', color: c.color, exclusiveTo: c.id },
@@ -234,7 +237,7 @@ export function resolveAccColor(acc, char) {
 // Jersey shows H.O.C., character name, and character number. Shorts match color + number.
 // Jersey + shorts now track the character's actual animated limbs (bob, lean, arm + leg swing).
 export function drawSoccerKit(ctx, x, y, color, charId, frame = 0, scale = 1, state = 'idle', facing = 1, powerActive = null, emote = null) {
-  const pose = getLimbPose(frame, state, facing, scale, powerActive, emote);
+  const pose = getLimbPose(frame, state, facing, scale, powerActive, emote, null, null, ALL_CHARS_MAP[charId] || null);
   const s = pose.s;
   const charNum = getCharNumber(charId);
   const charName = (getCharName(charId) || 'H.O.C.').slice(0, 8).toUpperCase();
@@ -307,6 +310,7 @@ function drawRedesignedAccessory(ctx, p) {
     torsoTopY, torsoCY, hipY, shoulderY, feetY, handL, handR, footL, footR,
     kneeL, kneeR, shoulderL, shoulderR, elbowL, elbowR } = p;
   const t = frame * 0.05;
+  const identity = getCharacterPresentation(ALL_CHARS_MAP[charId] || charId);
   const C = color || '#B9C7D8';
   const dark = '#111827';
   const light = '#F8FAFC';
@@ -322,6 +326,28 @@ function drawRedesignedAccessory(ctx, p) {
   const round = (rx,ry,rw,rh,rad,fill=C,stroke=null,lw=1) => {ctx.beginPath();ctx.roundRect(rx,ry,rw,rh,rad);if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke();}};
   const star = (cx,cy,r,fill=C,rot=-Math.PI/2) => {const pts=[];for(let i=0;i<10;i++){const a=rot+i*Math.PI/5,rr=i%2?r*.42:r;pts.push([cx+Math.cos(a)*rr,cy+Math.sin(a)*rr]);}poly(pts,fill);};
   const gem = (cx,cy,r,fill=C) => poly([[cx,cy-r],[cx+r*.72,cy-r*.2],[cx+r*.52,cy+r*.65],[cx-r*.52,cy+r*.65],[cx-r*.72,cy-r*.2]],fill,'rgba(255,255,255,.72)',Math.max(1,s*.012));
+  const characterSigil = (cx,cy,r) => {
+    ctx.save();
+    ctx.lineWidth = Math.max(1, s * 0.018);
+    ctx.strokeStyle = identity.eraAccent;
+    ctx.fillStyle = identity.secondary;
+    ctx.shadowColor = identity.primary;
+    ctx.shadowBlur = Math.max(1, s * 0.035);
+    if (identity.sigil === 'bolt') poly([[cx+r*.08,cy-r],[cx-r*.48,cy+r*.02],[cx-r*.08,cy+r*.02],[cx-r*.2,cy+r],[cx+r*.5,cy-r*.13],[cx+r*.12,cy-r*.13]], identity.secondary, identity.eraAccent, ctx.lineWidth);
+    else if (identity.sigil === 'flame') poly([[cx,cy-r],[cx-r*.42,cy-r*.05],[cx-r*.28,cy+r*.5],[cx,cy+r],[cx+r*.3,cy+r*.45],[cx+r*.44,cy-r*.05],[cx+r*.16,cy+r*.12],[cx+r*.06,cy-r*.38]], identity.secondary, identity.eraAccent, ctx.lineWidth);
+    else if (identity.sigil === 'wave') { ctx.beginPath(); ctx.moveTo(cx-r,cy); ctx.quadraticCurveTo(cx-r*.45,cy-r*.75,cx,cy); ctx.quadraticCurveTo(cx+r*.5,cy+r*.7,cx+r,cy); ctx.stroke(); }
+    else if (identity.sigil === 'flake') { for(let i=0;i<3;i++){const a=i*Math.PI/3;line(cx-Math.cos(a)*r,cy-Math.sin(a)*r,cx+Math.cos(a)*r,cy+Math.sin(a)*r,identity.secondary,ctx.lineWidth);} }
+    else if (identity.sigil === 'leaf') { ctx.beginPath(); ctx.ellipse(cx,cy,r*.45,r,identity.phase*Math.PI,0,Math.PI*2); ctx.fill(); ctx.stroke(); line(cx-r*.35,cy+r*.62,cx+r*.35,cy-r*.62,identity.eraAccent,ctx.lineWidth); }
+    else if (identity.sigil === 'mountain') poly([[cx-r,cy+r*.65],[cx-r*.35,cy-r*.48],[cx,cy+r*.05],[cx+r*.4,cy-r*.75],[cx+r,cy+r*.65]],identity.secondary,identity.eraAccent,ctx.lineWidth);
+    else if (identity.sigil === 'star') star(cx,cy,r,identity.secondary);
+    else if (identity.sigil === 'dial') { circle(cx,cy,r*.9,null,identity.secondary,ctx.lineWidth); line(cx,cy,cx+r*.48,cy-r*.38,identity.eraAccent,ctx.lineWidth); line(cx,cy,cx-r*.08,cy-r*.58,identity.eraAccent,ctx.lineWidth); }
+    else if (identity.sigil === 'portal') { ctx.beginPath(); ctx.ellipse(cx,cy,r*.48,r,identity.phase,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.ellipse(cx,cy,r*.22,r*.68,-identity.phase,0,Math.PI*2); ctx.stroke(); }
+    else if (identity.sigil === 'crescent') { circle(cx,cy,r*.8,identity.secondary); circle(cx+r*.32,cy-r*.16,r*.73,C); }
+    else if (identity.sigil === 'orb') { circle(cx,cy,r*.72,identity.secondary,'#FFFFFF',ctx.lineWidth); circle(cx-r*.22,cy-r*.24,r*.16,'#FFFFFF'); }
+    else if (identity.sigil === 'ring' || identity.sigil === 'spiral') { ctx.beginPath(); ctx.arc(cx,cy,r*.82,0,Math.PI*2); ctx.stroke(); if(identity.sigil==='spiral'){ctx.beginPath();ctx.arc(cx,cy,r*.52,identity.phase*6,identity.phase*6+Math.PI*1.5);ctx.stroke();} }
+    else gem(cx,cy,r*.82,identity.secondary);
+    ctx.restore();
+  };
   const limbBand = (pt, w, h, fill=C) => {ctx.save();ctx.translate(pt.x,pt.y);round(-w/2,-h/2,w,h,h*.28,fill,'rgba(255,255,255,.52)',Math.max(1,s*.012));line(-w*.32,-h*.15,w*.32,-h*.15,'rgba(255,255,255,.5)',Math.max(1,s*.012));ctx.restore();};
   const drawBoot = (foot, tech=false) => {ctx.save();ctx.translate(foot.x,foot.y);round(-s*.14,-s*.075,s*.29,s*.15,s*.045, C, '#172033',s*.018);round(-s*.11,-s*.04,s*.22,s*.035,s*.012,'rgba(255,255,255,.32)');if(tech){glow(accent,7);line(-s*.07,s*.065,s*.07,s*.065,accent,s*.025);noGlow();}else{line(-s*.07,s*.01,s*.07,s*.01,'#F8FAFC',s*.012);}ctx.restore();};
   const drawWings = (kind='feather') => {const flap=Math.sin(t*1.8)*.08;ctx.save();glow(C,kind==='energy'?13:4);[-1,1].forEach(side=>{ctx.save();ctx.translate(x+side*s*.22,torsoCY-s*.02);ctx.rotate(side*(.25+flap));if(kind==='feather'){for(let i=0;i<4;i++){const yy=(i-1.5)*s*.14;poly([[0,yy],[side*s*(.2+i*.035),yy-s*.12],[side*s*(.48-i*.035),yy+s*.02],[side*s*.12,yy+s*.11]],i%2?'rgba(255,255,255,.72)':C,'rgba(255,255,255,.55)',s*.012);}}else{poly([[0,-s*.25],[side*s*.42,-s*.45],[side*s*.28,-s*.08],[side*s*.48,s*.12],[side*s*.06,s*.22]],C,'rgba(255,255,255,.8)',s*.018);line(0,0,side*s*.34,-s*.24,accent,s*.018);}ctx.restore();});noGlow();ctx.restore();};
@@ -396,6 +422,7 @@ function drawRedesignedAccessory(ctx, p) {
     else if(['kimono','yukata','haori','checkered_haori','samurai_armor','chrome_armor'].includes(type)) {drawCloth('jacket');ctx.save();poly([[x-s*.2,torsoTopY+s*.02],[x-s*.04,torsoTopY+s*.12],[x+s*.2,hipY+s*.08],[x+s*.04,hipY+s*.08]],'rgba(255,255,255,.22)','rgba(17,24,39,.45)',s*.012);poly([[x+s*.2,torsoTopY+s*.02],[x+s*.04,torsoTopY+s*.12],[x-s*.2,hipY+s*.08],[x-s*.04,hipY+s*.08]],'rgba(0,0,0,.13)');round(x-s*.34,hipY-s*.02,s*.68,s*.075,s*.025,type==='samurai_armor'?'#C6A45A':'#1F2937','#F8FAFC',s*.015);if(type==='checkered_haori'){for(let i=0;i<4;i++)for(let j=0;j<3;j++)if((i+j)%2===0)round(x-s*.28+i*s*.14,torsoTopY+s*.08+j*s*.13,s*.14,s*.13,0,'rgba(255,255,255,.22)');}if(type==='samurai_armor'){for(let i=0;i<4;i++)line(x-s*.28,hipY+s*(.08+i*.035),x+s*.28,hipY+s*(.08+i*.035),'#D6B96A',s*.014);}if(type==='chrome_armor'){round(x-s*.25,torsoTopY+s*.06,s*.5,s*.48,s*.055,'rgba(148,163,184,.58)','#E2E8F0',s*.025);line(x,torsoTopY+s*.08,x,hipY+s*.02,'#F8FAFC',s*.025);gem(x,torsoCY,s*.075,'#67E8F9');[shoulderL,shoulderR].forEach(pt=>poly([[pt.x-s*.13,pt.y],[pt.x-s*.08,pt.y-s*.1],[pt.x+s*.08,pt.y-s*.1],[pt.x+s*.13,pt.y+s*.04]],'#94A3B8','#F8FAFC',s*.02));}ctx.restore();}
     else drawCloth(type);
     if(type==='samurai_armor'){limbBand(elbowL,s*.22,s*.15,'#9CA3AF');limbBand(elbowR,s*.22,s*.15,'#9CA3AF');}
+    if(['kimono','yukata','haori','checkered_haori','samurai_armor','chrome_armor','soccer_kit','jersey','volleyball_kit','baseball_kit','basketball_kit','tennis_kit','track_kit'].includes(type)) characterSigil(x, torsoCY, s*.075);
     return true;
   }
   // Headwear and facial accessories
@@ -420,6 +447,7 @@ function drawRedesignedAccessory(ctx, p) {
     else if(type==='goggles'){ctx.save();round(x-s*.31,headY-s*.09,s*.26,s*.18,s*.06,'rgba(15,23,42,.88)',C,s*.025);round(x+s*.05,headY-s*.09,s*.26,s*.18,s*.06,'rgba(15,23,42,.88)',C,s*.025);line(x-s*.05,headY,x+s*.05,headY,C,s*.025);ctx.restore();}
     else if(type==='helmet'){ctx.save();glow(C,3);ctx.beginPath();ctx.arc(x,headTopY+s*.07,headR*1.14,Math.PI,0);ctx.lineTo(x+headR*1.08,headY+s*.04);ctx.lineTo(x-headR*1.08,headY+s*.04);ctx.closePath();ctx.fillStyle=C;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.65)';ctx.lineWidth=s*.02;ctx.stroke();round(x-s*.2,headTopY+s*.05,s*.4,s*.045,s*.02,'rgba(17,24,39,.55)');noGlow();ctx.restore();}
     else {ctx.save();if(type==='cap'){ctx.beginPath();ctx.arc(x,headTopY+s*.08,headR*1.08,Math.PI,0);ctx.lineTo(x+facing*s*.35,headTopY+s*.12);ctx.lineTo(x,headTopY+s*.14);ctx.closePath();ctx.fillStyle=C;ctx.fill();line(x-s*.25,headTopY+s*.08,x+s*.25,headTopY+s*.08,'rgba(255,255,255,.5)',s*.018);}else if(type==='beret'){ellipse(x-facing*s*.04,headTopY+s*.06,s*.37,s*.15,C,-.08*facing,'rgba(255,255,255,.55)',s*.018);circle(x-facing*s*.04,headTopY-s*.08,s*.04,accent);}else if(type==='beanie'){ellipse(x,headTopY+s*.09,headR*1.08,s*.16,C,0,'rgba(255,255,255,.5)',s*.018);round(x-headR,headTopY+s*.08,headR*2,s*.11,s*.035,'rgba(15,23,42,.2)');}else if(type==='bucket_hat'){ellipse(x,headTopY+s*.07,s*.43,s*.11,C,0,'rgba(255,255,255,.6)',s*.018);round(x-s*.27,headTopY-s*.03,s*.54,s*.17,s*.04,C,'rgba(15,23,42,.45)',s*.015);line(x-s*.23,headTopY+s*.09,x+s*.23,headTopY+s*.09,accent,s*.025);}else{round(x-s*.31,headY-s*.08,s*.62,s*.09,s*.03,C,'rgba(255,255,255,.6)',s*.014);line(x-s*.24,headY-s*.035,x+s*.24,headY-s*.035,accent,s*.02);if(type==='hachimaki'){circle(x,headY-s*.035,s*.035,'#DC2626');line(x-s*.32,headY,x-s*.43,headY+s*.18,C,s*.035);}}ctx.restore();}
+    if(type==='headband'||type==='hachimaki') characterSigil(x, headY-s*.035, s*.055);
     return true;
   }
   // Jewelry, hand/arm/leg gear and held props
@@ -440,13 +468,15 @@ function drawRedesignedAccessory(ctx, p) {
     else if(type==='sensu'){ctx.save();ctx.translate(handL.x,handL.y);ctx.rotate(-.5);poly([[0,0],[s*.35,-s*.16],[s*.35,s*.16]],C,'rgba(255,255,255,.7)',s*.018);for(let i=-2;i<=2;i++)line(0,0,s*.35, i*s*.055,'rgba(255,255,255,.6)',s*.012);circle(0,0,s*.03,'#78350F');ctx.restore();}
     else if(type==='time_dial'){ctx.save();circle(x+s*.28,torsoCY-s*.04,s*.19,'#111827',C,s*.025);circle(x+s*.28,torsoCY-s*.04,s*.14,'rgba(255,255,255,.08)',C,s*.012);for(let i=0;i<12;i++){const a=i*Math.PI/6;line(x+s*.28+Math.cos(a)*s*.105,torsoCY-s*.04+Math.sin(a)*s*.105,x+s*.28+Math.cos(a)*s*.125,torsoCY-s*.04+Math.sin(a)*s*.125,'#F8FAFC',s*.012);}line(x+s*.28,torsoCY-s*.04,x+s*.34,torsoCY-s*.11,accent,s*.018);ctx.restore();}
     else if(type==='sonic_rings'){[handL,handR].forEach(pt=>{ctx.save();ctx.strokeStyle=C;ctx.lineWidth=s*.025;ctx.beginPath();ctx.ellipse(pt.x,pt.y,s*.13,s*.07,0,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.ellipse(pt.x,pt.y,s*.18,s*.1,0,0,Math.PI*2);ctx.stroke();ctx.restore();});}
+    if(type==='gloves') [handL,handR].forEach(pt=>line(pt.x-s*.055,pt.y+s*.01,pt.x+s*.055,pt.y+s*.01,identity.eraAccent,s*.018));
+    if(type==='shoes') [footL,footR].forEach(pt=>{line(pt.x-s*.09,pt.y+s*.045,pt.x+s*.09,pt.y+s*.045,identity.eraAccent,s*.018);circle(pt.x,pt.y-s*.045,s*.025,identity.secondary);});
     return true;
   }
   // Back silhouettes, elemental VFX, and character-exclusive signature effects.
   const effectTypes = ['aura','rainbow','shadow','sparkles','wings','halo','horns','cape','scarf','flower','comet','bubble','crystals','lightning','star','mist','puppet','clock','flame','beam','grav','phantom','clone','metal','thunder','speed','water','stone','tk','spirit','web','portal','shadow_cloak','web_spinner','wings_energy','energy_wings','angel_feathers','light_wings','lwings','cape_long','scarf_long','phantom_echoes','clone_echo','energy_spikes','orbiting_orbs','rising_souls','crystal_burst','rune_circle','flame_aura','void_rift','lightning_crown','cosmic_swirl','petal_storm','ice_spikes','shadow_tentacles','fire_ring','star_shower','snow_dots','ice_crystals','void_tendrils','soul_chains','venom_drip','angel_halo','grav_rings','water_orbs','stone_pillar','tk_debris','spirit_echo','adhesive','portal_glow','inferno','beam_aura','puppet_strings','light_wings'];
   if(effectTypes.includes(type)) {
     if(['wings','lwings','light_wings','wings_energy','energy_wings','angel_feathers'].includes(type)) drawWings(type==='wings'||type==='angel_feathers'?'feather':'energy');
-    else if(['cape','cape_long','shadow_cloak','scarf','scarf_long'].includes(type)){ctx.save();const sway=Math.sin(t*1.5)*s*.07;poly([[x-s*.2,shoulderY],[x+s*.2,shoulderY],[x+s*.34+sway,feetY+s*.025],[x-s*.3+sway,feetY+s*.025]],type.includes('shadow')?'rgba(30,20,50,.86)':C,'rgba(255,255,255,.38)',s*.018);line(x-s*.12,shoulderY+s*.05,x-s*.18+sway,feetY-s*.08,'rgba(255,255,255,.25)',s*.018);if(type.includes('scarf')){line(x+s*.1,torsoTopY+s*.04,x+s*.25+sway,hipY+s*.45,C,s*.09);line(x+s*.1,torsoTopY+s*.04,x+s*.25+sway,hipY+s*.45,'rgba(255,255,255,.38)',s*.018);}ctx.restore();}
+    else if(['cape','cape_long','shadow_cloak','scarf','scarf_long'].includes(type)){ctx.save();const sway=Math.sin(t*1.5+identity.phase*2)*s*.07;poly([[x-s*.2,shoulderY],[x+s*.2,shoulderY],[x+s*.34+sway,feetY+s*.025],[x-s*.3+sway,feetY+s*.025]],type.includes('shadow')?'rgba(30,20,50,.86)':C,identity.eraAccent,s*.018);line(x-s*.12,shoulderY+s*.05,x-s*.18+sway,feetY-s*.08,'rgba(255,255,255,.25)',s*.018);line(x-s*.24+sway,feetY-s*.1,x+s*.27+sway,feetY-s*.1,identity.secondary,s*.018);characterSigil(x+sway,torsoCY,s*.06);if(type.includes('scarf')){line(x+s*.1,torsoTopY+s*.04,x+s*.25+sway,hipY+s*.45,C,s*.09);line(x+s*.1,torsoTopY+s*.04,x+s*.25+sway,hipY+s*.45,'rgba(255,255,255,.38)',s*.018);}ctx.restore();}
     else if(['aura','rainbow','bubble','mist','rune_circle'].includes(type))drawAura(type==='rune_circle'?'rune':type);
     else if(['crown','flower','halo','horns'].includes(type)){if(type==='crown')drawCrown(type);else if(type==='flower'){for(let i=0;i<6;i++){const a=i*Math.PI/3;circle(x+Math.cos(a)*s*.23,headTopY+Math.sin(a)*s*.07,s*.055,i%2?C:accent);}circle(x,headTopY,s*.04,'#FDE68A');}else if(type==='halo'){ctx.save();glow(C,10);ellipse(x,headTopY-s*.14,s*.4,s*.12,null,0,C,s*.035);noGlow();ctx.restore();}else{poly([[x-s*.15,headTopY+s*.02],[x-s*.3,headTopY-s*.22],[x-s*.08,headTopY-s*.1]],C);poly([[x+s*.15,headTopY+s*.02],[x+s*.3,headTopY-s*.22],[x+s*.08,headTopY-s*.1]],C);}}
     else if(['star','sparkles','comet','crystals','crystal_burst','ice_crystals','ice_spikes','energy_spikes','snow_dots','star_shower','petal_storm','orbiting_orbs','rising_souls','phantom_echoes','clone_echo'].includes(type)){ctx.save();const count=type==='snow_dots'?12:type==='crystals'||type==='ice_crystals'||type==='ice_spikes'?5:7;for(let i=0;i<count;i++){const a=t*(type==='orbiting_orbs'?1.1:.35)+i*Math.PI*2/count;const rr=s*(type==='orbiting_orbs'?.55:.38)+(i%2)*s*.06;const px=x+Math.cos(a)*rr,py=torsoCY-s*.16+Math.sin(a)*rr*.8;if(type==='crystals'||type==='ice_crystals'||type==='ice_spikes'||type==='crystal_burst'||type==='energy_spikes')poly([[px,py-s*.12],[px+s*.06,py],[px,py+s*.12],[px-s*.06,py]],C,'rgba(255,255,255,.7)',s*.012);else if(type==='petal_storm')ellipse(px,py,s*.035,s*.07,C,a);else if(type==='snow_dots')circle(px,py,s*.025,'#E0F7FF');else if(type==='orbiting_orbs')circle(px,py,s*.045,C,'rgba(255,255,255,.75)',s*.012);else star(px,py,s*.07,C);}ctx.restore();}
@@ -477,7 +507,8 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
   // shade so gradient stops like `color + '88'` never produce "undefined88".
   if (!color) color = '#CCCCCC';
   const t = frame * 0.05;
-  const pose = getLimbPose(frame, state, facing, scale, powerActive, emote);
+  const charData = ALL_CHARS_MAP[charId] || null;
+  const pose = getLimbPose(frame, state, facing, scale, powerActive, emote, null, null, charData);
   const s = pose.s;
   // Body part positions — now follow the actual animated limbs (bob/lean/swing)
   const headR = pose.headR;
