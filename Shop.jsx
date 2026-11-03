@@ -35,6 +35,34 @@ function shopCharOrder(c) {
   return 100 + (eraIdx < 0 ? 99 : eraIdx); // 100+ so they come after the 6
 }
 const SHOP_SORTED = [...ALL].sort((a, b) => shopCharOrder(a) - shopCharOrder(b));
+const SHOP_CATEGORY_GROUPS = [
+  { label: 'ROSTER', items: [{ id: 'characters', label: 'Fighters', icon: '⚔️' }] },
+  { label: 'COSMETICS', items: [
+    { id: 'accessories', label: 'Accessories', icon: '✦' },
+    { id: 'kits', label: 'Sport kits', icon: '◈' },
+    { id: 'emotes', label: 'Emotes', icon: '☺' },
+    { id: 'killfx', label: 'KO effects', icon: '✹' },
+    { id: 'crossovers', label: 'Crossovers', icon: '⟳' },
+    { id: 'shikigami', label: 'Shikigami', icon: '❖' },
+    { id: 'titles', label: 'Titles', icon: '▤' },
+  ] },
+  { label: 'MORE', items: [
+    { id: 'paid', label: 'Paid packs', icon: '◆' },
+    { id: 'donate', label: 'Support the game', icon: '♡' },
+  ] },
+];
+const SHOP_CATEGORY_META = {
+  accessories: { group: 'COSMETICS', title: 'Accessories', description: 'Fit character-ready gear, then preview it on the selected fighter.' },
+  kits: { group: 'COSMETICS', title: 'Sport kits', description: 'Choose a uniform set for your favorite player.' },
+  characters: { group: 'ROSTER', title: 'Fighters', description: 'Expand your roster with fighters from every generation.' },
+  emotes: { group: 'COSMETICS', title: 'Emotes', description: 'Add expressions and celebrations to your in-match emote wheel.' },
+  killfx: { group: 'COSMETICS', title: 'KO effects', description: 'Choose the effect displayed when you score a knockout.' },
+  crossovers: { group: 'COSMETICS', title: 'Crossovers', description: 'Browse alternate looks and their matching effects.' },
+  shikigami: { group: 'COSMETICS', title: 'Shikigami', description: 'Find a companion to follow your fighter.' },
+  titles: { group: 'COSMETICS', title: 'Titles', description: 'Equip a title to show beside your player name.' },
+  paid: { group: 'MORE', title: 'Paid packs', description: 'Optional packs and support items. Checkout is not yet connected.' },
+  donate: { group: 'MORE', title: 'Support the game', description: 'Choose a way to support Element 6.' },
+};
 
 export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin, onBuyKillFX, onEquipKillFX, onBuyCharacter, onBuyPack, onEquipTitle, onBuyCrossover, onEquipCrossover, onBuyShikigami, onEquipShikigami, onBuyEmote, onBack }) {
   const [selected, setSelected] = useState(progress?.favoriteId || HEROES[0].id);
@@ -76,33 +104,56 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
   const equippedSkinId = equippedSkins[char?.id];
   const previewSkinColor = equippedSkinId ? getSkin(equippedSkinId)?.color : null;
   const previewSkinParts = equippedSkinId ? getSkinParts(char?.id, equippedSkins) : [];
+  const categoryMeta = SHOP_CATEGORY_META[shopTab] || SHOP_CATEGORY_META.accessories;
 
   return (
-    <div className="e6-shop-screen w-full max-w-5xl flex flex-col gap-5">
-      <div className="e6-shop-intro flex justify-between items-center">
-        <div>
-          <p className="e6-screen-eyebrow">ELEMENT 6 · ITEM EXCHANGE</p>
-          <h2 className="text-3xl font-heading text-accent tracking-wider">THE SHOP</h2>
-          <p className="text-sm text-muted-foreground font-body mt-1">Browse cosmetics, fighters, and rewards for your collection.</p>
+    <div className="e6-shop-screen e6-storefront-screen w-full flex flex-col">
+      <header className="e6-storefront-topbar">
+        <div className="e6-storefront-brand">
+          <p className="e6-storefront-kicker">ELEMENT 6 / MARKET</p>
+          <h2>THE ARMORY</h2>
+          <p>Fighters, gear and showpieces for your next match.</p>
         </div>
-        <div className="e6-shop-actions">
-          <div className="e6-token-wallet"><span>YOUR TOKENS</span><strong>{formatNumber(coins)} <GameIcon emoji="◆" size={14} /></strong></div>
-          <button onClick={onBack} className="e6-back-button"><GameIcon emoji="←" size={16} /> BACK</button>
+        <div className="e6-storefront-account">
+          <div className="e6-storefront-wallet" aria-label={`${formatNumber(coins)} tokens available`}>
+            <span>YOUR TOKENS</span><strong>{formatNumber(coins)} <GameIcon emoji="◆" size={16} /></strong>
+          </div>
+          <button onClick={onBack} className="e6-storefront-back"><GameIcon emoji="←" size={16} /> LOBBY</button>
         </div>
-      </div>
+      </header>
 
-      <div className="e6-shop-tabs flex gap-2" role="tablist" aria-label="Shop categories">
-        <button role="tab" aria-selected={shopTab === 'accessories'} onClick={() => setShopTab('accessories')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'accessories' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>ACCESSORIES</button>
-        <button role="tab" aria-selected={shopTab === 'kits'} onClick={() => setShopTab('kits')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'kits' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>KITS</button>
-        <button role="tab" aria-selected={shopTab === 'killfx'} onClick={() => setShopTab('killfx')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'killfx' ? 'bg-destructive text-destructive-foreground' : 'bg-secondary text-secondary-foreground'}`}>KILL FX</button>
-        <button role="tab" aria-selected={shopTab === 'characters'} onClick={() => setShopTab('characters')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'characters' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>CHARACTERS</button>
-        <button role="tab" aria-selected={shopTab === 'titles'} onClick={() => setShopTab('titles')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'titles' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon emoji="🏷️" size={14} /> TITLES</button>
-        <button role="tab" aria-selected={shopTab === 'crossovers'} onClick={() => setShopTab('crossovers')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'crossovers' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon emoji="🔀" size={14} /> CROSSOVERS</button>
-        <button role="tab" aria-selected={shopTab === 'shikigami'} onClick={() => setShopTab('shikigami')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'shikigami' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>🪶 SHIKIGAMI</button>
-        <button role="tab" aria-selected={shopTab === 'emotes'} onClick={() => setShopTab('emotes')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'emotes' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>EMOTES</button>
-        <button role="tab" aria-selected={shopTab === 'paid'} onClick={() => setShopTab('paid')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'paid' ? 'bg-primary text-primary-foreground' : 'bg-primary/50 text-primary-foreground'}`}><GameIcon emoji="💰" size={14} /> PAID</button>
-        <button role="tab" aria-selected={shopTab === 'donate'} onClick={() => setShopTab('donate')} className={`px-4 py-1.5 rounded font-heading text-xs ${shopTab === 'donate' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon emoji="💖" size={14} /> DONATE</button>
-      </div>
+      <div className="e6-storefront-layout">
+        <aside className="e6-storefront-sidebar" aria-label="Shop categories">
+          {SHOP_CATEGORY_GROUPS.map(group => (
+            <div className="e6-storefront-nav-group" key={group.label}>
+              <p>{group.label}</p>
+              {group.items.map(item => (
+                <button key={item.id} type="button" aria-current={shopTab === item.id ? 'page' : undefined}
+                  className={`e6-storefront-nav-item ${shopTab === item.id ? 'is-active' : ''}`}
+                  onClick={() => setShopTab(item.id)}>
+                  <span className="e6-storefront-nav-icon" aria-hidden="true">{item.icon}</span>
+                  <span>{item.label}</span>
+                  {shopTab === item.id && <span className="e6-storefront-nav-arrow" aria-hidden="true">›</span>}
+                </button>
+              ))}
+            </div>
+          ))}
+          <div className="e6-storefront-sidebar-note">
+            <span>ACCESSORIES · EMOTES · KO FX</span>
+            <strong>{(progress?.ownedAccessories || []).length + (progress?.ownedEmotes || []).length + (progress?.ownedKillFX || []).length}</strong>
+            <small>items owned</small>
+          </div>
+        </aside>
+
+        <main className="e6-storefront-catalog">
+          <div className="e6-storefront-category-head">
+            <div>
+              <p className="e6-storefront-crumb">MARKET <span>/</span> {categoryMeta.group}</p>
+              <h3>{categoryMeta.title}</h3>
+              <p>{categoryMeta.description}</p>
+            </div>
+            <span className="e6-storefront-pick">SELECT A CARD TO PREVIEW</span>
+          </div>
 
       {['accessories', 'kits'].includes(shopTab) && (
       <div className="e6-shop-preview-row flex gap-4">
@@ -150,7 +201,9 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
             const isOwned = owned.includes(a.id);
             const isTrying = tryOn === a.id;
             return (
-              <div key={a.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center cursor-pointer transition ${isTrying ? 'border-accent' : 'border-border'}`}
+              <div key={a.id} role="group" tabIndex={0} aria-label={`Preview ${a.name} on ${char?.name || selected}`}
+                onKeyDown={e => { if (e.target !== e.currentTarget || !['Enter', ' '].includes(e.key)) return; e.preventDefault(); setTryOn(isTrying ? null : a.id); }}
+                className={`bg-card border rounded-xl p-3 flex flex-col items-center cursor-pointer transition ${isTrying ? 'border-accent' : 'border-border'}`}
                 onClick={() => setTryOn(isTrying ? null : a.id)}>
                 <AccessoryIcon accessory={a} />
                 <p className="font-heading text-xs text-foreground mt-1">{a.name}</p>
@@ -183,7 +236,9 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
             const isTrying = tryOn === a.id;
             const kitLabel = {soccer_kit:'SOCCER',volleyball_kit:'VOLLEYBALL',baseball_kit:'BASEBALL'}[a.type] || 'KIT';
             return (
-              <div key={a.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center cursor-pointer transition ${isTrying ? 'border-accent' : 'border-border'}`}
+              <div key={a.id} role="group" tabIndex={0} aria-label={`Preview ${a.name} on ${char?.name || selected}`}
+                onKeyDown={e => { if (e.target !== e.currentTarget || !['Enter', ' '].includes(e.key)) return; e.preventDefault(); setTryOn(isTrying ? null : a.id); }}
+                className={`bg-card border rounded-xl p-3 flex flex-col items-center cursor-pointer transition ${isTrying ? 'border-accent' : 'border-border'}`}
                 onClick={() => setTryOn(isTrying ? null : a.id)}>
                 <AccessoryIcon accessory={a} />
                 <p className="font-heading text-xs text-foreground mt-1">{a.name}</p>
@@ -449,6 +504,9 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
         </div>
       </div>
       )}
+
+        </main>
+      </div>
 
       {justBought && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">

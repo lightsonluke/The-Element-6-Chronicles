@@ -55,137 +55,109 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
     });
   };
 
+  const claimableCount = activeEvent?.battlePass?.filter(bp => bp.tier <= currentTier && !claimedTiers.includes(bp.tier)).length || 0;
+
   // Star characters for the event
   const starChars = (activeEvent?.starCharIds || []).map(id => ALL.find(c => c.id === id)).filter(Boolean);
 
   return (
-    <div className="w-full max-w-5xl flex flex-col gap-4">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-heading tracking-wider" style={{ color: activeEvent?.color || 'var(--accent)' }}>BATTLE PASS</h2>
-          <p className="text-xs text-muted-foreground font-body">{activeEvent?.name} — Earn XP from battles to climb 50 tiers. Battle Pass+ adds a second reward on every claimed tier.</p>
-          {battlePassPlus && <p className="text-[10px] font-heading text-accent mt-1"><GameIcon emoji="⭐" size={14} /> BATTLE PASS+ ACTIVE — All tiers unlocked!</p>}
-          {nextEventInfo?.event && nextEventInfo?.startDate && (() => {
-            const diff = Math.max(0, nextEventInfo.startDate.getTime() - now);
-            const totalSec = Math.floor(diff / 1000);
-            const days = Math.floor(totalSec / 86400);
-            const hours = Math.floor((totalSec % 86400) / 3600);
-            const mins = Math.floor((totalSec % 3600) / 60);
-            const secs = totalSec % 60;
-            const months = Math.floor(days / 30);
-            const remDays = days % 30;
-            return (
-              <div className="mt-2 inline-flex flex-col gap-0.5 bg-card/60 border border-border rounded-lg px-3 py-1.5">
-                <p className="text-[9px] font-heading" style={{ color: nextEventInfo.event.color }}>
-                  NEXT: {nextEventInfo.event.name}
-                </p>
-                <p className="text-[10px] font-heading text-foreground tabular-nums">
-                  {months > 0 && `${months}mo `}{remDays}d {String(hours).padStart(2,'0')}h {String(mins).padStart(2,'0')}m {String(secs).padStart(2,'0')}s
-                </p>
-              </div>
-            );
-          })()}
+    <div className="e6-season-pass-screen">
+      <header className="e6-pass-topbar">
+        <button type="button" onClick={onBack} className="e6-pass-back"><GameIcon emoji="←" size={17} /> LOBBY</button>
+        <div className="e6-pass-brand"><span>ELEMENT 6 / SEASONAL</span><strong>REWARD TRACK</strong></div>
+        <div className="e6-pass-actions">
+          <button type="button" onClick={() => onNavigateEquip?.()} className="e6-pass-secondary">VIEW COLLECTION <GameIcon emoji="→" size={14} /></button>
+          <button type="button" onClick={handleClaimAll} className="e6-pass-claim-all" disabled={!claimableCount}>
+            CLAIM AVAILABLE <span>{claimableCount}</span>
+          </button>
         </div>
-        <div className="flex gap-2">
-          <button onClick={handleClaimAll} className="px-3 py-2 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-80">CLAIM ALL</button>
-          <button onClick={() => onNavigateEquip?.()} className="px-3 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-80">EQUIP <GameIcon emoji="→" size={14} /></button>
-          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
-        </div>
-      </div>
+      </header>
 
-      {/* Active event banner with star character showcase */}
-      {activeEvent && (
-        <div className="rounded-xl border-2 overflow-hidden" style={{ borderColor: activeEvent.color + '66' }}>
-          <EventShowcaseCanvas event={activeEvent} starChars={starChars} />
-          <div className="p-4 flex items-center gap-4" style={{ background: `linear-gradient(135deg, ${activeEvent.color}15 0%, #0a0b16 70%)` }}>
-            <div className="flex-1">
-              <p className="text-[8px] font-heading text-muted-foreground uppercase">ACTIVE EVENT</p>
-              <p className="font-heading text-lg" style={{ color: activeEvent.color }}>{activeEvent.name}</p>
-              {starChars.length > 0 && (
-                <p className="text-[9px] text-muted-foreground font-body">Stars: {starChars.map(c => c.name).join(' & ')} — exclusive star skins in the pass!</p>
-              )}
-              <p className="text-[9px] text-muted-foreground font-body mt-1">Tier {currentTier}/{MAX_TIERS} • {eventXP} XP earned • {xpInTier}/{XP_PER_TIER} to next tier</p>
+      {activeEvent ? <>
+        <section className="e6-pass-hero" style={{ '--pass-accent': activeEvent.color || '#d9a441' }}>
+          <div className="e6-pass-art"><EventShowcaseCanvas event={activeEvent} starChars={starChars} /><span className="e6-pass-art-tag">LIVE SEASON</span></div>
+          <div className="e6-pass-hero-content">
+            <div className="e6-pass-eyebrow"><span className="e6-pass-live-dot" /> SEASON REWARDS <span className="e6-pass-divider">/</span> 50 TIERS</div>
+            <h1>{activeEvent.name}</h1>
+            <p className="e6-pass-summary">Earn Event XP in battle to unlock a new reward every {XP_PER_TIER} XP. Collect your free rewards as you progress.</p>
+            {starChars.length > 0 && <p className="e6-pass-featured"><span>FEATURED FIGHTERS</span>{starChars.map(c => c.name).join('  ·  ')}</p>}
+            <div className="e6-pass-progress-block">
+              <div className="e6-pass-progress-title"><span>YOUR PROGRESS</span><strong>TIER {Math.min(currentTier, MAX_TIERS)} <i>/ {MAX_TIERS}</i></strong></div>
+              <div className="e6-pass-progress-track"><span style={{ width: `${battlePassPlus ? 100 : (xpInTier / XP_PER_TIER) * 100}%` }} /></div>
+              <div className="e6-pass-progress-foot"><span>{eventXP.toLocaleString()} TOTAL XP</span><span>{battlePassPlus ? 'ALL TIERS UNLOCKED' : `${xpInTier} / ${XP_PER_TIER} XP TO NEXT TIER`}</span></div>
             </div>
-            <div className="w-40">
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all" style={{ width: `${(xpInTier / XP_PER_TIER) * 100}%`, backgroundColor: activeEvent.color }} />
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-[7px] text-muted-foreground">{xpInTier} XP</span>
-                <span className="text-[7px] text-muted-foreground">{XP_PER_TIER} XP</span>
-              </div>
+            <div className={`e6-pass-premium-status ${battlePassPlus ? 'is-active' : ''}`}>
+              <span className="e6-pass-premium-mark">✦</span>
+              <div><strong>{battlePassPlus ? 'BATTLE PASS+ ACTIVE' : 'BATTLE PASS+'}</strong><small>{battlePassPlus ? 'Bonus rewards are included when you claim a tier.' : 'Premium rewards are shown on each tier.'}</small></div>
+              <span className="e6-pass-premium-state">{battlePassPlus ? 'ACTIVE' : 'PREMIUM'}</span>
             </div>
           </div>
-        </div>
-      )}
+        </section>
 
-      {/* Tier rewards — horizontal scrollable timeline */}
-      {activeEvent && (
-        <div className="bg-card/80 border border-border rounded-xl p-4 flex flex-col gap-3">
-          <div className="flex justify-between items-center">
-            <p className="text-[10px] font-heading text-accent">{(activeEvent.name || 'EVENT').toUpperCase()} — 50 TIER TIMELINE</p>
-            <div className="flex gap-2 items-center">
-              <p className="text-[9px] text-muted-foreground">{claimedTiers.length}/{MAX_TIERS} claimed</p>
-              <button onClick={() => {
-                const c = timelineRef.current;
-                if (c) { const t = c.children[currentTier - 1]; if (t) t.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); }
-              }} className="px-2 py-0.5 bg-primary/20 text-primary rounded text-[8px] font-heading hover:bg-primary/30">JUMP TO CURRENT</button>
+        <section className="e6-pass-track-section">
+          <div className="e6-pass-section-head">
+            <div><span className="e6-pass-section-kicker">THE REWARD ROAD</span><h2>Season track</h2><p>Claim rewards you’ve earned. Milestone tiers bring featured seasonal drops.</p></div>
+            <div className="e6-pass-track-tools"><span className="e6-pass-claimed-count"><b>{claimedTiers.length}</b> / {MAX_TIERS} CLAIMED</span>
+              <button type="button" onClick={() => { const c = timelineRef.current; if (c) { const t = c.children[Math.max(0, currentTier - 1)]; if (t) t.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); } }} className="e6-pass-jump">JUMP TO TIER {Math.min(currentTier, MAX_TIERS)} <GameIcon emoji="→" size={13} /></button>
             </div>
           </div>
-          <div ref={timelineRef} className="flex gap-2 overflow-x-auto pb-3" style={{ scrollbarWidth: 'thin' }}>
+          <div className="e6-pass-lane-labels"><span>FREE TRACK <small>Available through play</small></span><span className="e6-pass-premium-lane">PREMIUM TRACK <small>{battlePassPlus ? 'Pass active' : 'Bonus tier rewards'}</small></span><span className="e6-pass-tier-guide">TIER</span></div>
+          <div className="e6-pass-timeline" ref={timelineRef}>
             {activeEvent.battlePass.map(bp => {
               const claimed = claimedTiers.includes(bp.tier);
               const canClaim = bp.tier <= currentTier && !claimed;
               const isMilestone = bp.tier % 10 === 0;
               const isStar = bp.isStar;
               const isCurrent = bp.tier === currentTier;
-              const rewardLabel = bp.type === 'tokens' ? `${bp.amount} ◆`
-                : bp.type === 'skin' ? `${bp.item?.name || 'Skin'}`
-                : bp.type === 'allskins' ? `${bp.name || 'All Skins'} ★`
-                : bp.type === 'allaccessories' ? `${bp.name || 'All Accessories'} ★`
-                : bp.type === 'accessory' ? `${bp.item?.name || 'Gear'}`
-                : bp.type === 'character' ? `${bp.name || bp.charId || 'Character'}`
-                : bp.type === 'killfx' ? `${bp.item?.name || 'Kill FX'}`
-                : bp.type === 'emote' ? `${bp.name || 'Emote'} 💃`
-                : 'Reward';
+              const label = bp.type === 'tokens' ? `${bp.amount} Tokens`
+                : bp.type === 'skin' ? bp.item?.name || 'Skin'
+                : bp.type === 'allskins' ? bp.name || 'All Skins'
+                : bp.type === 'allaccessories' ? bp.name || 'All Accessories'
+                : bp.type === 'accessory' ? bp.item?.name || 'Accessory'
+                : bp.type === 'character' ? bp.name || bp.charId || 'Character'
+                : bp.type === 'killfx' ? bp.item?.name || 'KO Effect'
+                : bp.type === 'emote' ? bp.name || 'Emote'
+                : bp.name || 'Season Reward';
+              const premiumLabel = bp.premiumReward?.type === 'tokens' ? `${bp.premiumReward.amount} Tokens`
+                : bp.premiumReward?.type === 'accessory' ? bp.premiumReward.item?.name || 'Accessory'
+                : bp.premiumReward?.type === 'killfx' ? bp.premiumReward.item?.name || 'KO Effect'
+                : bp.premiumReward?.name || (bp.premiumReward ? 'Bonus Reward' : '');
               return (
-                <div key={bp.tier} className={`flex-shrink-0 w-28 rounded-lg p-2 border-2 flex flex-col items-center gap-1 ${claimed ? 'border-green-600 opacity-60' : canClaim ? 'border-accent' : 'border-border opacity-50'} ${isMilestone ? 'bg-accent/5' : ''} ${isStar ? 'bg-accent/10' : ''} ${isCurrent ? 'ring-2 ring-primary' : ''}`}>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center font-heading text-sm flex-shrink-0"
-                    style={{ backgroundColor: (isStar ? '#FFD700' : activeEvent.color) + '22', color: isStar ? '#FFD700' : activeEvent.color }}>
-                    {bp.tier}
+                <article key={bp.tier} className={`e6-pass-tier ${claimed ? 'is-claimed' : ''} ${canClaim ? 'is-claimable' : ''} ${isCurrent ? 'is-current' : ''} ${isMilestone ? 'is-milestone' : ''} ${isStar ? 'is-star' : ''}`}>
+                  <div className="e6-pass-tier-index"><span>{String(bp.tier).padStart(2, '0')}</span>{isCurrent && <small>CURRENT</small>}</div>
+                  <div className="e6-pass-reward-pair">
+                    <div className="e6-pass-reward-cell e6-pass-free-cell">
+                      <span className="e6-pass-cell-label">FREE</span>
+                      <RewardPreview bp={bp} event={activeEvent} />
+                      <strong title={label}>{label}</strong>
+                      <small>{(bp.type || 'reward').replace(/([A-Z])/g, ' $1').toUpperCase()}{(isMilestone || isStar) && ' · FEATURED'}</small>
+                      {claimed ? <span className="e6-pass-reward-status is-done"><GameIcon emoji="✓" size={13} /> CLAIMED</span>
+                        : canClaim ? <button type="button" onClick={() => handleClaim(bp.tier)} className="e6-pass-tier-claim">CLAIM FREE</button>
+                        : <span className="e6-pass-reward-status"><GameIcon emoji="🔒" size={12} /> TIER {bp.tier}</span>}
+                    </div>
+                    <div className={`e6-pass-reward-cell e6-pass-bonus-cell ${battlePassPlus ? 'is-unlocked' : ''} ${!bp.premiumReward ? 'is-empty' : ''}`}>
+                      <span className="e6-pass-cell-label">✦ PREMIUM</span>
+                      {bp.premiumReward ? <>
+                        <RewardPreview bp={bp.premiumReward} event={activeEvent} />
+                        <strong title={premiumLabel}>{premiumLabel}</strong>
+                        <small>{(bp.premiumReward.type || 'bonus reward').toUpperCase()}</small>
+                        <span className="e6-pass-reward-status">{battlePassPlus ? 'INCLUDED WITH CLAIM' : <><GameIcon emoji="🔒" size={12} /> BONUS TRACK</>}</span>
+                      </> : <><span className="e6-pass-no-reward">—</span><strong>NO BONUS DROP</strong><small>FREE TIER</small><span className="e6-pass-reward-status">FREE REWARD TIER</span></>}
+                    </div>
                   </div>
-                  <RewardPreview bp={bp} event={activeEvent} />
-                  <p className="text-[8px] font-heading text-foreground text-center truncate w-full">FREE: {rewardLabel}</p>
-                  {bp.premiumReward && <p className="text-[7px] font-heading text-accent text-center truncate w-full">PREMIUM: {bp.premiumReward.type === 'tokens' ? `${bp.premiumReward.amount} ◆` : bp.premiumReward.type === 'accessory' ? (bp.premiumReward.item?.name || 'Accessory') : bp.premiumReward.type === 'killfx' ? (bp.premiumReward.item?.name || 'Kill FX') : (bp.premiumReward.name || 'Bonus Reward')}</p>}
-                  <p className="text-[6px] text-muted-foreground text-center">
-                    {(bp.type || 'reward').toUpperCase()}
-                    {isMilestone && ' ★'}
-                    {isStar && ' ★'}
-                  </p>
-                  {claimed ? (
-                    <span className="text-[9px] text-green-500 font-heading"><GameIcon emoji="✓" size={14} /></span>
-                  ) : canClaim ? (
-                    <button onClick={() => handleClaim(bp.tier)} className="px-2 py-0.5 bg-accent text-accent-foreground rounded text-[7px] font-heading hover:opacity-80">CLAIM</button>
-                  ) : (
-                    <span className="text-[6px] text-muted-foreground"><GameIcon emoji="🔒" size={14} /></span>
-                  )}
-                </div>
+                </article>
               );
             })}
           </div>
-        </div>
-      )}
-
-      {/* How it works */}
-      <div className="bg-card/60 border border-border rounded-xl p-3">
-        <p className="text-[9px] font-heading text-accent mb-1">HOW THE 50-TIER BATTLE PASS WORKS</p>
-        <p className="text-[10px] text-muted-foreground font-body">• Win battles to earn Event XP — each 100 XP unlocks the next tier</p>
-        <p className="text-[10px] text-muted-foreground font-body">• Tiers reward cool multi-colored accessories, kill FX, tokens, and up to 20 character unlocks!</p>
-        <p className="text-[10px] text-muted-foreground font-body">• Milestone tiers (10, 20, 30, 40) unlock exclusive STAR accessories!</p>
-        <p className="text-[10px] text-muted-foreground font-body">• Tier 50 unlocks the ultimate all-accessory legendary pack!</p>
-        <p className="text-[10px] text-muted-foreground font-body">• Event items never appear in the shop — only earnable during the event!</p>
-      </div>
+        </section>
+        <footer className="e6-pass-footnote"><span>✦</span><p><strong>How progression works</strong> Earn Event XP from battles. Every {XP_PER_TIER} XP advances your free track by one tier. Claiming a tier uses the existing reward system; Battle Pass+ adds its bonus reward when active.</p></footer>
+      </> : <section className="e6-pass-empty"><span>✦</span><p className="e6-pass-section-kicker">SEASONAL REWARDS</p><h1>No active season</h1><p>There isn’t an active reward track right now. Check back when the next event begins.</p>
+        {nextEventInfo?.event && nextEventInfo?.startDate && (() => {
+          const diff = Math.max(0, nextEventInfo.startDate.getTime() - now);
+          const totalSec = Math.floor(diff / 1000); const days = Math.floor(totalSec / 86400); const hours = Math.floor((totalSec % 86400) / 3600); const mins = Math.floor((totalSec % 3600) / 60); const secs = totalSec % 60;
+          return <div className="e6-pass-next-event"><span>NEXT SEASON · {nextEventInfo.event.name}</span><strong>{days}d {String(hours).padStart(2, '0')}h {String(mins).padStart(2, '0')}m {String(secs).padStart(2, '0')}s</strong></div>;
+        })()}
+      </section>}
     </div>
   );
 }
@@ -292,8 +264,17 @@ function EventShowcaseCanvas({ event, starChars }) {
 
 function RewardPreview({ bp, event }) {
   const ref = useRef(null);
+  const frameRef = useRef(0);
+  const [isVisible, setIsVisible] = useState(true);
   useEffect(() => {
-    const c = ref.current; if (!c) return;
+    const canvas = ref.current;
+    if (!canvas || typeof IntersectionObserver === 'undefined') return undefined;
+    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting), { rootMargin: '80px', threshold: 0.01 });
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const c = ref.current; if (!c || !isVisible) return undefined;
     const ctx = c.getContext('2d'); let f = 0; let r = true;
     const loop = () => {
       if (!r) return; f++;
@@ -343,10 +324,10 @@ function RewardPreview({ bp, event }) {
         ctx.fillStyle = '#FFD700'; ctx.font = 'bold 6px Orbitron';
         ctx.fillText((bp.name || 'EMOTE').substring(0, 8).toUpperCase(), 24, 42);
       }
-      requestAnimationFrame(loop);
+      frameRef.current = requestAnimationFrame(loop);
     };
     loop();
-    return () => { r = false; };
-  }, [bp, event]);
+    return () => { r = false; cancelAnimationFrame(frameRef.current); };
+  }, [bp, event, isVisible]);
   return <canvas ref={ref} width={48} height={48} className="rounded flex-shrink-0" />;
 }

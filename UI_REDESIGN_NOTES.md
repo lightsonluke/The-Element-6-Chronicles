@@ -1,19 +1,22 @@
-# UI redesign implementation notes
+# UI redesign update notes
 
-This is a changed-files package for the attached game source, not a full game copy. The Home Menu and every Character Selection Menu remain excluded from the redesign.
+This is a change-only package for the attached game source, not a full game copy. The Home Menu and actual Character Selection Menus remain excluded.
 
-## This update
+## Shop and Battle Pass rebuild
 
-- The active roster super renderer no longer darkens the whole stage or draws a viewport-wide flash rectangle. Other super renderers also avoid full-screen color washes; water and freeze effects use local arcs and particles. The existing stage background remains visible during supers.
-- Purple's move data now matches Itto's endlag for the requested moves: side heavy 31 frames, down heavy 43 frames, and up signature 11 frames. Purple's up-signature timing was already 11 frames; that value is retained.
-- Non-exempt menus have a second visual pass with flatter, compact panels, clearer hierarchy, simpler focus and button states, and less glow/gradient decoration. Shop, Settings, and mode browsers use the same cleaner competitive-fighter UI language. Existing theme colors, functionality, navigation, and purchase flows are preserved.
+- Rebuilt the Shop screen around a dedicated storefront: grouped category rail, token wallet, clear category context, and a responsive item catalog. Existing categories, previews, ownership states, currency checks, purchase callbacks, equip actions, and confirmation behavior remain wired to the game's existing data and handlers.
+- Shop accessory and sport-kit previews can be selected by mouse, keyboard, and controller focus. The catalog adapts to compact screens with horizontally scrollable category navigation.
+- Rebuilt the Battle Pass as a season hub with an event showcase, progress meter, free/premium lane distinction, and side-by-side reward cells for each tier. Claim, claim-all, tier eligibility, claimed state, Battle Pass+ rewards, next-event countdown, and Equip navigation continue to use the existing game state and callbacks.
+- Reward previews animate only while visible to reduce work while browsing the 50-tier horizontal track. The paid-pack checkout remains marked unavailable because the existing game does not have a connected checkout flow; no purchase is presented as successful.
 
-## Included from the prior update
+## Other included UI and gameplay changes
 
-- Gameplay canvases in the shared match host, Volleyball host, Platform Fighter, and Story Mode resize to the viewport at device pixel ratio and use a uniform camera transform. The complete logical scene stays visible without stretching; extra aspect-ratio space uses a scene-derived backdrop. Existing physics and stage boundaries remain unchanged.
-- Character-aware emote posing and cosmetic fit handling across the existing roster, plus updates to the stock/damage HUD, bars, and pause-button placement.
-- Routed non-home, non-character-select menu styling and responsive layouts.
+- The active roster super renderer no longer darkens the stage or draws a viewport-wide flash rectangle. Other super renderers avoid full-screen color washes; localized effects retain the stage background.
+- Purple's requested side-heavy, down-heavy, and up-signature endlag values match Itto's corresponding values.
+- The existing change-only bundle retains the earlier responsive gameplay viewport, HUD, non-exempt menu, settings, and mode-browser changes.
 
 ## Scope and verification
 
-The viewport adapter retains each mode's logical canvas size and gameplay world bounds; it does not expand every mode's camera-aware world bounds. The package does not replace existing emote/accessory art with bespoke character-by-character designs and does not alter authentication screens that are not routed by the current Game.jsx shell. Bundled dist output is omitted. No build or tests were run for this pass.
+- Gameplay viewport sizing retains each mode's logical canvas and world bounds; it does not expand every mode's camera-aware world bounds.
+- Existing emote/accessory art has not been replaced with bespoke character-by-character designs. Authentication screens outside the active Game.jsx shell were not changed.
+- Bundled production output is omitted. No build or tests were run for this update.
