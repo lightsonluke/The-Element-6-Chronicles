@@ -214,9 +214,9 @@ function flushCloudSave() {
 const ALL = [...ALL_CHARS];
 
 const TOUCH_SCREENS = ['fighting', 'soccer', 'sports', 'training', 'tutorial', 'lan', 'team', 'customrooms', 'experimental', 'sportslobby', 'onlinesportsmatch'];
-// These screens are intentionally outside the menu redesign system. Their
-// presentation is an explicit exception and must remain visually unchanged.
-const UI_REDESIGN_EXEMPT_SCREENS = new Set(['menu', 'charSelect', 'hubcharselect', 'shapeshiftSelect']);
+// The Home Menu keeps its authored presentation; every other routed screen
+// uses the shared redesign system.
+const UI_REDESIGN_EXEMPT_SCREENS = new Set(['menu']);
 
 function detectMobileOrTablet() {
   if (typeof navigator === 'undefined') return false;
@@ -2070,12 +2070,12 @@ export default function Game() {
         data-e6-screen={screen}
       >
         {tokenFlash && (
-          <div className="fixed top-4 right-4 z-50 bg-accent text-accent-foreground px-4 py-2 rounded-lg font-heading text-sm shadow-2xl animate-pulse">
+          <div className="e6-global-toast fixed top-4 right-4 z-50 bg-accent text-accent-foreground px-4 py-2 rounded-lg font-heading text-sm shadow-2xl animate-pulse">
             +{formatNumber(tokenFlash)} <GameIcon emoji="◆" size={14} /> Element 6 Tokens!
           </div>
         )}
         {storyRewardToast && (
-          <div className="fixed top-4 left-4 z-50 bg-card border-2 border-accent rounded-lg px-5 py-4 shadow-2xl max-w-sm">
+          <div className="e6-global-toast fixed top-4 left-4 z-50 bg-card border-2 border-accent rounded-lg px-5 py-4 shadow-2xl max-w-sm">
             <div className="flex justify-between items-start mb-2">
               <p className="font-heading text-sm text-accent"><GameIcon emoji="🏆" size={14} /> STORY COMPLETE!</p>
               <button onClick={() => setStoryRewardToast(null)} className="text-muted-foreground hover:text-foreground text-xs ml-2"><GameIcon emoji="✕" size={14} /></button>
@@ -2089,19 +2089,19 @@ export default function Game() {
         )}
         <GlobalNotifications settings={progress.settings || {}} />
         {chatToast && (
-          <div className="fixed top-16 right-4 z-50 bg-card border-2 border-accent rounded-lg px-4 py-3 shadow-2xl max-w-xs animate-pulse">
+          <div className="e6-global-toast fixed top-16 right-4 z-50 bg-card border-2 border-accent rounded-lg px-4 py-3 shadow-2xl max-w-xs animate-pulse">
             <p className="text-[10px] font-heading text-accent"><GameIcon emoji="💬" size={14} /> NEW MESSAGE — {chatToast.name}</p>
             <p className="text-xs font-body text-foreground truncate">{chatToast.text}</p>
           </div>
         )}
         {usernameToast && (
-          <div className="fixed top-28 right-4 z-50 bg-card border-2 border-primary rounded-lg px-4 py-3 shadow-2xl max-w-xs">
+          <div className="e6-global-toast fixed top-28 right-4 z-50 bg-card border-2 border-primary rounded-lg px-4 py-3 shadow-2xl max-w-xs">
             <p className="text-[10px] font-heading text-primary">USERNAME CHANGED</p>
             <p className="text-xs font-body text-foreground">You changed your username to <span className="text-accent font-heading">{usernameToast.newName}</span> from <span className="text-muted-foreground">{usernameToast.oldName}</span></p>
           </div>
         )}
         {matchRequestToast && (
-          <div className="fixed top-44 right-4 z-50 bg-card border-2 border-accent rounded-lg px-4 py-3 shadow-2xl max-w-xs">
+          <div className="e6-global-toast fixed top-44 right-4 z-50 bg-card border-2 border-accent rounded-lg px-4 py-3 shadow-2xl max-w-xs">
             <p className="text-[10px] font-heading text-accent">MATCH REQUEST</p>
             <p className="text-xs font-body text-foreground mb-2"><span className="text-accent font-heading">{matchRequestToast.from_username}</span> challenged you to <span className="font-heading text-primary">{matchRequestToast.sport.toUpperCase()}</span>!</p>
             <div className="flex gap-2">
@@ -2111,7 +2111,7 @@ export default function Game() {
           </div>
         )}
         {tradeGiftToast && (
-          <div className="fixed top-60 right-4 z-50 bg-card border-2 border-accent rounded-lg px-4 py-3 shadow-2xl max-w-xs animate-pulse">
+          <div className="e6-global-toast fixed top-60 right-4 z-50 bg-card border-2 border-accent rounded-lg px-4 py-3 shadow-2xl max-w-xs animate-pulse">
             <p className="text-[10px] font-heading text-accent inline-flex items-center gap-1">{tradeGiftToast.type === 'gift' ? <><GameIcon emoji="🎁" size={14} /> GIFT RECEIVED</> : tradeGiftToast.type === 'trade' ? <><GameIcon emoji="🔄" size={14} /> TRADE OFFER</> : <><GameIcon emoji="✅" size={14} /> TRADE ACCEPTED</>}</p>
             <p className="text-xs font-body text-foreground"><span className="text-accent font-heading">{tradeGiftToast.name}</span> {tradeGiftToast.text}</p>
           </div>

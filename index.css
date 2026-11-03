@@ -512,8 +512,7 @@ button:focus-visible, [role='button']:focus-visible, input:focus-visible, select
 
 /* ========================================================================
    UNIFIED NON-EXEMPT UI
-   Applied by Game.jsx only to redesigned menus, utility screens, overlays,
-   and results. Home and character-selection screens never receive this class.
+   Applied by Game.jsx to every routed screen except the Home Menu.
    Theme values continue to come from the active light/dark theme tokens.
    ======================================================================== */
 .e6-unified-ui {
@@ -538,7 +537,6 @@ button:focus-visible, [role='button']:focus-visible, input:focus-visible, select
     radial-gradient(ellipse 42rem 24rem at 8% 0%, var(--e6-ui-glow), transparent 76%),
     radial-gradient(ellipse 32rem 20rem at 100% 100%, hsl(var(--accent) / .08), transparent 78%);
 }
-.e6-unified-ui:has(.e6-character-select-exempt)::before { display: none; }
 .e6-unified-ui :is(.bg-card, [class*='bg-card/'], .bg-popover) {
   background-color: var(--e6-ui-panel) !important;
   border-color: var(--e6-ui-line);
@@ -607,32 +605,6 @@ button:focus-visible, [role='button']:focus-visible, input:focus-visible, select
   background: hsl(var(--primary) / .55);
   background-clip: padding-box;
 }
-.e6-unified-ui .e6-character-select-exempt :is(.bg-card, [class*='bg-card/'], .bg-popover) {
-  background-color: revert-layer !important;
-  border-color: revert-layer;
-  box-shadow: revert-layer;
-  backdrop-filter: revert-layer;
-}
-.e6-unified-ui .e6-character-select-exempt :is(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border) {
-  border-color: revert-layer;
-  box-shadow: revert-layer;
-}
-.e6-unified-ui .e6-character-select-exempt :is(button, [role='button'], a[role='button']) { min-height: revert-layer; }
-.e6-unified-ui .e6-character-select-exempt :is(button, [role='button']):focus-visible,
-.e6-unified-ui .e6-character-select-exempt :is(input, select, textarea):focus-visible {
-  outline: revert-layer !important;
-  outline-offset: revert-layer;
-  box-shadow: revert-layer;
-}
-.e6-unified-ui .e6-character-select-exempt :is(input:not([type='checkbox']):not([type='radio']), select, textarea) {
-  min-height: revert-layer;
-  border: revert-layer;
-  border-radius: revert-layer;
-  background-color: revert-layer;
-  color: revert-layer;
-  padding-inline: revert-layer;
-}
-.e6-unified-ui .e6-character-select-exempt [role='tablist'] { max-width: revert-layer; overflow-x: revert-layer; }
 @media (max-width: 640px) {
   .e6-unified-ui { padding-inline: max(.75rem, env(safe-area-inset-left)); }
   .e6-unified-ui :is([role='dialog'], [aria-modal='true']) {
@@ -659,19 +631,18 @@ button:focus-visible, [role='button']:focus-visible, input:focus-visible, select
 .e6-shop-preview-row > .w-56 { flex: 0 0 14rem; }
 .e6-equip-tabs { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
 
-/* Major non-exempt screen refresh. These rules stay inside the redesigned UI
-   shell, so the home and character-select presentations remain untouched. */
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) {
+/* Shared screen hierarchy and interaction rules for the routed UI shell. */
+.e6-unified-ui {
   --e6-ui-glow: hsl(var(--primary) / .27);
   padding: clamp(.5rem, 1.7vw, 1.35rem);
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt))::before {
+.e6-unified-ui::before {
   background:
     radial-gradient(ellipse 48rem 27rem at 6% 0%, hsl(var(--primary) / .22), transparent 74%),
     radial-gradient(ellipse 40rem 26rem at 96% 100%, hsl(var(--accent) / .13), transparent 76%),
     linear-gradient(135deg, hsl(var(--background) / .18), transparent 55%);
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(h1, h2) {
+.e6-unified-ui :is(h1, h2) {
   letter-spacing: .09em;
   text-shadow: 0 0 25px hsl(var(--primary) / .22);
 }
@@ -682,18 +653,18 @@ button:focus-visible, [role='button']:focus-visible, input:focus-visible, select
   letter-spacing: .19em;
   text-transform: uppercase;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(.bg-card, [class*='bg-card/'], .bg-popover) {
+.e6-unified-ui :is(.bg-card, [class*='bg-card/'], .bg-popover) {
   border-radius: 1rem;
   background-image: linear-gradient(145deg, hsl(var(--foreground) / .035), transparent 55%);
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(button, [role='button'], a[role='button']) {
+.e6-unified-ui :is(button, [role='button'], a[role='button']) {
   border-radius: .72rem;
   transition: transform 150ms ease, border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(button, [role='button'], a[role='button']):hover:not(:disabled) {
+.e6-unified-ui :is(button, [role='button'], a[role='button']):hover:not(:disabled) {
   box-shadow: 0 8px 24px hsl(var(--background) / .26), 0 0 18px hsl(var(--primary) / .12);
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(button, [role='button'], a[role='button']):active:not(:disabled) {
+.e6-unified-ui :is(button, [role='button'], a[role='button']):active:not(:disabled) {
   transform: translateY(1px) scale(.99);
 }
 .e6-back-button {
@@ -1163,18 +1134,16 @@ body.el6-gameplay-active {
   pointer-events: auto !important;
 }
 
-/* Clean competitive-fighter menu pass for non-home, non-character-select UI.
-   The visual direction follows Brawlhalla's clear menu hierarchy: flat
-   surfaces, compact cards, strong labels and restrained interaction feedback. */
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) {
+/* Shared competitive-fighter menu hierarchy across the routed UI shell. */
+.e6-unified-ui {
   --font-heading: 'Rajdhani', sans-serif;
   --border: 213 22% 80%;
   --input: 213 22% 80%;
   --e6-ui-glow: transparent;
   padding: clamp(.55rem, 1.4vw, 1.1rem);
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt))::before { display: none; }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(.bg-card, [class*='bg-card/'], .bg-popover) {
+.e6-unified-ui::before { display: none; }
+.e6-unified-ui :is(.bg-card, [class*='bg-card/'], .bg-popover) {
   border-color: hsl(var(--border) / .9) !important;
   border-radius: .45rem !important;
   background-color: hsl(var(--card) / .98) !important;
@@ -1182,131 +1151,131 @@ body.el6-gameplay-active {
   box-shadow: 0 2px 8px hsl(var(--background) / .12) !important;
   backdrop-filter: none !important;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border) {
+.e6-unified-ui :is(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border) {
   border-color: hsl(var(--border) / .9) !important;
   border-radius: .45rem !important;
   background-image: none !important;
   box-shadow: 0 2px 8px hsl(var(--background) / .12) !important;
   backdrop-filter: none !important;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(h1, h2, h3, .font-heading) {
+.e6-unified-ui :is(h1, h2, h3, .font-heading) {
   letter-spacing: .025em;
   text-shadow: none !important;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(button, [role='button'], a[role='button']) {
+.e6-unified-ui :is(button, [role='button'], a[role='button']) {
   border-radius: .35rem;
   box-shadow: none;
   font-family: 'Rajdhani', sans-serif;
   letter-spacing: .025em;
   transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(button, [role='button'], a[role='button']):hover:not(:disabled) {
+.e6-unified-ui :is(button, [role='button'], a[role='button']):hover:not(:disabled) {
   transform: none;
   border-color: hsl(var(--primary) / .8);
   box-shadow: none;
   filter: none;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(button, [role='button']):focus-visible,
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) :is(input, select, textarea):focus-visible {
+.e6-unified-ui :is(button, [role='button']):focus-visible,
+.e6-unified-ui :is(input, select, textarea):focus-visible {
   outline: 2px solid hsl(var(--accent)) !important;
   outline-offset: 2px;
   box-shadow: 0 0 0 3px hsl(var(--accent) / .18) !important;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-screen-eyebrow {
+.e6-unified-ui .e6-screen-eyebrow {
   color: hsl(var(--primary));
   font: 700 .72rem/1.1 'Rajdhani', sans-serif;
   letter-spacing: .09em;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-back-button {
+.e6-unified-ui .e6-back-button {
   border-radius: .35rem;
   border-color: hsl(var(--border));
   background: hsl(var(--secondary));
   font: 700 .9rem/1 'Rajdhani', sans-serif;
   letter-spacing: .04em;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-shop-intro,
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-browser-header {
+.e6-unified-ui .e6-shop-intro,
+.e6-unified-ui .e6-mode-browser-header {
   border-radius: .45rem;
   border-color: hsl(var(--border));
   background: hsl(var(--card));
   box-shadow: none;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-shop-tabs {
+.e6-unified-ui .e6-shop-tabs {
   border-radius: .4rem;
   background: hsl(var(--secondary));
   box-shadow: none;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-shop-tabs > button {
+.e6-unified-ui .e6-shop-tabs > button {
   border-radius: .3rem;
   font: 700 .82rem/1 'Rajdhani', sans-serif;
   letter-spacing: .035em;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-shop-tabs > button[aria-selected='true'] {
+.e6-unified-ui .e6-shop-tabs > button[aria-selected='true'] {
   border-color: hsl(var(--primary));
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
   box-shadow: none;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-shop-preview-row > :last-child {
+.e6-unified-ui .e6-shop-preview-row > :last-child {
   border-radius: .45rem;
   border-color: hsl(var(--border)) !important;
   background: hsl(var(--card)) !important;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-shop-screen .grid > :is(.bg-card, button.bg-card, div.rounded-xl) {
+.e6-unified-ui .e6-shop-screen .grid > :is(.bg-card, button.bg-card, div.rounded-xl) {
   border-radius: .4rem;
   background: hsl(var(--card));
   box-shadow: 0 2px 7px hsl(var(--background) / .12);
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-shop-screen .grid > :is(div.rounded-xl, button.bg-card):hover {
+.e6-unified-ui .e6-shop-screen .grid > :is(div.rounded-xl, button.bg-card):hover {
   transform: translateY(-1px);
   border-color: hsl(var(--primary) / .8);
   box-shadow: 0 3px 10px hsl(var(--background) / .16);
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-settings-header {
+.e6-unified-ui .e6-settings-header {
   background: hsl(var(--background) / .96) !important;
   backdrop-filter: none !important;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-settings-screen > :is(.bg-card, section.bg-card) {
+.e6-unified-ui .e6-settings-screen > :is(.bg-card, section.bg-card) {
   border-radius: .45rem !important;
   background: hsl(var(--card)) !important;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-settings-screen > :is(.bg-card, section.bg-card) h3 {
+.e6-unified-ui .e6-settings-screen > :is(.bg-card, section.bg-card) h3 {
   color: hsl(var(--foreground));
   letter-spacing: .035em;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile {
+.e6-unified-ui .e6-mode-tile {
   min-height: 96px !important;
   border-radius: .4rem;
   border-color: hsl(var(--border));
   background: hsl(var(--card));
   box-shadow: 0 2px 7px hsl(var(--background) / .12);
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile:hover,
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile:focus-visible {
+.e6-unified-ui .e6-mode-tile:hover,
+.e6-unified-ui .e6-mode-tile:focus-visible {
   transform: none;
   border-color: hsl(var(--primary));
   background: hsl(var(--primary) / .07);
   box-shadow: inset 3px 0 hsl(var(--primary));
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile-mark {
+.e6-unified-ui .e6-mode-tile-mark {
   border-radius: .35rem;
   background: hsl(var(--primary) / .1);
   color: hsl(var(--primary));
   text-shadow: none;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile-title { font: 700 1.2rem/1.05 'Rajdhani', sans-serif; }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile-kicker,
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile-action,
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-section-heading > span {
+.e6-unified-ui .e6-mode-tile-title { font: 700 1.2rem/1.05 'Rajdhani', sans-serif; }
+.e6-unified-ui .e6-mode-tile-kicker,
+.e6-unified-ui .e6-mode-tile-action,
+.e6-unified-ui .e6-mode-section-heading > span {
   font: 700 .75rem/1.1 'Rajdhani', sans-serif;
   letter-spacing: .05em;
 }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-section-featured { border-color: hsl(var(--border)); }
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-mode-tile-featured {
+.e6-unified-ui .e6-mode-section-featured { border-color: hsl(var(--border)); }
+.e6-unified-ui .e6-mode-tile-featured {
   border-color: hsl(var(--border));
   background: hsl(var(--card));
 }
-.dark .e6-unified-ui:not(:has(.e6-character-select-exempt)) {
+.dark .e6-unified-ui {
   --background: 220 32% 9%;
   --foreground: 210 25% 95%;
   --card: 220 25% 15%;
@@ -1320,7 +1289,7 @@ body.el6-gameplay-active {
   --border: 214 23% 30%;
   --input: 214 23% 30%;
 }
-html:not(.dark) .e6-unified-ui:not(:has(.e6-character-select-exempt)) {
+html:not(.dark) .e6-unified-ui {
   --background: 210 35% 96%;
   --foreground: 218 38% 13%;
   --card: 0 0% 100%;
@@ -1336,7 +1305,7 @@ html:not(.dark) .e6-unified-ui:not(:has(.e6-character-select-exempt)) {
 }
 
 /* Purpose-built storefront: category rail, account bar and item catalog. */
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-storefront-screen {
+.e6-unified-ui .e6-storefront-screen {
   width: min(100%, 100rem); max-width: none; min-height: calc(100dvh - 2.5rem);
   margin-inline: auto; gap: 1rem; color: hsl(var(--foreground));
 }
@@ -1383,7 +1352,7 @@ html:not(.dark) .e6-unified-ui:not(:has(.e6-character-select-exempt)) {
 .e6-storefront-catalog :is(button, [role='button'], [role='group']):focus-visible, .e6-storefront-sidebar button:focus-visible, .e6-storefront-back:focus-visible { outline: 3px solid hsl(var(--accent)); outline-offset: 2px; }
 
 /* Season hub and free/premium tier road. */
-.e6-unified-ui:not(:has(.e6-character-select-exempt)) .e6-season-pass-screen { --pass-accent: hsl(var(--accent)); width: min(100%,100rem); max-width: none; min-height: calc(100dvh - 2.5rem); margin-inline: auto; display: flex; flex-direction: column; gap: clamp(.9rem,1.8vw,1.4rem); color: hsl(var(--foreground)); }
+.e6-unified-ui .e6-season-pass-screen { --pass-accent: hsl(var(--accent)); width: min(100%,100rem); max-width: none; min-height: calc(100dvh - 2.5rem); margin-inline: auto; display: flex; flex-direction: column; gap: clamp(.9rem,1.8vw,1.4rem); color: hsl(var(--foreground)); }
 .e6-pass-topbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem; min-height: 4.1rem; padding: .65rem clamp(.7rem,1.7vw,1.4rem); border: 1px solid hsl(var(--border) / .8); border-top: 3px solid var(--pass-accent); background: linear-gradient(100deg,hsl(var(--card)),hsl(var(--background) / .92)); }
 .e6-pass-back { justify-self: start; }
 .e6-pass-brand { display: grid; justify-items: center; gap: .18rem; }
@@ -1519,3 +1488,260 @@ html:not(.dark) .e6-unified-ui:not(:has(.e6-character-select-exempt)) {
   .e6-storefront-nav-item,.e6-pass-actions button,.e6-pass-tier-claim { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { .e6-pass-progress-track > span,.e6-storefront-catalog .grid > :is(div[class*='rounded-'],button.bg-card) { transition: none; } }
+
+/* Unified rounded redesign for every routed screen. The Home Menu stays
+   outside .e6-unified-ui, so this system never reaches its authored layout. */
+.e6-unified-ui {
+  --e6-radius-panel: 1.35rem;
+  --e6-radius-card: 1.05rem;
+  --e6-radius-control: 999px;
+  --e6-soft-shadow: 0 12px 30px hsl(var(--background) / .2), inset 0 1px hsl(var(--foreground) / .05);
+  padding: clamp(.8rem, 1.65vw, 1.5rem);
+}
+.e6-unified-ui::before {
+  display: block;
+  background:
+    radial-gradient(ellipse 42rem 28rem at 8% 0%, hsl(var(--primary) / .13), transparent 76%),
+    radial-gradient(ellipse 36rem 24rem at 100% 92%, hsl(var(--accent) / .1), transparent 78%),
+    radial-gradient(ellipse 60rem 22rem at 50% 0%, hsl(var(--foreground) / .035), transparent 85%);
+}
+.e6-unified-ui :is(.bg-card, [class*='bg-card/'], .bg-popover) {
+  border-radius: var(--e6-radius-panel) !important;
+  border-color: hsl(var(--border) / .78) !important;
+  background-color: hsl(var(--card) / .94) !important;
+  background-image: linear-gradient(145deg, hsl(var(--foreground) / .045), transparent 64%) !important;
+  box-shadow: var(--e6-soft-shadow) !important;
+  backdrop-filter: blur(12px) saturate(1.05);
+}
+.e6-unified-ui :is(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border, [role='dialog'], [aria-modal='true']) {
+  border-radius: var(--e6-radius-panel) !important;
+  border-color: hsl(var(--border) / .78);
+  box-shadow: var(--e6-soft-shadow);
+}
+.e6-unified-ui :is(h1, h2, h3) { text-wrap: balance; line-height: 1.12; }
+.e6-unified-ui :is(h1, h2, h3, .font-heading) { letter-spacing: .035em; text-shadow: none; }
+.e6-unified-ui :is(button, [role='button'], a[role='button']) {
+  border-radius: var(--e6-radius-control) !important;
+  transition: transform 160ms ease, color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.e6-unified-ui :is(button, [role='button'], a[role='button']):hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px hsl(var(--background) / .16), 0 0 0 1px hsl(var(--primary) / .12);
+}
+.e6-unified-ui :is(button, [role='button'], a[role='button']):focus-visible,
+.e6-unified-ui :is(input, select, textarea):focus-visible {
+  outline: 3px solid hsl(var(--accent)) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px hsl(var(--accent) / .15) !important;
+}
+.e6-unified-ui :is(input:not([type='checkbox']):not([type='radio']), select) { border-radius: var(--e6-radius-control); }
+.e6-unified-ui textarea { border-radius: 1.1rem; }
+.e6-unified-ui :is(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border) > :is(img, canvas) { border-radius: calc(var(--e6-radius-card) - .25rem); }
+.e6-unified-ui :is([role='dialog'], [aria-modal='true']) { border-radius: var(--e6-radius-panel); }
+.e6-unified-ui :is(.overflow-y-auto, .overflow-auto) { scrollbar-color: hsl(var(--primary) / .58) hsl(var(--background) / .28); }
+.e6-unified-ui :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar-thumb { border-radius: 999px; }
+.e6-unified-ui :is(button, [role='button'])[class~='w-4'],
+.e6-unified-ui :is(button, [role='button'])[class~='w-5'],
+.e6-unified-ui :is(button, [role='button'])[class~='w-6'],
+.e6-unified-ui :is(button, [role='button'])[class~='w-7'],
+.e6-unified-ui :is(button, [role='button'])[class~='w-8'],
+.e6-unified-ui :is(button, [role='button'])[class~='w-9'] { min-height: 0; }
+
+/* Settings gets a section rail and responsive two-column control room. */
+.e6-unified-ui .e6-settings-screen {
+  display: grid !important;
+  width: min(100%, 90rem);
+  max-width: 90rem;
+  max-height: calc(100dvh - 2rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 1rem;
+  padding: .2rem .35rem 1rem;
+  scroll-padding-top: 7.5rem;
+}
+.e6-unified-ui .e6-settings-header, .e6-unified-ui .e6-settings-nav,
+.e6-unified-ui .e6-settings-account, .e6-unified-ui .e6-settings-span { grid-column: 1 / -1; }
+.e6-unified-ui .e6-settings-header {
+  margin: 0 !important;
+  padding: 1rem 1.25rem !important;
+  border: 1px solid hsl(var(--border) / .72);
+  border-radius: var(--e6-radius-panel);
+  background: hsl(var(--background) / .9) !important;
+  backdrop-filter: blur(16px);
+}
+.e6-unified-ui .e6-settings-nav {
+  position: sticky;
+  top: 5.25rem;
+  z-index: 9;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  padding: .65rem;
+  border: 1px solid hsl(var(--border) / .76);
+  border-radius: 1.2rem;
+  background: hsl(var(--background) / .94);
+  box-shadow: 0 8px 20px hsl(var(--background) / .15);
+  backdrop-filter: blur(12px);
+}
+.e6-unified-ui .e6-settings-nav a {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: .45rem .9rem;
+  border: 1px solid hsl(var(--border) / .6);
+  border-radius: 999px;
+  background: hsl(var(--card) / .85);
+  color: hsl(var(--foreground));
+  font: 700 .77rem Rajdhani, sans-serif;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.e6-unified-ui .e6-settings-nav a:hover,
+.e6-unified-ui .e6-settings-nav a:focus-visible { border-color: hsl(var(--primary)); background: hsl(var(--primary) / .12); outline: none; }
+.e6-unified-ui .e6-settings-account, .e6-unified-ui .e6-settings-card,
+.e6-unified-ui .e6-settings-span {
+  min-width: 0;
+  border-radius: var(--e6-radius-panel) !important;
+  padding: clamp(1rem, 1.7vw, 1.55rem) !important;
+  scroll-margin-top: 7.5rem;
+}
+.e6-unified-ui .e6-settings-card h3 {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin: 0 0 1rem;
+  padding: 0 0 .7rem;
+  border-bottom: 1px solid hsl(var(--border) / .72);
+  color: hsl(var(--primary));
+  font: 800 .88rem Rajdhani, sans-serif;
+  letter-spacing: .12em;
+}
+.e6-unified-ui .e6-settings-card .space-y-3 > div,
+.e6-unified-ui .e6-settings-card .space-y-2 > div {
+  border-radius: 1rem;
+}
+.e6-unified-ui .e6-settings-danger { border-color: hsl(var(--destructive) / .45) !important; }
+.e6-unified-ui .e6-settings-danger button { border-radius: 999px !important; }
+.e6-unified-ui #settings-controls > * { width: 100%; border-radius: var(--e6-radius-panel); }
+.e6-unified-ui #settings-controls [class*='bg-card'] { border-radius: var(--e6-radius-panel) !important; }
+
+/* Character pick screens now use the same finish, with larger, round select
+   tiles and a distinct preview panel. */
+.e6-unified-ui .e6-character-select-screen {
+  width: min(100%, 90rem);
+  max-width: 90rem;
+  padding-inline: .4rem;
+  scrollbar-gutter: stable;
+}
+.e6-unified-ui .e6-character-select-header {
+  padding: .8rem 1rem;
+  border: 1px solid hsl(var(--border) / .72);
+  border-radius: 1.25rem;
+  background: hsl(var(--card) / .78);
+}
+.e6-unified-ui .e6-character-select-screen .e6-character-grid-layout { align-items: stretch; gap: 1rem; }
+.e6-unified-ui .e6-character-select-screen .e6-character-grid-panel,
+.e6-unified-ui .e6-character-select-screen .e6-character-stats-panel > .bg-card {
+  border-radius: 1.4rem !important;
+  padding: .85rem !important;
+  background: hsl(var(--card) / .87) !important;
+}
+.e6-unified-ui .e6-character-select-screen .e6-character-grid { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)) !important; gap: .55rem !important; }
+.e6-unified-ui .e6-character-select-screen .e6-character-grid > button {
+  min-height: 76px;
+  gap: .3rem;
+  padding: .45rem .25rem !important;
+  border-radius: 1rem !important;
+  border-color: hsl(var(--border) / .55) !important;
+  background: hsl(var(--background) / .38) !important;
+}
+.e6-unified-ui .e6-character-select-screen .e6-character-grid > button:hover { background: hsl(var(--primary) / .12) !important; }
+.e6-unified-ui .e6-character-select-screen .e6-character-grid > button > div { width: 42px !important; height: 42px !important; }
+.e6-unified-ui .e6-character-select-screen .e6-character-grid > button > span:last-child { max-width: 66px !important; font-size: .62rem !important; }
+.e6-unified-ui .e6-story-character-select,
+.e6-unified-ui .e6-shapeshift-select { border-radius: 1.6rem !important; }
+.e6-unified-ui .e6-story-character-select { border-color: hsl(var(--border) / .7) !important; background: hsl(var(--card) / .96) !important; }
+
+/* Put the new rounded treatment on the recent storefronts as well. */
+.e6-unified-ui .e6-storefront-topbar, .e6-unified-ui .e6-storefront-sidebar,
+.e6-unified-ui .e6-storefront-catalog, .e6-unified-ui .e6-storefront-wallet,
+.e6-unified-ui .e6-storefront-catalog .grid > :is(div[class*='rounded-'], button.bg-card) {
+  border-radius: var(--e6-radius-panel) !important;
+}
+.e6-unified-ui .e6-storefront-nav-item { border-radius: 999px !important; }
+.e6-unified-ui .e6-pass-topbar, .e6-unified-ui .e6-pass-hero,
+.e6-unified-ui .e6-pass-track-section, .e6-unified-ui .e6-pass-tier,
+.e6-unified-ui .e6-pass-footnote, .e6-unified-ui .e6-pass-empty { border-radius: var(--e6-radius-panel); }
+.e6-unified-ui .e6-pass-reward-cell { border-radius: 1.15rem; }
+.e6-unified-ui .e6-pass-tier-index { border-radius: 1rem 1rem 0 0; }
+
+@media (max-width: 760px) {
+  .e6-unified-ui .e6-settings-screen { grid-template-columns: minmax(0, 1fr); gap: .75rem; max-height: calc(100dvh - 1rem); }
+  .e6-unified-ui .e6-settings-header, .e6-unified-ui .e6-settings-nav,
+  .e6-unified-ui .e6-settings-account, .e6-unified-ui .e6-settings-span { grid-column: 1; }
+  .e6-unified-ui .e6-settings-nav { top: .35rem; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+  .e6-unified-ui .e6-settings-nav a { min-height: 44px; }
+  .e6-unified-ui .e6-character-select-screen .e6-character-grid-layout { flex-direction: column; }
+  .e6-unified-ui .e6-character-select-screen .e6-character-stats-panel { width: 100%; }
+  .e6-unified-ui .e6-character-select-screen .e6-character-grid { grid-template-columns: repeat(auto-fill,minmax(64px,1fr)) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .e6-unified-ui *, .e6-unified-ui *::before, .e6-unified-ui *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+.e6-boot-screen {
+  z-index: 1000;
+  background: radial-gradient(ellipse at 50% 38%, hsl(263 47% 24%), hsl(232 39% 11%) 58%, hsl(230 39% 7%));
+}
+.e6-boot-spinner { width: 3.25rem; height: 3.25rem; border-color: hsl(0 0% 100% / .25); border-top-color: hsl(45 93% 63%); box-shadow: 0 0 28px hsl(45 93% 63% / .3); }
+.e6-daily-reward-backdrop { padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); background: hsl(230 45% 5% / .76); }
+.e6-daily-reward-panel { width: min(100%, 32rem); max-height: calc(100dvh - 2rem); overflow-y: auto; border-radius: 1.75rem !important; box-shadow: 0 28px 90px hsl(230 45% 3% / .55), 0 0 0 1px hsl(var(--accent) / .14); }
+.e6-daily-reward-panel > .grid > div { border-radius: 1rem; }
+.e6-daily-reward-panel > button { min-height: 48px; border-radius: 999px !important; }
+.e6-global-toast, .e6-global-notification-item { border-radius: 1.25rem !important; box-shadow: 0 18px 45px hsl(var(--background) / .32); backdrop-filter: blur(12px); }
+.e6-global-toast.bg-card { border: 1px solid hsl(var(--border) / .7); background-color: hsl(var(--card) / .97) !important; }
+.e6-global-toast button { border-radius: 999px !important; }
+.e6-clip-toast { border: 1px solid hsl(45 85% 62% / .7); border-radius: 999px; background: linear-gradient(120deg, hsl(45 93% 63%), hsl(36 85% 57%)); color: hsl(230 38% 12%); padding: .7rem 1.2rem; font: 800 .72rem Orbitron, sans-serif; letter-spacing: .04em; box-shadow: 0 12px 34px hsl(230 45% 3% / .45); }
+.e6-auth-layout .e6-auth-panel { border-radius: 1.7rem; box-shadow: 0 24px 70px hsl(228 45% 4% / .48); }
+.e6-auth-layout .e6-auth-mark { border-radius: 1.35rem; }
+.e6-auth-layout .e6-auth-guidance { border-radius: 1.1rem; }
+.e6-auth-panel input:not([type='checkbox']):not([type='radio']), .e6-auth-panel select { border-radius: 1rem; }
+.e6-auth-panel :is(button, a[role='button']) { border-radius: 999px; }
+.e6-auth-panel :is(button, input, a):focus-visible { outline: 3px solid hsl(45 93% 63% / .9); outline-offset: 3px; }
+.e6-auth-panel :is(.bg-destructive\/10, [role='alert']) { border-radius: 1.1rem; }
+.e6-unified-ui .e6-account-panel { border-radius: 1.35rem; padding: clamp(1rem, 1.7vw, 1.55rem); }
+.e6-unified-ui .e6-account-panel :is(.e6-auth-tabs button, .e6-auth-submit, .e6-auth-secondary) { border-radius: 999px; }
+.e6-unified-ui .e6-story-character-select { color: hsl(var(--foreground)) !important; }
+.e6-unified-ui .e6-story-character-select [class*='text-white/'] { color: hsl(var(--muted-foreground)) !important; }
+.e6-unified-ui .e6-story-character-select .text-white { color: hsl(var(--foreground)) !important; }
+.e6-unified-ui .e6-story-character-select :is(button, .rounded-xl) { border-radius: 1.15rem !important; }
+.e6-unified-ui .e6-story-character-select button { border-color: hsl(var(--border) / .72); }
+.e6-unified-ui .e6-story-character-select button:hover { background-color: hsl(var(--primary) / .12); }
+.e6-unified-ui .e6-story-character-select .bg-white\/5,
+.e6-unified-ui .e6-story-character-select .bg-white\/10 { background-color: hsl(var(--background) / .44) !important; }
+.e6-unified-ui .e6-story-character-select .border-white\/10,
+.e6-unified-ui .e6-story-character-select .border-white\/15 { border-color: hsl(var(--border) / .7) !important; }
+.e6-unified-ui .e6-character-select-screen .e6-character-grid-panel,
+.e6-unified-ui .e6-shapeshift-select :is(.bg-card, .bg-card\/50, .bg-card\/40) { border-radius: 1.35rem !important; }
+.e6-unified-ui .e6-mode-browser-header,
+.e6-unified-ui .e6-mode-section,
+.e6-unified-ui .e6-mode-tile { border-radius: 1.35rem !important; }
+.e6-unified-ui .e6-mode-tile { min-height: 8.4rem !important; padding: 1.05rem 1.15rem; }
+.e6-unified-ui .e6-mode-tile-mark { width: 3.25rem; height: 3.25rem; border-radius: 1.15rem; }
+.e6-unified-ui :is(.e6-mode-browser, .e6-settings-screen, .e6-storefront-screen, .e6-season-pass-screen, .e6-character-select-screen) :is(h1, h2) { text-shadow: none; }
+.el6-global-pause-layer, .el6-global-pause-button-layer { --e6-radius-panel: 1.35rem; --e6-radius-control: 999px; color: hsl(var(--foreground)); }
+.el6-global-pause-layer :is(.bg-card, [class*='bg-card/'], .bg-popover),
+.el6-global-pause-layer :is(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border) { border-radius: var(--e6-radius-panel) !important; }
+.el6-global-pause-layer :is(button, [role='button'], a[role='button']),
+.el6-global-pause-button-layer :is(button, [role='button'], a[role='button']) { border-radius: var(--e6-radius-control) !important; }
+.el6-global-pause-layer :is(button, [role='button']):focus-visible,
+.el6-global-pause-button-layer :is(button, [role='button']):focus-visible { outline: 3px solid hsl(var(--accent)); outline-offset: 3px; }
+.e6-unified-ui table { border-collapse: separate; border-spacing: 0 .35rem; }
+.e6-unified-ui :is(thead, tbody) tr > :first-child { border-top-left-radius: .8rem; border-bottom-left-radius: .8rem; }
+.e6-unified-ui :is(thead, tbody) tr > :last-child { border-top-right-radius: .8rem; border-bottom-right-radius: .8rem; }
+@media (max-width: 760px) {
+  .e6-unified-ui .e6-settings-card .flex.items-center.justify-between,
+  .e6-unified-ui .e6-settings-card .flex.items-center.gap-3 { gap: .65rem; }
+  .e6-unified-ui .e6-settings-card .text-xs.w-28,
+  .e6-unified-ui .e6-settings-card .text-xs.w-32 { width: auto; min-width: 6.2rem; }
+}

@@ -1,22 +1,26 @@
-# UI redesign update notes
+# Full non-home UI redesign
 
-This is a change-only package for the attached game source, not a full game copy. The Home Menu and actual Character Selection Menus remain excluded.
+This is a change-only package for the attached game source, not a full game copy. The Home Menu is the only screen excluded from the redesign system. Character selection screens are included in this update.
 
-## Shop and Battle Pass rebuild
+## What changed
 
-- Rebuilt the Shop screen around a dedicated storefront: grouped category rail, token wallet, clear category context, and a responsive item catalog. Existing categories, previews, ownership states, currency checks, purchase callbacks, equip actions, and confirmation behavior remain wired to the game's existing data and handlers.
-- Shop accessory and sport-kit previews can be selected by mouse, keyboard, and controller focus. The catalog adapts to compact screens with horizontally scrollable category navigation.
-- Rebuilt the Battle Pass as a season hub with an event showcase, progress meter, free/premium lane distinction, and side-by-side reward cells for each tier. Claim, claim-all, tier eligibility, claimed state, Battle Pass+ rewards, next-event countdown, and Equip navigation continue to use the existing game state and callbacks.
-- Reward previews animate only while visible to reduce work while browsing the 50-tier horizontal track. The paid-pack checkout remains marked unavailable because the existing game does not have a connected checkout flow; no purchase is presented as successful.
+- Applied a new shared visual system to every screen routed through `Game.jsx`: softened layered surfaces, rounded cards and panels, pill-shaped controls, consistent focus feedback, responsive spacing, and clearer type hierarchy. The common styling also covers in-game menus, popups, overlays, notifications, and results while preserving their existing layouts and actions.
+- Rebuilt Settings as a responsive two-column control room with a section navigator. Audio, profile, music, CPU, match history, gameplay, controls, display, theme, social, and online settings retain their existing settings keys and handlers.
+- Redesigned the active fighter, story, and Shapeshift selection screens to use the shared style. Character choices, unlock rules, filters, equipment, match settings, and start actions are preserved.
+- Rounded the Shop storefront and Battle Pass season hub, including their panels and item/reward cards. Their purchase, ownership, claim, equip, progress, and navigation flows remain connected to the existing systems.
+- Updated app loading, account forms, daily reward dialogs, global notifications, clip notices, and pause portals to match the shared rounded treatment.
 
-## Other included UI and gameplay changes
+The Home Menu remains outside the shared UI wrapper, so the new visual rules do not alter its layout. The game’s data, progression, networking, and gameplay handlers remain in their existing components.
+
+## Included gameplay updates
 
 - The active roster super renderer no longer darkens the stage or draws a viewport-wide flash rectangle. Other super renderers avoid full-screen color washes; localized effects retain the stage background.
 - Purple's requested side-heavy, down-heavy, and up-signature endlag values match Itto's corresponding values.
-- The existing change-only bundle retains the earlier responsive gameplay viewport, HUD, non-exempt menu, settings, and mode-browser changes.
+- The package carries the earlier responsive gameplay viewport and compact HUD changes.
 
 ## Scope and verification
 
-- Gameplay viewport sizing retains each mode's logical canvas and world bounds; it does not expand every mode's camera-aware world bounds.
-- Existing emote/accessory art has not been replaced with bespoke character-by-character designs. Authentication screens outside the active Game.jsx shell were not changed.
+- Gameplay viewport sizing retains each mode's logical canvas and world bounds; camera-aware world expansion is still needed to guarantee every stage detail stays visible on every aspect ratio.
+- Existing emote and accessory art has not been replaced with bespoke character-by-character designs across Generations I–V.
+- The paid-pack checkout remains unavailable in the existing game and is still presented as unavailable.
 - Bundled production output is omitted. No build or tests were run for this update.

@@ -498,10 +498,10 @@ export default function UniversalCharacterSelect({
   const selectedIds = activePlayerCount === 1 || rankedRandom ? [p1] : picks.slice(0, activePlayerCount);
 
   return (
-    <div className="e6-character-select-exempt el6-character-select-scroll flex flex-col gap-2 w-full max-w-6xl mx-auto h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] overflow-y-auto overflow-x-hidden overscroll-contain pr-2 pb-28" tabIndex={-1}>
+    <div className="e6-character-select-screen el6-character-select-scroll flex flex-col gap-3 w-full max-w-6xl mx-auto h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] overflow-y-auto overflow-x-hidden overscroll-contain pr-2 pb-28" tabIndex={-1}>
       {enableMatchSettings && <MatchSettingsOverlay open={settingsOpen} onClose={() => setSettingsOpen(false)} config={{ ...matchConfig, customControls: settings?.customControls || [], characterNames: picks.slice(0, activePlayerCount).map(id => ALL_CHARS.find(c => c.id === id)?.name || id) }} onChange={handleMatchConfigChange} />}
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="e6-character-select-header flex justify-between items-center">
         <h2 className="text-xl font-heading text-foreground tracking-wider">MANAGE MATCH</h2>
         <div className="flex gap-2 items-center">
           {rankedRandom && <span className="text-[9px] text-muted-foreground"><GameIcon emoji="🔒" size={14} /> P2: Random</span>}
@@ -547,13 +547,13 @@ export default function UniversalCharacterSelect({
       </div>
 
       {/* Main: grid + stat popup */}
-      <div className="flex gap-2">
-        <div className="flex-1 bg-card/40 border border-border rounded-lg p-1.5">
+      <div className="e6-character-grid-layout flex gap-2">
+        <div className="e6-character-grid-panel flex-1 bg-card/40 border border-border rounded-lg p-1.5">
           <div className="flex items-center justify-between mb-0.5">
             <div className="text-[8px] font-heading text-muted-foreground">{filtered.length} characters</div>
             <div className="text-[7px] font-heading text-accent"><GameIcon emoji="★" size={14} /> {favoriteIds.length}/5 FAVORITES (right-click)</div>
           </div>
-          <div className="grid gap-1" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(48px, 1fr))' }}>
+          <div className="e6-character-grid grid gap-1" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(48px, 1fr))' }}>
             {filtered.map(c => {
               const selected = selectedIds.includes(c.id);
               const locked = !allowLocked && !unlockedSet.has(c.id) && !c.isCustom;
@@ -578,7 +578,7 @@ export default function UniversalCharacterSelect({
           </div>
         </div>
         {/* Stat popup (replaces the old right panel — compact, only on hover) */}
-        <div className="w-[170px] flex-shrink-0">
+        <div className="e6-character-stats-panel w-[170px] flex-shrink-0">
           <StatPopup char={hoveredChar || (selecting === 1 ? p1Char : p2Char)} locked={hoveredChar ? (!allowLocked && !unlockedSet.has(hoveredChar.id) && !hoveredChar.isCustom) : false} charMastery={charMastery} />
         </div>
       </div>

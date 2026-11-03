@@ -33,6 +33,12 @@ const MUSIC_SCENES = [
   { id: 'soccer', label: 'Soccer' },
 ];
 
+const SETTINGS_NAV = [
+  ['settings-account', 'Account'], ['settings-profile', 'Profile'], ['settings-audio', 'Audio'], ['settings-gameplay', 'Gameplay'],
+  ['settings-controls', 'Controls'], ['settings-display', 'Display'], ['settings-themes', 'Themes'], ['settings-era', 'UI style'],
+  ['settings-social', 'Social'], ['settings-online', 'Online'], ['settings-danger', 'Account reset'],
+];
+
 function Toggle({ on, onClick }) {
   return (
     <button onClick={onClick} className={`w-12 h-6 rounded-full transition relative ${on ? 'bg-accent' : 'bg-muted'}`}>
@@ -191,7 +197,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
   };
 
   return (
-    <div className="e6-settings-screen w-full max-w-4xl flex flex-col gap-4 max-h-[85vh] overflow-y-auto pr-1">
+    <div className="e6-settings-screen w-full max-w-6xl flex flex-col gap-4 max-h-[calc(100dvh-2rem)] overflow-y-auto pr-1">
       <div className="e6-settings-header flex justify-between items-center sticky top-0 z-10 bg-background/80 backdrop-blur py-3 -mx-1 px-2">
         <div><p className="e6-screen-eyebrow">PLAYER EXPERIENCE · CONFIGURATION</p><h2 className="text-3xl font-heading text-accent tracking-wider">SETTINGS</h2></div>
         <div className="flex items-center gap-2">
@@ -199,10 +205,14 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
         </div>
       </div>
 
-      <AccountPanel />
+      <nav className="e6-settings-nav" aria-label="Settings sections">
+        {SETTINGS_NAV.map(([id, label]) => <a key={id} href={`#${id}`} onClick={e => { e.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>{label}</a>)}
+      </nav>
+
+      <div id="settings-account" className="e6-settings-account"><AccountPanel /></div>
 
       {/* AUDIO */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div id="settings-audio" className="e6-settings-card bg-card border border-border rounded-xl p-5">
         <h3 className="font-heading text-sm text-primary mb-3">AUDIO</h3>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
@@ -219,7 +229,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       </div>
 
       {/* PROFILE — Username + Title */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div id="settings-profile" className="e6-settings-card bg-card border border-border rounded-xl p-5">
         <h3 className="font-heading text-sm text-primary mb-3">PROFILE</h3>
         <div className="space-y-3">
           <div>
@@ -286,7 +296,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       </div>
 
       {/* CUSTOM MUSIC */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div className="e6-settings-card bg-card border border-border rounded-xl p-5">
         <h3 className="font-heading text-sm text-primary mb-2">CUSTOM MUSIC</h3>
         <p className="text-[10px] text-muted-foreground mb-3">Upload your own MP3 for each scene. Overrides the default tracks.</p>
         <div className="space-y-2">
@@ -308,7 +318,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       </div>
 
       {/* CUSTOM BACKDROP */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div className="e6-settings-card bg-card border border-border rounded-xl p-5">
         <h3 className="font-heading text-sm text-primary mb-2">CUSTOM BACKDROP</h3>
         <p className="text-[10px] text-muted-foreground mb-3">Upload your own image to replace the Split City backdrop on the home menu and menu screens. PNG, JPG, GIF (animated), WEBP supported.</p>
         <div className="flex items-center gap-2">
@@ -330,7 +340,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       </div>
 
       {/* FIGHT & SPORTS MUSIC */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div className="e6-settings-card e6-settings-span bg-card border border-border rounded-xl p-5">
         <h3 className="font-heading text-sm text-primary mb-2">FIGHT & SPORTS MUSIC</h3>
         <p className="text-[10px] text-muted-foreground mb-3">Pick a built-in track for fights, sports & battle royale. "Auto" rotates through all tracks. This overrides uploads above for fight/soccer scenes.</p>
         <div className="flex flex-wrap gap-1.5">
@@ -347,7 +357,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       </div>
 
       {/* CPU */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div className="e6-settings-card bg-card border border-border rounded-xl p-5">
         <h3 className="font-heading text-sm text-primary mb-3">CPU DEFAULTS</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -378,7 +388,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       </div>
 
       {/* MATCH HISTORY */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div className="e6-settings-card bg-card border border-border rounded-xl p-5">
         <h3 className="font-heading text-sm text-primary mb-3">MATCH HISTORY</h3>
         {matchHistory.length === 0 ? (
           <p className="text-xs text-muted-foreground font-body">No matches played yet.</p>
@@ -399,7 +409,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       </div>
 
       {/* GAMEPLAY */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div id="settings-gameplay" className="e6-settings-card e6-settings-span bg-card border border-border rounded-xl p-5">
         <h3 className="font-heading text-sm text-primary mb-3">GAMEPLAY</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -469,14 +479,14 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       </div>
 
       {/* EDIT CONTROLS */}
-      <EditControls
+      <div id="settings-controls" className="e6-settings-span"><EditControls
         settings={local}
         onSave={(patch) => apply(patch)}
         onReset={() => apply({ keybinds: null, customControls: null, mainControl: null, soloControl: null })}
-      />
+      /></div>
 
       {/* CONTROLLER (Bluetooth + Wired) */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div className="e6-settings-card bg-card border border-border rounded-xl p-5">
         <h3 className="font-heading text-sm text-primary mb-3"><GameIcon emoji="🎮" size={14} /> CONTROLLER (BLUETOOTH & WIRED)</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -506,7 +516,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       </div>
 
       {/* DISPLAY */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div id="settings-display" className="e6-settings-card bg-card border border-border rounded-xl p-5">
         <h3 className="font-heading text-sm text-primary mb-3">DISPLAY</h3>
         <div className="flex gap-3 mb-3">
           <button onClick={() => applyDisplayMode('dark')} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border-2 transition ${local.displayMode === 'dark' ? 'border-accent bg-accent/10' : 'border-border hover:border-muted-foreground'}`}><span className="font-heading text-sm text-foreground">Dark</span></button>
@@ -521,7 +531,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       </div>
 
       {/* THEME */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div id="settings-themes" className="e6-settings-card bg-card border border-border rounded-xl p-5">
         <h3 className="font-heading text-sm text-primary mb-3">APP THEME</h3>
         <div className="grid grid-cols-4 gap-2">
           {THEMES.map(t => (
@@ -534,7 +544,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       </div>
 
       {/* UI ERA */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div id="settings-era" className="e6-settings-card bg-card border border-border rounded-xl p-5">
         <h3 className="font-heading text-sm text-primary mb-3">UI ERA</h3>
         <p className="text-[10px] text-muted-foreground mb-2">Changes the visual presentation of the game. Does not affect gameplay.</p>
         <div className="flex flex-wrap gap-2">
@@ -552,7 +562,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       </div>
 
       {/* SOCIAL */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div id="settings-social" className="e6-settings-card bg-card border border-border rounded-xl p-5">
         <h3 className="font-heading text-sm text-primary mb-3">SOCIAL</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Allow friend requests:</span>
@@ -563,7 +573,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       </div>
 
       {/* ONLINE & LAN (merged from OnlineSettings) */}
-      <div className="bg-card border border-border rounded-xl p-5">
+      <div id="settings-online" className="e6-settings-card e6-settings-span bg-card border border-border rounded-xl p-5">
         <h3 className="font-heading text-sm text-primary mb-3"><GameIcon emoji="🌐" size={14} /> ONLINE &amp; LAN</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -596,9 +606,9 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-5"><p className="text-[10px] text-muted-foreground font-body">Settings are saved automatically. Theme changes apply immediately.</p></div>
+      <div className="e6-settings-span bg-card border border-border rounded-xl p-5"><p className="text-[10px] text-muted-foreground font-body">Settings are saved automatically. Theme changes apply immediately.</p></div>
 
-      <div className="bg-destructive/10 border-2 border-destructive rounded-xl p-5 text-center">
+      <div id="settings-danger" className="e6-settings-span e6-settings-danger bg-destructive/10 border-2 border-destructive rounded-xl p-5 text-center">
         <h3 className="font-heading text-sm text-destructive mb-2">DANGER ZONE</h3>
         <p className="text-xs text-muted-foreground font-body mb-3">Reset your entire account — all progress, unlocked characters, coins, skins, and save data will be permanently deleted.</p>
         <button onClick={() => { if (window.confirm('Are you ABSOLUTELY SURE? This will permanently delete ALL your progress, unlocks, coins, and save data. This cannot be undone!')) { if (window.confirm('Last chance! This is irreversible. Click OK to erase everything.')) { onReset?.(); } } }} className="px-8 py-4 bg-destructive text-destructive-foreground rounded-lg font-heading text-lg hover:opacity-80 transition shadow-lg">RESET ENTIRE ACCOUNT</button>

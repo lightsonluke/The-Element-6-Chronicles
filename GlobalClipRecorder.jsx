@@ -14,9 +14,10 @@ function showToast(message) {
 
   const toast = document.createElement('div');
   toast.id = 'clip-toast';
+  toast.className = 'e6-clip-toast';
   toast.textContent = message;
   toast.style.cssText =
-    'position:fixed;top:18px;right:18px;z-index:99999;background:#FFD700;color:#1a1030;padding:10px 18px;border-radius:10px;font:bold 15px Orbitron,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.5);pointer-events:none;';
+    'position:fixed;top:18px;right:18px;z-index:99999;pointer-events:none;';
   document.body.appendChild(toast);
 
   setTimeout(() => toast.remove(), 2400);

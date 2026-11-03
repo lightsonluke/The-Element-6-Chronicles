@@ -109,8 +109,8 @@ export default function DailyRewards({ onClaim, onClose, coins }) {
   const displayStreak = claimed ? (rewardData?.streak_day || 0) : projectedStreak;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+    <div className="e6-daily-reward-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="e6-daily-reward-panel bg-card border border-border rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
         <h2 className="text-2xl font-heading text-accent text-center tracking-wider mb-1 flex items-center justify-center gap-2">
           <GameIcon emoji="🎁" size={22} color="var(--accent)" /> DAILY REWARD
         </h2>

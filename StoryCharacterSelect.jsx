@@ -18,7 +18,7 @@ export default function StoryCharacterSelect({ onNext, onBack }) {
   const [selected,setSelected]=useState(all[0]?.id||'yellow');
   const visible=all.filter(h=>h._storyGeneration===generation);
   const selectedHero=all.find(h=>h.id===selected)||all[0];
-  return <div className="e6-character-select-exempt min-h-[620px] w-full max-w-6xl bg-black/80 rounded-2xl border border-white/15 p-6 text-white">
+  return <div className="e6-story-character-select min-h-[620px] w-full max-w-6xl bg-black/80 rounded-2xl border border-white/15 p-6 text-white">
     <div className="flex items-center justify-between mb-5">
       <div><div className="text-xs tracking-[.35em] text-white/45">NEW STORY • ALL GENERATIONS AVAILABLE</div><h2 className="text-3xl font-heading tracking-widest">SELECT YOUR HERO</h2><p className="text-sm text-white/55 mt-1">Every existing Element 6 playable hero from Generations 1–5 can be used in Story Mode. This does not unlock them in the rest of the game.</p></div>
       <button onClick={onBack} className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15">BACK</button>

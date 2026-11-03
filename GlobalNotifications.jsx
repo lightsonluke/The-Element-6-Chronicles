@@ -144,7 +144,7 @@ export default function GlobalNotifications({ settings = {} }) {
   return (
     <div className="fixed top-3 left-3 z-[100000] pointer-events-none flex w-[min(360px,calc(100vw-24px))] flex-col gap-2">
       {items.map(item => (
-        <div key={item.id} className="pointer-events-none rounded-xl border-2 border-accent bg-card/95 px-3 py-2 shadow-2xl backdrop-blur animate-in slide-in-from-left-3">
+        <div key={item.id} className="e6-global-notification-item pointer-events-none rounded-xl border-2 border-accent bg-card/95 px-3 py-2 shadow-2xl backdrop-blur animate-in slide-in-from-left-3">
           <div className="flex items-center gap-2">
             <span className="text-lg"><GameIcon emoji={item.icon} size={14} /></span>
             <div className="min-w-0">

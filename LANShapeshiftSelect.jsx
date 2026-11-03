@@ -93,7 +93,7 @@ export default function LANShapeshiftSelect({
   const ownedShiks = SHIKIGAMI.filter(s => (ownedShikigami || []).includes(s.id));
 
   return (
-    <div className="e6-character-select-exempt flex flex-col gap-2 w-full max-w-5xl mx-auto">
+    <div className="e6-shapeshift-select flex flex-col gap-3 w-full max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-heading text-foreground tracking-wider">{title}</h2>
