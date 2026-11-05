@@ -1,7 +1,7 @@
 import db from './localBackend';
 
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import MainMenu from './MainMenu.jsx';
 import ModeSelect from './ModeSelect.jsx';
 import CharacterSelect from './CharacterSelect.jsx';
@@ -92,7 +92,7 @@ import { formatNumber } from './formatNumber.js';
 import TouchControls from './TouchControls.jsx';
 import MobileControlsTest from './MobileControlsTest.jsx';
 import { useGamepadMenuNav } from './useGamepadMenuNav.js';
-import { loadCloudProgress, saveCloudProgress } from './cloudSaves.js';
+import { loadCloudProgress, saveCloudProgress, getCloudSaveOwner, setCloudSaveOwner } from './cloudSaves.js';
 import { supabase } from './supabaseClient.js';
 import { syncSharedLeaderboard } from './sharedLeaderboard.js';
 
@@ -183,14 +183,20 @@ const STORY_FIELDS = ['defeatedVillains', 'playerX', 'playerY', 'inventory', 'ho
 // Debounce cloud saves to avoid hammering the DB on rapid updates
 let _cloudSaveTimer = null;
 let _lastProgress = null;
+let _lastCloudOwner = null;
 
-async function _doCloudSave(prog) {
-  try { await saveCloudProgress(prog); } catch { /* Offline play still saves locally. */ }
+async function _doCloudSave(prog, ownerId) {
+  if (!ownerId) return;
+  try { await saveCloudProgress(prog, ownerId); }
+  catch (error) {
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('element6-cloud-save-error', { detail: { message: error?.message || 'Account progress could not be saved.' } }));
+  }
 }
 
 function saveProgress(prog) {
   const withTs = { ...prog, _lastSavedAt: Date.now() };
   _lastProgress = withTs;
+  _lastCloudOwner = getCloudSaveOwner();
   try {
     localStorage.setItem('element6_progress', JSON.stringify(withTs));
     if (_activeStorySlot != null) {
@@ -201,14 +207,15 @@ function saveProgress(prog) {
   } catch {}
   // Cloud-save (debounced, 1 second delay for faster persistence)
   if (_cloudSaveTimer) clearTimeout(_cloudSaveTimer);
-  _cloudSaveTimer = setTimeout(() => { _cloudSaveTimer = null; _doCloudSave(_lastProgress); }, 1000);
+  const ownerId = _lastCloudOwner;
+  _cloudSaveTimer = setTimeout(() => { _cloudSaveTimer = null; _doCloudSave(_lastProgress, ownerId); }, 1000);
 }
 
 // Flush any pending cloud save immediately — used when the tab is hidden or closed
 // so settings/progress persist even if the user leaves before the debounce fires.
 function flushCloudSave() {
   if (_cloudSaveTimer) { clearTimeout(_cloudSaveTimer); _cloudSaveTimer = null; }
-  if (_lastProgress) _doCloudSave(_lastProgress);
+  if (_lastProgress) _doCloudSave(_lastProgress, _lastCloudOwner);
 }
 
 const ALL = [...ALL_CHARS];
@@ -251,7 +258,7 @@ export default function Game() {
     '/home': 'menu', '/fights': 'modeSelect', '/online': 'onlinehub', '/online/the-table': 'thetable', '/ranked': 'onlinelobby', '/unranked': 'onlinelobby',
     '/online-fights': 'onlinelobby', '/sports': 'sports', '/online-sports': 'sportslobby', '/onlinesports': 'sportslobby',
     '/soccer': 'soccer', '/soccer-online': 'onlinesports', '/soccer-ranked': 'onlinesports', '/volleyball': 'sports',
-    '/volleyball-online': 'onlinesports', '/volleyball-ranked-1v1': 'onlinesports', '/baseball': 'sports', '/parkour': 'sports',
+    '/volleyball-online': 'onlinesports', '/volleyball-ranked-1v1': 'onlinesports', '/parkour': 'sports',
     '/rock-climbing': 'sports', '/capture-the-flag': 'sports', '/dodgeball': 'sports', '/dodgeball-ranked': 'onlinesports',
     '/dodgeball-online': 'onlinesports', '/ziplining': 'sports', '/banger': 'sports', '/banger-online': 'onlinesports',
     '/battle-royale': 'battleroyale', '/custom-rooms': 'customrooms', '/lan-play': 'lan', '/friends': 'friends', '/chat': 'chat',
@@ -274,22 +281,43 @@ export default function Game() {
   sessionStorage.removeItem('element6_requested_path');
   const initialModeFromPath = CHARACTER_MODE_PATHS[rawInitialPath] || null;
   const initialScreenFromPath = initialModeFromPath ? 'charSelect' : (PATH_ALIASES[rawInitialPath] || PATH_SCREENS[rawInitialPath] || 'menu');
-  const initialSportFromPath = ({ '/volleyball':'volleyball','/baseball':'baseball','/parkour':'parkour','/rock-climbing':'rockclimb','/capture-the-flag':'ctf','/dodgeball':'dodgeball','/ziplining':'zipline','/banger':'banger' })[rawInitialPath] || null;
+  const initialSportFromPath = ({ '/volleyball':'volleyball','/parkour':'parkour','/rock-climbing':'rockclimb','/capture-the-flag':'ctf','/dodgeball':'dodgeball','/ziplining':'zipline','/banger':'banger' })[rawInitialPath] || null;
   const routePathRef = useRef(rawInitialPath || '/home');
-  const [screen, setScreen] = useState(initialScreenFromPath);
+  const [screen, setScreenState] = useState(initialScreenFromPath);
   const [screenTransition, setScreenTransition] = useState(null);
-  const previousScreenForTransition = useRef(initialScreenFromPath);
+  const visibleScreenRef = useRef(initialScreenFromPath);
+  const queuedScreenRef = useRef(initialScreenFromPath);
+  const transitionTimerRef = useRef(null);
+  const transitionIdRef = useRef(0);
+  const setScreen = useCallback((requestedScreen) => {
+    const from = queuedScreenRef.current || visibleScreenRef.current;
+    const destination = typeof requestedScreen === 'function' ? requestedScreen(from) : requestedScreen;
+    if (!destination || destination === from) return;
+    if (transitionTimerRef.current) window.clearTimeout(transitionTimerRef.current);
+    const id = ++transitionIdRef.current;
+    const kind = from === 'menu' || destination === 'menu' ? 'scene' : 'light';
+    // Wait past the animation's nominal duration so the cover reaches full
+    // opacity before React mounts the destination screen underneath it.
+    const coverDuration = kind === 'scene' ? 440 : 205;
+    const revealDuration = kind === 'scene' ? 380 : 250;
+    queuedScreenRef.current = destination;
+    setScreenTransition({ id, kind, phase: 'cover' });
+    transitionTimerRef.current = window.setTimeout(() => {
+      visibleScreenRef.current = destination;
+      setScreenState(destination);
+      setScreenTransition({ id, kind, phase: 'reveal' });
+      transitionTimerRef.current = window.setTimeout(() => {
+        if (transitionIdRef.current !== id) return;
+        queuedScreenRef.current = visibleScreenRef.current;
+        setScreenTransition(null);
+        transitionTimerRef.current = null;
+      }, revealDuration);
+    }, coverDuration);
+  }, []);
 
-  useEffect(() => {
-    const previous = previousScreenForTransition.current;
-    previousScreenForTransition.current = screen;
-    if (previous === screen) return undefined;
-    const kind = previous === 'menu' || screen === 'menu' ? 'scene' : 'light';
-    const transition = { kind, id: `${screen}-${Date.now()}` };
-    setScreenTransition(transition);
-    const timer = window.setTimeout(() => setScreenTransition(null), kind === 'scene' ? 720 : 360);
-    return () => window.clearTimeout(timer);
-  }, [screen]);
+  useEffect(() => () => {
+    if (transitionTimerRef.current) window.clearTimeout(transitionTimerRef.current);
+  }, []);
   const [returnScreen, setReturnScreen] = useState('menu');
   const [hubServer, setHubServer] = useState(null);
   const [fighters, setFighters] = useState(null);
@@ -301,16 +329,27 @@ export default function Game() {
 
   useEffect(() => {
     let cancelled = false;
-    const loadSignedInProgress = () => loadCloudProgress().then(cloudProgress => {
-      if (!cancelled && cloudProgress) {
+    const loadSignedInProgress = (userId) => {
+      if (!userId) return;
+      setCloudSaveOwner(userId);
+      loadCloudProgress().then(cloudProgress => {
+      if (!cancelled && getCloudSaveOwner() === userId && cloudProgress) {
         const merged = { ...DEFAULT_PROGRESS, ...cloudProgress };
         localStorage.setItem('element6_progress', JSON.stringify(merged));
         setProgress(merged);
       }
-    }).catch(() => {});
-    loadSignedInProgress();
+      }).catch(() => {});
+    };
+    supabase.auth.getSession().then(({ data }) => loadSignedInProgress(data?.session?.user?.id)).catch(() => {});
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) loadSignedInProgress();
+      if (session?.user) loadSignedInProgress(session.user.id);
+      else if (event === 'SIGNED_OUT') {
+        setCloudSaveOwner(null);
+        if (_cloudSaveTimer) { window.clearTimeout(_cloudSaveTimer); _cloudSaveTimer = null; }
+        _lastProgress = null; _lastCloudOwner = null;
+        localStorage.removeItem('element6_progress');
+        setProgress({ ...DEFAULT_PROGRESS });
+      }
     });
     return () => { cancelled = true; listener.subscription.unsubscribe(); };
   }, []);
@@ -330,7 +369,7 @@ export default function Game() {
   const [matchRequestToast, setMatchRequestToast] = useState(null); // { req } incoming match invite
   const [pendingMatchRequest, setPendingMatchRequest] = useState(null); // accepted request ready to launch
   const [tradeGiftToast, setTradeGiftToast] = useState(null); // incoming gift or trade request notification
-  const [customRoomMode, setCustomRoomMode] = useState('fight'); // fight | soccer | volleyball | baseball
+  const [customRoomMode, setCustomRoomMode] = useState('fight'); // fight | soccer | volleyball
   const [onlineSport, setOnlineSport] = useState(null);        // sportId for online sports lobby
   const [onlineSportsLobby, setOnlineSportsLobby] = useState(null);
   const [onlineSportsRole, setOnlineSportsRole] = useState(null);
@@ -342,6 +381,15 @@ export default function Game() {
   const prevUnreadRef = useRef(0);
   const onChatScreenRef = useRef(false);
   const clanRewardSyncInFlightRef = useRef(false);
+
+  useEffect(() => {
+    const reportSaveFailure = event => {
+      setChatToast({ name: 'ACCOUNT SYNC', text: event.detail?.message || 'Account progress could not be saved. Try again when connected.' });
+      window.setTimeout(() => setChatToast(current => current?.name === 'ACCOUNT SYNC' ? null : current), 6000);
+    };
+    window.addEventListener('element6-cloud-save-error', reportSaveFailure);
+    return () => window.removeEventListener('element6-cloud-save-error', reportSaveFailure);
+  }, []);
 
   // Expose the current app state to the persistent party-status heartbeat so
   // party members can see whether each player is online, away, or in a match.
@@ -366,7 +414,7 @@ export default function Game() {
       const mode = CHARACTER_MODE_PATHS[p];
       if (mode) { setPending({ mode }); setScreen('charSelect'); routePathRef.current = p; return; }
       const next = PATH_ALIASES[p] || PATH_SCREENS[p] || 'menu';
-      const sportPath = ({ '/volleyball':'volleyball','/baseball':'baseball','/parkour':'parkour','/rock-climbing':'rockclimb','/capture-the-flag':'ctf','/dodgeball':'dodgeball','/ziplining':'zipline','/banger':'banger' })[p] || null;
+      const sportPath = ({ '/volleyball':'volleyball','/parkour':'parkour','/rock-climbing':'rockclimb','/capture-the-flag':'ctf','/dodgeball':'dodgeball','/ziplining':'zipline','/banger':'banger' })[p] || null;
       if (sportPath) initialSportRouteRef.current = sportPath;
       setScreen(next); routePathRef.current = p;
     };
@@ -388,7 +436,7 @@ export default function Game() {
   // Controller menu navigation — active everywhere. During active matches each
   // game component sets window.__el6GameplayActive to suppress menu-nav so the
   // gamepad drives the fighter; pausing/finishing clears it so buttons are clickable.
-  useGamepadMenuNav(progress?.settings?.controllerEnabled !== false);
+  useGamepadMenuNav(progress?.settings?.controllerEnabled !== false && progress?.settings?.controllerMenuNav !== false);
 
   // Online matchmaking must use the real Supabase session rather than the
   // browser-only local adapter, otherwise a real signed-in account appears off.
@@ -477,8 +525,6 @@ export default function Game() {
         const s = data.soccerStats?.p1 || {};
         set1('soccer_count', 1); set1('soccer_goals', s.goals || 0); set1('soccer_saves', s.saves || 0);
         set1('soccer_shots', s.shots || 0); set1('soccer_shots_on_target', s.shotsOnTarget || 0); set1('soccer_xp', xp);
-      } else if (mode === 'baseball') {
-        const s = data.stats || {}; set1('baseball_count', 1); set1('baseball_runs', s.runs || 0); set1('baseball_hits', s.hits || 0); set1('baseball_xp', xp);
       } else if (mode === 'volleyball') {
         const s = data.stats || {}; set1('volleyball_count', 1); set1('volleyball_spikes', s.spikes || 0); set1('volleyball_digs', s.digs || 0); set1('volleyball_xp', xp);
       } else if (mode === 'tennis') {
@@ -1437,39 +1483,17 @@ export default function Game() {
     }
   };
 
-  const handleReceivedChatGift = async (give, fromName) => {
-    setProgress(prev => {
-      const next = { ...prev };
-      if (give.tokens > 0) next.coins = (next.coins || 0) + give.tokens;
-      if (give.skins?.length) next.ownedSkins = [...new Set([...(next.ownedSkins || []), ...give.skins])];
-      if (give.accessories?.length) next.ownedAccessories = [...new Set([...(next.ownedAccessories || []), ...give.accessories])];
-      if (give.killFX?.length) next.ownedKillFX = [...new Set([...(next.ownedKillFX || []), ...give.killFX])];
-      if (give.chars?.length) next.unlockedIds = [...new Set([...(next.unlockedIds || []), ...give.chars])];
-      saveProgress(next); return next;
-    });
-    setTradeGiftToast({ type: 'gift', name: fromName || 'Someone', text: 'sent you a gift!' });
-    sfx.notification(); setTimeout(() => setTradeGiftToast(null), 5000);
-  };
-
   const handleChatTransfer = async (info) => {
     if (!info?.to) return;
     const give = info.give || {};
     try {
       if (info.kind === 'gift') {
-        const { error } = await supabase.rpc('element6_send_gift', { p_to_user: info.to, p_to_username: info.peerName || 'Player', p_from_username: userProfile.username || 'Player', p_give: give });
+        const { error } = await supabase.rpc('element6_create_gift', { p_to_user: info.to, p_give: { ...give, requestId: info.requestId } });
         if (error) throw error;
       }
-      setProgress(prev => {
-        const next = { ...prev };
-        if (give.tokens > 0) next.coins = Math.max(0, (next.coins || 0) - give.tokens);
-        if (give.skins?.length) next.ownedSkins = (next.ownedSkins || []).filter(s => !give.skins.includes(s));
-        if (give.accessories?.length) next.ownedAccessories = (next.ownedAccessories || []).filter(a => !give.accessories.includes(a));
-        if (give.killFX?.length) next.ownedKillFX = (next.ownedKillFX || []).filter(f => !give.killFX.includes(f));
-        if (give.chars?.length) next.unlockedIds = (next.unlockedIds || []).filter(c => !give.chars.includes(c));
-        saveProgress(next); return next;
-      });
       sfx.purchaseSuccess();
-    } catch { sfx.warning(); }
+      return true;
+    } catch (error) { sfx.warning(); throw error; }
   };
 
   const handleUsernameChange = ({ oldName, newName }) => {
@@ -1518,61 +1542,6 @@ export default function Game() {
     };
     poll();
     const t = setInterval(poll, 6000);
-    return () => clearInterval(t);
-  }, []);
-
-  // Poll for incoming TradeGift records (gifts received + trade requests)
-  useEffect(() => {
-    let me = null;
-    let seenIds = new Set();
-    // Persist applied gift IDs so each gift (especially tokens) is applied EXACTLY
-    // once — never re-applied on reload, which would duplicate token grants.
-    const APPLIED_KEY = 'element6_applied_gifts';
-    const appliedIds = new Set((() => { try { return JSON.parse(localStorage.getItem(APPLIED_KEY) || '[]'); } catch { return []; } })());
-    const markApplied = (id) => { if (!id) return; appliedIds.add(id); try { localStorage.setItem(APPLIED_KEY, JSON.stringify([...appliedIds])); } catch {} };
-    const poll = async () => {
-      try {
-        if (!me) me = await db.auth.me();
-        const recs = await db.entities.TradeGift.filter({ to_user_id: me.id }, '-created_date', 20);
-        const fresh = (recs || []).find(r => !seenIds.has(r.id));
-        if (fresh) {
-          seenIds.add(fresh.id);
-          if (fresh.type === 'gift' && fresh.status === 'completed' && !appliedIds.has(fresh.id)) {
-            // Merge gifted items into local progress immediately (exactly once)
-            const give = fresh.give || {};
-            setProgress(prev => {
-              const next = { ...prev };
-              if (give.tokens > 0) next.coins = (next.coins || 0) + give.tokens;
-              if (give.skins) next.ownedSkins = [...new Set([...(next.ownedSkins || []), ...give.skins])];
-              if (give.accessories) next.ownedAccessories = [...new Set([...(next.ownedAccessories || []), ...give.accessories])];
-              if (give.killFX) next.ownedKillFX = [...new Set([...(next.ownedKillFX || []), ...give.killFX])];
-              if (give.chars) next.unlockedIds = [...new Set([...(next.unlockedIds || []), ...give.chars])];
-              saveProgress(next);
-              return next;
-            });
-            markApplied(fresh.id);
-            setTradeGiftToast({ type: 'gift', name: fresh.from_username || 'Someone', text: `sent you a gift!` });
-            sfx.notification();
-            setTimeout(() => setTradeGiftToast(null), 5000);
-          } else if (fresh.type === 'trade_request' && fresh.status === 'pending') {
-            setTradeGiftToast({ type: 'trade', name: fresh.from_username || 'Someone', text: `sent you a trade offer!` });
-            sfx.notification();
-            setTimeout(() => setTradeGiftToast(null), 5000);
-          }
-        }
-        // Also check for accepted/declined trade responses
-        const mine = await db.entities.TradeGift.filter({ from_user_id: me.id, status: 'completed', type: 'trade_completed' }, '-created_date', 10);
-        const acceptedFresh = (mine || []).find(r => !seenIds.has(`c_${r.id}`));
-        if (acceptedFresh) {
-          seenIds.add(`c_${acceptedFresh.id}`);
-          setTradeGiftToast({ type: 'trade_accepted', name: acceptedFresh.to_username || 'Someone', text: `accepted your trade! Reload to see new items.` });
-          sfx.notification();
-          setTimeout(() => setTradeGiftToast(null), 6000);
-        }
-      } catch {}
-    };
-    poll();
-    const t = setInterval(poll, 8000);
     return () => clearInterval(t);
   }, []);
 
@@ -1633,7 +1602,6 @@ export default function Game() {
         'LAN Play': () => setScreen('lan'),
         'Soccer': () => setScreen('soccer'),
         'Volleyball': () => { initialSportRouteRef.current = 'volleyball'; setScreen('sports'); },
-        'Baseball': () => { initialSportRouteRef.current = 'baseball'; setScreen('sports'); },
         'Parkour': () => { initialSportRouteRef.current = 'parkour'; setScreen('sports'); },
         'Rock Climbing': () => { initialSportRouteRef.current = 'rockclimb'; setScreen('sports'); },
         'CTF': () => { initialSportRouteRef.current = 'ctf'; setScreen('sports'); },
@@ -2051,22 +2019,8 @@ export default function Game() {
         ? `radial-gradient(ellipse at top, ${disableEventBg ? '#aaa8bb' : effectiveEventColor}22 0%, #e8e4f0 50%, #ddd8e8 100%)`
         : `radial-gradient(ellipse at top, ${disableEventBg ? '#5544aa' : effectiveEventColor}22 0%, #0a0820 50%, #06040f 100%)` }}
     >
-      {screenTransition && <div key={screenTransition.id} aria-hidden="true" className={`e6-screen-transition e6-screen-transition--${screenTransition.kind}`} />}
+      {screenTransition && <div key={`${screenTransition.id}-${screenTransition.phase}`} aria-hidden="true" className={`e6-screen-transition e6-screen-transition--${screenTransition.kind} e6-screen-transition--${screenTransition.phase}`} />}
       <UsernamePrompt onSet={(name) => setUserProfile(prev => ({ ...prev, username: name }))} />
-      {/* Global splitcity backdrop — visible on menu screens, covered by game canvases during sport/fight */}
-      {progress?.settings?.displayMode !== 'light' && !['fighting', 'soccer', 'sports', 'story', 'lan', 'onlinelobby', 'customrooms'].includes(screen) && (
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: `url(${progress?.settings?.customBackdrop || DEFAULT_SPLIT_CITY_BACKDROP})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            opacity: progress?.settings?.customBackdrop ? 0.4 : 0.28,
-            zIndex: 0,
-          }}
-        />
-      )}
       {screen !== 'menu' && <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {Array.from({ length: (progress.settings?.bgParticleDensity ?? 30) }).map((_, i) => (
           <div key={i} className="absolute rounded-full animate-pulse" style={{
@@ -2168,6 +2122,7 @@ export default function Game() {
         {screen === 'hub' && (
           <CommunityHub
             progress={progress} userProfile={userProfile} customCharsData={customCharData}
+            onRefreshProgress={async () => { const cloud = await loadCloudProgress(); if (!cloud) return; const merged = { ...DEFAULT_PROGRESS, ...cloud }; localStorage.setItem('element6_progress', JSON.stringify(merged)); setProgress(merged); }}
             serverCode={hubServer?.room_code || hubServer?.code || 'default'}
             onBack={goBack}
             onNavigate={handleNavigate}
@@ -2187,32 +2142,7 @@ export default function Game() {
                 // Trade offer already created via TradeOfferModal — pending peer acceptance
                 return;
               }
-              // Gift: remove items from sender immediately, add to receiver's UserProgress,
-              // and create a TradeGift notification record.
-              const give = info.give || {};
-              setProgress(prev => {
-                const next = { ...prev };
-                if (give.tokens > 0) next.coins = Math.max(0, (next.coins || 0) - give.tokens);
-                if (give.skins?.length) next.ownedSkins = (next.ownedSkins || []).filter(s => !give.skins.includes(s));
-                if (give.accessories?.length) next.ownedAccessories = (next.ownedAccessories || []).filter(a => !give.accessories.includes(a));
-                if (give.killFX?.length) next.ownedKillFX = (next.ownedKillFX || []).filter(f => !give.killFX.includes(f));
-                if (give.chars?.length) next.unlockedIds = (next.unlockedIds || []).filter(c => !give.chars.includes(c));
-                saveProgress(next);
-                return next;
-              });
-              try {
-                const me = await db.auth.me();
-                // The recipient's own client applies the gift from the TradeGift
-                // record below (see the incoming-gift poll). Don't write their cloud
-                // progress here too — that would double-credit tokens once the
-                // recipient merges the cloud write and the poll re-applies the gift.
-                await db.entities.TradeGift.create({
-                  type: 'gift', from_user_id: me.id, to_user_id: info.to,
-                  from_username: userProfile.username, to_username: info.peerName || 'Player',
-                  status: 'completed', give, room_code: '',
-                });
-                sfx.purchaseSuccess();
-              } catch (e) { sfx.warning(); }
+              await handleChatTransfer(info);
             }}
           />
         )}
@@ -2692,7 +2622,7 @@ export default function Game() {
         )}
 
         {screen === 'chat' && (
-          <ChatPanel onBack={() => { setPendingDM(null); goBack(); }} initialDM={pendingDM} onMarkSeen={markChatSeen} progress={progress} onTransfer={handleChatTransfer} onAcceptClanInvite={acceptCommunityClanInvite} onReceiveGift={handleReceivedChatGift} />
+          <ChatPanel onBack={() => { setPendingDM(null); goBack(); }} initialDM={pendingDM} onMarkSeen={markChatSeen} progress={progress} onTransfer={handleChatTransfer} onAcceptClanInvite={acceptCommunityClanInvite} onRefreshProgress={async () => { const cloud = await loadCloudProgress(); if (!cloud) return; const merged = { ...DEFAULT_PROGRESS, ...cloud }; localStorage.setItem('element6_progress', JSON.stringify(merged)); setProgress(merged); }} />
         )}
 
         {screen === 'customrooms' && (

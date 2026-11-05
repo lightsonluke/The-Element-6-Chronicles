@@ -1,7 +1,6 @@
-import db from './localBackend';
-
 import React, { useState, useEffect } from 'react';
 
+import { supabase } from './supabaseClient.js';
 import { sfx } from './sfx.js';
 import { getAccessory } from './cosmetics.js';
 import { getSkin } from './skins.js';
@@ -15,20 +14,24 @@ const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 
 // Trades & Gifts panel — shows all trade requests, completions, gifts sent/received,
 // plus a list of all players in the current server for quick trade/gift access.
-export default function TradesGiftsPanel({ userId, username, progress, room, onTrade, onGift, onClose }) {
+export default function TradesGiftsPanel({ userId, username, progress, room, onTrade, onGift, onRefreshProgress, onClose }) {
   const [tab, setTab] = useState('incoming'); // incoming | outgoing | players
-  const [records, setRecords] = useState([]);
+  const [records, setRecords] = useState({ incoming: [], outgoing: [] });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const load = async () => {
     if (!userId) return;
     try {
       const [incoming, outgoing] = await Promise.all([
-        db.entities.TradeGift.filter({ to_user_id: userId }, '-created_date', 50),
-        db.entities.TradeGift.filter({ from_user_id: userId }, '-created_date', 50),
+        supabase.from('element6_trade_gifts').select('*').eq('to_user_id', userId).order('created_at', { ascending: false }).limit(50),
+        supabase.from('element6_trade_gifts').select('*').eq('from_user_id', userId).order('created_at', { ascending: false }).limit(50),
       ]);
-      setRecords({ incoming: incoming || [], outgoing: outgoing || [] });
-    } catch {}
+      if (incoming.error) throw incoming.error;
+      if (outgoing.error) throw outgoing.error;
+      setRecords({ incoming: incoming.data || [], outgoing: outgoing.data || [] });
+      setError('');
+    } catch (e) { setError(e?.message || 'Could not load account transactions.'); }
     setLoading(false);
   };
 
@@ -36,74 +39,33 @@ export default function TradesGiftsPanel({ userId, username, progress, room, onT
 
   const acceptTrade = async (rec) => {
     try {
-      // Fetch both players' progress
-      const [myProgRec, theirProgRec] = await Promise.all([
-        db.entities.UserProgress.filter({ user_id: userId }),
-        db.entities.UserProgress.filter({ user_id: rec.from_user_id }),
-      ]);
-      const myProg = myProgRec[0] ? JSON.parse(myProgRec[0].progress_json || '{}') : {};
-      const theirProg = theirProgRec[0] ? JSON.parse(theirProgRec[0].progress_json || '{}') : {};
-
-      // Auto-delete duplicate items before applying trade
-      myProg.ownedSkins = [...new Set(myProg.ownedSkins || [])];
-      myProg.ownedAccessories = [...new Set(myProg.ownedAccessories || [])];
-      myProg.ownedKillFX = [...new Set(myProg.ownedKillFX || [])];
-      myProg.unlockedIds = [...new Set(myProg.unlockedIds || [])];
-      theirProg.ownedSkins = [...new Set(theirProg.ownedSkins || [])];
-      theirProg.ownedAccessories = [...new Set(theirProg.ownedAccessories || [])];
-      theirProg.ownedKillFX = [...new Set(theirProg.ownedKillFX || [])];
-      theirProg.unlockedIds = [...new Set(theirProg.unlockedIds || [])];
-      // Remove offer items from sender, add to me (only items I don't already own — no duplicates)
-      const give = rec.give || {};
-      if (give.tokens > 0) theirProg.coins = Math.max(0, (theirProg.coins || 0) - give.tokens);
-      myProg.coins = (myProg.coins || 0) + (give.tokens || 0);
-      if (give.skins) myProg.ownedSkins = [...new Set([...(myProg.ownedSkins || []), ...give.skins])];
-      if (give.accessories) myProg.ownedAccessories = [...new Set([...(myProg.ownedAccessories || []), ...give.accessories])];
-      if (give.killFX) myProg.ownedKillFX = [...new Set([...(myProg.ownedKillFX || []), ...give.killFX])];
-      if (give.chars) myProg.unlockedIds = [...new Set([...(myProg.unlockedIds || []), ...give.chars])];
-
-      // Remove request items from me, add to sender
-      const req = rec.request || {};
-      if (req.tokens > 0) myProg.coins = Math.max(0, (myProg.coins || 0) - req.tokens);
-      theirProg.coins = (theirProg.coins || 0) + (req.tokens || 0);
-      if (req.skins) { myProg.ownedSkins = (myProg.ownedSkins || []).filter(s => !req.skins.includes(s)); theirProg.ownedSkins = [...new Set([...(theirProg.ownedSkins || []), ...req.skins])]; }
-      if (req.accessories) { myProg.ownedAccessories = (myProg.ownedAccessories || []).filter(a => !req.accessories.includes(a)); theirProg.ownedAccessories = [...new Set([...(theirProg.ownedAccessories || []), ...req.accessories])]; }
-      if (req.killFX) { myProg.ownedKillFX = (myProg.ownedKillFX || []).filter(f => !req.killFX.includes(f)); theirProg.ownedKillFX = [...new Set([...(theirProg.ownedKillFX || []), ...req.killFX])]; }
-      if (req.chars) { myProg.unlockedIds = (myProg.unlockedIds || []).filter(c => !req.chars.includes(c)); theirProg.unlockedIds = [...new Set([...(theirProg.unlockedIds || []), ...req.chars])]; }
-
-      // Save both
-      const now = new Date().toISOString();
-      if (myProgRec[0]) await db.entities.UserProgress.update(myProgRec[0].id, { progress_json: JSON.stringify({ ...myProg, _lastSavedAt: Date.now() }) });
-      if (theirProgRec[0]) await db.entities.UserProgress.update(theirProgRec[0].id, { progress_json: JSON.stringify({ ...theirProg, _lastSavedAt: Date.now() }) });
-
-      // Mark trade as completed
-      await db.entities.TradeGift.update(rec.id, { status: 'completed', type: 'trade_completed' });
+      const rpc = rec.type === 'gift' ? 'element6_accept_gift' : 'element6_accept_trade';
+      const args = rec.type === 'gift' ? { p_gift_id: rec.id, p_accept: true } : { p_trade_id: rec.id, p_accept: true };
+      const { data: result, error: transactionError } = await supabase.rpc(rpc, args);
+      if (transactionError) throw transactionError;
+      if (result?.status !== 'completed') throw new Error(`This offer is ${result?.status || 'no longer pending'}.`);
+      try { await onRefreshProgress?.(); } catch { setError('Transaction completed; account refresh failed. Reconnect to reload your inventory.'); }
       sfx.purchaseSuccess();
-      // Merge received items into localStorage so they persist without a full reload
-      try {
-        const raw = localStorage.getItem('element6_progress');
-        if (raw) {
-          const prog = JSON.parse(raw);
-          if (give.tokens > 0) prog.coins = (prog.coins || 0) + give.tokens;
-          if (give.skins) prog.ownedSkins = [...new Set([...(prog.ownedSkins || []), ...give.skins])];
-          if (give.accessories) prog.ownedAccessories = [...new Set([...(prog.ownedAccessories || []), ...give.accessories])];
-          if (give.killFX) prog.ownedKillFX = [...new Set([...(prog.ownedKillFX || []), ...give.killFX])];
-          if (give.chars) prog.unlockedIds = [...new Set([...(prog.unlockedIds || []), ...give.chars])];
-          if (req.tokens > 0) prog.coins = Math.max(0, (prog.coins || 0) - req.tokens);
-          if (req.skins) prog.ownedSkins = (prog.ownedSkins || []).filter(s => !req.skins.includes(s));
-          if (req.accessories) prog.ownedAccessories = (prog.ownedAccessories || []).filter(a => !req.accessories.includes(a));
-          if (req.killFX) prog.ownedKillFX = (prog.ownedKillFX || []).filter(f => !req.killFX.includes(f));
-          if (req.chars) prog.unlockedIds = (prog.unlockedIds || []).filter(c => !req.chars.includes(c));
-          prog._lastSavedAt = Date.now();
-          localStorage.setItem('element6_progress', JSON.stringify(prog));
-        }
-      } catch {}
       load();
-    } catch (e) { sfx.warning(); }
+    } catch (e) { setError(e?.message || 'The transaction could not be completed. Inventory was not changed.'); sfx.warning(); }
   };
 
   const declineTrade = async (rec) => {
-    try { await db.entities.TradeGift.update(rec.id, { status: 'declined' }); sfx.click(); load(); } catch {}
+    try {
+      const rpc = rec.type === 'gift' ? 'element6_accept_gift' : 'element6_accept_trade';
+      const args = rec.type === 'gift' ? { p_gift_id: rec.id, p_accept: false } : { p_trade_id: rec.id, p_accept: false };
+      const { error: transactionError } = await supabase.rpc(rpc, args);
+      if (transactionError) throw transactionError;
+      sfx.click(); load();
+    } catch (e) { setError(e?.message || 'Could not reject the offer.'); }
+  };
+
+  const cancelTransfer = async (rec) => {
+    try {
+      const { error: cancelError } = await supabase.rpc('element6_cancel_transfer', { p_transaction_id: rec.id });
+      if (cancelError) throw cancelError;
+      sfx.click(); await load();
+    } catch (e) { setError(e?.message || 'Could not cancel the offer.'); }
   };
 
   const summarize = (items) => {
@@ -149,12 +111,13 @@ export default function TradesGiftsPanel({ userId, username, progress, room, onT
           </div>
         )}
       </div>
-      {isIncoming && rec.status === 'pending' && rec.type === 'trade_request' && (
+      {isIncoming && rec.status === 'pending' && ['gift','trade_request'].includes(rec.type) && (
         <div className="flex gap-1.5">
           <button onClick={() => acceptTrade(rec)} className="flex-1 px-2 py-1 bg-accent text-accent-foreground rounded font-heading text-[10px]"><GameIcon icon="check" size={14} /> ACCEPT</button>
           <button onClick={() => declineTrade(rec)} className="flex-1 px-2 py-1 bg-destructive text-destructive-foreground rounded font-heading text-[10px]"><GameIcon icon="close" size={14} /> DECLINE</button>
         </div>
       )}
+      {!isIncoming && rec.status === 'pending' && <button onClick={() => cancelTransfer(rec)} className="self-end rounded-full border border-border px-3 py-1 text-[10px] font-heading">CANCEL OFFER</button>}
     </div>
   );
 
@@ -174,6 +137,8 @@ export default function TradesGiftsPanel({ userId, username, progress, room, onT
           <button onClick={() => setTab('outgoing')} className={`px-3 py-1 rounded font-heading text-[10px] ${tab === 'outgoing' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>SENT ({(records.outgoing || []).length})</button>
           <button onClick={() => setTab('players')} className={`px-3 py-1 rounded font-heading text-[10px] ${tab === 'players' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>PLAYERS ({serverPlayers.length})</button>
         </div>
+
+        {error && <p role="alert" className="text-xs text-destructive mb-3">{error}</p>}
 
         {loading ? (
           <p className="text-[10px] text-muted-foreground">Loading…</p>
@@ -201,7 +166,7 @@ export default function TradesGiftsPanel({ userId, username, progress, room, onT
             )}
           </div>
         )}
-        <p className="text-[9px] text-muted-foreground mt-3">Auto-refreshes every 5 seconds. Trades require acceptance from both players. Gifts are instant.</p>
+        <p className="text-[9px] text-muted-foreground mt-3">Auto-refreshes every 5 seconds. Gift and trade offers transfer only after recipient acceptance.</p>
       </div>
     </div>
   );

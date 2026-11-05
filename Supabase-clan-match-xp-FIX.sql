@@ -48,7 +48,6 @@ begin
     'dodgeball',
     'dodgeball_ranked',
     'dodgeball_online',
-    'baseball',
     'banger',
     'banger_online',
     'battle_royale',

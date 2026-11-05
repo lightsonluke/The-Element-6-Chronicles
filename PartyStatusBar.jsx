@@ -25,7 +25,7 @@ export default function PartyStatusBar() {
       try {
         const screen = window.__el6CurrentScreen || 'menu';
         const mode = window.__el6CurrentMode || screen;
-        const playing = Boolean(window.__el6IsPlaying) || (/fight|match|battle|sports|soccer|battleroyale|storybattle|storymode|team|rockclimb|parkour|dodgeball|volleyball|baseball|zipline|banger|ctf|grandcircuit|race|training|sandbox|creator/i.test(screen) && !/select|lobby|review|result|menu/i.test(screen));
+        const playing = Boolean(window.__el6IsPlaying) || (/fight|match|battle|sports|soccer|battleroyale|storybattle|storymode|team|rockclimb|parkour|dodgeball|volleyball|zipline|banger|ctf|grandcircuit|race|training|sandbox|creator/i.test(screen) && !/select|lobby|review|result|menu/i.test(screen));
         await supabase.rpc('element6_set_app_presence', { p_status: document.visibilityState === 'hidden' ? 'away' : playing ? 'playing' : 'online', p_mode: playing ? mode : null });
         const { data, error } = await supabase.rpc('element6_get_party_presence');
         if (!error && alive) setPresence(data || null);

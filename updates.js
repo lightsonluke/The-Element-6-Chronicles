@@ -23,7 +23,7 @@ export const UPDATES = [
   { id: 1, title: 'Custom Character Creator', date: 'July 2026', color: '#7744FF', color2: '#1a1a2e', caption: 'Design your own fighter with unique stats, abilities, and signature moves!' },
   { id: 2, title: 'Crossover Skins', date: 'July 2026', color: '#2A3A5A', color2: '#0a0a1a', caption: 'Backrooms & Cyberpunk-themed skins now available in the Battle Pass!' },
   { id: 3, title: 'New Home Screen', date: 'July 2026', color: '#9966CC', color2: '#1a1a2e', caption: 'Redesigned main menu with overlapping tab columns and updates slideshow.' },
-  { id: 4, title: 'Sports Modes', date: 'June 2026', color: '#44AA44', color2: '#0a2a0a', caption: 'Play Soccer, Volleyball, and Baseball with your favorite characters.' },
+  { id: 4, title: 'Sports Modes', date: 'June 2026', color: '#44AA44', color2: '#0a2a0a', caption: 'Play Soccer, Volleyball, and Dodgeball with your favorite characters.' },
   { id: 5, title: 'Online Multiplayer', date: 'June 2026', color: '#4488FF', color2: '#0a1a3e', caption: 'Battle players worldwide in ranked and unranked online matches.' },
   { id: 6, title: 'Win Screen Animation', date: 'June 2026', color: '#FFD700', color2: '#2a2200', caption: 'Celebrate every victory with a dynamic winner showcase screen.' },
   { id: 7, title: 'Story Mode Rework', date: 'May 2026', color: '#FF8800', color2: '#2a1a0a', caption: 'Explore an open world, mine blocks, craft items, and defeat villains.' },

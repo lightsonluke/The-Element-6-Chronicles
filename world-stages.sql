@@ -6,7 +6,7 @@ create table if not exists public.community_stages (
   owner_username text not null default 'Player',
   name text not null,
   description text not null default '',
-  emoji text not null default '🎨',
+  emoji text not null default '',
   backdrop text not null default 'splitcity',
   stage_data jsonb not null default '{}'::jsonb,
   is_private boolean not null default false,

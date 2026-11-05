@@ -11,7 +11,6 @@ import { getCharNumber } from './characterNumber.js';
 import PlatformFighter from './PlatformFighter';
 import SoccerFighter from './SoccerFighter';
 import VolleyballGame from './VolleyballGame.jsx';
-import BaseballGame from './BaseballGame.jsx';
 
 import { sfx } from './sfx.js';
 import { music } from './music.js';
@@ -152,22 +151,6 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
           musicVolume={musicVolume} sfxVolume={sfxVolume}
           equippedAccessories={equippedAccessories} equippedSkins={equippedSkins}
           p1Elements={[p1Element]} p2Elements={[p2Element]}
-          settings={settings}
-          lanConnection={lan} lanRole={lan.isHost ? 'host' : 'guest'}
-          onResult={handleFightEnd} onQuit={onQuitLan}
-          localScheme={localScheme}
-          customCharsData={customCharsData}
-        />
-      );
-    }
-    if (gameMode === 'baseball') {
-      return (
-        <BaseballGame
-          p1Chars={[p1Char, p1Char, p1Char]} p2Chars={[p2Char, p2Char, p2Char]} p2IsCPU={false} difficulty="regular"
-          p1Jersey p2Jersey
-          musicVolume={musicVolume} sfxVolume={sfxVolume}
-          equippedAccessories={equippedAccessories} equippedSkins={equippedSkins}
-          p1Elements={[p1Element, p1Element, p1Element]} p2Elements={[p2Element, p2Element, p2Element]}
           settings={settings}
           lanConnection={lan} lanRole={lan.isHost ? 'host' : 'guest'}
           onResult={handleFightEnd} onQuit={onQuitLan}
@@ -333,7 +316,6 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
         <button onClick={() => setGameMode('fight')} className={`px-4 py-3 rounded-lg font-heading text-sm ${gameMode === 'fight' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>FIGHT</button>
         <button onClick={() => setGameMode('soccer')} className={`px-4 py-3 rounded-lg font-heading text-sm ${gameMode === 'soccer' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>SOCCER</button>
         <button onClick={() => setGameMode('volleyball')} className={`px-4 py-3 rounded-lg font-heading text-sm ${gameMode === 'volleyball' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>VOLLEYBALL</button>
-        <button onClick={() => setGameMode('baseball')} className={`px-4 py-3 rounded-lg font-heading text-sm ${gameMode === 'baseball' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>BASEBALL</button>
       </div>
       {gameMode === 'fight' && (
         <div className="flex flex-wrap gap-1.5 w-full items-center">

@@ -54,7 +54,7 @@ export const FIGHT_TRACK_LIBRARY = [
   { id: 'showdown', name: 'Showdown', url: A('showdown.mp3') },
 ];
 const FIGHT_TRACKS = FIGHT_TRACK_LIBRARY.map(t => t.url);
-const FIGHT_SCENES = new Set(['fight','story','battleroyale','soccer','volleyball','baseball','banger','dodgeball','ctf','team','custombattle','tournament','grandcircuit']);
+const FIGHT_SCENES = new Set(['fight','story','battleroyale','soccer','volleyball','banger','dodgeball','ctf','team','custombattle','tournament','grandcircuit']);
 
 // Grand Circuit track pool — only these tracks play during Grand Circuit matches.
 // The "Final" track is reserved for the championship match.

@@ -4,7 +4,6 @@ import { getCharNumber } from './characterNumber.js';
 import { withCustomChars } from './characterNumber.js';
 import BracketVisualization from './BracketVisualization.jsx';
 import VolleyballMatchReview from './VolleyballMatchReview.jsx';
-import BaseballMatchReview from './BaseballMatchReview.jsx';
 import PrematchAnimation from './PrematchAnimation.jsx';
 import UniversalCharacterSelect from './UniversalCharacterSelect.jsx';
 import GameIcon from "./GameIcon.jsx";
@@ -270,18 +269,6 @@ export default function SportsShell({ sport, unlockedIds, favoriteId, equippedAc
         />
       );
     }
-    if (sport === 'baseball') {
-      return (
-        <BaseballMatchReview
-          p1Name={p1CD?.name || 'P1'} p2Name={summary.p2CharName || p2CD?.name || 'P2'}
-          p1Color={TEAM_COLOR_P1} p2Color={TEAM_COLOR_P2}
-          p1Won={summary.p1Won}
-          p1Stats={summary.p1Stats || {}} p2Stats={summary.p2Stats || {}}
-          onRematch={() => { paidRef.current = false; setSummary(null); replayNonce(); setPhase('game'); }}
-          onContinue={() => { setSummary(null); onEnd?.({ ...summary, tournamentWon: false }); }}
-        />
-      );
-    }
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85">
         <div className="w-full max-w-md flex flex-col gap-4 p-6">
@@ -476,16 +463,6 @@ const RULES = {
     'First to 10 goals wins. Goals are behind the wall — shoot through the gap.',
     'Own goals bounce off your net. Ties → extra time → sudden death.',
     'Win the 4-round tournament for 50 tokens.',
-  ],
-  baseball: [
-    'Each team has 3 characters: Pitcher, Infield, Outfield — pick roles and elements for each.',
-    'P2 bats first. P1 pitches: press , to throw (hold arrows to curve/speed up/slow down the pitch).',
-    'Batting: press , (or X for P2) to swing when the ball enters the strike zone. Better timing = farther hit.',
-    'After a hit, the game switches to birds-eye view. Batter spams , to run forward, . to run back.',
-    'Fielding: arrows move the controlled fielder. / (supermove) switches control to the "next" fielder. . (power) cycles the next indicator. , (sig) throws the ball to the "next" fielder.',
-    'Get the ball to a base before the runner = force out. Touch a runner with the ball = tag out.',
-    '3 outs = sides switch. 3 innings. Power = throw strength, Utility = batting power, Speed = running speed.',
-    'Win the tournament for 50 tokens!',
   ],
   tennis: [
     '1v1 singles. Move with arrows/WASD, jump to reach high balls.',

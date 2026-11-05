@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { SPORTS, getSport } from './sports.js';
 import SportsShell from './SportsShell.jsx';
 import VolleyballGame from './VolleyballGame.jsx';
-import BaseballGame from './BaseballGame.jsx';
 import SplitCityParkour from './SplitCityParkour.jsx';
 import RockClimbing from './RockClimbing.jsx';
 import CaptureTheFlag from './CaptureTheFlag.jsx';
@@ -13,7 +12,6 @@ import GameIcon from "./GameIcon.jsx";
 
 const GAME_COMPONENTS = {
   volleyball: VolleyballGame,
-  baseball: BaseballGame,
 };
 
 // Sports tab: pick a sport, then play. Soccer delegates to the existing

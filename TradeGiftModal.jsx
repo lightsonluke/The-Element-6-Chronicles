@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { ACCESSORIES, getAccessory } from './cosmetics.js';
 import { SKINS, getSkin } from './skins.js';
 import { KILL_FX as KILL_FX_LIST, getKillFX } from './killFX.js';
@@ -15,6 +15,10 @@ const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 export default function TradeGiftModal({ mode, peerName, progress, onConfirm, onClose }) {
   const [tab, setTab] = useState('tokens');
   const [selected, setSelected] = useState({ tokens: 0, skins: [], accessories: [], killFX: [], chars: [] });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const requestIdRef = useRef(null);
+  if (!requestIdRef.current) requestIdRef.current = globalThis.crypto?.randomUUID?.() || `gift-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   const toggle = (category, id) => {
     setSelected(prev => {
@@ -36,18 +40,23 @@ export default function TradeGiftModal({ mode, peerName, progress, onConfirm, on
   selected.killFX.forEach(id => { const fx = getKillFX(id); if (fx) summary.push(` ${fx.name}`); });
   selected.chars.forEach(id => { const c = ALL.find(x => x.id === id); if (c) summary.push(` ${c.name}`); });
 
-  const confirm = () => {
+  const confirm = async () => {
     if (summary.length === 0) { sfx.warning(); return; }
-    sfx.purchaseSuccess();
-    onConfirm?.({
-      give: {
-        tokens: tokenAmount,
-        skins: selected.skins,
-        accessories: selected.accessories,
-        killFX: selected.killFX,
-        chars: selected.chars,
-      },
-    });
+    setBusy(true); setError('');
+    try {
+      await onConfirm?.({
+        requestId: requestIdRef.current,
+        give: {
+          tokens: tokenAmount,
+          skins: selected.skins,
+          accessories: selected.accessories,
+          killFX: selected.killFX,
+          chars: selected.chars,
+        },
+      });
+      sfx.purchaseSuccess();
+    } catch (e) { setError(e?.message || 'The offer could not be sent.'); sfx.warning(); }
+    finally { setBusy(false); }
   };
 
   const Tab = ({ id, label, count }) => (
@@ -76,7 +85,7 @@ export default function TradeGiftModal({ mode, peerName, progress, onConfirm, on
         <p className="text-[10px] text-muted-foreground mb-3">
           {mode === 'trade'
             ? 'Select items to offer. Both players must accept. Ownership transfers permanently — no duplication.'
-            : 'Select items to send. Gifting is one-way. Ownership transfers permanently.'}
+            : 'Select items to offer as a gift. The recipient must accept before anything transfers.'}
         </p>
 
         {/* Tabs */}
@@ -134,6 +143,8 @@ export default function TradeGiftModal({ mode, peerName, progress, onConfirm, on
           )}
         </div>
 
+        {error && <p role="alert" className="text-xs text-destructive mb-3">{error}</p>}
+
         {/* Summary */}
         <div className="bg-muted/30 border border-border rounded-lg p-3 mb-3">
           <p className="text-[10px] font-heading text-primary mb-1">{mode === 'trade' ? 'OFFERING:' : 'GIFTING:'}</p>
@@ -147,10 +158,10 @@ export default function TradeGiftModal({ mode, peerName, progress, onConfirm, on
         </div>
 
         <div className="flex gap-2">
-          <button onClick={confirm} disabled={summary.length === 0} className="flex-1 px-3 py-2 bg-accent text-accent-foreground rounded font-heading text-xs disabled:opacity-50">
-            {mode === 'trade' ? 'SEND TRADE OFFER' : 'SEND GIFT'}
+          <button onClick={confirm} disabled={summary.length === 0 || busy} className="flex-1 px-3 py-2 bg-accent text-accent-foreground rounded font-heading text-xs disabled:opacity-50">
+            {busy ? 'SENDING…' : mode === 'trade' ? 'SEND TRADE OFFER' : 'SEND GIFT'}
           </button>
-          <button onClick={onClose} className="flex-1 px-3 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs">CANCEL</button>
+          <button onClick={onClose} disabled={busy} className="flex-1 px-3 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs">CANCEL</button>
         </div>
       </div>
     </div>

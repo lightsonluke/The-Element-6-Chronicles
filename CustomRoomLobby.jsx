@@ -29,7 +29,6 @@ const MODE_CONFIG = {
   fight:      { maxPlayers: 8, label: 'FIGHT',    stage: 'splitcity' },
   soccer:     { maxPlayers: 8, label: 'SOCCER',   stage: 'soccer' },
   volleyball: { maxPlayers: 6, label: 'VOLLEYBALL', stage: 'splitcity' },
-  baseball:   { maxPlayers: 6, label: 'BASEBALL',   stage: 'splitcity' },
   banger:     { maxPlayers: 6, label: 'BANGER',    stage: 'splitcity' },
 };
 

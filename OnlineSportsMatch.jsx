@@ -3,7 +3,7 @@ import db from './localBackend';
 // ═══════════════════════════════════════════════════════════════════════════
 // OnlineSportsMatch — Host-authoritative online wrapper for sport games
 // ═══════════════════════════════════════════════════════════════════════════
-// Wraps any sport game component (Volleyball, Baseball, Dodgeball, Banger)
+// Wraps the supported online sport game components.
 // with host-authoritative state synchronization:
 //
 //   HOST:

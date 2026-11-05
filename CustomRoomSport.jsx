@@ -3,7 +3,6 @@ import db from './localBackend';
 import React from 'react';
 import SportsShell from './SportsShell.jsx';
 import VolleyballGame from './VolleyballGame.jsx';
-import BaseballGame from './BaseballGame.jsx';
 import SoccerMode from './SoccerMode.jsx';
 import BangerMode from './BangerMode.jsx';
 
@@ -11,7 +10,6 @@ import { sfx } from './sfx.js';
 
 const GAME_COMPONENTS = {
   volleyball: VolleyballGame,
-  baseball: BaseballGame,
 };
 
 // Launches a sport match for a custom room. The sports engines don't share the

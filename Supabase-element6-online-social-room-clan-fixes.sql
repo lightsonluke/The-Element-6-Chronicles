@@ -325,7 +325,7 @@ begin
  end loop;
  update public.user_progress set progress_json=prog,updated_at=now() where user_id=me;
  insert into public.element6_trade_gifts(type,from_user_id,to_user_id,from_username,to_username,status,give) values('gift',me,p_to_user,coalesce(p_from_username,'Player'),coalesce(p_to_username,'Player'),'completed',give) returning id into rid;
- insert into public.player_direct_messages(sender_id,recipient_id,sender_username,body) values(me,p_to_user,coalesce(p_from_username,'Player'),'🎁 Sent you a gift! Open this chat to receive it.');
+ insert into public.player_direct_messages(sender_id,recipient_id,sender_username,body) values(me,p_to_user,coalesce(p_from_username,'Player'),'Sent you a gift offer.');
  return jsonb_build_object('gift_id',rid,'sent',true);
 end $$;
 grant execute on function public.element6_send_gift(uuid,text,text,jsonb) to authenticated;

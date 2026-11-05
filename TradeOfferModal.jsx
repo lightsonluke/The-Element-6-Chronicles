@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient.js';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { ACCESSORIES, getAccessory } from './cosmetics.js';
 import { SKINS, getSkin } from './skins.js';
@@ -25,18 +25,24 @@ export default function TradeOfferModal({ mode = 'trade', peer, progress, userId
   const [activeSide, setActiveSide] = useState('offer'); // offer | request
   const [tab, setTab] = useState('tokens');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const requestIdRef = useRef(null);
+  if (!requestIdRef.current) requestIdRef.current = globalThis.crypto?.randomUUID?.() || `trade-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-  // Fetch the peer's UserProgress to show their inventory
+  // Only expose the tradeable inventory snapshot returned after the server
+  // verifies that the two accounts are accepted friends.
   useEffect(() => {
-    if (!peer?.user_id) return;
+    const peerId = peer?.user_id || peer?.id;
+    if (!peerId) return;
     (async () => {
       try {
-        const { data: rec } = await supabase.from('user_progress').select('progress_json').eq('user_id', peer.user_id).maybeSingle();
-        if (rec?.progress_json) setPeerProgress(rec.progress_json);
-      } catch {}
+        const { data, error: inventoryError } = await supabase.rpc('element6_trade_inventory', { p_peer: peerId });
+        if (inventoryError) throw inventoryError;
+        setPeerProgress(data || null);
+      } catch (e) { setError(e?.message || 'Could not load the other player’s available items.'); }
       setLoading(false);
     })();
-  }, [peer?.user_id]);
+  }, [peer?.user_id, peer?.id]);
 
   const toggle = (side, category, id) => {
     const state = side === 'offer' ? offer : request;
@@ -64,19 +70,17 @@ export default function TradeOfferModal({ mode = 'trade', peer, progress, userId
   const confirm = async () => {
     if (!hasItems(offer) || !hasItems(request)) { sfx.warning(); return; }
     setBusy(true);
+    setError('');
     try {
-      // Create a TradeGift record (pending — peer must accept)
-      const { data: trade, error: tradeError } = await supabase.from('element6_trade_gifts').insert({
-        type: 'trade_request', from_user_id: userId, to_user_id: peer.id,
-        from_username: username, to_username: peer.username || peer.name || 'Player', status: 'pending',
-        give: { tokens: offer.tokens || 0, skins: offer.skins, accessories: offer.accessories, killFX: offer.killFX, chars: offer.chars },
-        request: { tokens: request.tokens || 0, skins: request.skins, accessories: request.accessories, killFX: request.killFX, chars: request.chars },
-      }).select('id').single();
+      const { error: tradeError } = await supabase.rpc('element6_create_trade', {
+        p_to_user: peer.user_id || peer.id,
+        p_give: { tokens: offer.tokens || 0, skins: offer.skins, accessories: offer.accessories, killFX: offer.killFX, chars: offer.chars, requestId: requestIdRef.current },
+        p_request: { tokens: request.tokens || 0, skins: request.skins, accessories: request.accessories, killFX: request.killFX, chars: request.chars },
+      });
       if (tradeError) throw tradeError;
-      await supabase.from('player_direct_messages').insert({ sender_id: userId, recipient_id: peer.id, sender_username: username || 'Player', body: ` Sent you a trade offer. [E6TRADE:${trade?.id || ''}]` });
       sfx.purchaseSuccess();
-      onConfirm?.({ give: offer, request });
-    } catch (e) { sfx.warning(); }
+      await onConfirm?.({ give: offer, request });
+    } catch (e) { setError(e?.message || 'The trade offer could not be sent.'); sfx.warning(); }
     setBusy(false);
   };
 
@@ -147,6 +151,7 @@ export default function TradeOfferModal({ mode = 'trade', peer, progress, userId
           <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button>
         </div>
         <p className="text-[10px] text-muted-foreground mb-3">Select what you'll offer (left) and what you want from them (right). They must accept before the trade is official.</p>
+        {error && <p role="alert" className="text-xs text-destructive mb-3">{error}</p>}
 
         {loading ? (
           <p className="text-xs text-muted-foreground">Loading their inventory…</p>

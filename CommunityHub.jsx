@@ -82,7 +82,7 @@ const SKY = {
   night:  ['#1a1a33', '#0a0a2a', '#050510'],
 };
 
-export default function CommunityHub({ progress, userProfile, customCharsData = {}, onBack, onNavigate, onOpenServers, onPlayCampaign, onEquipPatch, onTransfer, onDownloadStage, serverCode = 'default' }) {
+export default function CommunityHub({ progress, userProfile, customCharsData = {}, onBack, onNavigate, onOpenServers, onPlayCampaign, onEquipPatch, onTransfer, onRefreshProgress, onDownloadStage, serverCode = 'default' }) {
   const canvasRef = useRef(null);
   const hubCanvasFocusedRef = useRef(false);
   const stateRef = useRef({ px: HUB_WIDTH / 2, py: HUB_GROUND_Y, vy: 0, grounded: true, facing: 1, cam: 0, frame: 0, emote: null, emoteT: 0, emoteMaxT: 0 });
@@ -868,6 +868,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
       {showTradesGifts && (
         <TradesGiftsPanel
           userId={userId} username={username} progress={progress} room={room}
+          onRefreshProgress={onRefreshProgress}
           onTrade={(peer) => { setTradePeer({ ...peer, name: peer.username || peer.name }); }}
           onGift={(peer) => { setGiftPeer({ ...peer, name: peer.username || peer.name }); }}
           onClose={() => setShowTradesGifts(false)}
@@ -876,13 +877,13 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
 
       {tradePeer && (
         <TradeOfferModal mode="trade" peer={tradePeer} progress={progress} userId={userId} username={username}
-          onConfirm={(data) => { onTransfer?.({ ...data, to: tradePeer.id, kind: 'trade' }); setTradePeer(null); }}
+          onConfirm={async (data) => { await onTransfer?.({ ...data, to: tradePeer.user_id || tradePeer.id, kind: 'trade' }); setTradePeer(null); }}
           onClose={() => setTradePeer(null)} />
       )}
 
       {giftPeer && (
         <TradeGiftModal mode="gift" peerName={giftPeer.name} progress={progress}
-          onConfirm={(data) => { onTransfer?.({ ...data, to: giftPeer.id, kind: 'gift', peerName: giftPeer.name }); setGiftPeer(null); }}
+          onConfirm={async (data) => { await onTransfer?.({ ...data, to: giftPeer.user_id || giftPeer.id, kind: 'gift', peerName: giftPeer.name }); setGiftPeer(null); }}
           onClose={() => setGiftPeer(null)} />
       )}
 

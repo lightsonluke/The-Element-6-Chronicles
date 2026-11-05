@@ -230,11 +230,11 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
       <div>
         <p className="text-[10px] font-heading text-muted-foreground mb-2">SPORT KITS{char ? ` FOR ${char.name.toUpperCase()}` : ''}</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {available.filter(a => ['soccer_kit','volleyball_kit','baseball_kit'].includes(a.type)).map(a => {
+          {available.filter(a => ['soccer_kit','volleyball_kit'].includes(a.type)).map(a => {
             const isOwned = owned.includes(a.id);
             const isEquipped = equippedIds.includes(a.id);
             const isTrying = tryOn === a.id;
-            const kitLabel = {soccer_kit:'SOCCER',volleyball_kit:'VOLLEYBALL',baseball_kit:'BASEBALL'}[a.type] || 'KIT';
+            const kitLabel = {soccer_kit:'SOCCER',volleyball_kit:'VOLLEYBALL'}[a.type] || 'KIT';
             return (
               <div key={a.id} role="group" tabIndex={0} aria-label={`Preview ${a.name} on ${char?.name || selected}`}
                 onKeyDown={e => { if (e.target !== e.currentTarget || !['Enter', ' '].includes(e.key)) return; e.preventDefault(); setTryOn(isTrying ? null : a.id); }}
@@ -571,8 +571,8 @@ function PreviewCanvas({ char, accessories = [], skinColor, skinParts = [] }) {
       if (!r) return; f++;
       ctx.clearRect(0, 0, 160, 180);
       ctx.fillStyle = '#0a0820'; ctx.fillRect(0, 0, 160, 180);
-      const kitAcc = accessories.find(a => a.type === 'volleyball_kit' || a.type === 'baseball_kit');
-      const _sportForKit = kitAcc && (kitAcc.type === 'volleyball_kit' ? 'volleyball' : kitAcc.type === 'baseball_kit' ? 'baseball' : null);
+      const kitAcc = accessories.find(a => a.type === 'volleyball_kit');
+      const _sportForKit = kitAcc ? 'volleyball' : null;
       if (_sportForKit) {
         drawSportChar(ctx, 80, 150, char, { facing: 1, frame: f, scale: 1.3, jersey: true, sport: _sportForKit, teamColor: kitAcc.color, state: 'idle', equippedSkins: {}, equippedAccessories: {} });
         requestAnimationFrame(loop); return;

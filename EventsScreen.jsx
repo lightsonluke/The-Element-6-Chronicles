@@ -14,6 +14,14 @@ const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 const MAX_TIERS = 50;
 const XP_PER_TIER = 100;
 const MULTI_PAL = ['#FF4444', '#FFDD44', '#44FF44', '#4488FF'];
+const SEASON_PASS_BANNERS = {
+  'Frost & Found': 'frost-found.svg',
+  'Six Feet Under: Yokai Rising': 'yokai-rising.svg',
+  'Petal to the Metal': 'petal-metal.svg',
+  "Six O'Clock Somewhere": 'six-oclock.svg',
+  'Out of This Element': 'out-of-element.svg',
+  'The Sixth Eclipse': 'sixth-eclipse.svg',
+};
 
 export default function EventsScreen({ onBack, progress, onClaimEventReward, onNavigateEquip }) {
   const [scrollTier, setScrollTier] = useState(0);
@@ -22,6 +30,9 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
 
   const activeEvent = getActiveEvent();
   const nextEventInfo = getNextEvent();
+  const seasonBanner = SEASON_PASS_BANNERS[activeEvent?.name]
+    ? `${import.meta.env.BASE_URL}assets/battle-passes/2027/${SEASON_PASS_BANNERS[activeEvent.name]}`
+    : null;
 
   useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
@@ -75,7 +86,7 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
 
       {activeEvent ? <>
         <section className="e6-pass-hero" style={{ '--pass-accent': activeEvent.color || '#d9a441' }}>
-          <div className="e6-pass-art"><EventShowcaseCanvas event={activeEvent} starChars={starChars} /><span className="e6-pass-art-tag">LIVE SEASON</span></div>
+          <div className="e6-pass-art"><EventShowcaseCanvas event={activeEvent} starChars={starChars} bannerImage={seasonBanner} />{!seasonBanner && <span className="e6-pass-art-tag">LIVE SEASON</span>}</div>
           <div className="e6-pass-hero-content">
             <div className="e6-pass-eyebrow"><span className="e6-pass-live-dot" /> SEASON REWARDS <span className="e6-pass-divider">/</span> 50 TIERS</div>
             <h1>{activeEvent.name}</h1>
@@ -163,9 +174,10 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
 }
 
 // ── Event showcase canvas — draws a cool event-themed scene with star characters ──
-function EventShowcaseCanvas({ event, starChars }) {
+function EventShowcaseCanvas({ event, starChars, bannerImage }) {
   const ref = useRef(null);
   useEffect(() => {
+    if (bannerImage) return undefined;
     const c = ref.current; if (!c) return;
     const ctx = c.getContext('2d'); let f = 0; let r = true;
     const W = 800, H = 180;
@@ -258,8 +270,10 @@ function EventShowcaseCanvas({ event, starChars }) {
     };
     loop();
     return () => { r = false; };
-  }, [event, starChars]);
-  return <canvas ref={ref} width={800} height={180} className="w-full" style={{ maxWidth: '800px' }} />;
+  }, [event, starChars, bannerImage]);
+  return bannerImage
+    ? <img src={bannerImage} alt={`LIVE SEASON · ${event.name}`} />
+    : <canvas ref={ref} width={800} height={180} className="w-full" style={{ maxWidth: '800px' }} />;
 }
 
 function RewardPreview({ bp, event }) {

@@ -30,7 +30,7 @@ export default function AboutTheGame({ onBack }) {
             <li>• <span className="text-foreground">Battle Royale</span> — 30 fighters, closing danger zone, loot, and last-one-standing</li>
             <li>• <span className="text-foreground">Ranked</span> — Climb the ELO ladder in bot or online ranked</li>
             <li>• <span className="text-foreground">Story Mode</span> — Explore an open world, mine, craft, and defeat villains</li>
-            <li>• <span className="text-foreground">Sports</span> — Soccer, Volleyball, Baseball, Dodgeball, Banger, and more</li>
+            <li>• <span className="text-foreground">Sports</span> — Soccer, Volleyball, Dodgeball, Banger, and more</li>
             <li>• <span className="text-foreground">Combo Trainer</span> — Practice and master character combos with frame data</li>
             <li>• <span className="text-foreground">Online & LAN</span> — Battle players worldwide or on the same network</li>
             <li>• <span className="text-foreground">Community Hub</span> — Hang out, trade, gift, and chat with other players in real time</li>

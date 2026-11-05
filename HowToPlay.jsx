@@ -30,13 +30,6 @@ const MODES = [
     tournament: '4-round Round of 16 bracket. Win the tournament for 50 tokens. Soccer Kits are buyable in the Shop.',
   },
   {
-    name: 'BASEBALL',
-    color: '#886633',
-    controls: 'Pitcher: Signature to pitch. Batter: Signature to swing (timing = power). Fielder: Signature to throw, Power to run the runner down.',
-    objective: 'Draft 3 characters — assign Pitcher, Infield, Outfield. Score runs by hitting and running bases. Switch sides at 3 outs or 5 runs. Ties → extra innings → sudden death.',
-    rewards: 'XP for runs, hits, and strikeouts. Win bonus + tokens. Tournament supported. Buy Baseball Uniforms in the Shop.',
-    tournament: '8-team tournament bracket. Outscore each opponent across innings to advance to the championship.',
-  },
   {
     name: 'VOLLEYBALL',
     color: '#FF8800',

@@ -61,7 +61,7 @@ export default function OnlineSettings({ onBack, settings = {}, onSave }) {
         <h3 className="font-heading text-sm text-primary mb-3">LAN (SAME WI-FI)</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">LAN auto-discovery:</span><Toggle on={local.lanDiscovery !== false} onClick={() => apply({ lanDiscovery: !local.lanDiscovery })} /></div>
-          <p className="text-[10px] text-muted-foreground font-body">Create or join a room with a friend on the same network. Supported modes: Fight, Soccer, Volleyball, Baseball.</p>
+          <p className="text-[10px] text-muted-foreground font-body">Create or join a room with a friend on the same network. Supported modes: Fight, Soccer, Volleyball.</p>
         </div>
       </div>
 

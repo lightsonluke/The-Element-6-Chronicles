@@ -16,7 +16,7 @@
     },
     "emoji": {
       "type": "string",
-      "default": "\ud83c\udfa8"
+      "default": ""
     },
     "backdrop": {
       "type": "string",

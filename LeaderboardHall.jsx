@@ -34,7 +34,6 @@ export default function LeaderboardHall({ onBack }) {
       case 'kos': return e.combat_kills || 0;
       case 'soccer': return e.soccer_xp || 0;
       case 'basketball': return e.basketball_xp || 0;
-      case 'baseball': return e.baseball_xp || 0;
       case 'volleyball': return e.volleyball_xp || 0;
       case 'tennis': return e.tennis_xp || 0;
       case 'track': return e.track_xp || 0;
@@ -45,7 +44,7 @@ export default function LeaderboardHall({ onBack }) {
     .filter(e => !query || (e.user_name || '').toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => metric(b, tab) - metric(a, tab));
 
-  const TABS = ['overall', 'wins', 'kos', 'soccer', 'basketball', 'baseball', 'volleyball', 'tennis', 'track'];
+  const TABS = ['overall', 'wins', 'kos', 'soccer', 'basketball', 'volleyball', 'tennis', 'track'];
 
   return (
     <div className="w-full max-w-5xl mx-auto bg-card border border-border rounded-2xl p-5 shadow-2xl">
@@ -90,7 +89,6 @@ export default function LeaderboardHall({ onBack }) {
               <Stat label="Fights" v={profile.fight_count} />
               <Stat label="Soccer XP" v={profile.soccer_xp} />
               <Stat label="Basketball XP" v={profile.basketball_xp} />
-              <Stat label="Baseball XP" v={profile.baseball_xp} />
               <Stat label="Volleyball XP" v={profile.volleyball_xp} />
               <Stat label="Tennis XP" v={profile.tennis_xp} />
               <Stat label="Track XP" v={profile.track_xp} />

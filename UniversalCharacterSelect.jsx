@@ -685,8 +685,8 @@ export default function UniversalCharacterSelect({
 
       {/* Start button */}
       <div className="flex flex-col gap-1 items-center">
-        {p1Locked && <p className="text-[9px] text-destructive font-heading"><GameIcon icon="warning" size={14} /> P1 character is locked — unlock in Shop to use</p>}
-        {p2Locked && <p className="text-[9px] text-destructive font-heading"><GameIcon icon="warning" size={14} /> P2 character is locked — unlock in Shop to use</p>}
+        {p1Locked && <p className="text-[9px] text-destructive font-heading"><GameIcon icon="lock" size={14} /> P1 character is locked — unlock in Shop to use</p>}
+        {p2Locked && <p className="text-[9px] text-destructive font-heading"><GameIcon icon="lock" size={14} /> P2 character is locked — unlock in Shop to use</p>}
         <button onClick={handleStart} disabled={!canStart}
           className={`px-8 py-2.5 rounded-lg font-heading text-base transition shadow-lg ${canStart ? 'bg-accent text-accent-foreground hover:opacity-90' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
           {startLabel}

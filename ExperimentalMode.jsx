@@ -6,7 +6,6 @@ import { PLAYABLE } from './sports.js';
 import PlatformFighter from './PlatformFighter.jsx';
 import SoccerFighter from './SoccerFighter.jsx';
 import VolleyballGame from './VolleyballGame.jsx';
-import BaseballGame from './BaseballGame.jsx';
 import DodgeballGame from './DodgeballGame.jsx';
 import BangerGame from './BangerGame.jsx';
 import { music } from './music.js';
@@ -19,7 +18,6 @@ const FIGHT_MAPS = ['splitcity', 'skyarena', 'lavarift', 'icepalace', 'cloudking
 const SPORT_COMPONENTS = {
   soccer: { Comp: SoccerFighter, label: 'SOCCER', icon: 'game', desc: 'First to 10 goals', color: 'bg-chart-3' },
   volleyball: { Comp: VolleyballGame, label: 'VOLLEYBALL', icon: 'game', desc: 'Bump set spike', color: 'bg-accent' },
-  baseball: { Comp: BaseballGame, label: 'BASEBALL', icon: 'game', desc: '3 innings duel', color: 'bg-chart-3' },
   dodgeball: { Comp: DodgeballGame, label: 'DODGEBALL', icon: 'game', desc: 'Last one standing', color: 'bg-chart-5' },
   banger: { Comp: BangerGame, label: 'BANGER', icon: 'game', desc: 'Net-drop side-rolling', color: 'bg-primary' },
 };

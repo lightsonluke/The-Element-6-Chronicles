@@ -7,7 +7,6 @@
       "enum": [
         "soccer",
         "volleyball",
-        "baseball",
         "dodgeball",
         "banger"
       ],

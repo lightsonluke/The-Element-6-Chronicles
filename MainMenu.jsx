@@ -6,14 +6,24 @@ import { sfx } from './sfx.js';
 
 const SECTIONS = [
   {
-    id: 'play', label: 'PLAY', summary: 'Choose how you want to enter the arena.', icon: 'game',
+    id: 'arena', label: 'ENTER ARENA', summary: 'Choose a mode and step into your next match.', icon: 'game',
+    items: [
+      { label: 'Ranked', detail: 'Compete for rating', key: 'onlineranked', icon: 'medal' },
+      { label: 'Unranked', detail: 'Play online without rating changes', key: 'onlineunranked', icon: 'globe' },
+      { label: 'Regular Battle', detail: 'Start a local fight', key: 'regularbattle', icon: 'game' },
+      { label: 'Tournament', detail: 'Enter a knockout bracket', key: 'tournament', icon: 'trophy' },
+      { label: 'Training', detail: 'Practice against a training dummy', key: 'training', icon: 'running' },
+      { label: 'Elo Ratings', detail: 'Review competitive ratings', key: 'elo', icon: 'chart' },
+      { label: 'Daily Quests', detail: 'Complete today’s challenges', key: 'daily', icon: 'calendar' },
+    ],
+  },
+  {
+    id: 'play', label: 'PLAY', summary: 'Explore stories and multiplayer.', icon: 'game',
     items: [
       { label: 'Fight Modes', detail: 'Browse every fight format', key: 'modeSelect', icon: 'game' },
       { label: 'Story Mode', detail: 'Continue the chronicles', key: 'story', icon: 'book' },
       { label: 'Online', detail: 'Find a match or join friends', key: 'online', icon: 'globe' },
       { label: 'Sports', detail: 'Play the full sports roster', key: 'sports', icon: 'trophy' },
-      { label: 'Tournament', detail: 'Enter a knockout bracket', key: 'tournament', icon: 'medal' },
-      { label: 'Grand Circuit', detail: 'Fight through the circuit', key: 'grandcircuit', icon: 'trophy' },
     ],
   },
   {
@@ -24,7 +34,6 @@ const SECTIONS = [
       { label: 'Equip', detail: 'Manage your loadouts', key: 'equip', icon: 'package' },
       { label: 'Meet Characters', detail: 'Explore the roster', key: 'meet', icon: 'users' },
       { label: 'Edit Characters', detail: 'Manage your fighters', key: 'editchars', icon: 'edit' },
-      { label: 'Create Character', detail: 'Build a custom fighter', key: 'creator', icon: 'plus' },
       { label: 'Hero Codex', detail: 'Read fighter profiles', key: 'codex', icon: 'book' },
     ],
   },
@@ -61,12 +70,12 @@ const SECTIONS = [
       { label: 'Campaign Creator', detail: 'Build a battle campaign', key: 'creatormode', icon: 'edit' },
       { label: 'Save Codes', detail: 'Import or export setups', key: 'savecodes', icon: 'clipboard' },
       { label: 'Settings', detail: 'Tune controls and display', key: 'settings', icon: 'settings' },
-      { label: 'About the Game', detail: 'Learn about Element 6', key: 'about', icon: 'info' },
+      { label: 'About the Game', detail: 'Learn about The Chronicles', key: 'about', icon: 'info' },
     ],
   },
 ];
 
-export default function MainMenu({ onNavigate, coins = 0, favoriteName, favoriteLevel = 1, onlineRankedRating, musicVolume, activeEvent, username, chatNotifCount = 0 }) {
+export default function MainMenu({ onNavigate, coins = 0, favoriteName, favoriteLevel = 1, onlineRankedRating, musicVolume, username, chatNotifCount = 0 }) {
   const [showHowTo, setShowHowTo] = useState(false);
   const [activeSection, setActiveSection] = useState('play');
   const [query, setQuery] = useState('');
@@ -81,6 +90,7 @@ export default function MainMenu({ onNavigate, coins = 0, favoriteName, favorite
 
   const navigate = (key) => {
     sfx.click();
+    if (key === 'arena') { setActiveSection('arena'); setQuery(''); return; }
     if (key === 'howto') {
       sfx.menuOpen();
       setShowHowTo(true);
@@ -93,9 +103,9 @@ export default function MainMenu({ onNavigate, coins = 0, favoriteName, favorite
     <main className="e6-home-menu" style={{ '--e6-home-image': `url("${import.meta.env.BASE_URL}assets/e6-home-menu-background.png")` }}>
       <div className="e6-home-backdrop" aria-hidden="true" />
       <header className="e6-home-topbar">
-        <div className="e6-home-brand" aria-label="Element 6 Chronicles">
-          <span className="e6-home-brand-mark">6</span>
-          <span><strong>ELEMENT 6</strong><small>CHRONICLES</small></span>
+        <div className="e6-home-brand" aria-label="The Chronicles">
+          <span className="e6-home-brand-mark"><img src={`${import.meta.env.BASE_URL}favicon.png`} alt="" /></span>
+          <span><strong>THE</strong><small>CHRONICLES</small></span>
         </div>
         <div className="e6-home-player-strip">
           <div className="e6-home-player-name"><span className="e6-home-eyebrow">PLAYER</span><strong>{username || 'Guest Player'}</strong></div>
@@ -111,11 +121,11 @@ export default function MainMenu({ onNavigate, coins = 0, favoriteName, favorite
 
       <section className="e6-home-layout">
         <div className="e6-home-hero">
-          <div className="e6-home-season">{activeEvent?.name ? `NOW PLAYING · ${activeEvent.name}` : 'A NEW ERA OF ELEMENTAL FIGHTING'}</div>
-          <h1>ELEMENT <span>6</span></h1>
+          <div className="e6-home-season">A NEW ERA OF ELEMENTAL FIGHTING</div>
+          <h1>THE <span>CHRONICLES</span></h1>
           <p className="e6-home-subtitle">A world of fighters, stories, and rivalries waits beyond the city lights.</p>
           <div className="e6-home-actions">
-            <button type="button" className="e6-home-primary" onClick={() => navigate('modeSelect')}>
+            <button type="button" className="e6-home-primary" onClick={() => navigate('arena')}>
               <span><small>READY WHEN YOU ARE</small><strong>ENTER THE ARENA</strong></span><GameIcon icon="arrowRight" size={20} />
             </button>
             <button type="button" className="e6-home-secondary" onClick={() => navigate('story')}><GameIcon icon="book" size={17} /> EXPLORE STORY</button>
@@ -153,7 +163,7 @@ export default function MainMenu({ onNavigate, coins = 0, favoriteName, favorite
             ))}
             {visibleItems.length === 0 && <div className="e6-home-empty">No destinations match “{query}”.</div>}
           </div>
-          <div className="e6-home-nav-footer"><span>ELEMENT 6 CHRONICLES</span><button type="button" onClick={() => navigate('about')}>ABOUT THE GAME <GameIcon icon="arrowRight" size={13} /></button></div>
+          <div className="e6-home-nav-footer"><span>THE CHRONICLES</span><button type="button" onClick={() => navigate('about')}>ABOUT THE GAME <GameIcon icon="arrowRight" size={13} /></button></div>
         </aside>
       </section>
 

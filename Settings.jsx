@@ -602,7 +602,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Show opponent ping:</span><Toggle on={local.showPing !== false} onClick={() => apply({ showPing: !local.showPing })} /></div>
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Mute opponent emotes:</span><Toggle on={local.muteOpponentEmotes === true} onClick={() => apply({ muteOpponentEmotes: !local.muteOpponentEmotes })} /></div>
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">LAN auto-discovery:</span><Toggle on={local.lanDiscovery !== false} onClick={() => apply({ lanDiscovery: !local.lanDiscovery })} /></div>
-          <p className="text-[10px] text-muted-foreground font-body">Create or join a room with a friend on the same network. Supported modes: Fight, Soccer, Volleyball, Baseball.</p>
+          <p className="text-[10px] text-muted-foreground font-body">Create or join a room with a friend on the same network. Supported modes: Fight, Soccer, Volleyball.</p>
         </div>
       </div>
 
