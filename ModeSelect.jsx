@@ -3,9 +3,9 @@ import { GAME_MODES } from './PlatformFighter.jsx';
 import GameIcon from './GameIcon.jsx';
 
 const MODE_MARKS = {
-  regular: '⚔', time: '◷', sudden: '✦', ranked: '♛', coin: '◆', brawl: '✹',
-  challenge: '⬡', botbattle: '◎', lowgravity: '↟', tournament: '♜',
-  grandcircuit: '✧', team: '◈', shapeshift: '⟳',
+  regular: '', time: '◷', sudden: '', ranked: '', coin: '◆', brawl: '',
+  challenge: '⬡', botbattle: '◎', lowgravity: '↟', tournament: '',
+  grandcircuit: '', team: '◈', shapeshift: '⟳',
 };
 
 function ModeTile({ mode, onPick, index, featured = false }) {
@@ -16,7 +16,7 @@ function ModeTile({ mode, onPick, index, featured = false }) {
       className={`e6-mode-tile group ${featured ? 'e6-mode-tile-featured' : ''}`}
       aria-label={`Select ${mode.name}: ${mode.desc}`}
     >
-      <span className="e6-mode-tile-mark" aria-hidden="true">{MODE_MARKS[mode.id] || '✧'}</span>
+      <span className="e6-mode-tile-mark" aria-hidden="true">{MODE_MARKS[mode.id] || ''}</span>
       <span className="e6-mode-tile-content">
         <span className="e6-mode-tile-kicker">MODE {String(index + 1).padStart(2, '0')}</span>
         <span className="e6-mode-tile-title">{mode.name}</span>
@@ -44,7 +44,7 @@ export default function ModeSelect({ onPick, onBack }) {
           <h2 className="text-3xl font-heading text-accent tracking-wider">CHOOSE YOUR ARENA</h2>
           <p className="text-sm text-muted-foreground font-body mt-2">Pick a ruleset. Your fighter selection comes next.</p>
         </div>
-        <button onClick={onBack} className="e6-back-button"><GameIcon emoji="←" size={16} /> BACK</button>
+        <button onClick={onBack} className="e6-back-button"><GameIcon icon="info" size={16} /> BACK</button>
       </header>
 
       <section aria-labelledby="standard-modes-title" className="e6-mode-section">

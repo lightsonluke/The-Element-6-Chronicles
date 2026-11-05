@@ -391,7 +391,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
         <button
           onClick={() => { if (gameRef.current) gameRef.current.running = false; onEnd(false); }}
           className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"
-        ><GameIcon emoji="←" size={14} /> Retreat (forfeit)</button>
+        ><GameIcon icon="info" size={14} /> Retreat (forfeit)</button>
         {battleTitle && <span className="text-[10px] font-heading text-accent tracking-wider">{battleTitle}</span>}
         <span className="text-[10px] text-muted-foreground font-body">Arrows · , sig · ,+ '↑' recovery · . power · l side heavy · l+ '↓' down/pound · / super</span>
       </div>

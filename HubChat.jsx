@@ -68,7 +68,7 @@ export default function HubChat({ userId, username, serverCode, partyId, partyNa
   return <div className="fixed bottom-0 left-0 z-50 w-80 max-w-[90%] bg-card border-2 border-primary rounded-t-xl shadow-2xl flex flex-col" style={{maxHeight:'60vh'}}>
     <div className="flex items-center justify-between px-3 py-2 border-b border-border">
       <div className="flex gap-1">{tabs.map(t=><button key={t.id} onClick={()=>{setChannel(t.id);setError('');sfx.click();}} className={`px-2 py-1 rounded font-heading text-[9px] ${channel===t.id?'bg-primary text-primary-foreground':'bg-secondary text-secondary-foreground'}`}>{t.label}</button>)}</div>
-      <button onClick={onClose} className="text-xs text-muted-foreground hover:text-foreground"><GameIcon emoji="✕" size={14}/></button>
+      <button onClick={onClose} className="text-xs text-muted-foreground hover:text-foreground"><GameIcon icon="close" size={14}/></button>
     </div>
     <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-1 min-h-[200px]">
       {error && <p className="text-[9px] text-destructive mb-2 break-words">{error}</p>}
@@ -76,7 +76,7 @@ export default function HubChat({ userId, username, serverCode, partyId, partyNa
     </div>
     <div className="flex gap-1 px-3 py-2 border-t border-border">
       <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')send();}} placeholder={channelType==='party'&&!partyId?'Join a party to use party chat':`Message ${channel}...`} maxLength={300} disabled={!channelKey} className="flex-1 bg-secondary text-secondary-foreground rounded px-2 py-1 text-xs font-body disabled:opacity-50"/>
-      <button onClick={send} disabled={!channelKey||!text.trim()} className="px-3 py-1 bg-primary text-primary-foreground rounded font-heading text-[10px] disabled:opacity-50"><GameIcon emoji="➤" size={14}/></button>
+      <button onClick={send} disabled={!channelKey||!text.trim()} className="px-3 py-1 bg-primary text-primary-foreground rounded font-heading text-[10px] disabled:opacity-50"><GameIcon icon="arrowRight" size={14}/></button>
     </div>
   </div>;
 }

@@ -36,19 +36,19 @@ function shopCharOrder(c) {
 }
 const SHOP_SORTED = [...ALL].sort((a, b) => shopCharOrder(a) - shopCharOrder(b));
 const SHOP_CATEGORY_GROUPS = [
-  { label: 'ROSTER', items: [{ id: 'characters', label: 'Fighters', icon: '⚔️' }] },
+  { label: 'ROSTER', items: [{ id: 'characters', label: 'Fighters', icon: 'users' }] },
   { label: 'COSMETICS', items: [
-    { id: 'accessories', label: 'Accessories', icon: '✦' },
-    { id: 'kits', label: 'Sport kits', icon: '◈' },
-    { id: 'emotes', label: 'Emotes', icon: '☺' },
-    { id: 'killfx', label: 'KO effects', icon: '✹' },
-    { id: 'crossovers', label: 'Crossovers', icon: '⟳' },
-    { id: 'shikigami', label: 'Shikigami', icon: '❖' },
-    { id: 'titles', label: 'Titles', icon: '▤' },
+    { id: 'accessories', label: 'Accessories', icon: 'bag' },
+    { id: 'kits', label: 'Sport kits', icon: 'game' },
+    { id: 'emotes', label: 'Emotes', icon: 'heart' },
+    { id: 'killfx', label: 'KO effects', icon: 'fire' },
+    { id: 'crossovers', label: 'Crossovers', icon: 'layers' },
+    { id: 'shikigami', label: 'Shikigami', icon: 'star' },
+    { id: 'titles', label: 'Titles', icon: 'tag' },
   ] },
   { label: 'MORE', items: [
-    { id: 'paid', label: 'Paid packs', icon: '◆' },
-    { id: 'donate', label: 'Support the game', icon: '♡' },
+    { id: 'paid', label: 'Paid packs', icon: 'package' },
+    { id: 'donate', label: 'Support the game', icon: 'heart' },
   ] },
 ];
 const SHOP_CATEGORY_META = {
@@ -116,9 +116,9 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
         </div>
         <div className="e6-storefront-account">
           <div className="e6-storefront-wallet" aria-label={`${formatNumber(coins)} tokens available`}>
-            <span>YOUR TOKENS</span><strong>{formatNumber(coins)} <GameIcon emoji="◆" size={16} /></strong>
+            <span>YOUR TOKENS</span><strong>{formatNumber(coins)} <GameIcon icon="star" size={16} /></strong>
           </div>
-          <button onClick={onBack} className="e6-storefront-back"><GameIcon emoji="←" size={16} /> LOBBY</button>
+          <button onClick={onBack} className="e6-storefront-back"><GameIcon icon="info" size={16} /> LOBBY</button>
         </div>
       </header>
 
@@ -131,7 +131,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
                 <button key={item.id} type="button" aria-current={shopTab === item.id ? 'page' : undefined}
                   className={`e6-storefront-nav-item ${shopTab === item.id ? 'is-active' : ''}`}
                   onClick={() => setShopTab(item.id)}>
-                  <span className="e6-storefront-nav-icon" aria-hidden="true">{item.icon}</span>
+                  <span className="e6-storefront-nav-icon" aria-hidden="true"><GameIcon icon={item.icon} size={16} /></span>
                   <span>{item.label}</span>
                   {shopTab === item.id && <span className="e6-storefront-nav-arrow" aria-hidden="true">›</span>}
                 </button>
@@ -208,9 +208,9 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
                 <AccessoryIcon accessory={a} />
                 <p className="font-heading text-xs text-foreground mt-1">{a.name}</p>
                 {a.exclusiveTo && <span className="text-[8px] text-primary font-heading">EXCLUSIVE</span>}
-                <p className="text-[10px] text-accent font-heading mb-2">{a.id === 'clan_badge' ? 'FREE' : <>{a.price} <GameIcon emoji="◆" size={14} /></>}</p>
+                <p className="text-[10px] text-accent font-heading mb-2">{a.id === 'clan_badge' ? 'FREE' : <>{a.price} <GameIcon icon="star" size={14} /></>}</p>
                 {isOwned ? (
-                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
+                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon icon="check" size={14} /> OWNED</span>
                 ) : (
                   <button onClick={(e) => { e.stopPropagation(); if (coins >= a.price) { onBuy(a.id); setPendingPurchase({ label: a.name, equip: () => onEquip(char.id, a.id), isOwned: p => (p?.ownedAccessories || []).includes(a.id) }); } }}
                     disabled={coins < a.price}
@@ -243,9 +243,9 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
                 <AccessoryIcon accessory={a} />
                 <p className="font-heading text-xs text-foreground mt-1">{a.name}</p>
                 <span className="text-[8px] text-primary font-heading">{kitLabel}</span>
-                <p className="text-[10px] text-accent font-heading mb-2">{a.price} <GameIcon emoji="◆" size={14} /></p>
+                <p className="text-[10px] text-accent font-heading mb-2">{a.price} <GameIcon icon="star" size={14} /></p>
                 {isOwned ? (
-                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
+                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon icon="check" size={14} /> OWNED</span>
                 ) : (
                   <button onClick={(e) => { e.stopPropagation(); if (coins >= a.price) { onBuy(a.id); setPendingPurchase({ label: a.name, equip: () => onEquip(char.id, a.id), isOwned: p => (p?.ownedAccessories || []).includes(a.id) }); } }}
                     disabled={coins < a.price}
@@ -280,10 +280,10 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
                 <span className="text-[8px] font-heading" style={{ color: CATEGORY_COLORS[cat] }}>{cat}</span>
                 {eraInfo && <span className="text-[7px] text-muted-foreground font-body">{eraInfo.short}</span>}
                 {isUnlocked ? (
-                  <span className="text-[10px] font-heading text-accent mt-2"><GameIcon emoji="✓" size={14} /> UNLOCKED</span>
+                  <span className="text-[10px] font-heading text-accent mt-2"><GameIcon icon="check" size={14} /> UNLOCKED</span>
                 ) : (
                   <>
-                    <p className="text-[10px] text-accent font-heading mb-2 mt-1">{price} <GameIcon emoji="◆" size={14} /></p>
+                    <p className="text-[10px] text-accent font-heading mb-2 mt-1">{price} <GameIcon icon="star" size={14} /></p>
                     <button onClick={() => onBuyCharacter(c.id)}
                       disabled={coins < price}
                       className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
@@ -311,9 +311,9 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
                 <KillFXPreview fxId={k.id} color="#FFD700" />
                 <p className="font-heading text-xs text-foreground mt-1">{k.name}</p>
                 <p className="text-[9px] text-muted-foreground text-center mb-1">{k.desc}</p>
-                <p className="text-[10px] text-accent font-heading mb-2">{k.price} <GameIcon emoji="◆" size={14} /></p>
+                <p className="text-[10px] text-accent font-heading mb-2">{k.price} <GameIcon icon="star" size={14} /></p>
                 {isOwned ? (
-                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
+                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon icon="check" size={14} /> OWNED</span>
                 ) : (
                   <button onClick={() => { if (coins >= k.price) { onBuyKillFX(k.id); setPendingPurchase({ label: k.name, equip: () => onEquipKillFX(k.id), isOwned: p => (p?.ownedKillFX || []).includes(k.id) }); } }}
                     disabled={coins < k.price}
@@ -353,9 +353,9 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
                   <div className="w-4 h-4 rounded" style={{ backgroundColor: cx.colorMap.secondary }} title="Secondary" />
                   <div className="w-4 h-4 rounded" style={{ backgroundColor: cx.colorMap.attack }} title="Attack" />
                 </div>
-                <p className="text-[10px] text-accent font-heading mb-2">{cx.price} <GameIcon emoji="◆" size={14} /></p>
+                <p className="text-[10px] text-accent font-heading mb-2">{cx.price} <GameIcon icon="star" size={14} /></p>
                 {isOwned ? (
-                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
+                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon icon="check" size={14} /> OWNED</span>
                 ) : (
                   <button onClick={() => { if (coins >= cx.price) { onBuyCrossover?.(cx.id); setPendingPurchase({ label: cx.name, equip: () => onEquipCrossover?.(cx.charId, cx.id), isOwned: p => (p?.ownedCrossovers || []).includes(cx.id) }); } }}
                     disabled={coins < cx.price}
@@ -384,9 +384,9 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
                 <p className="font-heading text-xs text-foreground mt-1">{s.name}</p>
                 <p className="text-[8px] text-muted-foreground text-center mb-1 leading-tight">{s.desc}</p>
                 <p className="text-[8px] text-accent font-heading text-center mb-1">+0.5 {(getShikigamiStat(s.id) || '').toUpperCase()}</p>
-                <p className="text-[10px] text-accent font-heading mb-2">{s.price} <GameIcon emoji="◆" size={14} /></p>
+                <p className="text-[10px] text-accent font-heading mb-2">{s.price} <GameIcon icon="star" size={14} /></p>
                 {isOwned ? (
-                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
+                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon icon="check" size={14} /> OWNED</span>
                 ) : (
                   <button onClick={() => { if (coins >= s.price) { onBuyShikigami?.(s.id); setPendingPurchase({ label: s.name, equip: () => onEquipShikigami?.(char?.id, s.id), isOwned: p => (p?.ownedShikigami || []).includes(s.id) }); } }}
                     disabled={coins < s.price}
@@ -416,10 +416,10 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
                 {e.price === 0 ? (
                   <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-accent/20 text-accent text-center block">FREE</span>
                 ) : isOwned ? (
-                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon emoji="✓" size={14} /> OWNED</span>
+                  <span className="px-3 py-1 rounded font-heading text-[10px] w-full bg-secondary text-secondary-foreground text-center block"><GameIcon icon="check" size={14} /> OWNED</span>
                 ) : (
                   <>
-                    <p className="text-[10px] text-accent font-heading mb-2">{e.price} <GameIcon emoji="◆" size={14} /></p>
+                    <p className="text-[10px] text-accent font-heading mb-2">{e.price} <GameIcon icon="star" size={14} /></p>
                     <button onClick={() => { if (coins >= e.price) { onBuyEmote?.(e.id); setPendingPurchase({ label: e.name, equip: () => {}, isOwned: p => (p?.ownedEmotes || []).includes(e.id) }); } }}
                       disabled={coins < e.price}
                       className={`px-3 py-1 rounded font-heading text-[10px] w-full ${coins >= e.price ? 'bg-primary text-primary-foreground hover:opacity-80' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
@@ -484,14 +484,14 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
             const isOwned = (progress?.ownedPacks || []).includes(p.id);
             return (
               <div key={p.id} className={`bg-card border-2 rounded-2xl p-4 flex flex-col items-center text-center shadow-xl transition-transform hover:-translate-y-1 ${p.category === 'Tokens' || p.category === 'Support' ? 'md:col-span-1' : ''}`} style={{ borderColor: p.color + '88' }}>
-                <span className="text-4xl mb-1">{p.emoji}</span>
+                <span className="mb-1 grid h-12 w-12 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary"><GameIcon icon={p.icon || 'package'} size={25} /></span>
                 <p className="font-heading text-sm text-foreground">{p.name}</p>
                 <p className="text-[9px] text-muted-foreground mb-2 flex-1">{p.desc}</p>
                 {p.grants?.amount && <p className="font-heading text-2xl mb-1" style={{ color: p.color }}>{p.grants.amount.toLocaleString()} TOKENS</p>}
                 {p.name.includes('RANDOM') && <span className="mb-2 px-2 py-0.5 rounded bg-primary/20 text-primary font-heading text-[9px]">RANDOM REWARDS</span>}
                 <p className="font-heading text-xl mb-2" style={{ color: p.color }}>${(p.price / 100).toFixed(2)}</p>
                 {isOwned ? (
-                  <span className="px-3 py-1 bg-accent/20 text-accent rounded font-heading text-[10px] w-full"><GameIcon emoji="✓" size={14} /> OWNED</span>
+                  <span className="px-3 py-1 bg-accent/20 text-accent rounded font-heading text-[10px] w-full"><GameIcon icon="check" size={14} /> OWNED</span>
                 ) : (
                   <button onClick={() => onBuyPack?.(p.id)} disabled
                     className="px-3 py-2 bg-muted text-muted-foreground rounded-lg font-heading text-[10px] w-full cursor-not-allowed">
@@ -511,7 +511,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
       {justBought && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div className="bg-card border-2 border-accent rounded-xl p-5 flex flex-col items-center gap-2 max-w-xs text-center">
-            <p className="font-heading text-lg text-accent"><GameIcon emoji="✓" size={14} /> EQUIP IN SHOP</p>
+            <p className="font-heading text-lg text-accent"><GameIcon icon="check" size={14} /> EQUIP IN SHOP</p>
             <p className="text-sm font-heading text-foreground">{justBought.label}</p>
             <p className="text-[10px] text-muted-foreground">Purchased! Equip it now or from the Equip tab later.</p>
             <button onClick={() => { justBought.equip?.(); setJustBought(null); }} className="px-6 py-2 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-80">EQUIP NOW</button>

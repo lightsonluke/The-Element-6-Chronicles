@@ -65,7 +65,7 @@ export default function HowToPlay({ onClose }) {
       <div className="bg-card border border-border rounded-2xl p-6 max-w-3xl w-full max-h-[88vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-heading text-xl text-accent tracking-wider">HOW TO PLAY</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none"><GameIcon emoji="✕" size={14} /></button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-2xl leading-none"><GameIcon icon="close" size={14} /></button>
         </div>
         <div className="flex gap-2 mb-4">
           <button onClick={() => setTab('stats')} className={`px-4 py-1.5 rounded-lg font-heading text-xs ${tab === 'stats' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>STATS</button>

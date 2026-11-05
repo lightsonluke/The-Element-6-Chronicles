@@ -23,7 +23,7 @@ export default function OnlineHubScreen({ onBack, onNavigate, initialTab = null 
   return (
     <div className="w-full max-w-5xl flex flex-col gap-5">
       <div className="flex items-center justify-between">
-        <button onClick={onBack} className="px-4 py-2 bg-secondary rounded-lg font-heading text-sm"><GameIcon emoji="←" size={14}/> BACK</button>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary rounded-lg font-heading text-sm"><GameIcon icon="info" size={14}/> BACK</button>
         <div className="text-center"><h2 className="text-3xl font-heading text-accent">ONLINE</h2><p className="text-xs text-muted-foreground">ALL ONLINE MODES</p></div>
         <div className="w-20"/>
       </div>

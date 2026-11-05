@@ -59,7 +59,7 @@ export default function PartyStatusBar() {
         const isOnline = status === 'online' || status === 'playing';
         return <span key={m.user_id} className="inline-flex items-center gap-1 rounded bg-white/10 px-1.5 py-1">
           <i className={`h-1.5 w-1.5 rounded-full ${status === 'playing' ? 'bg-sky-400' : isOnline ? 'bg-green-400' : 'bg-zinc-500'}`}/>
-          <span>{m.username || 'Player'}{m.user_id === party.host_user_id ? ' ★' : ''}</span>
+          <span>{m.username || 'Player'}{m.user_id === party.host_user_id ? ' ' : ''}</span>
           <span className="text-white/60">{status === 'playing' ? `PLAYING ${String(m.current_mode || '').replace(/[_-]/g,' ').toUpperCase()}` : isOnline ? 'ONLINE' : 'OFFLINE'}</span>
         </span>;
       })}

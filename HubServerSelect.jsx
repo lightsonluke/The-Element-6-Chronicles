@@ -72,8 +72,8 @@ export default function HubServerSelect({ onBack, onJoin }) {
   return (
     <div className="w-full max-w-3xl flex flex-col gap-3">
       <div className="flex justify-between items-center">
-        <div><h2 className="text-xl font-heading text-accent tracking-wider"><GameIcon emoji="🌐" size={14} /> SELECT A COMMUNITY SERVER</h2><p className="text-[10px] text-muted-foreground font-body mt-1">Showing every active server with at least one player, sorted by players online.</p></div>
-        <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
+        <div><h2 className="text-xl font-heading text-accent tracking-wider"><GameIcon icon="globe" size={14} /> SELECT A COMMUNITY SERVER</h2><p className="text-[10px] text-muted-foreground font-body mt-1">Showing every active server with at least one player, sorted by players online.</p></div>
+        <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       <div className="flex gap-2 flex-wrap bg-card/60 border border-border rounded-xl p-3">

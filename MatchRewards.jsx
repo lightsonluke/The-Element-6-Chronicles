@@ -87,10 +87,10 @@ export default function MatchRewards({
         {/* Action buttons */}
         <div className="flex justify-center gap-3">
           <button onClick={onBack} className="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">
-            <GameIcon emoji="⭕" size={14} /> BACK TO MENU
+            <GameIcon icon="info" size={14} /> BACK TO MENU
           </button>
           <button onClick={onContinue} className="px-6 py-2 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-80">
-            <GameIcon emoji="✖" size={14} /> CONTINUE
+            <GameIcon icon="close" size={14} /> CONTINUE
           </button>
         </div>
 
@@ -112,7 +112,7 @@ export default function MatchRewards({
               <span className="text-[10px] font-heading text-muted-foreground">Lv {newLevel}/{MAX_LEVEL}</span>
               {leveledUp && (
                 <span className="text-[9px] font-heading text-accent animate-pulse px-2 py-0.5 rounded bg-accent/20">
-                  <GameIcon emoji="⬆" size={14} /> LEVEL UP!
+                  <GameIcon icon="arrowUp" size={14} /> LEVEL UP!
                 </span>
               )}
             </div>
@@ -133,7 +133,7 @@ export default function MatchRewards({
           {/* Gold/coins */}
           <div className="flex-shrink-0 text-center">
             <div className="w-12 h-12 rounded-full bg-accent/20 border-2 border-accent flex items-center justify-center">
-              <span className="text-lg"><GameIcon emoji="◆" size={14} /></span>
+              <span className="text-lg"><GameIcon icon="star" size={14} /></span>
             </div>
             <p className="text-[9px] font-heading text-accent mt-1">
               {showCoins ? `+${coinsEarned}` : '...'}
@@ -158,11 +158,11 @@ export default function MatchRewards({
           <div className="bg-card/80 border border-border rounded-xl p-3">
             <p className="text-[10px] font-heading text-muted-foreground mb-2">REWARDS EARNED</p>
             <div className="space-y-1">
-              <RewardRow icon=<GameIcon emoji="✦" size={14} /> label="XP Gained" value={`+${xpGained}`} color={char?.color} shown={showXP} />
-              <RewardRow icon=<GameIcon emoji="◆" size={14} /> label="Tokens" value={`+${coinsEarned}`} color="#FFD700" shown={showCoins} />
-              {leveledUp && <RewardRow icon=<GameIcon emoji="⬆" size={14} /> label="Level Up!" value={`Lv ${oldLevel} → ${newLevel}`} color="#44FF88" shown={showLevel} />}
+              <RewardRow icon=<GameIcon icon="star" size={14} /> label="XP Gained" value={`+${xpGained}`} color={char?.color} shown={showXP} />
+              <RewardRow icon=<GameIcon icon="star" size={14} /> label="Tokens" value={`+${coinsEarned}`} color="#FFD700" shown={showCoins} />
+              {leveledUp && <RewardRow icon=<GameIcon icon="arrowUp" size={14} /> label="Level Up!" value={`Lv ${oldLevel} → ${newLevel}`} color="#44FF88" shown={showLevel} />}
               {!leveledUp && newLevel < MAX_LEVEL && (
-                <RewardRow icon=<GameIcon emoji="◎" size={14} /> label="Next Level" value={`${xpForNext - newXP} XP to go`} color="#888899" shown={showLevel} />
+                <RewardRow icon=<GameIcon icon="box" size={14} /> label="Next Level" value={`${xpForNext - newXP} XP to go`} color="#888899" shown={showLevel} />
               )}
             </div>
           </div>

@@ -153,13 +153,13 @@ export default function SportsHub({ initialSport = null, onBack, onPlaySoccer, o
     <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
       <div className="flex justify-between items-center w-full">
         <h2 className="text-2xl font-heading text-accent tracking-wider">SPORTS</h2>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> MENU</button>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> MENU</button>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full">
         {SPORTS.map(s => (
           <button key={s.id} onClick={() => setSport(s.id)}
             className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-border bg-card hover:border-accent hover:bg-accent/10 transition hover:scale-[1.03] shadow-lg">
-            <span className="text-5xl">{s.emoji}</span>
+            <GameIcon icon={s.icon || "game"} size={36} />
             <span className="font-heading text-lg tracking-wider" style={{ color: s.color }}>{s.name.toUpperCase()}</span>
             {s.subtitle && <span className="font-heading text-[9px] tracking-widest text-accent uppercase">Element 6 Original</span>}
             <span className="text-[10px] text-muted-foreground font-body text-center leading-tight">{s.desc}</span>

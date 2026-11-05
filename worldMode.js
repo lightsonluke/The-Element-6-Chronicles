@@ -123,16 +123,16 @@ export const NAMED_STAGES = {
 };
 
 export const CHAPTERS = [
-  { id: 1, name: 'A Normal Life', stages: [1, 15], emoji: '🌱', color: '#44AA88', desc: 'Eola Island / Split City — Learn the basics of life in the world.' },
-  { id: 2, name: 'Community', stages: [16, 30], emoji: '⚽', color: '#44AA44', desc: 'Meet sports coaches, learn new sports, and make friends.' },
-  { id: 3, name: 'The Forest Mystery', stages: [31, 45], emoji: '🌲', color: '#228822', desc: 'People are disappearing. Bandits roam the forests. Find the ruins.' },
-  { id: 4, name: 'Coastline', stages: [46, 60], emoji: '🏖', color: '#44CCAA', desc: 'Unlock beaches, boats, fishing. Discover an underwater lab.' },
-  { id: 5, name: 'Frost Mountains', stages: [61, 75], emoji: '❄', color: '#88CCFF', desc: 'Travel north. Villages frozen. Meet Silver. Defeat an Ice Guardian.' },
-  { id: 6, name: 'Volcano Region', stages: [76, 90], emoji: '🌋', color: '#FF4400', desc: 'Meet Crimson. Volcano erupts. Rescue civilians. Huge boss fight.' },
-  { id: 7, name: 'Metro Region', stages: [91, 105], emoji: '🌆', color: '#4488CC', desc: 'Futuristic city. Crime, stealth. Someone controls the technology.' },
-  { id: 8, name: 'The Rift', stages: [106, 120], emoji: '🌌', color: '#8844FF', desc: 'Reality breaks. Gravity shifts. The Controller speaks through glitches.' },
-  { id: 9, name: 'War for Eola', stages: [121, 140], emoji: '⚔', color: '#FF2244', desc: 'Massive online battles. Defend cities. NPCs fight beside you.' },
-  { id: 10, name: 'Beyond Evil', stages: [141, 150], emoji: '👑', color: '#FFD700', desc: 'Fight Nightmare, Evil, and The Controller. Restore the world.' },
+  { id: 1, name: 'A Normal Life', stages: [1, 15], color: '#44AA88', desc: 'Eola Island / Split City — Learn the basics of life in the world.' },
+  { id: 2, name: 'Community', stages: [16, 30], color: '#44AA44', desc: 'Meet sports coaches, learn new sports, and make friends.' },
+  { id: 3, name: 'The Forest Mystery', stages: [31, 45], color: '#228822', desc: 'People are disappearing. Bandits roam the forests. Find the ruins.' },
+  { id: 4, name: 'Coastline', stages: [46, 60], color: '#44CCAA', desc: 'Unlock beaches, boats, fishing. Discover an underwater lab.' },
+  { id: 5, name: 'Frost Mountains', stages: [61, 75], color: '#88CCFF', desc: 'Travel north. Villages frozen. Meet Silver. Defeat an Ice Guardian.' },
+  { id: 6, name: 'Volcano Region', stages: [76, 90], color: '#FF4400', desc: 'Meet Crimson. Volcano erupts. Rescue civilians. Huge boss fight.' },
+  { id: 7, name: 'Metro Region', stages: [91, 105], color: '#4488CC', desc: 'Futuristic city. Crime, stealth. Someone controls the technology.' },
+  { id: 8, name: 'The Rift', stages: [106, 120], color: '#8844FF', desc: 'Reality breaks. Gravity shifts. The Controller speaks through glitches.' },
+  { id: 9, name: 'War for Eola', stages: [121, 140], color: '#FF2244', desc: 'Massive online battles. Defend cities. NPCs fight beside you.' },
+  { id: 10, name: 'Beyond Evil', stages: [141, 150], color: '#FFD700', desc: 'Fight Nightmare, Evil, and The Controller. Restore the world.' },
 ];
 
 export function getChapterForStage(stage) {
@@ -258,9 +258,9 @@ export function getNPCDialogue(npc, ctx = {}) {
   if (rel >= 60 && category !== 'family') text += ' Always good to see a true friend.';
   else if (rel < 25 && category !== 'family') text += ' We should talk more, you and I.';
   if (category === 'romance') {
-    if (romanceStage === 'dating') text += ' 🌹 You make my days brighter.';
+    if (romanceStage === 'dating') text += '  You make my days brighter.';
     else if (romanceStage === 'engaged') text += ' I can\'t wait for the wedding!';
-    else if (romanceStage === 'married') text += ' Welcome home, love. ❤';
+    else if (romanceStage === 'married') text += ' Welcome home, love. ';
     else if (rel >= 40) text += ' I always enjoy your company…';
   }
   if (ctx.charName) text += `, ${ctx.charName}`;
@@ -283,9 +283,9 @@ export function getNPCDialogue(npc, ctx = {}) {
   if (category === 'romance') {
     if (rel >= 30 && romanceStage === 'none') options.push({ label: 'Flirt', delta: +4, kind: 'romance', activity: 'flirt' });
     if (rel >= 55 && romanceStage === 'interested') options.push({ label: 'Ask on a Date', delta: +6, kind: 'romance', activity: 'date' });
-    if (rel >= 75 && romanceStage === 'dating') options.push({ label: 'Propose 💍', delta: +8, kind: 'romance', activity: 'propose' });
-    if (rel >= 90 && romanceStage === 'engaged') options.push({ label: 'Get Married 👰', delta: +10, kind: 'romance', activity: 'marry' });
-    if (romanceStage === 'married') options.push({ label: 'Start a Family 👶', delta: +5, kind: 'romance', activity: 'child' });
+    if (rel >= 75 && romanceStage === 'dating') options.push({ label: 'Propose ', delta: +8, kind: 'romance', activity: 'propose' });
+    if (rel >= 90 && romanceStage === 'engaged') options.push({ label: 'Get Married ', delta: +10, kind: 'romance', activity: 'marry' });
+    if (romanceStage === 'married') options.push({ label: 'Start a Family ', delta: +5, kind: 'romance', activity: 'child' });
   }
   return { text, options, relationship: rel, relationshipLabel: getRelationshipLabel(rel), romanceStage, category };
 }

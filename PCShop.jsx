@@ -31,15 +31,15 @@ export default function PCShop({ stRef, selected, onSave, force, sfx }) {
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setOpen(false)}>
       <div className="bg-card border-2 border-accent rounded-xl p-4 max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-3">
-          <p className="font-heading text-accent"><GameIcon emoji="🛒" size={14} /> SHOP</p>
+          <p className="font-heading text-accent"><GameIcon icon="cart" size={14} /> SHOP</p>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-heading text-accent"><GameIcon emoji="🪙" size={14} /> {stRef.current.pcCoins || 0}</span>
-            <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground"><GameIcon emoji="✕" size={14} /></button>
+            <span className="text-[11px] font-heading text-accent"><GameIcon icon="bag" size={14} /> {stRef.current.pcCoins || 0}</span>
+            <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground"><GameIcon icon="close" size={14} /></button>
           </div>
         </div>
         <div className="flex gap-2 mb-3">
-          <button onClick={() => setTab('furniture')} className={`px-3 py-1 rounded font-heading text-xs ${tab === 'furniture' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon emoji="🛋️" size={14} /> FURNITURE</button>
-          <button onClick={() => setTab('clothing')} className={`px-3 py-1 rounded font-heading text-xs ${tab === 'clothing' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon emoji="👕" size={14} /> CLOTHING</button>
+          <button onClick={() => setTab('furniture')} className={`px-3 py-1 rounded font-heading text-xs ${tab === 'furniture' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon icon="home" size={14} /> FURNITURE</button>
+          <button onClick={() => setTab('clothing')} className={`px-3 py-1 rounded font-heading text-xs ${tab === 'clothing' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}><GameIcon icon="info" size={14} /> CLOTHING</button>
         </div>
         {tab === 'furniture' ? (
           <div className="grid grid-cols-2 gap-2">
@@ -48,8 +48,8 @@ export default function PCShop({ stRef, selected, onSave, force, sfx }) {
               return (
                 <div key={f.id} className="bg-muted/40 border border-border rounded-lg p-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xl">{f.emoji}</span>
-                    <div><p className="text-[11px] font-heading text-foreground">{f.name}</p><p className="text-[9px] text-accent"><GameIcon emoji="🪙" size={14} /> {f.price}</p></div>
+                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary font-heading">{(f.name || 'F').slice(0, 1)}</span>
+                    <div><p className="text-[11px] font-heading text-foreground">{f.name}</p><p className="text-[9px] text-accent"><GameIcon icon="bag" size={14} /> {f.price}</p></div>
                   </div>
                   <button disabled={owned || (stRef.current.pcCoins || 0) < f.price} onClick={() => buyFurniture(f.id)}
                     className={`px-2 py-1 rounded font-heading text-[9px] ${owned ? 'bg-muted text-muted-foreground' : (stRef.current.pcCoins || 0) >= f.price ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
@@ -66,8 +66,8 @@ export default function PCShop({ stRef, selected, onSave, force, sfx }) {
               return (
                 <div key={c.id} className="bg-muted/40 border border-border rounded-lg p-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xl">{c.emoji}</span>
-                    <div><p className="text-[11px] font-heading text-foreground">{c.name}</p><p className="text-[9px] text-accent"><GameIcon emoji="🪙" size={14} /> {c.price}</p></div>
+                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary font-heading">{(c.name || 'C').slice(0, 1)}</span>
+                    <div><p className="text-[11px] font-heading text-foreground">{c.name}</p><p className="text-[9px] text-accent"><GameIcon icon="bag" size={14} /> {c.price}</p></div>
                   </div>
                   <button disabled={equipped || (stRef.current.pcCoins || 0) < c.price} onClick={() => buyClothing(c.id)}
                     className={`px-2 py-1 rounded font-heading text-[9px] ${equipped ? 'bg-muted text-muted-foreground' : (stRef.current.pcCoins || 0) >= c.price ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>

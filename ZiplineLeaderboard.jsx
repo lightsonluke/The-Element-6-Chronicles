@@ -56,8 +56,8 @@ export default function ZiplineLeaderboard({ onBack, customCharsData = {} }) {
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
       <div className="flex justify-between items-center w-full">
-        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="🪢" size={14} /> ZIPLINE LEADERBOARD</h2>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="link" size={14} /> ZIPLINE LEADERBOARD</h2>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       <div className="flex gap-2">

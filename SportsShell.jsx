@@ -331,7 +331,7 @@ export default function SportsShell({ sport, unlockedIds, favoriteId, equippedAc
           <span className="font-heading text-sm">{mode === 'tournament' ? `Team ${teamColorName(tournamentTeamColors?.[nextOpp] || TEAM_COLOR_P2)}` : (nextOppChar?.name || 'P2')}</span>
           {mode !== 'tournament' && <span className="text-xs text-muted-foreground">#{getCharNumber(nextOpp)}</span>}
         </div>
-        <button onClick={continueFromBracket} className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90 shadow-lg">CONTINUE TO MATCH <GameIcon emoji="→" size={14} /></button>
+        <button onClick={continueFromBracket} className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90 shadow-lg">CONTINUE TO MATCH <GameIcon icon="arrowRight" size={14} /></button>
         <button onClick={() => { setBracket(null); setPhase('select'); }} className="px-4 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs">Quit Tournament</button>
       </div>
     );
@@ -341,18 +341,18 @@ export default function SportsShell({ sport, unlockedIds, favoriteId, equippedAc
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
       <div className="flex justify-between items-center w-full">
-        <h2 className="text-2xl font-heading text-accent tracking-wider">{cfg.emoji} {cfg.name.toUpperCase()}</h2>
+        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon={cfg.icon || 'game'} size={19} /> {cfg.name.toUpperCase()}</h2>
         <div className="flex gap-2">
-          {sport === 'soccer' && <button onClick={onShop} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm"><GameIcon emoji="🛒" size={14} /> SHOP</button>}
-          <button onClick={() => onExit ? onExit() : onBack()} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> SPORTS</button>
+          {sport === 'soccer' && <button onClick={onShop} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm"><GameIcon icon="cart" size={14} /> SHOP</button>}
+          <button onClick={() => onExit ? onExit() : onBack()} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> SPORTS</button>
         </div>
       </div>
 
       {/* Universal character select screen */}
       <UniversalCharacterSelect
-        title={`${cfg.emoji} ${cfg.name.toUpperCase()} — SELECT FIGHTERS`}
+        title={`${cfg.name.toUpperCase()} — SELECT FIGHTERS`}
         modeLabel={mode === 'tournament' ? 'TOURNAMENT' : 'QUICK MATCH'}
-        startLabel="▶ START MATCH"
+        startLabel="START MATCH"
         unlockedIds={unlockedIds || ['yellow']}
         favoriteId={favoriteId}
         customCharsData={customCharsData}
@@ -406,9 +406,9 @@ export default function SportsShell({ sport, unlockedIds, favoriteId, equippedAc
               <input type="checkbox" checked={p2Jersey} onChange={e => setP2Jersey(e.target.checked)} className="w-3.5 h-3.5 accent-primary" />
               <span className="text-muted-foreground">P2 Jersey</span>
             </label>
-            <button onClick={() => setShowRules(true)} className="px-2 py-0.5 bg-primary text-primary-foreground rounded font-heading"><GameIcon emoji="📜" size={14} /> RULES</button>
-            <button onClick={() => handleStart('tournament')} className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded font-heading border border-accent"><GameIcon emoji="🏆" size={14} /> TOURNAMENT</button>
-            {onOnlinePlay && <button onClick={onOnlinePlay} className="px-2 py-0.5 bg-accent/80 text-accent-foreground rounded font-heading"><GameIcon emoji="🌐" size={14} /> ONLINE</button>}
+            <button onClick={() => setShowRules(true)} className="px-2 py-0.5 bg-primary text-primary-foreground rounded font-heading"><GameIcon icon="package" size={14} /> RULES</button>
+            <button onClick={() => handleStart('tournament')} className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded font-heading border border-accent"><GameIcon icon="trophy" size={14} /> TOURNAMENT</button>
+            {onOnlinePlay && <button onClick={onOnlinePlay} className="px-2 py-0.5 bg-accent/80 text-accent-foreground rounded font-heading"><GameIcon icon="globe" size={14} /> ONLINE</button>}
           </div>
         }
       />
@@ -431,7 +431,7 @@ export default function SportsShell({ sport, unlockedIds, favoriteId, equippedAc
             </div>
             <div className="flex gap-3">
               <button onClick={() => { setShowTeamColorPicker(false); setPhase('select'); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm flex-1 hover:opacity-80">CANCEL</button>
-              <button onClick={() => startTournamentWith(pickTeamColorIdx)} className="px-6 py-2 bg-accent text-accent-foreground rounded-lg font-heading text-sm flex-1 hover:opacity-90">START TOURNAMENT <GameIcon emoji="→" size={14} /></button>
+              <button onClick={() => startTournamentWith(pickTeamColorIdx)} className="px-6 py-2 bg-accent text-accent-foreground rounded-lg font-heading text-sm flex-1 hover:opacity-90">START TOURNAMENT <GameIcon icon="arrowRight" size={14} /></button>
             </div>
           </div>
         </div>
@@ -442,7 +442,7 @@ export default function SportsShell({ sport, unlockedIds, favoriteId, equippedAc
           <div className="bg-card border border-border rounded-2xl p-6 max-w-lg w-full max-h-[85vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-heading text-lg text-accent tracking-wider">{cfg.name.toUpperCase()} RULES</h3>
-              <button onClick={() => setShowRules(false)} className="text-muted-foreground hover:text-foreground text-xl"><GameIcon emoji="✕" size={14} /></button>
+              <button onClick={() => setShowRules(false)} className="text-muted-foreground hover:text-foreground text-xl"><GameIcon icon="close" size={14} /></button>
             </div>
             <div className="space-y-1 text-xs text-muted-foreground font-body">
               {RULES[sport]?.map((r, i) => <p key={i}>• {r}</p>)}

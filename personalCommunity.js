@@ -365,18 +365,18 @@ export const PC_REPUTATIONS = [
 
 // ── Achievements ──
 export const PC_ACHIEVEMENTS = [
-  { id:'first_bff', name:'First Best Friend', emoji:'🤝', desc:'Reached Best Friends with someone.' },
-  { id:'first_date', name:'First Date', emoji:'💕', desc:'Started dating someone.' },
-  { id:'ten_friends', name:'10 Friends', emoji:'👥', desc:'Became Friends with 10 characters.' },
-  { id:'movie_lover', name:'Movie Lover', emoji:'🎬', desc:'Watched 5 movies at the theater.' },
-  { id:'birthday_host', name:'Birthday Host', emoji:'🎂', desc:'Celebrated your birthday.' },
-  { id:'community_favorite', name:'Community Favorite', emoji:'⭐', desc:'Reached Friends with 15 characters.' },
-  { id:'early_bird', name:'Early Bird', emoji:'🌅', desc:'Visited the plaza at dawn.' },
-  { id:'night_owl', name:'Night Owl', emoji:'🦉', desc:'Stayed out past midnight.' },
-  { id:'fitness_fanatic', name:'Fitness Fanatic', emoji:'💪', desc:'Trained at the gym 10 times.' },
-  { id:'social_butterfly', name:'Social Butterfly', emoji:'🦋', desc:'Had 50 conversations.' },
-  { id:'matchmaker', name:'Matchmaker', emoji:'💘', desc:'Saw a couple start dating.' },
-  { id:'peacemaker', name:'Peacemaker', emoji:'🕊️', desc:'Reconciled after an argument.' },
+  { id:'first_bff', name:'First Best Friend', desc:'Reached Best Friends with someone.' },
+  { id:'first_date', name:'First Date', desc:'Started dating someone.' },
+  { id:'ten_friends', name:'10 Friends', desc:'Became Friends with 10 characters.' },
+  { id:'movie_lover', name:'Movie Lover', desc:'Watched 5 movies at the theater.' },
+  { id:'birthday_host', name:'Birthday Host', desc:'Celebrated your birthday.' },
+  { id:'community_favorite', name:'Community Favorite', icon:'star', desc:'Reached Friends with 15 characters.' },
+  { id:'early_bird', name:'Early Bird', desc:'Visited the plaza at dawn.' },
+  { id:'night_owl', name:'Night Owl', desc:'Stayed out past midnight.' },
+  { id:'fitness_fanatic', name:'Fitness Fanatic', desc:'Trained at the gym 10 times.' },
+  { id:'social_butterfly', name:'Social Butterfly', desc:'Had 50 conversations.' },
+  { id:'matchmaker', name:'Matchmaker', desc:'Saw a couple start dating.' },
+  { id:'peacemaker', name:'Peacemaker', desc:'Reconciled after an argument.' },
 ];
 
 // Moods
@@ -384,35 +384,35 @@ export const PC_MOODS = ['Happy','Calm','Excited','Nervous','Embarrassed','Sad',
 
 // Community buildings — placed in a single front row (coords computed in component)
 export const PC_GROUND_BUILDINGS = [
-  { id:'cafe', name:'Sunrise Café', emoji:'☕', type:'cafe' },
-  { id:'grocery', name:'Market Basket', emoji:'🛒', type:'grocery' },
-  { id:'clothing', name:'Thread Shop', emoji:'👕', type:'clothing' },
-  { id:'school', name:'Community School', emoji:'🏫', type:'school' },
-  { id:'library', name:'Library', emoji:'📚', type:'library' },
-  { id:'hospital', name:'Clinic', emoji:'🏥', type:'hospital' },
-  { id:'plaza', name:'Community Plaza', emoji:'⛲', type:'plaza' },
-  { id:'center', name:'Community Center', emoji:'🏛️', type:'center' },
-  { id:'gym', name:'Power Gym', emoji:'🏋️', type:'gym' },
-  { id:'field', name:'Sports Field', emoji:'⚽', type:'field' },
-  { id:'theater', name:'Movie Theater', emoji:'🎬', type:'theater' },
-  { id:'restaurant', name:'Lantern Restaurant', emoji:'🍽️', type:'restaurant' },
-  { id:'park', name:'Greenleaf Park', emoji:'🌳', type:'park' },
-  { id:'playground', name:'Playground', emoji:'🛝', type:'playground' },
-  { id:'police', name:'Police Station', emoji:'🚓', type:'police' },
-  { id:'forest', name:'Whispering Forest', emoji:'🌲', type:'forest' },
-  { id:'beach', name:'Coral Beach', emoji:'🏖️', type:'beach' },
-  { id:'festival', name:'Festival Grounds', emoji:'🎪', type:'festival' },
-  { id:'villain_hall', name:'Villain Hall', emoji:'🏚️', type:'villain' },
-  { id:'rooftop', name:'Rooftops', emoji:'🏙️', type:'rooftop' },
-  { id:'bridge', name:'City Bridge', emoji:'🌉', type:'bridge' },
+  { id:'cafe', name:'Sunrise Café', type:'cafe' },
+  { id:'grocery', name:'Market Basket', type:'grocery' },
+  { id:'clothing', name:'Thread Shop', type:'clothing' },
+  { id:'school', name:'Community School', type:'school' },
+  { id:'library', name:'Library', type:'library' },
+  { id:'hospital', name:'Clinic', type:'hospital' },
+  { id:'plaza', name:'Community Plaza', type:'plaza' },
+  { id:'center', name:'Community Center', type:'center' },
+  { id:'gym', name:'Power Gym', type:'gym' },
+  { id:'field', name:'Sports Field', type:'field' },
+  { id:'theater', name:'Movie Theater', type:'theater' },
+  { id:'restaurant', name:'Lantern Restaurant', type:'restaurant' },
+  { id:'park', name:'Greenleaf Park', type:'park' },
+  { id:'playground', name:'Playground', type:'playground' },
+  { id:'police', name:'Police Station', type:'police' },
+  { id:'forest', name:'Whispering Forest', type:'forest' },
+  { id:'beach', name:'Coral Beach', type:'beach' },
+  { id:'festival', name:'Festival Grounds', type:'festival' },
+  { id:'villain_hall', name:'Villain Hall', type:'villain' },
+  { id:'rooftop', name:'Rooftops', type:'rooftop' },
+  { id:'bridge', name:'City Bridge', type:'bridge' },
 ];
 
 // Guardian district (floating, above the town in the clouds) — single row
 export const PC_GUARDIAN_BUILDINGS = [
-  { id:'g_life', name:'Life\'s Garden', emoji:'🌸', type:'guardian' },
-  { id:'g_mercy', name:'Mercy\'s Sanctuary', emoji:'✨', type:'guardian' },
-  { id:'g_death', name:'Death\'s Quiet', emoji:'🌑', type:'guardian' },
-  { id:'g_evil', name:'Evil\'s Isle', emoji:'💜', type:'guardian_evil' },
+  { id:'g_life', name:'Life\'s Garden', type:'guardian' },
+  { id:'g_mercy', name:'Mercy\'s Sanctuary', type:'guardian' },
+  { id:'g_death', name:'Death\'s Quiet', type:'guardian' },
+  { id:'g_evil', name:'Evil\'s Isle', type:'guardian_evil' },
 ];
 
 export const PC_JOBS = {
@@ -450,39 +450,39 @@ export function formatBirthday(b) {
 
 // ── Furniture shop (decorates a resident's home) ──
 export const PC_FURNITURE = [
-  { id:'bed', name:'Cozy Bed', emoji:'🛏️', price:40 },
-  { id:'sofa', name:'Plush Sofa', emoji:'🛋️', price:70 },
-  { id:'tv', name:'TV Set', emoji:'📺', price:90 },
-  { id:'plant', name:'Potted Plant', emoji:'🪴', price:25 },
-  { id:'lamp', name:'Floor Lamp', emoji:'💡', price:30 },
-  { id:'rug', name:'Soft Rug', emoji:'🟫', price:50 },
-  { id:'desk', name:'Work Desk', emoji:'🗄️', price:65 },
-  { id:'bookshelf', name:'Bookshelf', emoji:'📚', price:80 },
-  { id:'fridge', name:'Fridge', emoji:'❄️', price:110 },
-  { id:'painting', name:'Painting', emoji:'🖼️', price:60 },
+  { id:'bed', name:'Cozy Bed', price:40 },
+  { id:'sofa', name:'Plush Sofa', price:70 },
+  { id:'tv', name:'TV Set', price:90 },
+  { id:'plant', name:'Potted Plant', price:25 },
+  { id:'lamp', name:'Floor Lamp', price:30 },
+  { id:'rug', name:'Soft Rug', price:50 },
+  { id:'desk', name:'Work Desk', price:65 },
+  { id:'bookshelf', name:'Bookshelf', price:80 },
+  { id:'fridge', name:'Fridge', price:110 },
+  { id:'painting', name:'Painting', price:60 },
 ];
 
 // ── Clothing shop (changes a resident's accent color) ──
 export const PC_CLOTHING = [
-  { id:'hat_red', name:'Red Cap', emoji:'🧢', price:45, accent:'#ff3333' },
-  { id:'hat_blue', name:'Blue Beanie', emoji:'🧢', price:45, accent:'#3388ff' },
-  { id:'dress', name:'Summer Dress', emoji:'👗', price:70, accent:'#ff66aa' },
-  { id:'jacket', name:'Leather Jacket', emoji:'🧥', price:85, accent:'#8a5a2a' },
-  { id:'shoes', name:'Sneakers', emoji:'👟', price:55, accent:'#eeeeee' },
-  { id:'scarf', name:'Winter Scarf', emoji:'🧣', price:40, accent:'#66ccff' },
-  { id:'glasses', name:'Sunglasses', emoji:'🕶️', price:60, accent:'#222222' },
-  { id:'crown', name:'Golden Crown', emoji:'👑', price:150, accent:'#FFD700' },
+  { id:'hat_red', name:'Red Cap', price:45, accent:'#ff3333' },
+  { id:'hat_blue', name:'Blue Beanie', price:45, accent:'#3388ff' },
+  { id:'dress', name:'Summer Dress', price:70, accent:'#ff66aa' },
+  { id:'jacket', name:'Leather Jacket', price:85, accent:'#8a5a2a' },
+  { id:'shoes', name:'Sneakers', price:55, accent:'#eeeeee' },
+  { id:'scarf', name:'Winter Scarf', price:40, accent:'#66ccff' },
+  { id:'glasses', name:'Sunglasses', price:60, accent:'#222222' },
+  { id:'crown', name:'Golden Crown', price:150, accent:'#FFD700' },
 ];
 
 // ── Holiday events & decorations (real holidays only) ──
 export const PC_HOLIDAYS = {
-  newyear:     { name:'New Year', emoji:'🎆', decor:'🎆', color:'#FFD700' },
-  valentine:   { name:"Valentine's Day", emoji:'💝', decor:'💕', color:'#ff66aa' },
-  easter:      { name:'Easter', emoji:'🥚', decor:'🥚', color:'#88ddaa' },
-  halloween:   { name:'Halloween', emoji:'🎃', decor:'🎃', color:'#ff8833' },
-  thanksgiving:{ name:'Thanksgiving', emoji:'🦃', decor:'🍂', color:'#cc7733' },
-  christmas:   { name:'Christmas', emoji:'🎄', decor:'🎄', color:'#33aa44' },
-  hanukkah:    { name:'Hanukkah', emoji:'🕯️', decor:'🕎', color:'#4488cc' },
+  newyear:     { name:'New Year', decor:'', color:'#FFD700' },
+  valentine:   { name:"Valentine's Day", decor:'', color:'#ff66aa' },
+  easter:      { name:'Easter', decor:'', color:'#88ddaa' },
+  halloween:   { name:'Halloween', decor:'', color:'#ff8833' },
+  thanksgiving:{ name:'Thanksgiving', decor:'', color:'#cc7733' },
+  christmas:   { name:'Christmas', decor:'', color:'#33aa44' },
+  hanukkah:    { name:'Hanukkah', decor:'', color:'#4488cc' },
 };
 export function currentHoliday() {
   const d = new Date(), m = d.getMonth() + 1, day = d.getDate();
@@ -500,8 +500,8 @@ export function currentHoliday() {
 // Weather for the community (derived from season + daily random)
 export const PC_WEATHER_TYPES = ['sunny','cloudy','rain','snow','wind','fog','storm','heat'];
 export const PC_WEATHER_LABELS = {
-  sunny:'☀️ Sunny', cloudy:'☁️ Cloudy', rain:'🌧️ Rain', snow:'❄️ Snow',
-  wind:'💨 Wind', fog:'🌫️ Fog', storm:'⛈️ Storm', heat:'🔥 Heat',
+  sunny:' Sunny', cloudy:' Cloudy', rain:' Rain', snow:' Snow',
+  wind:' Wind', fog:' Fog', storm:' Storm', heat:' Heat',
 };
 export function weatherForSeason(seasonIdx) {
   const r = Math.random();

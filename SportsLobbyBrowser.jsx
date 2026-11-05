@@ -6,10 +6,10 @@ import { sfx } from './sfx.js';
 import GameIcon from './GameIcon.jsx';
 
 const SPORTS = [
-  { id: 'soccer', name: 'Soccer', emoji: '⚽', color: '#44FF44' },
-  { id: 'volleyball', name: 'Volleyball', emoji: '🏐', color: '#FF44FF' },
-  { id: 'dodgeball', name: 'Dodgeball', emoji: '🟡', color: '#FFDD44' },
-  { id: 'banger', name: 'Banger', emoji: '🔥', color: '#FF4444' },
+  { id: 'soccer', name: 'Soccer', icon: 'game', color: '#44FF44' },
+  { id: 'volleyball', name: 'Volleyball', icon: 'game', color: '#FF44FF' },
+  { id: 'dodgeball', name: 'Dodgeball', icon: 'game', color: '#FFDD44' },
+  { id: 'banger', name: 'Banger', icon: 'game', color: '#FF4444' },
 ];
 
 export default function SportsLobbyBrowser({ me, onJoinLobby, onBack }) {
@@ -119,7 +119,7 @@ export default function SportsLobbyBrowser({ me, onJoinLobby, onBack }) {
                   : 'border-border bg-secondary text-secondary-foreground hover:opacity-80'
               }`}
             >
-              <GameIcon emoji={s.emoji} size={12} className="inline mr-1" />
+              <GameIcon icon={s.icon} size={12} className="inline mr-1" />
               {s.name.toUpperCase()}
             </button>
           ))}
@@ -168,7 +168,7 @@ export default function SportsLobbyBrowser({ me, onJoinLobby, onBack }) {
                 className="flex items-center justify-between bg-card border border-border rounded-lg p-2.5 hover:border-primary/50 transition"
               >
                 <div className="flex items-center gap-2.5">
-                  <GameIcon emoji={sport.emoji} size={20} color={sport.color} />
+                  <GameIcon icon={sport.icon} size={20} color={sport.color} />
                   <div className="flex flex-col">
                     <span className="font-heading text-xs text-foreground">{sport.name}</span>
                     <span className="text-[10px] font-body text-muted-foreground">

@@ -49,7 +49,7 @@ export default function MapSelect({ onPick, onBack, p1Id, p2Id, customCharsData 
         <div className="flex gap-2 items-center">
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search stages…" maxLength={28}
             className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs font-body w-36" />
-          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
       </div>
 
@@ -60,7 +60,7 @@ export default function MapSelect({ onPick, onBack, p1Id, p2Id, customCharsData 
           className="bg-card border-2 border-accent rounded-xl p-4 hover:opacity-80 transition flex flex-col items-center gap-2 col-span-2 md:col-span-3"
           style={{ borderColor: '#FFD700', background: 'linear-gradient(135deg, #FFD70015 0%, #0a0b16 50%)' }}>
           <div className="w-full h-16 rounded-lg relative overflow-hidden flex items-center justify-center" style={{ background: 'linear-gradient(160deg, #FFD70055, #04020a)' }}>
-            <span className="text-3xl font-heading text-accent" style={{ textShadow: '0 0 20px #FFD700' }}>🎲 RANDOM</span>
+            <span className="text-3xl font-heading text-accent" style={{ textShadow: '0 0 20px #FFD700' }}> RANDOM</span>
           </div>
           <p className="font-heading text-sm text-accent">Random Stage</p>
           <span className="text-[8px] text-muted-foreground font-body">Picks a random non-custom stage</span>
@@ -71,7 +71,7 @@ export default function MapSelect({ onPick, onBack, p1Id, p2Id, customCharsData 
             style={{ borderColor: eventStage.color, background: `linear-gradient(135deg, ${eventStage.color}15 0%, #0a0b16 50%)` }}>
             <div className="w-full h-20 rounded-lg relative overflow-hidden" style={{ background: `linear-gradient(160deg, ${eventStage.color}55, #04020a)` }}>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-heading text-white" style={{ textShadow: `0 0 20px ${eventStage.color}` }}><GameIcon emoji="★" size={14} /> EVENT STAGE <GameIcon emoji="★" size={14} /></span>
+                <span className="text-2xl font-heading text-white" style={{ textShadow: `0 0 20px ${eventStage.color}` }}><GameIcon icon="star" size={14} /> EVENT STAGE <GameIcon icon="star" size={14} /></span>
               </div>
             </div>
             <p className="font-heading text-sm" style={{ color: eventStage.color }}>{eventStage.name}</p>
@@ -96,7 +96,7 @@ export default function MapSelect({ onPick, onBack, p1Id, p2Id, customCharsData 
           <button key={`custom_${i}`} onClick={() => onPick(`custom_${i}`)}
             className="bg-card border-2 border-primary rounded-xl p-4 hover:opacity-80 transition flex flex-col items-center gap-2">
             <div className="w-full h-16 rounded-lg bg-primary/10 flex items-center justify-center">
-              <span className="text-2xl">{meta.emoji || <GameIcon emoji="🛠️" size={14} />}</span>
+              <GameIcon icon="map" size={24} />
             </div>
             <p className="font-heading text-sm text-primary">{meta.name || `Custom Stage ${i + 1}`}</p>
           </button>

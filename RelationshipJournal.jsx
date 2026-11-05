@@ -62,7 +62,7 @@ export default function RelationshipJournal({
               <p className="text-[9px] font-heading text-muted-foreground">{t.category.toUpperCase()} · {t.gender.toUpperCase()} · LV {getLevel(id)}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg"><GameIcon emoji="✕" size={14} /></button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg"><GameIcon icon="close" size={14} /></button>
         </div>
 
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] font-body mb-2">
@@ -86,7 +86,7 @@ export default function RelationshipJournal({
           <p className="text-[9px] font-heading text-muted-foreground mb-1">ACHIEVEMENTS</p>
           <div className="flex flex-wrap gap-1">
             {PC_ACHIEVEMENTS.filter(a => ach[a.id]).map(a => (
-              <span key={a.id} title={a.desc} className="px-1.5 py-0.5 bg-accent/20 border border-accent rounded text-[8px] font-heading text-accent">{a.emoji} {a.name}</span>
+              <span key={a.id} title={a.desc} className="px-1.5 py-0.5 bg-accent/20 border border-accent rounded text-[8px] font-heading text-accent"><GameIcon icon="trophy" size={12} /> {a.name}</span>
             ))}
             {Object.keys(ach).length === 0 && <span className="text-[10px] text-muted-foreground">No achievements yet.</span>}
           </div>
@@ -115,11 +115,11 @@ export default function RelationshipJournal({
               return (
                 <div key={oid} className="px-2 py-1 rounded bg-muted/40 border border-border text-[10px] font-body flex items-center gap-1">
                   <span className="text-accent">{oc.name}</span>
-                  <span className="text-muted-foreground"><GameIcon emoji="→" size={14} /></span>
+                  <span className="text-muted-foreground"><GameIcon icon="arrowRight" size={14} /></span>
                   <span className="text-foreground">{fl}</span>
-                  {rl !== 'None' && <span className="text-pink-400"> <GameIcon emoji="❤" size={14} />{rl}</span>}
-                  {couple && <span className="text-pink-400"> <GameIcon emoji="💍" size={14} /></span>}
-                  {nl && <span className="text-red-400"> <GameIcon emoji="⚔" size={14} />{nl}</span>}
+                  {rl !== 'None' && <span className="text-pink-400"> <GameIcon icon="heart" size={14} />{rl}</span>}
+                  {couple && <span className="text-pink-400"> <GameIcon icon="star" size={14} /></span>}
+                  {nl && <span className="text-red-400"> <GameIcon icon="info" size={14} />{nl}</span>}
                   <button onClick={() => onInteract(oid)} className="ml-1 px-1.5 py-0.5 bg-primary/30 border border-primary text-primary rounded text-[8px] font-heading hover:bg-primary hover:text-primary-foreground">TALK</button>
                 </div>
               );
@@ -131,7 +131,7 @@ export default function RelationshipJournal({
         <Memories st={st} id={id} />
 
         {r.insideBid && (
-          <button onClick={() => { onBringOut(id); onClose(); }} className="w-full mt-3 px-3 py-1.5 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon emoji="🚪" size={14} /> BRING OUTSIDE</button>
+          <button onClick={() => { onBringOut(id); onClose(); }} className="w-full mt-3 px-3 py-1.5 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon icon="arrowRight" size={14} /> BRING OUTSIDE</button>
         )}
       </div>
     </div>

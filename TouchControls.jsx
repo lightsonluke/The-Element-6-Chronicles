@@ -94,10 +94,10 @@ export default function TouchControls({ keybinds, settings = {} }) {
         </div>
       ) : (
         <>
-          <button className={`${dpadBtn} bg-white/15 pointer-events-auto`} style={buttonStyle(b.left)} {...buttonHandlers(kb.left)}><GameIcon emoji="←" size={22} /></button>
-          <button className={`${dpadBtn} bg-white/15 pointer-events-auto`} style={buttonStyle(b.right)} {...buttonHandlers(kb.right)}><GameIcon emoji="→" size={22} /></button>
-          <button className={`${dpadBtn} bg-white/15 pointer-events-auto`} style={buttonStyle(b.jump)} {...buttonHandlers(kb.jump)}><GameIcon emoji="↑" size={22} /></button>
-          <button className={`${dpadBtn} bg-white/15 pointer-events-auto`} style={buttonStyle(b.down)} {...buttonHandlers(kb.down)}><GameIcon emoji="↓" size={22} /></button>
+          <button className={`${dpadBtn} bg-white/15 pointer-events-auto`} style={buttonStyle(b.left)} {...buttonHandlers(kb.left)}><GameIcon icon="info" size={22} /></button>
+          <button className={`${dpadBtn} bg-white/15 pointer-events-auto`} style={buttonStyle(b.right)} {...buttonHandlers(kb.right)}><GameIcon icon="arrowRight" size={22} /></button>
+          <button className={`${dpadBtn} bg-white/15 pointer-events-auto`} style={buttonStyle(b.jump)} {...buttonHandlers(kb.jump)}><GameIcon icon="arrowUp" size={22} /></button>
+          <button className={`${dpadBtn} bg-white/15 pointer-events-auto`} style={buttonStyle(b.down)} {...buttonHandlers(kb.down)}><GameIcon icon="arrowDown" size={22} /></button>
         </>
       )}
 

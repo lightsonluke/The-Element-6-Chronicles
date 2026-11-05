@@ -130,8 +130,8 @@ export default function LoreLibrary({ onBack }) {
     <div className="min-h-screen bg-background flex flex-col">
       {/* ── HEADER ── */}
       <div className="flex items-center justify-between px-4 py-3 bg-card/80 border-b-2 border-border">
-        <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Back</button>
-        <h1 className="font-heading text-lg text-accent"><GameIcon emoji="📖" size={14} /> LORE LIBRARY</h1>
+        <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Back</button>
+        <h1 className="font-heading text-lg text-accent"><GameIcon icon="book" size={14} /> LORE LIBRARY</h1>
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -141,7 +141,7 @@ export default function LoreLibrary({ onBack }) {
             className="px-2 py-1 bg-muted/40 border border-border rounded text-[10px] font-body text-foreground w-40"
           />
           <button onClick={() => setShowCharSearch(!showCharSearch)} className="px-2 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[9px]">
-            {showCharSearch ? '📖 Books' : '🔍 Characters'}
+            {showCharSearch ? ' Books' : ' Characters'}
           </button>
         </div>
       </div>
@@ -166,7 +166,7 @@ export default function LoreLibrary({ onBack }) {
         {selectedBook && (
           <button onClick={() => { setSelectedBook(null); setSelectedArc(0); sfx.click(); }}
             className="ml-auto px-2 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[9px] hover:opacity-80">
-            <GameIcon emoji="←" size={14} /> ALL BOOKS
+            <GameIcon icon="info" size={14} /> ALL BOOKS
           </button>
         )}
       </div>
@@ -261,7 +261,7 @@ export default function LoreLibrary({ onBack }) {
                     disabled={selectedArc === 0}
                     className="px-3 py-1.5 rounded font-heading text-[10px] bg-secondary text-secondary-foreground hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    <GameIcon emoji="←" size={14} /> PREV ARC
+                    <GameIcon icon="info" size={14} /> PREV ARC
                   </button>
                   <span className="text-[9px] text-muted-foreground font-heading">{selectedArc + 1} / {currentBook.arcs.length}</span>
                   <button
@@ -269,7 +269,7 @@ export default function LoreLibrary({ onBack }) {
                     disabled={selectedArc >= currentBook.arcs.length - 1}
                     className="px-3 py-1.5 rounded font-heading text-[10px] bg-secondary text-secondary-foreground hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    NEXT ARC <GameIcon emoji="→" size={14} />
+                    NEXT ARC <GameIcon icon="arrowRight" size={14} />
                   </button>
                 </div>
               </>

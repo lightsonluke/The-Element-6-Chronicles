@@ -6,7 +6,7 @@ import GameIcon from './GameIcon.jsx';
 
 const FILTERS = [
   ['overall','OVERALL'], ['soccer','SOCCER'], ['combat','COMBAT'], ['ranked','RANKED'],
-  ['parkour','PARKOUR'], ['rockclimb','ROCK CLIMBING'], ['zipline','ZIPLINING'], ['honored','👑 HONORED BOT']
+  ['parkour','PARKOUR'], ['rockclimb','ROCK CLIMBING'], ['zipline','ZIPLINING'], ['honored',' HONORED BOT']
 ];
 
 function rankName(elo) {
@@ -78,7 +78,7 @@ export default function Leaderboard({ onBack }) {
     <div className="flex flex-col items-center gap-4 w-full max-w-4xl">
       <div className="flex justify-between items-center w-full">
         <h2 className="text-2xl font-heading text-accent tracking-wider">LEADERBOARD</h2>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary rounded-lg font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary rounded-lg font-heading text-sm"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
       <div className="flex gap-2 flex-wrap justify-center">
         {FILTERS.map(([key,labelText]) => <button key={key} onClick={()=>setFilter(key)}

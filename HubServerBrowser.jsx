@@ -615,7 +615,7 @@ export default function HubServerBrowser({
       >
         <div className="flex justify-between items-center mb-3">
           <h3 className="font-heading text-base text-accent">
-            <GameIcon emoji="🌐" size={14} />
+            <GameIcon icon="globe" size={14} />
             {' '}COMMUNITY SERVERS
           </h3>
 
@@ -623,7 +623,7 @@ export default function HubServerBrowser({
             onClick={onClose}
             className="text-xs text-muted-foreground"
           >
-            <GameIcon emoji="✕" size={14} />
+            <GameIcon icon="close" size={14} />
           </button>
         </div>
 
@@ -696,7 +696,7 @@ export default function HubServerBrowser({
                 disabled={busy || !userId}
                 className="px-3 py-2 bg-accent/80 text-accent-foreground rounded font-heading text-xs disabled:opacity-50"
               >
-                <GameIcon emoji="🎲" size={14} />
+                <GameIcon icon="shuffle" size={14} />
                 {' '}Random
               </button>
             </div>
@@ -704,7 +704,7 @@ export default function HubServerBrowser({
             {favoriteRooms.length > 0 && (
               <div>
                 <p className="text-[10px] font-heading text-primary mb-1">
-                  <GameIcon emoji="★" size={14} />
+                  <GameIcon icon="star" size={14} />
                   {' '}FAVORITES
                 </p>
 
@@ -730,7 +730,7 @@ export default function HubServerBrowser({
             {recent.length > 0 && (
               <div>
                 <p className="text-[10px] font-heading text-muted-foreground mb-1">
-                  <GameIcon emoji="⏱" size={14} />
+                  <GameIcon icon="clock" size={14} />
                   {' '}RECENT
                 </p>
 
@@ -757,7 +757,7 @@ export default function HubServerBrowser({
                 disabled={loading}
                 className="text-[10px] text-accent disabled:opacity-50"
               >
-                <GameIcon emoji="↻" size={14} />
+                <GameIcon icon="redo" size={14} />
               </button>
             </div>
 
@@ -795,7 +795,7 @@ export default function HubServerBrowser({
                       </p>
 
                       <p className="text-[9px] text-muted-foreground">
-                        {room.room_code}{room.settings?.private ? ' 🔒' : ''}
+                        {room.room_code}{room.settings?.private ? ' ' : ''}
                         {' • '}
                         {playerCount}/{maxPlayers}
                         {' • '}
@@ -808,7 +808,7 @@ export default function HubServerBrowser({
                         onClick={() => toggleFav(room)}
                         className="text-xs text-accent"
                       >
-                        <GameIcon emoji="★" size={14} />
+                        <GameIcon icon="star" size={14} />
                       </button>
 
                       {room.host_user_id === userId && (
@@ -818,7 +818,7 @@ export default function HubServerBrowser({
                           className="text-xs text-destructive disabled:opacity-50"
                           title="Delete server"
                         >
-                          <GameIcon emoji="🗑" size={14} />
+                          <GameIcon icon="trash" size={14} />
                         </button>
                       )}
 

@@ -3,12 +3,12 @@
 
 export const MASTERY_RANKS = [
   { id: 0, name: 'Unranked',  icon: '',     color: '#888888',  minScore: 0    },
-  { id: 1, name: 'Bronze',     icon: '🥉',   color: '#CD7F32',  minScore: 50   },
-  { id: 2, name: 'Silver',     icon: '🥈',   color: '#C0C0C0',  minScore: 150  },
-  { id: 3, name: 'Gold',       icon: '🥇',   color: '#FFD700',  minScore: 350  },
-  { id: 4, name: 'Platinum',   icon: '💎',   color: '#E5E4E2',  minScore: 700  },
-  { id: 5, name: 'Diamond',    icon: '🔷',   color: '#4FC3F7',  minScore: 1200 },
-  { id: 6, name: 'Master',     icon: '👑',   color: '#FF44FF',  minScore: 2000 },
+  { id: 1, name: 'Bronze',     icon: '',   color: '#CD7F32',  minScore: 50   },
+  { id: 2, name: 'Silver',     icon: '',   color: '#C0C0C0',  minScore: 150  },
+  { id: 3, name: 'Gold',       icon: '',   color: '#FFD700',  minScore: 350  },
+  { id: 4, name: 'Platinum',   icon: '',   color: '#E5E4E2',  minScore: 700  },
+  { id: 5, name: 'Diamond',    icon: '',   color: '#4FC3F7',  minScore: 1200 },
+  { id: 6, name: 'Master',     icon: '',   color: '#FF44FF',  minScore: 2000 },
 ];
 
 // Score = playtimeMinutes * 1 + wins * 10
@@ -75,12 +75,12 @@ export function recordMasteryPlaytime(masteryMap, charId, seconds) {
 // The skin tint is equipped as a "skin" (id: mastery_<charId>_<rankId>) and
 // recolors the character in-game.
 export const MASTERY_REWARDS = [
-  { rankId: 1, badgeName: 'Bronze Initiate',   badgeIcon: '🥉', skinTint: '#CD7F32' },
-  { rankId: 2, badgeName: 'Silver Adept',      badgeIcon: '🥈', skinTint: '#C0C0C0' },
-  { rankId: 3, badgeName: 'Gold Veteran',      badgeIcon: '🥇', skinTint: '#FFD700' },
-  { rankId: 4, badgeName: 'Platinum Champion',  badgeIcon: '💎', skinTint: '#A8D8C8' },
-  { rankId: 5, badgeName: 'Diamond Legend',    badgeIcon: '🔷', skinTint: '#4FC3F7' },
-  { rankId: 6, badgeName: 'Master Paragon',    badgeIcon: '👑', skinTint: '#FF44FF' },
+  { rankId: 1, badgeName: 'Bronze Initiate',   badgeIcon: '', skinTint: '#CD7F32' },
+  { rankId: 2, badgeName: 'Silver Adept',      badgeIcon: '', skinTint: '#C0C0C0' },
+  { rankId: 3, badgeName: 'Gold Veteran',      badgeIcon: '', skinTint: '#FFD700' },
+  { rankId: 4, badgeName: 'Platinum Champion',  badgeIcon: '', skinTint: '#A8D8C8' },
+  { rankId: 5, badgeName: 'Diamond Legend',    badgeIcon: '', skinTint: '#4FC3F7' },
+  { rankId: 6, badgeName: 'Master Paragon',    badgeIcon: '', skinTint: '#FF44FF' },
 ];
 
 // Returns all rewards unlocked for a character based on their current mastery rank

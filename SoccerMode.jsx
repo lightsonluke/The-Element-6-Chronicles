@@ -359,7 +359,7 @@ export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePla
           </div>
         </div>
 
-        <button onClick={continueFromBracket} className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90 shadow-lg">CONTINUE TO MATCH <GameIcon emoji="→" size={14} /></button>
+        <button onClick={continueFromBracket} className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90 shadow-lg">CONTINUE TO MATCH <GameIcon icon="arrowRight" size={14} /></button>
         <button onClick={() => { setPhase('select'); setBracket(null); }} className="px-4 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80">Quit Tournament</button>
       </div>
     );
@@ -372,7 +372,7 @@ export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePla
         <h2 className="text-2xl font-heading text-accent tracking-wider">SOCCER MODE</h2>
         <div className="flex gap-2">
           <button onClick={onShop} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-80">SHOP</button>
-          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
       </div>
 
@@ -383,15 +383,15 @@ export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePla
         <button onClick={() => setGameMode('tournament')} className={`px-4 py-2 rounded-lg font-heading text-sm ${gameMode === 'tournament' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground border-2 border-accent'}`}>TOURNAMENT</button>
         <button onClick={() => setGameMode('2v2')} className={`px-4 py-2 rounded-lg font-heading text-sm ${gameMode === '2v2' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>2v2</button>
         <button onClick={() => setPhase('grouptournament')} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm border-2 border-primary">GROUP</button>
-        <button onClick={() => setShowRules(true)} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm"><GameIcon emoji="📜" size={14} /> RULES</button>
-        <button onClick={onOnlinePlay} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm"><GameIcon emoji="🌐" size={14} /> ONLINE</button>
+        <button onClick={() => setShowRules(true)} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm"><GameIcon icon="package" size={14} /> RULES</button>
+        <button onClick={onOnlinePlay} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm"><GameIcon icon="globe" size={14} /> ONLINE</button>
       </div>
 
       {/* Character select — universal screen */}
       <UniversalCharacterSelect
         title="SOCCER — SELECT FIGHTERS"
         modeLabel={gameMode === 'tournament' ? 'TOURNAMENT' : gameMode === '2v2' ? '2v2' : 'QUICK MATCH'}
-        startLabel="▶ START MATCH"
+        startLabel=" START MATCH"
         unlockedIds={unlockedIds || ['yellow']}
         favoriteId={favoriteId}
         customCharsData={customCharsData}
@@ -458,7 +458,7 @@ export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePla
         <p className="text-xs text-muted-foreground font-body">• Powers launch the ball at 5x damage toward the opponent's goal!</p>
         <p className="text-xs text-muted-foreground font-body">• Own goals are blocked — ball bounces off your own net</p>
         <p className="text-xs text-muted-foreground font-body">• Clock shows 90s but each second counts double — more time to score!</p>
-        <p className="text-xs text-muted-foreground font-body">• Tied after regulation <GameIcon emoji="→" size={14} /> 30s extra time <GameIcon emoji="→" size={14} /> sudden death (or penalties if enabled)</p>
+        <p className="text-xs text-muted-foreground font-body">• Tied after regulation <GameIcon icon="arrowRight" size={14} /> 30s extra time <GameIcon icon="arrowRight" size={14} /> sudden death (or penalties if enabled)</p>
         <p className="text-xs text-muted-foreground font-body">• Goals are behind the wall — shoot through the gap to score!</p>
         <p className="text-xs text-muted-foreground font-body">• Win the 4-round Round of 16 tournament for 50 tokens!</p>
         <p className="text-xs text-muted-foreground font-body">• Visit the Shop to buy Soccer Kits for any character!</p>
@@ -469,7 +469,7 @@ export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePla
           <div className="bg-card border border-border rounded-2xl p-6 max-w-lg w-full max-h-[85vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-heading text-lg text-accent tracking-wider">SOCCER RULES</h3>
-              <button onClick={() => setShowRules(false)} className="text-muted-foreground hover:text-foreground text-xl"><GameIcon emoji="✕" size={14} /></button>
+              <button onClick={() => setShowRules(false)} className="text-muted-foreground hover:text-foreground text-xl"><GameIcon icon="close" size={14} /></button>
             </div>
             <div className="space-y-2 text-xs text-muted-foreground font-body">
               <p>• Use your signature attacks to hit the ball into the opponent's net</p>
@@ -479,9 +479,9 @@ export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePla
               <p>• Powers launch the ball at 5x damage toward the opponent's goal</p>
               <p>• Own goals are blocked — the ball bounces off your own net</p>
               <p>• Match clock shows 90s but each second counts as 2 — more time to score!</p>
-              <p>• Tied after regulation <GameIcon emoji="→" size={14} /> 30s extra time <GameIcon emoji="→" size={14} /> sudden death (or penalties if enabled)</p>
+              <p>• Tied after regulation <GameIcon icon="arrowRight" size={14} /> 30s extra time <GameIcon icon="arrowRight" size={14} /> sudden death (or penalties if enabled)</p>
               <p>• Penalties: shooter uses SIG to shoot (DOWN+SIG for low), keeper jumps to save — roles switch each shot</p>
-              <p>• Tournament: 16-player bracket (Round of 16 <GameIcon emoji="→" size={14} /> Final), 4 rounds</p>
+              <p>• Tournament: 16-player bracket (Round of 16 <GameIcon icon="arrowRight" size={14} /> Final), 4 rounds</p>
               <p>• Win the tournament for 50 tokens!</p>
               <p>• Visit the Shop to buy Soccer Kits for any character</p>
             </div>

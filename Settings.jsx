@@ -201,7 +201,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       <div className="e6-settings-header flex justify-between items-center sticky top-0 z-10 bg-background/80 backdrop-blur py-3 -mx-1 px-2">
         <div><p className="e6-screen-eyebrow">PLAYER EXPERIENCE · CONFIGURATION</p><h2 className="text-3xl font-heading text-accent tracking-wider">SETTINGS</h2></div>
         <div className="flex items-center gap-2">
-          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
       </div>
 
@@ -289,7 +289,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
               ))}
             </div>
             {PROFILE_TITLES.filter(t => ownsTitle(t.id, { ownedPacks: local.ownedPacks, ownedTitles: local.ownedTitles })).length === 0 && (
-              <p className="text-[10px] text-muted-foreground mt-1">Unlock titles in the Shop (Paid tab <GameIcon emoji="→" size={14} /> All Profile Titles Pack).</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Unlock titles in the Shop (Paid tab <GameIcon icon="arrowRight" size={14} /> All Profile Titles Pack).</p>
             )}
           </div>
         </div>
@@ -306,11 +306,11 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
               <label className="flex-1 cursor-pointer">
                 <input type="file" accept="audio/mp3,audio/mpeg,audio/*" className="hidden" onChange={e => handleMusicUpload(s.id, e.target.files?.[0])} />
                 <span className={`block text-center px-3 py-1.5 rounded text-[10px] font-body border border-dashed border-border hover:border-accent transition ${uploading === s.id ? 'opacity-50' : ''}`}>
-                  {uploading === s.id ? 'Uploading...' : local.customMusic?.[s.id] ? '✓ Custom track set — Click to replace' : 'Upload MP3'}
+                  {uploading === s.id ? 'Uploading...' : local.customMusic?.[s.id] ? ' Custom track set — Click to replace' : 'Upload MP3'}
                 </span>
               </label>
               {local.customMusic?.[s.id] && (
-                <button onClick={() => { const cm = { ...local.customMusic }; delete cm[s.id]; apply({ customMusic: cm }); }} className="text-xs px-2 py-1 bg-destructive/20 text-destructive rounded hover:opacity-80"><GameIcon emoji="✕" size={14} /></button>
+                <button onClick={() => { const cm = { ...local.customMusic }; delete cm[s.id]; apply({ customMusic: cm }); }} className="text-xs px-2 py-1 bg-destructive/20 text-destructive rounded hover:opacity-80"><GameIcon icon="close" size={14} /></button>
               )}
             </div>
           ))}
@@ -325,11 +325,11 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
           <label className="flex-1 cursor-pointer">
             <input type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/*" className="hidden" onChange={e => handleBackdropUpload(e.target.files?.[0])} />
             <span className={`block text-center px-3 py-1.5 rounded text-[10px] font-body border border-dashed border-border hover:border-accent transition ${uploading === 'backdrop' ? 'opacity-50' : ''}`}>
-              {uploading === 'backdrop' ? 'Uploading...' : local.customBackdrop ? '✓ Custom backdrop set — Click to replace' : 'Upload Image'}
+              {uploading === 'backdrop' ? 'Uploading...' : local.customBackdrop ? ' Custom backdrop set — Click to replace' : 'Upload Image'}
             </span>
           </label>
           {local.customBackdrop && (
-            <button onClick={() => { apply({ customBackdrop: null }); clearCustomBackdrop(); sfx.click(); }} className="text-xs px-2 py-1 bg-destructive/20 text-destructive rounded hover:opacity-80"><GameIcon emoji="✕" size={14} /></button>
+            <button onClick={() => { apply({ customBackdrop: null }); clearCustomBackdrop(); sfx.click(); }} className="text-xs px-2 py-1 bg-destructive/20 text-destructive rounded hover:opacity-80"><GameIcon icon="close" size={14} /></button>
           )}
         </div>
         {local.customBackdrop && (
@@ -487,7 +487,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
 
       {/* CONTROLLER (Bluetooth + Wired) */}
       <div className="e6-settings-card bg-card border border-border rounded-xl p-5">
-        <h3 className="font-heading text-sm text-primary mb-3"><GameIcon emoji="🎮" size={14} /> CONTROLLER (BLUETOOTH & WIRED)</h3>
+        <h3 className="font-heading text-sm text-primary mb-3"><GameIcon icon="controller" size={14} /> CONTROLLER (BLUETOOTH & WIRED)</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-body text-muted-foreground">Enable controller input:</span>
@@ -501,7 +501,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
               <ul className="space-y-1">
                 {pads.map(p => (
                   <li key={p.index} className="text-xs text-foreground font-body flex items-center gap-2">
-                    <span className="text-accent"><GameIcon emoji="●" size={14} /></span> Slot {p.index}: <span className="font-heading truncate flex-1">{p.id || 'Gamepad'}</span>
+                    <span className="text-accent"><GameIcon icon="box" size={14} /></span> Slot {p.index}: <span className="font-heading truncate flex-1">{p.id || 'Gamepad'}</span>
                     <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/20 text-primary capitalize">{p.family}</span>
                   </li>
                 ))}
@@ -509,7 +509,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
             )}
           </div>
           <button onClick={() => { sfx.click(); onOpenController?.(); }} className="w-full px-4 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90">
-            <GameIcon emoji="⚙" size={14} /> BUTTON MAPPING & CONTROLLER SETTINGS
+            <GameIcon icon="settings" size={14} /> BUTTON MAPPING & CONTROLLER SETTINGS
           </button>
           <p className="text-[10px] text-muted-foreground font-body">Remap every button, adjust stick deadzones & sensitivity, invert axes, toggle vibration strength, and save multiple controller profiles.</p>
         </div>
@@ -574,7 +574,7 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
 
       {/* ONLINE & LAN (merged from OnlineSettings) */}
       <div id="settings-online" className="e6-settings-card e6-settings-span bg-card border border-border rounded-xl p-5">
-        <h3 className="font-heading text-sm text-primary mb-3"><GameIcon emoji="🌐" size={14} /> ONLINE &amp; LAN</h3>
+        <h3 className="font-heading text-sm text-primary mb-3"><GameIcon icon="globe" size={14} /> ONLINE &amp; LAN</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-body text-muted-foreground">Region:</span>

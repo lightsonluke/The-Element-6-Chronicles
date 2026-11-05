@@ -140,7 +140,7 @@ export default function Tutorial({ onBack }) {
         {cur.last && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[2147483641]">
             <div className="bg-card border-2 border-accent rounded-xl p-8 text-center">
-              <p className="text-3xl font-heading text-accent mb-4"><GameIcon emoji="🎓" size={14} /> TUTORIAL COMPLETE!</p>
+              <p className="text-3xl font-heading text-accent mb-4"><GameIcon icon="book" size={14} /> TUTORIAL COMPLETE!</p>
               <p className="text-foreground font-body mb-4">You're ready to fight. Go show them what you've learned!</p>
               <div className="flex gap-3 justify-center">
                 <button onClick={() => { setFighting(false); setStep(0); setDone([]); }} className="px-5 py-2 bg-secondary text-secondary-foreground rounded font-heading">REPLAY</button>
@@ -157,7 +157,7 @@ export default function Tutorial({ onBack }) {
     <div className="w-full max-w-2xl flex flex-col gap-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-heading text-accent tracking-wider">TUTORIAL</h2>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
       <div className="bg-card border border-border rounded-xl p-6">
         <p className="font-body text-foreground/90 mb-4">Welcome to <span className="font-heading text-accent">The Element 6: Heroes in Color</span>! This tutorial is a guided course through the core systems of The Element 6, from movement and combat to recovery, match rules, Training Mode, and online matchmaking.</p>

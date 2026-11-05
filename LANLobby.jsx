@@ -116,7 +116,7 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
           <h2 className="text-2xl font-heading text-accent">SYNCING TEAMS...</h2>
           <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-muted-foreground">Waiting for opponent's Shapeshift team...</p>
-          <button onClick={() => { lan.closeConnection(); setPhase('menu'); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="←" size={14} /> CANCEL</button>
+          <button onClick={() => { lan.closeConnection(); setPhase('menu'); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="info" size={14} /> CANCEL</button>
         </div>
       );
     }
@@ -210,7 +210,7 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
         {lan.error && <p className="text-sm text-destructive">{lan.error}</p>}
         <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin" />
         <p className="text-sm text-muted-foreground">Waiting for connection...</p>
-        <button onClick={() => { lan.closeConnection(); setPhase('menu'); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="←" size={14} /> CANCEL</button>
+        <button onClick={() => { lan.closeConnection(); setPhase('menu'); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="info" size={14} /> CANCEL</button>
       </div>
     );
   }
@@ -326,7 +326,7 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
     <div className="flex flex-col items-center gap-6 w-full max-w-md py-8">
       <div className="w-full flex justify-between items-center">
         <h2 className="text-2xl font-heading text-accent tracking-wider">LAN PLAY</h2>
-        <button onClick={onBack} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onBack} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
       <p className="text-sm text-muted-foreground text-center">Play with a friend on the same WiFi network. One player creates a room, the other joins with the code.</p>
       <div className="grid grid-cols-2 gap-2 w-full">

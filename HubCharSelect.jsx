@@ -4,7 +4,7 @@ import UniversalCharacterSelect from './UniversalCharacterSelect.jsx';
 export default function HubCharSelect({ unlockedIds = [], customCharsData = {}, favoriteId, onEnter, onBack }) {
   return (
     <UniversalCharacterSelect
-      title="👥 CHOOSE YOUR CHARACTER"
+      title=" CHOOSE YOUR CHARACTER"
       startLabel="ENTER THE COMMUNITY HUB →"
       unlockedIds={unlockedIds}
       favoriteId={favoriteId}

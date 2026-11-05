@@ -1,27 +1,77 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import HowToPlay from './HowToPlay.jsx';
-import MenuButton from './MenuButton.jsx';
-import UpdatesSlideshow from './UpdatesSlideshow.jsx';
-import TitleArt from './TitleArt.jsx';
+import GameIcon from './GameIcon.jsx';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
-import GameIcon from "./GameIcon.jsx";
 
-function getRank(elo) {
-  if (elo >= 2200) return 'Elite';
-  if (elo >= 1800) return 'Platinum';
-  if (elo >= 1500) return 'Diamond';
-  if (elo >= 1200) return 'Gold';
-  if (elo >= 1000) return 'Silver';
-  return 'Bronze';
-}
+const SECTIONS = [
+  {
+    id: 'play', label: 'PLAY', summary: 'Choose how you want to enter the arena.', icon: 'game',
+    items: [
+      { label: 'Fight Modes', detail: 'Browse every fight format', key: 'modeSelect', icon: 'game' },
+      { label: 'Story Mode', detail: 'Continue the chronicles', key: 'story', icon: 'book' },
+      { label: 'Online', detail: 'Find a match or join friends', key: 'online', icon: 'globe' },
+      { label: 'Sports', detail: 'Play the full sports roster', key: 'sports', icon: 'trophy' },
+      { label: 'Tournament', detail: 'Enter a knockout bracket', key: 'tournament', icon: 'medal' },
+      { label: 'Grand Circuit', detail: 'Fight through the circuit', key: 'grandcircuit', icon: 'trophy' },
+    ],
+  },
+  {
+    id: 'customize', label: 'CUSTOMIZE', summary: 'Make your roster and loadout yours.', icon: 'palette',
+    items: [
+      { label: 'Shop', detail: 'Browse fighters and cosmetics', key: 'shop', icon: 'cart' },
+      { label: 'Battle Pass', detail: 'See season rewards', key: 'events', icon: 'calendar' },
+      { label: 'Equip', detail: 'Manage your loadouts', key: 'equip', icon: 'package' },
+      { label: 'Meet Characters', detail: 'Explore the roster', key: 'meet', icon: 'users' },
+      { label: 'Edit Characters', detail: 'Manage your fighters', key: 'editchars', icon: 'edit' },
+      { label: 'Create Character', detail: 'Build a custom fighter', key: 'creator', icon: 'plus' },
+      { label: 'Hero Codex', detail: 'Read fighter profiles', key: 'codex', icon: 'book' },
+    ],
+  },
+  {
+    id: 'progress', label: 'PROGRESSION', summary: 'Track rewards, challenges, and records.', icon: 'chart',
+    items: [
+      { label: 'Daily Reward', detail: 'Claim today’s reward', key: 'dailyreward', icon: 'gift' },
+      { label: 'Daily Quests', detail: 'Complete today’s challenges', key: 'daily', icon: 'calendar' },
+      { label: 'Fight Quests', detail: 'Earn rewards in battle', key: 'fightquests', icon: 'checkCircle' },
+      { label: 'Leaderboard', detail: 'View your standing', key: 'leaderboard', icon: 'chart' },
+      { label: 'Elo Ratings', detail: 'Review competitive ratings', key: 'elo', icon: 'medal' },
+    ],
+  },
+  {
+    id: 'community', label: 'COMMUNITY', summary: 'Meet players and keep in touch.', icon: 'users',
+    items: [
+      { label: 'Community Hub', detail: 'Visit the shared plaza', key: 'hub', icon: 'globe' },
+      { label: 'Friends', detail: 'Manage your friend list', key: 'friends', icon: 'users' },
+      { label: 'Chat', detail: 'Open your conversations', key: 'chat', icon: 'comment' },
+      { label: 'Clans', detail: 'Browse and manage clans', key: 'clans', icon: 'users' },
+      { label: 'Clips', detail: 'Review saved match clips', key: 'clips', icon: 'video' },
+      { label: 'Online Users', detail: 'See who is playing', key: 'online', icon: 'user' },
+    ],
+  },
+  {
+    id: 'tools', label: 'TOOLS & LEARN', summary: 'Practice, create, and adjust your game.', icon: 'settings',
+    items: [
+      { label: 'Training', detail: 'Practice against a dummy', key: 'training', icon: 'running' },
+      { label: 'Combo Trainer', detail: 'Study routes and timing', key: 'combos', icon: 'chart' },
+      { label: 'Tutorial', detail: 'Learn the controls', key: 'tutorial', icon: 'info' },
+      { label: 'Custom Battle', detail: 'Set up a custom match', key: 'custombattle', icon: 'settings' },
+      { label: 'Stage Editor', detail: 'Build a custom arena', key: 'stageeditor', icon: 'layers' },
+      { label: 'Sandbox', detail: 'Explore match settings', key: 'sandbox', icon: 'expand' },
+      { label: 'Campaign Creator', detail: 'Build a battle campaign', key: 'creatormode', icon: 'edit' },
+      { label: 'Save Codes', detail: 'Import or export setups', key: 'savecodes', icon: 'clipboard' },
+      { label: 'Settings', detail: 'Tune controls and display', key: 'settings', icon: 'settings' },
+      { label: 'About the Game', detail: 'Learn about Element 6', key: 'about', icon: 'info' },
+    ],
+  },
+];
 
-export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLevel, rankedRating, onlineRankedRating, musicVolume, activeEvent, mobileMode, username, chatNotifCount }) {
+export default function MainMenu({ onNavigate, coins = 0, favoriteName, favoriteLevel = 1, onlineRankedRating, musicVolume, activeEvent, username, chatNotifCount = 0 }) {
   const [showHowTo, setShowHowTo] = useState(false);
-  const [frontCol, setFrontCol] = useState('col1');
-  const [expandedTab, setExpandedTab] = useState(null);
-  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
-  const rim = isDark ? '#1a1a4e' : '#c4a8ff';
+  const [activeSection, setActiveSection] = useState('play');
+  const [query, setQuery] = useState('');
+  const selected = SECTIONS.find(section => section.id === activeSection) || SECTIONS[0];
+  const visibleItems = selected.items.filter(item => `${item.label} ${item.detail}`.toLowerCase().includes(query.trim().toLowerCase()));
 
   useEffect(() => {
     music.setVolume(musicVolume ?? 50);
@@ -29,227 +79,85 @@ export default function MainMenu({ onNavigate, coins, favoriteName, favoriteLeve
     return () => music.stop();
   }, [musicVolume]);
 
-  const handleNav = (key) => {
+  const navigate = (key) => {
     sfx.click();
-    if (key === 'howto') { sfx.menuOpen(); setShowHowTo(true); return; }
+    if (key === 'howto') {
+      sfx.menuOpen();
+      setShowHowTo(true);
+      return;
+    }
     onNavigate(key);
   };
 
-  const col1 = [
-    { type: 'tab', id: 'fight', label: 'FIGHT', items: [
-      { label: 'Fight Modes', key: 'modeSelect' },
-      { label: 'Custom Battle', key: 'custombattle' },
-      { label: 'Regular Battle', key: 'regularbattle' },
-      { label: 'Stage Editor', key: 'stageeditor' },
-    ]},
-    { type: 'tab', id: 'ranked', label: 'RANKED', items: [
-      { label: 'Ranked Fights', key: 'onlineranked' },
-      { label: 'Unranked Fights', key: 'onlineunranked' },
-    ]},
-    { type: 'button', label: 'ONLINE', key: 'online' },
-    { type: 'button', label: 'SPORTS', key: 'sports' },
-    { type: 'button', label: 'SHOP', key: 'shop' },
-    { type: 'tab', id: 'sandbox', label: 'SANDBOX', items: [
-      { label: 'Sandbox Mode', key: 'sandbox' },
-      { label: 'Stage Editor', key: 'stageeditor' },
-    ]},
-  ];
-
-  const col2 = [
-    { type: 'tab', id: 'learn', label: 'LEARN', items: [
-      { label: 'Training', key: 'training' },
-      { label: 'Combo Trainer', key: 'combos' },
-      { label: 'Tutorial', key: 'tutorial' },
-      { label: 'About the Game', key: 'about' },
-    ]},
-    { type: 'tab', id: 'characters', label: 'CHARACTERS', items: [
-      { label: 'Meet Characters', key: 'meet' },
-      { label: 'Edit Characters', key: 'editchars' },
-      { label: 'Equip', key: 'equip' },
-      { label: 'Create Character', key: 'creator' },
-      { label: 'Hero Codex', key: 'codex' },
-    ]},
-    { type: 'tab', id: 'quests', label: 'QUESTS', items: [
-      { label: 'Daily Reward', key: 'dailyreward' },
-      { label: 'Daily Quests', key: 'daily' },
-      { label: 'Fight Quests', key: 'fightquests' },
-      { label: 'Leaderboard', key: 'leaderboard' },
-    ]},
-    { type: 'tab', id: 'creator', label: 'CAMPAIGN', items: [
-      { label: 'Campaign', key: 'creatormode' },
-    ]},
-    { type: 'button', label: 'CLIPS', key: 'clips' },
-    { type: 'button', label: 'CLANS', key: 'clans' },
-    { type: 'button', label: 'SAVE CODES', key: 'savecodes' },
-  ];
-
-  const renderItem = (item, colId) => {
-    const isFront = frontCol === colId;
-    if (item.type === 'tab') {
-      return (
-        <div key={item.id}>
-          <MenuButton label={item.label} hasSubItems expanded={expandedTab === item.id}
-            onFocus={() => { if (!isFront) { setFrontCol(colId); setExpandedTab(null); } }}
-            onToggleExpand={() => { if (!isFront) { setFrontCol(colId); setExpandedTab(null); } else setExpandedTab(expandedTab === item.id ? null : item.id); }}
-            onClick={() => { if (!isFront) { setFrontCol(colId); setExpandedTab(null); } }}
-            disabled={false} isDark={isDark} />
-          {expandedTab === item.id && isFront && (
-            <div className="mt-1.5 ml-4 space-y-1.5">
-              {item.items.map(sub => (
-                <button key={sub.key} onClick={() => handleNav(sub.key)}
-                  className="block w-full text-left px-4 py-2 rounded-lg border text-xs font-heading bg-card/90 border-border hover:bg-primary/20 text-foreground transition">
-                  {sub.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-    return (
-      <MenuButton key={item.key} label={item.label} onClick={() => { if (!isFront) { setFrontCol(colId); setExpandedTab(null); } else handleNav(item.key); }}
-        onFocus={() => { if (!isFront) { setFrontCol(colId); setExpandedTab(null); } }}
-        disabled={false} notifCount={item.key === 'chat' ? chatNotifCount : 0} isDark={isDark} />
-    );
-  };
-
-  const renderMobileItem = (item) => {
-    if (item.type === 'tab') {
-      return (
-        <div key={item.id}>
-          <MenuButton label={item.label} hasSubItems expanded={expandedTab === item.id}
-            onToggleExpand={() => setExpandedTab(expandedTab === item.id ? null : item.id)} isDark={isDark} />
-          {expandedTab === item.id && (
-            <div className="mt-1 space-y-1">
-              {item.items.map(sub => (
-                <button key={sub.key} onClick={() => handleNav(sub.key)}
-                  className="block w-full text-left px-3 py-1.5 rounded-md border text-[10px] font-heading bg-card/90 border-border text-foreground">{sub.label}</button>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-    return <MenuButton key={item.key} label={item.label} onClick={() => handleNav(item.key)}
-      notifCount={item.key === 'chat' ? chatNotifCount : 0} isDark={isDark} />;
-  };
-
   return (
-    <div className="el6-home-menu w-full max-w-7xl mx-auto relative">
-      {/* ── Desktop layout ── */}
-      <div className="hidden lg:block">
-        {/* Top bar: © Made by + user info + settings/howto — all on one horizontal line */}
-        <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between gap-2 bg-card/80 border-b border-border px-3 py-1">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground">©</span>
-            <span className="font-heading text-[10px] text-muted-foreground tracking-wider">Made by Element 6 Studios</span>
+    <main className="e6-home-menu" style={{ '--e6-home-image': `url("${import.meta.env.BASE_URL}assets/e6-home-menu-background.png")` }}>
+      <div className="e6-home-backdrop" aria-hidden="true" />
+      <header className="e6-home-topbar">
+        <div className="e6-home-brand" aria-label="Element 6 Chronicles">
+          <span className="e6-home-brand-mark">6</span>
+          <span><strong>ELEMENT 6</strong><small>CHRONICLES</small></span>
+        </div>
+        <div className="e6-home-player-strip">
+          <div className="e6-home-player-name"><span className="e6-home-eyebrow">PLAYER</span><strong>{username || 'Guest Player'}</strong></div>
+          {favoriteName && <div className="e6-home-favorite"><span className="e6-home-eyebrow">FAVORITE FIGHTER</span><strong>{favoriteName}<small>{favoriteLevel > 1 ? ` · LV ${favoriteLevel}` : ''}</small></strong></div>}
+          <div className="e6-home-currency"><span className="e6-home-eyebrow">TOKENS</span><strong>{Number(coins || 0).toLocaleString()}</strong></div>
+          {onlineRankedRating != null && <div className="e6-home-rating"><span className="e6-home-eyebrow">RANKED</span><strong>{onlineRankedRating}</strong></div>}
+        </div>
+        <div className="e6-home-utility">
+          <button type="button" onClick={() => navigate('settings')} aria-label="Open settings"><GameIcon icon="settings" size={17} /><span>Settings</span></button>
+          <button type="button" onClick={() => navigate('howto')} aria-label="How to play"><GameIcon icon="info" size={17} /><span>How to Play</span></button>
+        </div>
+      </header>
+
+      <section className="e6-home-layout">
+        <div className="e6-home-hero">
+          <div className="e6-home-season">{activeEvent?.name ? `NOW PLAYING · ${activeEvent.name}` : 'A NEW ERA OF ELEMENTAL FIGHTING'}</div>
+          <h1>ELEMENT <span>6</span></h1>
+          <p className="e6-home-subtitle">A world of fighters, stories, and rivalries waits beyond the city lights.</p>
+          <div className="e6-home-actions">
+            <button type="button" className="e6-home-primary" onClick={() => navigate('modeSelect')}>
+              <span><small>READY WHEN YOU ARE</small><strong>ENTER THE ARENA</strong></span><GameIcon icon="arrowRight" size={20} />
+            </button>
+            <button type="button" className="e6-home-secondary" onClick={() => navigate('story')}><GameIcon icon="book" size={17} /> EXPLORE STORY</button>
           </div>
-          <div className="flex items-center gap-2.5 text-[10px] font-heading">
-            {username && <span className="inline-flex items-center gap-1 text-foreground"><GameIcon emoji="👤" size={12} /> {username}</span>}
-            {favoriteName && <span className="inline-flex items-center gap-1 text-muted-foreground"><GameIcon emoji="★" size={12} /> {favoriteName}{favoriteLevel > 1 && <span className="text-primary"> Lv.{favoriteLevel}</span>}</span>}
-            <span className="inline-flex items-center gap-1 text-muted-foreground"><GameIcon emoji="◆" size={12} /> <span className="text-accent">{coins || 0}</span></span>
-            <span className="text-muted-foreground">Ranked ELO: <span className="text-primary">{onlineRankedRating}</span></span>
+          <div className="e6-home-quicklinks">
+            <button type="button" onClick={() => navigate('shop')}><GameIcon icon="cart" size={16} /><span>SHOP</span></button>
+            <button type="button" onClick={() => navigate('events')}><GameIcon icon="calendar" size={16} /><span>BATTLE PASS</span></button>
+            <button type="button" onClick={() => navigate('equip')}><GameIcon icon="package" size={16} /><span>LOADOUT</span></button>
           </div>
-          <div className="flex items-center gap-1.5">
-            <button onClick={() => handleNav('clips')} className="inline-flex items-center gap-1 px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[10px] hover:opacity-80"><GameIcon emoji="🎬" size={12} /> CLIPS</button>
-            <button onClick={() => handleNav('clans')} className="inline-flex items-center gap-1 px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[10px] hover:opacity-80"><GameIcon emoji="⚔" size={12} /> CLANS</button>
-            <button onClick={() => handleNav('settings')} className="inline-flex items-center gap-1 px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[10px] hover:opacity-80"><GameIcon emoji="⚙" size={12} /> SETTINGS</button>
-            <button onClick={() => handleNav('howto')} className="inline-flex items-center gap-1 px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[10px] hover:opacity-80"><GameIcon emoji="?" size={12} /> HOW TO</button>
-          </div>
+          <div className="e6-home-caption"><span /> YOUR NEXT CHAPTER STARTS HERE</div>
         </div>
 
-        {/* Bottom left: element6.app link */}
-        <div className="absolute bottom-1 left-2 z-30">
-          <a href="https://element6.app" target="_blank" rel="noopener noreferrer" className="text-[10px] font-heading text-muted-foreground hover:text-accent transition">element6.app</a>
-        </div>
-
-        <div className="flex gap-4 items-start pt-12">
-          {/* Left: overlapping button columns — moved down, more spacing, fixed width */}
-          <div className="relative flex mt-6" style={{ width: '400px', height: '470px' }}>
-            <div className="flex flex-col justify-between w-56 transition-all duration-500 ease-out"
-              style={{ transform: frontCol === 'col1' ? 'translateX(0)' : 'translateX(56px) translateY(12px)', zIndex: frontCol === 'col1' ? 20 : 10, opacity: frontCol === 'col1' ? 1 : 0.45 }}
-              onClick={() => frontCol !== 'col1' && setFrontCol('col1')}>
-              {col1.map(item => renderItem(item, 'col1'))}
-            </div>
-            <div className="flex flex-col justify-between w-56 transition-all duration-500 ease-out"
-              style={{ transform: frontCol === 'col2' ? 'translateX(0)' : 'translateX(-56px) translateY(12px)', zIndex: frontCol === 'col2' ? 20 : 10, opacity: frontCol === 'col2' ? 1 : 0.45, marginLeft: '-28px' }}
-              onClick={() => frontCol !== 'col2' && setFrontCol('col2')}>
-              {col2.map(item => renderItem(item, 'col2'))}
-            </div>
+        <aside className="e6-home-navigation" aria-label="Game destinations">
+          <div className="e6-home-nav-heading">
+            <div><span className="e6-home-eyebrow">EXPLORE</span><h2>Where to next?</h2></div>
+            <span className="e6-home-nav-count">0{selected.items.length}</span>
           </div>
-
-          {/* Center: World button + TitleArt (battle pass design) + Battle Pass button */}
-          <div className="flex-1 flex flex-col items-center gap-4 pt-4">
-            <button onClick={() => handleNav('clips')}
-              className="inline-flex items-center gap-1.5 px-8 py-2.5 rounded-xl font-heading text-sm text-white tracking-wider hover:scale-105 transition"
-              style={{ background: 'linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)))', border: `2px solid ${rim}` }}>
-              <GameIcon emoji="🎬" size={14} /> CLIPS
-            </button>
-            <button onClick={() => handleNav('hub')}
-              className="inline-flex items-center gap-1.5 px-8 py-2.5 rounded-xl font-heading text-sm text-white tracking-wider hover:scale-105 transition"
-              style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))', border: `2px solid ${rim}` }}>
-              COMMUNITY HUB
-            </button>
-            <TitleArt />
-            <button onClick={() => handleNav('events')}
-              className="inline-flex items-center gap-1.5 px-8 py-2.5 rounded-xl font-heading text-sm text-white tracking-wider hover:scale-105 transition"
-              style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))', border: `2px solid ${rim}` }}>
-              BATTLE PASS
-            </button>
-            <button onClick={() => handleNav('lore')}
-              className="inline-flex items-center gap-1.5 px-8 py-2.5 rounded-xl font-heading text-sm text-white tracking-wider hover:scale-105 transition"
-              style={{ background: 'linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)))', border: `2px solid ${rim}` }}>
-              <GameIcon emoji="📖" size={14} /> LORE LIBRARY
-            </button>
+          <div className="e6-home-tabs" role="tablist" aria-label="Destination categories">
+            {SECTIONS.map(section => (
+              <button key={section.id} type="button" role="tab" aria-selected={activeSection === section.id}
+                className={activeSection === section.id ? 'is-active' : ''} onClick={() => { setActiveSection(section.id); setQuery(''); }}>
+                <GameIcon icon={section.icon} size={16} /><span>{section.label}</span>
+              </button>
+            ))}
           </div>
-
-          {/* Right: updates slideshow (matching left width) + equip */}
-          <div className="shrink-0 flex flex-col items-center gap-4" style={{ width: '400px' }}>
-            <UpdatesSlideshow />
-            <button onClick={() => handleNav('equip')}
-              className="inline-flex items-center gap-1.5 px-8 py-2.5 rounded-xl font-heading text-sm text-white tracking-wider hover:scale-105 transition"
-              style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))', border: `2px solid ${rim}` }}>
-              EQUIP
-            </button>
+          <div className="e6-home-section-intro"><span>{selected.summary}</span></div>
+          <label className="e6-home-search"><GameIcon icon="search" size={16} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Find in ${selected.label.toLowerCase()}…`} aria-label={`Find in ${selected.label.toLowerCase()}`} /></label>
+          <div className="e6-home-destination-list">
+            {visibleItems.map((item, index) => (
+              <button key={item.key} type="button" className="e6-home-destination" onClick={() => navigate(item.key)}>
+                <span className="e6-home-destination-icon"><GameIcon icon={item.icon} size={17} /></span>
+                <span className="e6-home-destination-copy"><strong>{item.label}{item.key === 'chat' && chatNotifCount > 0 && <i>{chatNotifCount}</i>}</strong><small>{item.detail}</small></span>
+                <GameIcon icon="arrowRight" size={15} className="e6-home-destination-arrow" />
+              </button>
+            ))}
+            {visibleItems.length === 0 && <div className="e6-home-empty">No destinations match “{query}”.</div>}
           </div>
-        </div>
-      </div>
-
-      {/* ── Mobile layout ── */}
-      <div className="lg:hidden flex flex-col items-center gap-3">
-        <div className="absolute top-1 left-1/2 -translate-x-1/2 flex items-center gap-1">
-          <span className="text-sm">©</span>
-          <span className="font-heading text-[10px] text-muted-foreground">Made by Element 6 Studios</span>
-        </div>
-        <div className="w-full flex justify-end gap-1.5 mt-8">
-          <button onClick={() => handleNav('settings')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg font-heading text-xs"><GameIcon emoji="⚙" size={14} /> SETTINGS</button>
-          <button onClick={() => handleNav('howto')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg font-heading text-xs"><GameIcon emoji="?" size={14} /> HOW TO</button>
-        </div>
-        <div className="bg-card/80 border border-border rounded-lg px-2.5 py-1.5 text-[9px] font-heading flex flex-wrap gap-2 justify-center max-w-sm">
-          {username && <span className="inline-flex items-center gap-1 text-foreground"><GameIcon emoji="👤" size={12} /> {username}</span>}
-          <span className="inline-flex items-center gap-1 text-muted-foreground"><GameIcon emoji="◆" size={12} /> {coins || 0}</span>
-          <span className="text-muted-foreground">Ranked ELO: <span className="text-primary">{onlineRankedRating}</span></span>
-        </div>
-        <TitleArt />
-        <div className="flex gap-2 flex-wrap justify-center">
-          <button onClick={() => handleNav('clips')} className="px-6 py-2 rounded-xl font-heading text-xs text-white" style={{ background: 'linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)))' }}>🎬 CLIPS</button>
-          <button onClick={() => handleNav('clans')} className="px-6 py-2 rounded-xl font-heading text-xs text-white" style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))' }}>⚔ CLANS</button>
-          <button onClick={() => handleNav('hub')} className="px-6 py-2 rounded-xl font-heading text-xs text-white"
-            style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))' }}>HUB</button>
-          <button onClick={() => handleNav('events')} className="px-6 py-2 rounded-xl font-heading text-xs text-white"
-            style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))' }}>BATTLE PASS</button>
-          <button onClick={() => handleNav('lore')} className="px-6 py-2 rounded-xl font-heading text-xs text-white"
-            style={{ background: 'linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)))' }}>LORE</button>
-          <button onClick={() => handleNav('equip')} className="px-6 py-2 rounded-xl font-heading text-xs text-white"
-            style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))' }}>EQUIP</button>
-        </div>
-        <div className="grid grid-cols-2 gap-2 w-full max-w-md">
-          {[...col1, ...col2].map(renderMobileItem)}
-        </div>
-        <UpdatesSlideshow />
-      </div>
+          <div className="e6-home-nav-footer"><span>ELEMENT 6 CHRONICLES</span><button type="button" onClick={() => navigate('about')}>ABOUT THE GAME <GameIcon icon="arrowRight" size={13} /></button></div>
+        </aside>
+      </section>
 
       {showHowTo && <HowToPlay onClose={() => setShowHowTo(false)} />}
-    </div>
+    </main>
   );
 }

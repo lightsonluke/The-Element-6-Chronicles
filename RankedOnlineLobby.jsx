@@ -208,7 +208,7 @@ function SupabaseFightLobby({
     <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
       <div className="flex justify-between items-center w-full">
         <h2 className="text-2xl font-heading text-accent tracking-wider">{mode === 'ranked' ? 'ONLINE RANKED' : 'ONLINE UNRANKED'}</h2>
-        <button onClick={() => { cancel(); onBack(); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={() => { cancel(); onBack(); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
       <div className="bg-card border border-border rounded-xl p-3 w-full max-w-md text-center">
         <p className="text-xs font-heading text-primary">GLOBAL MATCHMAKING</p>
@@ -220,7 +220,7 @@ function SupabaseFightLobby({
       {phase === 'pick' && (
         <UniversalCharacterSelect
           title="PICK YOUR FIGHTER"
-          startLabel="🔍 FIND MATCH"
+          startLabel=" FIND MATCH"
           unlockedIds={unlockedIds || ['yellow']}
           favoriteId={favoriteId}
           playerCount={1}

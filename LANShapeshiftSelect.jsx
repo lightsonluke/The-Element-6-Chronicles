@@ -97,7 +97,7 @@ export default function LANShapeshiftSelect({
       {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-heading text-foreground tracking-wider">{title}</h2>
-        <button onClick={onBack} className="px-3 py-1.5 bg-muted text-muted-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onBack} className="px-3 py-1.5 bg-muted text-muted-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       {/* Team slots */}
@@ -119,7 +119,7 @@ export default function LANShapeshiftSelect({
                       <span className="font-heading text-sm font-bold text-white" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>{(char.name || '?')[0]}</span>
                     </div>
                     <span className="text-[7px] font-heading text-foreground leading-tight text-center px-0.5 truncate w-full">{char.name}</span>
-                    <button onClick={(e) => { e.stopPropagation(); clearSlot(i); }} className="absolute -top-1 -right-1 text-[8px] text-muted-foreground hover:text-destructive bg-card rounded-full w-4 h-4 flex items-center justify-center border border-border"><GameIcon emoji="✕" size={14} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); clearSlot(i); }} className="absolute -top-1 -right-1 text-[8px] text-muted-foreground hover:text-destructive bg-card rounded-full w-4 h-4 flex items-center justify-center border border-border"><GameIcon icon="close" size={14} /></button>
                   </>
                 ) : (
                   <div className="w-9 h-9 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center">
@@ -167,7 +167,7 @@ export default function LANShapeshiftSelect({
                 <button key={c.id} disabled={locked} onClick={() => handlePick(c.id)}
                   className={`relative flex flex-col items-center rounded-md border-2 transition ${locked ? 'opacity-40 cursor-not-allowed' : 'hover:scale-105 cursor-pointer'}`}
                   style={{ borderColor: selected ? '#FFD700' : 'transparent', backgroundColor: selected ? 'rgba(255,215,0,0.12)' : 'transparent', padding: '2px 1px' }}>
-                  {locked && <span className="absolute top-0 right-0.5 text-[6px] leading-none opacity-60"><GameIcon emoji="🔒" size={14} /></span>}
+                  {locked && <span className="absolute top-0 right-0.5 text-[6px] leading-none opacity-60"><GameIcon icon="lock" size={14} /></span>}
                   <div className="rounded-full flex items-center justify-center" style={{ ...circleStyle, width: 30, height: 30, boxShadow: locked ? 'none' : `0 0 5px ${c.color}55` }}>
                     <span className="font-heading text-[11px] font-bold text-white" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>{initial}</span>
                   </div>
@@ -205,7 +205,7 @@ export default function LANShapeshiftSelect({
               {/* Accessories */}
               {shownAccs.length > 0 && onEquipAccessory && (
                 <div className="bg-card/50 border border-border rounded-lg p-1.5">
-                  <p className="text-[9px] font-heading text-accent mb-1"><GameIcon emoji="🎩" size={14} /> ACCESSORIES ({equippedAccIds.length}/4)</p>
+                  <p className="text-[9px] font-heading text-accent mb-1"><GameIcon icon="tag" size={14} /> ACCESSORIES ({equippedAccIds.length}/4)</p>
                   <div className="flex gap-1 flex-wrap max-h-20 overflow-y-auto">
                     {shownAccs.map(a => {
                       const equipped = equippedAccIds.includes(a.id);
@@ -214,7 +214,7 @@ export default function LANShapeshiftSelect({
                           className={`flex items-center gap-1 rounded px-1 py-0.5 border ${equipped ? 'border-accent bg-accent/20' : 'border-border'}`}>
                           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: a.color }} />
                           <span className="text-[7px] font-heading text-foreground">{a.name}</span>
-                          {equipped && <span className="text-[7px] text-accent"><GameIcon emoji="✓" size={14} /></span>}
+                          {equipped && <span className="text-[7px] text-accent"><GameIcon icon="check" size={14} /></span>}
                         </button>
                       );
                     })}
@@ -225,7 +225,7 @@ export default function LANShapeshiftSelect({
               {/* Shikigami */}
               {ownedShiks.length > 0 && (
                 <div className="bg-card/50 border border-border rounded-lg p-1.5">
-                  <p className="text-[9px] font-heading text-accent mb-1">🪶 SHIKIGAMI</p>
+                  <p className="text-[9px] font-heading text-accent mb-1"> SHIKIGAMI</p>
                   <div className="flex gap-1 flex-wrap max-h-20 overflow-y-auto">
                     <button onClick={() => { /* shikigami equip is match-temporary in UCS; for LAN we use equipped */ }}
                       className={`px-1.5 py-0.5 rounded text-[8px] font-heading border-2 ${!currentShikigami ? 'border-accent bg-accent/20' : 'border-border bg-secondary text-secondary-foreground'}`}>NONE</button>

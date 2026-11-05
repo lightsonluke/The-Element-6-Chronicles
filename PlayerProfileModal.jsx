@@ -106,7 +106,7 @@ export default function PlayerProfileModal({ player, me, onClose, onPlayCampaign
       spawnPoints: stageData.spawnPoints || null,
       backdrop: stageData.backdrop || s.backdrop || 'city',
       name: s.name || 'Downloaded Stage',
-      emoji: s.emoji || '🎨',
+      icon: s.icon || 'map',
     });
     flash('Stage downloaded to your stages!');
   };
@@ -132,7 +132,7 @@ export default function PlayerProfileModal({ player, me, onClose, onPlayCampaign
             <h3 className="font-heading text-base text-foreground">{player.username || player.name}</h3>
             <p className="text-[10px] text-muted-foreground">Fav: {ALL.find(c => c.id === player.charId)?.name || '?'} • {player.title || 'No title'}</p>
           </div>
-          <button onClick={() => onClose?.()} className="text-xs text-muted-foreground"><GameIcon emoji="✕" size={14} /></button>
+          <button onClick={() => onClose?.()} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button>
         </div>
 
         {toast && <p className="text-[10px] text-accent font-heading mb-2">{toast}</p>}
@@ -165,10 +165,10 @@ export default function PlayerProfileModal({ player, me, onClose, onPlayCampaign
           <BrowseList title="STAGES" items={stages} onBack={() => setView('profile')} render={s => (
             <div className="flex justify-between items-center">
               <div>
-                <p className="font-heading text-xs text-foreground">{s.emoji} {s.name}</p>
-                <p className="text-[9px] text-muted-foreground">Plays {s.plays || 0} • <GameIcon emoji="♥" size={14} /> {s.likes || 0}</p>
+                <p className="font-heading text-xs text-foreground inline-flex items-center gap-1"><GameIcon icon={s.icon || "map"} size={14} /> {s.name}</p>
+                <p className="text-[9px] text-muted-foreground">Plays {s.plays || 0} • <GameIcon icon="heart" size={14} /> {s.likes || 0}</p>
               </div>
-              <button onClick={() => downloadStage(s)} className="px-2 py-1 bg-accent text-accent-foreground rounded font-heading text-[9px]"><GameIcon emoji="⬇" size={14} /> DOWNLOAD</button>
+              <button onClick={() => downloadStage(s)} className="px-2 py-1 bg-accent text-accent-foreground rounded font-heading text-[9px]"><GameIcon icon="arrowDown" size={14} /> DOWNLOAD</button>
             </div>
           )} />
         )}
@@ -176,10 +176,10 @@ export default function PlayerProfileModal({ player, me, onClose, onPlayCampaign
           <BrowseList title="CAMPAIGNS" items={campaigns} onBack={() => setView('profile')} render={c => (
             <div className="flex justify-between items-center">
               <div>
-                <p className="font-heading text-xs text-foreground">{c.thumbnail || <GameIcon emoji="🎮" size={14} />} {c.name}</p>
-                <p className="text-[9px] text-muted-foreground">{c.difficulty} • {(c.battles || []).length} battles • <GameIcon emoji="♥" size={14} /> {c.likes || 0}</p>
+                <p className="font-heading text-xs text-foreground">{c.thumbnail || <GameIcon icon="controller" size={14} />} {c.name}</p>
+                <p className="text-[9px] text-muted-foreground">{c.difficulty} • {(c.battles || []).length} battles • <GameIcon icon="heart" size={14} /> {c.likes || 0}</p>
               </div>
-              <button onClick={() => playCampaign(c)} className="px-3 py-1.5 bg-accent text-accent-foreground rounded font-heading text-[10px]"><GameIcon emoji="▶" size={14} /> PLAY</button>
+              <button onClick={() => playCampaign(c)} className="px-3 py-1.5 bg-accent text-accent-foreground rounded font-heading text-[10px]"><GameIcon icon="play" size={14} /> PLAY</button>
             </div>
           )} />
         )}
@@ -187,7 +187,7 @@ export default function PlayerProfileModal({ player, me, onClose, onPlayCampaign
           <BrowseList title="FLYERS" items={flyers} onBack={() => setView('profile')} render={f => (
             <>
               <p className="font-heading text-xs text-foreground">{f.title}</p>
-              <p className="text-[9px] text-muted-foreground">{f.category} • <GameIcon emoji="♥" size={14} /> {f.likes || 0}</p>
+              <p className="text-[9px] text-muted-foreground">{f.category} • <GameIcon icon="heart" size={14} /> {f.likes || 0}</p>
             </>
           )} emptyMsg="This player has not posted any community flyers." />
         )}
@@ -213,7 +213,7 @@ function BrowseList({ title, items, render, emptyMsg, onBack }) {
         {items.length === 0 && <p className="text-xs text-muted-foreground italic">{emptyMsg || 'None yet.'}</p>}
         {items.map(it => <div key={it.id} className="bg-muted/30 rounded-lg p-2">{render(it)}</div>)}
       </div>
-      <button onClick={onBack} className="mt-3 text-[10px] text-accent"><GameIcon emoji="←" size={14} /> Back to profile</button>
+      <button onClick={onBack} className="mt-3 text-[10px] text-accent"><GameIcon icon="info" size={14} /> Back to profile</button>
     </div>
   );
 }

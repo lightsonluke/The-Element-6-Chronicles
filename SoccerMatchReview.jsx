@@ -24,12 +24,12 @@ export default function SoccerMatchReview({ stats, p1Name, p2Name, p1Color, p2Co
   const winnerLabel = !decided ? 'DRAW' : p1Won ? p1Name : p2Name;
 
   const rows = [
-    { label: '⚽ Goals', p1: s1.goals || 0, p2: s2.goals || 0 },
-    { label: '🎯 Shots', p1: s1.shots || 0, p2: s2.shots || 0 },
-    { label: '✓ On Target', p1: s1.shotsOnTarget || 0, p2: s2.shotsOnTarget || 0 },
-    { label: '✗ Misses', p1: s1.misses || 0, p2: s2.misses || 0 },
-    { label: '🧤 Saves', p1: s1.saves || 0, p2: s2.saves || 0 },
-    { label: '⏱ Possession', p1: `${p1Poss}%`, p2: `${p2Poss}%` },
+    { label: ' Goals', p1: s1.goals || 0, p2: s2.goals || 0 },
+    { label: ' Shots', p1: s1.shots || 0, p2: s2.shots || 0 },
+    { label: ' On Target', p1: s1.shotsOnTarget || 0, p2: s2.shotsOnTarget || 0 },
+    { label: ' Misses', p1: s1.misses || 0, p2: s2.misses || 0 },
+    { label: ' Saves', p1: s1.saves || 0, p2: s2.saves || 0 },
+    { label: ' Possession', p1: `${p1Poss}%`, p2: `${p2Poss}%` },
   ];
 
   const p1XP = calculateSoccerXP(s1, p1Won === true);

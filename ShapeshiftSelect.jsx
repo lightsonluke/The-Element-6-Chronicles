@@ -22,7 +22,7 @@ function TeamSlot({ char, index, active, filled, onClick, onClear, label, accent
             </div>
             <span className="text-[7px] font-heading text-foreground leading-tight text-center px-0.5 truncate w-full">{char.name}</span>
             <span className="text-[6px] text-muted-foreground leading-none truncate w-full text-center">{getPowerName(char)}</span>
-            <button onClick={(e) => { e.stopPropagation(); onClear(); }} className="absolute -top-1 -right-1 text-[8px] text-muted-foreground hover:text-destructive bg-card rounded-full w-4 h-4 flex items-center justify-center border border-border"><GameIcon emoji="✕" size={14} /></button>
+            <button onClick={(e) => { e.stopPropagation(); onClear(); }} className="absolute -top-1 -right-1 text-[8px] text-muted-foreground hover:text-destructive bg-card rounded-full w-4 h-4 flex items-center justify-center border border-border"><GameIcon icon="close" size={14} /></button>
           </>
         ) : (
           <div className="w-9 h-9 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center">
@@ -128,7 +128,7 @@ export default function ShapeshiftSelect({
           <h2 className="text-2xl font-heading text-primary tracking-wider">SHAPESHIFT MODE</h2>
           <p className="text-xs text-muted-foreground font-body">Pick 3 fighters per team. Press SUPER in-game to morph — stocks & damage persist, supers disabled.</p>
         </div>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       {/* Team panels */}
@@ -214,8 +214,8 @@ export default function ShapeshiftSelect({
               <button key={c.id} disabled={locked} onClick={() => handlePickChar(c.id)}
                 className={`relative flex flex-col items-center rounded-md border-2 transition ${locked ? 'opacity-40 cursor-not-allowed' : 'hover:scale-105 cursor-pointer'}`}
                 style={{ borderColor: selectedP1 ? '#FFD700' : selectedP2 ? '#9944CC' : 'transparent', backgroundColor: selectedP1 ? 'rgba(255,215,0,0.12)' : selectedP2 ? 'rgba(153,68,204,0.12)' : 'transparent', padding: '2px 1px' }}>
-                {c.id === favoriteId && !locked && <span className="absolute top-0 left-0.5 text-[7px] text-accent leading-none"><GameIcon emoji="★" size={14} /></span>}
-                {locked && <span className="absolute top-0 right-0.5 text-[6px] leading-none opacity-60"><GameIcon emoji="🔒" size={14} /></span>}
+                {c.id === favoriteId && !locked && <span className="absolute top-0 left-0.5 text-[7px] text-accent leading-none"><GameIcon icon="star" size={14} /></span>}
+                {locked && <span className="absolute top-0 right-0.5 text-[6px] leading-none opacity-60"><GameIcon icon="lock" size={14} /></span>}
                 <div className="rounded-full flex items-center justify-center" style={{ ...circleStyle, width: 28, height: 28, boxShadow: locked ? 'none' : `0 0 5px ${c.color}55` }}>
                   <span className="font-heading text-[10px] font-bold text-white" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>{initial}</span>
                 </div>
@@ -230,7 +230,7 @@ export default function ShapeshiftSelect({
       <div className="flex justify-center">
         <button onClick={handleStart} disabled={!p1Ready || !p2Ready}
           className={`px-10 py-3 rounded-lg font-heading text-lg transition ${p1Ready && p2Ready ? 'bg-primary text-primary-foreground hover:opacity-80 shadow-lg' : 'bg-secondary text-muted-foreground cursor-not-allowed'}`}>
-          {p1Ready && p2Ready ? '▶ START SHAPESHIFT' : 'FILL ALL 6 SLOTS'}
+          {p1Ready && p2Ready ? ' START SHAPESHIFT' : 'FILL ALL 6 SLOTS'}
         </button>
       </div>
     </div>

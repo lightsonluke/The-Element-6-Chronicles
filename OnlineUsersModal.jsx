@@ -58,10 +58,10 @@ export default function OnlineUsersModal({ onClose }) {
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center" onClick={onClose}>
       <div className="bg-card border border-border rounded-2xl p-5 w-[460px] max-w-[94%] max-h-[80vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-heading text-base text-accent"><GameIcon emoji="👥" size={14} /> ONLINE USERS</h3>
+          <h3 className="font-heading text-base text-accent"><GameIcon icon="users" size={14} /> ONLINE USERS</h3>
           <div className="flex gap-2">
-            <button onClick={load} className="text-[10px] text-accent"><GameIcon emoji="↻" size={14} /></button>
-            <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon emoji="✕" size={14} /></button>
+            <button onClick={load} className="text-[10px] text-accent"><GameIcon icon="redo" size={14} /></button>
+            <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button>
           </div>
         </div>
 
@@ -80,8 +80,8 @@ export default function OnlineUsersModal({ onClose }) {
               <div key={i} className="flex items-center gap-2 bg-muted/30 border border-border rounded-lg px-2 py-1.5">
                 <div className="w-3 h-3 rounded-full" style={{ background: u.color || '#66dd66' }} />
                 <span className="font-heading text-xs text-foreground flex-1">{u.name || u.username || 'Player'}</span>
-                {u.room && <span className="text-[9px] text-muted-foreground font-heading"><GameIcon emoji="🏠" size={14} /> {u.room}</span>}
-                {u.last_active && <span className="text-[9px] text-muted-foreground"><GameIcon emoji="⚡" size={14} /> active</span>}
+                {u.room && <span className="text-[9px] text-muted-foreground font-heading"><GameIcon icon="home" size={14} /> {u.room}</span>}
+                {u.last_active && <span className="text-[9px] text-muted-foreground"><GameIcon icon="warning" size={14} /> active</span>}
               </div>
             ))}
           </div>

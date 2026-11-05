@@ -84,8 +84,8 @@ export default function PartyPanel({ userId, username, serverCode, hubPlayers, o
     <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center" onClick={onClose}>
       <div className="bg-card border-2 border-primary rounded-xl p-5 w-[460px] max-w-[94%] max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-heading text-base text-accent"><GameIcon emoji="👥" size={14} /> PARTY</h3>
-          <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon emoji="✕" size={14} /></button>
+          <h3 className="font-heading text-base text-accent"><GameIcon icon="users" size={14} /> PARTY</h3>
+          <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button>
         </div>
 
         {loading ? (

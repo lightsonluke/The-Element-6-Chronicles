@@ -991,7 +991,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
       // Freeze ball at center during post-goal countdown
       if (resetCountdownRef.current > 0) { ball.x = 640; ball.y = 300; ball.vx = 0; ball.vy = 0; ball.damage = 1; ball.trail = []; }
 
-      // ── Timer: 90 (180 internal) <GameIcon emoji="→" size={14} /> 30 extra time (60 internal) <GameIcon emoji="→" size={14} /> sudden death OR penalties ──
+      // ── Timer: 90 (180 internal) <GameIcon icon="arrowRight" size={14} /> 30 extra time (60 internal) <GameIcon icon="arrowRight" size={14} /> sudden death OR penalties ──
       if (gameRef.current.timer >= (gameRef.current.maxTime || baseTime) && !suddenDeathRef.current && !penPhaseRef.current) {
         const p1Won = scoreRef.current.p1 > scoreRef.current.p2 ? true : scoreRef.current.p2 > scoreRef.current.p1 ? false : null;
         if (p1Won === null) {
@@ -1303,7 +1303,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         // Instructions under the score
         ctx.textAlign = 'center';
         ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = 'bold 8px Orbitron';
-        ctx.fillText('SHOOTER: <GameIcon emoji="↑" size={14} />=high  <GameIcon emoji="↓" size={14} />=low  |  KEEPER: <GameIcon emoji="↑" size={14} />=jump', W / 2, 138);
+        ctx.fillText('SHOOTER: <GameIcon icon="arrowUp" size={14} />=high  <GameIcon icon="arrowDown" size={14} />=low  |  KEEPER: <GameIcon icon="arrowUp" size={14} />=jump', W / 2, 138);
 
         if (penStateRef.current === 'input') {
           const shooterName = penShooterRef.current === 1 ? char1.name : char2.name;
@@ -1421,7 +1421,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
   return (
     <div className="el6-match-viewport">
       <div className="fixed top-4 left-4 z-[100] flex items-center gap-2">
-        {!tournamentMode && <button onClick={finishQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Menu</button>}
+        {!tournamentMode && <button onClick={finishQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Menu</button>}
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className={`el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80 ${tournamentMode ? 'ml-auto' : ''}`}>PAUSE (ESC)</button>
       </div>
       <GameCanvasPortal>

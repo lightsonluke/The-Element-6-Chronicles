@@ -126,7 +126,7 @@ export default function SportsLobbyReadyUp({ lobby, role, me, sport, favoriteId,
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-3xl mx-auto p-4">
       <div className="flex items-center justify-between w-full">
-        <button onClick={leaveLobby} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Leave</button>
+        <button onClick={leaveLobby} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Leave</button>
         <h2 className="text-xl font-heading text-accent tracking-wider">{sportName} LOBBY · {live.room_code}</h2>
         <div className="w-20" />
       </div>

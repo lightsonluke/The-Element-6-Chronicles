@@ -123,7 +123,7 @@ export default function PartyScreen({ onBack, onQueueMode }) {
 
   if(loading)return <div className="py-20 text-center">Loading party…</div>;
   return <div className="w-full max-w-4xl flex flex-col gap-4">
-    <div className="flex items-center justify-between"><button onClick={onBack} className="px-4 py-2 bg-secondary rounded-lg"><GameIcon emoji="←" size={14}/> BACK</button><h2 className="text-2xl font-heading text-accent">PARTY</h2><div className="w-20"/></div>
+    <div className="flex items-center justify-between"><button onClick={onBack} className="px-4 py-2 bg-secondary rounded-lg"><GameIcon icon="info" size={14}/> BACK</button><h2 className="text-2xl font-heading text-accent">PARTY</h2><div className="w-20"/></div>
     {error&&<div className="text-destructive text-xs text-center">{error}</div>}
     {!party ? <div className="grid md:grid-cols-2 gap-4">
       <div className="bg-card border rounded-xl p-5"><h3 className="font-heading text-primary">CREATE PARTY</h3><p className="text-xs text-muted-foreground mt-1">Up to 8 players. Public parties appear in the browser.</p>

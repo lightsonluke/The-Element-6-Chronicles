@@ -13,13 +13,13 @@ export default function TournamentMatchSummary({ homeChar, awayChar, homeScore, 
         <div className="flex flex-col items-center gap-2">
           <div className="w-12 h-12 rounded-full" style={{ backgroundColor: homeChar?.color }} />
           <span className="font-heading text-xs">{homeChar?.name}</span>
-          {humanHome && <span className="text-[8px] text-accent"><GameIcon emoji="★" size={14} /></span>}
+          {humanHome && <span className="text-[8px] text-accent"><GameIcon icon="star" size={14} /></span>}
         </div>
         <span className="text-5xl font-heading text-accent">{homeScore} - {awayScore}</span>
         <div className="flex flex-col items-center gap-2">
           <div className="w-12 h-12 rounded-full" style={{ backgroundColor: awayChar?.color }} />
           <span className="font-heading text-xs">{awayChar?.name}</span>
-          {humanAway && <span className="text-[8px] text-accent"><GameIcon emoji="★" size={14} /></span>}
+          {humanAway && <span className="text-[8px] text-accent"><GameIcon icon="star" size={14} /></span>}
         </div>
       </div>
       <div className="w-full max-w-md">
@@ -29,13 +29,13 @@ export default function TournamentMatchSummary({ homeChar, awayChar, homeScore, 
           {sorted.map((g, i) => (
             <div key={i} className="flex items-center gap-2 text-xs py-0.5">
               <span className="font-heading text-accent w-12">{g.second}'</span>
-              <span style={{ color: g.team === 'home' ? homeChar?.color : awayChar?.color }}><GameIcon emoji="●" size={14} /></span>
+              <span style={{ color: g.team === 'home' ? homeChar?.color : awayChar?.color }}><GameIcon icon="box" size={14} /></span>
               <span className="font-body">{g.team === 'home' ? homeChar?.name : awayChar?.name} scored</span>
             </div>
           ))}
         </div>
       </div>
-      <button onClick={onContinue} className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90">CONTINUE <GameIcon emoji="→" size={14} /></button>
+      <button onClick={onContinue} className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90">CONTINUE <GameIcon icon="arrowRight" size={14} /></button>
     </div>
   );
 }

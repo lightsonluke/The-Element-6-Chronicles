@@ -35,7 +35,7 @@ export default function MenuButton({ label, onClick, disabled, notifCount, isDar
             {label}
           </span>
           {hasSubItems && (
-            <span className="text-[8px] text-white/70">{expanded ? <GameIcon emoji="▼" size={14} /> : <GameIcon emoji="▶" size={14} />}</span>
+            <span className="text-[8px] text-white/70">{expanded ? <GameIcon icon="info" size={14} /> : <GameIcon icon="play" size={14} />}</span>
           )}
           {notifCount > 0 && (
             <span className="bg-destructive text-destructive-foreground text-[9px] font-heading rounded-full px-1.5 min-w-[18px] text-center leading-tight">

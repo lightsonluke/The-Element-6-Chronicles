@@ -111,7 +111,7 @@ export default function TrophyCeremony({ champion, onDone, duration = 10 }) {
       <canvas ref={canvasRef} width={800} height={500}
         className="rounded-xl border-2 border-accent shadow-2xl w-full"
         style={{ maxWidth: '800px', aspectRatio: '8 / 5', height: 'auto' }} />
-      <button onClick={onDone} className="px-5 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80">SKIP <GameIcon emoji="→" size={14} /></button>
+      <button onClick={onDone} className="px-5 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80">SKIP <GameIcon icon="arrowRight" size={14} /></button>
     </div>
   );
 }

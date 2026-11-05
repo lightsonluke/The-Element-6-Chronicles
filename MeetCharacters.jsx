@@ -26,7 +26,7 @@ export default function MeetCharacters({ onBack, favoriteId, onSetFavorite, prog
   const catTabs = [
     ...ERAS,
     { id: 'custom', name: 'Custom', short: 'CUSTOM', accent: '#FF66AA' },
-    { id: 'achievements', name: 'Achievements', short: <GameIcon emoji="🏆" size={14} />, accent: '#FFD700' },
+    { id: 'achievements', name: 'Achievements', short: <GameIcon icon="trophy" size={14} />, accent: '#FFD700' },
   ];
   const items = category === 'custom' ? customChars : category === 'achievements' ? [] : getRosterForEra(category);
 
@@ -92,7 +92,7 @@ export default function MeetCharacters({ onBack, favoriteId, onSetFavorite, prog
           <h2 className="text-2xl font-heading text-foreground tracking-wider">MEET THE CHARACTERS</h2>
           <p className="text-xs text-muted-foreground font-body">Legends of the Element 6 — heroes, villains, and cosmic guardians</p>
         </div>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       <div className="flex gap-1.5 flex-wrap justify-center">
@@ -112,7 +112,7 @@ export default function MeetCharacters({ onBack, favoriteId, onSetFavorite, prog
         <div className="w-full">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-2xl font-heading text-accent tracking-wider">ACHIEVEMENTS</h2>
-            <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+            <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
           </div>
           <AchievementsPanel progress={progress} />
         </div>
@@ -129,7 +129,7 @@ export default function MeetCharacters({ onBack, favoriteId, onSetFavorite, prog
             <button key={c.id} onClick={() => setSelected(c)}
               className={`flex flex-col items-center p-2 rounded-lg border transition hover:scale-105 ${selected?.id === c.id ? 'border-accent bg-accent/10' : 'border-border hover:border-muted-foreground'}`}>
               <div className="w-6 h-6 rounded-full" style={{ backgroundColor: c.color, boxShadow: `0 0 10px ${c.color}88` }} />
-              <span className="text-[8px] font-heading text-foreground mt-1 text-center leading-tight">{c.id === favoriteId ? '★ ' : ''}{c.name}</span>
+              <span className="text-[8px] font-heading text-foreground mt-1 text-center leading-tight">{c.id === favoriteId ? ' ' : ''}{c.name}</span>
             </button>
           ))}
         </div>
@@ -153,7 +153,7 @@ export default function MeetCharacters({ onBack, favoriteId, onSetFavorite, prog
                   </h3>
                   <button onClick={() => onSetFavorite?.(selected.id)}
                     className={`px-3 py-1 rounded font-heading text-xs ${selected.id === favoriteId ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground hover:opacity-80'}`}>
-                    {selected.id === favoriteId ? '★ FAVORITE' : '☆ SET FAVORITE'}
+                    {selected.id === favoriteId ? ' FAVORITE' : ' SET FAVORITE'}
                   </button>
                 </div>
                 <p className="text-sm text-muted-foreground font-body mb-3 italic">"{selected.title}"</p>
@@ -216,7 +216,7 @@ export default function MeetCharacters({ onBack, favoriteId, onSetFavorite, prog
                 {selected.superMove && (
                   <div className="rounded-lg p-2 border col-span-2" style={{ borderColor: selected.color + '55', backgroundColor: selected.color + '11' }}>
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-heading text-accent"><GameIcon emoji="⚡" size={14} /> SUPER MOVE</span>
+                      <span className="text-[9px] font-heading text-accent"><GameIcon icon="warning" size={14} /> SUPER MOVE</span>
                       <span className="text-[10px] font-heading text-foreground ml-1">{selected.superMove.name}</span>
                     </div>
                     <p className="text-[9px] text-muted-foreground font-body">{selected.superMove.desc}</p>
@@ -225,7 +225,7 @@ export default function MeetCharacters({ onBack, favoriteId, onSetFavorite, prog
                 {selected.heavyAttack && (
                   <div className="rounded-lg p-2 border col-span-2" style={{ borderColor: selected.color + '44', backgroundColor: selected.color + '0a' }}>
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-heading text-accent"><GameIcon emoji="💥" size={14} /> HEAVY</span>
+                      <span className="text-[9px] font-heading text-accent"><GameIcon icon="exclamationCircle" size={14} /> HEAVY</span>
                       <span className="text-[10px] font-heading text-foreground ml-1">{selected.heavyAttack.name}</span>
                     </div>
                     <p className="text-[9px] text-muted-foreground font-body">{selected.heavyAttack.desc}</p>

@@ -60,10 +60,10 @@ export default function HonoredBotTracking({ onBack }) {
     <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
       <div className="flex justify-between items-center w-full">
         <h2 className="text-2xl font-heading text-accent tracking-wider flex items-center gap-2">
-          <GameIcon emoji="👑" size={20} color="var(--accent)" /> HONORED BOT TRACKING
+          <GameIcon icon="trophy" size={20} color="var(--accent)" /> HONORED BOT TRACKING
         </h2>
         <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">
-          <GameIcon emoji="←" size={14} /> BACK
+          <GameIcon icon="info" size={14} /> BACK
         </button>
       </div>
 

@@ -41,12 +41,12 @@ export default function MasteryRewardsPanel({ char, charMastery, equippedSkinId,
               {/* Tint preview - character color circle overlaid with tint */}
               <div className="flex items-center gap-2 my-1">
                 <div className="w-7 h-7 rounded-full border-2 border-border" style={{ backgroundColor: char.color }} />
-                <GameIcon emoji="->" size={14} />
+                <GameIcon icon="info" size={14} />
                 <div className="w-7 h-7 rounded-full border-2 border-border" style={{ backgroundColor: unlocked ? reward.skinTint : '#444', boxShadow: unlocked ? `0 0 6px ${reward.skinTint}` : 'none' }} />
               </div>
               <p className="text-[8px] font-heading text-center">{reward.badgeName} Tint</p>
               {!unlocked ? (
-                <p className="text-[7px] text-destructive font-heading mt-1 text-center"><GameIcon emoji="X" size={14} /> Rank {reward.rankId} required</p>
+                <p className="text-[7px] text-destructive font-heading mt-1 text-center"><GameIcon icon="close" size={14} /> Rank {reward.rankId} required</p>
               ) : (
                 <button onClick={() => onEquipSkin?.(selectedChar, isEquipped ? null : tintId)}
                   className={`px-2 py-0.5 rounded text-[8px] font-heading mt-1 w-full ${isEquipped ? 'bg-secondary text-secondary-foreground' : 'bg-accent text-accent-foreground'}`}>

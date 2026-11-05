@@ -69,7 +69,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
   const [drag, setDrag] = useState(null);
   const [mousePos, setMousePos] = useState(null);
   const [stageName, setStageName] = useState('');
-  const [stageEmoji, setStageEmoji] = useState('🎨');
+  const [stageIcon, setStageIcon] = useState('map');
   const [backdrop, setBackdrop] = useState('splitcity');
   const [showGrid, setShowGrid] = useState(true);
   const [gridLock, setGridLock] = useState(false);
@@ -245,7 +245,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5;
         ctx.strokeRect(p.x, p.y, p.w, p.h);
         ctx.fillStyle = '#FFFFFF'; ctx.font = '9px Orbitron'; ctx.textAlign = 'left';
-        ctx.fillText(`#${i + 1} ${mat.name}${p.move ? ' ⛯' : ''}${p.destroyable ? ' 💥' : ''}`, p.x + 4, p.y - 4);
+        ctx.fillText(`#${i + 1} ${mat.name}${p.move ? ' ' : ''}${p.destroyable ? ' ' : ''}`, p.x + 4, p.y - 4);
         // Destroyable platform indicator — crack pattern overlay
         if (p.destroyable) {
           ctx.strokeStyle = 'rgba(255,100,50,0.5)'; ctx.lineWidth = 1.5;
@@ -777,7 +777,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
     setFreehandStrokes(storedFreehand);
     setPlatforms(Array.isArray(stage.freehandStrokes) ? rawPlatforms.filter(p => !p?._freehandSegment) : rawPlatforms);
     setStageName(stage.name || 'Custom Stage');
-    setStageEmoji(stage.emoji || '🎨');
+    setStageIcon(stage.icon || 'map');
     setBackdrop(stage.backdrop || 'splitcity');
     setPerimeter(stage.killPerimeter || { enabled: true, left: -500, right: 1780, top: -600, bottom: 1170, motions: { left: null, right: null, top: null, bottom: null } });
     setStageCamera(stage.stageCamera || { zoom: stage.cameraZoom || 1, motion: stage.cameraMotion || null });
@@ -879,8 +879,8 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           {tab === 'editor' && <button onClick={() => setPreviewOpen(true)} className="px-3 py-1 rounded font-heading text-xs bg-cyan-600 text-white">PREVIEW</button>}
           <button onClick={() => setTab('editor')} className={`px-3 py-1 rounded font-heading text-xs ${tab === 'editor' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>EDIT</button>
           <button onClick={() => setTab('stages')} className={`px-3 py-1 rounded font-heading text-xs ${tab === 'stages' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>SEE STAGES ({savedStages.length})</button>
-          {tab === 'stages' && <button onClick={() => setShowWorldStages(true)} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="🌍" size={14} /> WORLD STAGES</button>}
-          <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
+          {tab === 'stages' && <button onClick={() => setShowWorldStages(true)} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="globe" size={14} /> WORLD STAGES</button>}
+          <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
       </div>
 
@@ -896,7 +896,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
               spawnPoints: stageData.spawnPoints || null,
               backdrop: stageData.backdrop || s.backdrop || 'city',
               name: s.name || stageData.name || 'Imported Stage',
-              emoji: s.emoji || stageData.emoji || '🎨',
+              icon: s.icon || stageData.icon || 'map',
               hazards: Array.isArray(stageData.hazards) ? stageData.hazards : [],
               objects: Array.isArray(stageData.objects) ? stageData.objects : [],
               freehandStrokes: (Array.isArray(stageData.freehandStrokes) ? stageData.freehandStrokes : []).map(st => sanitizeFreehandStroke(st)).filter(Boolean).slice(0,64),
@@ -915,7 +915,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
               spawnPoints: stageData.spawnPoints || null,
               backdrop: stageData.backdrop || s.backdrop || 'city',
               name: s.name || stageData.name || 'Downloaded Stage',
-              emoji: s.emoji || stageData.emoji || '🎨',
+              icon: s.icon || stageData.icon || 'map',
               hazards: Array.isArray(stageData.hazards) ? stageData.hazards : [],
               objects: Array.isArray(stageData.objects) ? stageData.objects : [],
               freehandStrokes: (Array.isArray(stageData.freehandStrokes) ? stageData.freehandStrokes : []).map(st => sanitizeFreehandStroke(st)).filter(Boolean).slice(0,64),
@@ -930,14 +930,14 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         <div className="flex flex-col gap-3">
           <div className="flex gap-2 flex-wrap">
             <button onClick={() => setShowWorldStages(false)} className="px-3 py-1 bg-accent text-accent-foreground rounded font-heading text-xs">MY STAGES ({savedStages.length})</button>
-            <button onClick={() => setShowWorldStages(true)} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="🌍" size={14} /> WORLD STAGES</button>
+            <button onClick={() => setShowWorldStages(true)} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="globe" size={14} /> WORLD STAGES</button>
           </div>
           {savedStages.length === 0 ? (
             <div className="bg-card border border-border rounded-xl p-8 text-center">
               <p className="text-muted-foreground font-body text-sm">No saved stages yet. Create one in the EDIT tab, or browse WORLD STAGES to play stages made by anyone.</p>
               <div className="flex justify-center gap-2 mt-4">
-                <button onClick={() => setTab('editor')} className="px-4 py-2 bg-accent text-accent-foreground rounded font-heading text-xs hover:opacity-80">GO TO EDITOR <GameIcon emoji="→" size={14} /></button>
-                <button onClick={() => setShowWorldStages(true)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="🌍" size={14} /> WORLD STAGES</button>
+                <button onClick={() => setTab('editor')} className="px-4 py-2 bg-accent text-accent-foreground rounded font-heading text-xs hover:opacity-80">GO TO EDITOR <GameIcon icon="arrowRight" size={14} /></button>
+                <button onClick={() => setShowWorldStages(true)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon icon="globe" size={14} /> WORLD STAGES</button>
               </div>
             </div>
           ) : (
@@ -945,13 +945,13 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
               {savedStages.map((stage, i) => (
                 <div key={i} className="bg-card border border-border rounded-xl p-3 flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl">{stage.emoji || <GameIcon emoji="🎨" size={14} />}</span>
+                    <GameIcon icon={stage.icon || "map"} size={20} />
                     <span className="font-heading text-sm text-foreground">{stage.name || 'Custom Stage'}</span>
                   </div>
                   <StageThumbnail stage={stage} renderFn={renderThumbnail} />
                   <div className="flex gap-2">
-                    <button onClick={() => loadStage(stage, i)} className="flex-1 px-3 py-1.5 bg-accent text-accent-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="✎" size={14} /> EDIT</button>
-                    <button onClick={() => { if (confirm(`Delete "${stage.name || 'Custom Stage'}"?`)) onDeleteStage?.(i); }} className="px-3 py-1.5 bg-destructive text-destructive-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="🗑" size={14} /> DELETE</button>
+                    <button onClick={() => loadStage(stage, i)} className="flex-1 px-3 py-1.5 bg-accent text-accent-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon icon="edit" size={14} /> EDIT</button>
+                    <button onClick={() => { if (confirm(`Delete "${stage.name || 'Custom Stage'}"?`)) onDeleteStage?.(i); }} className="px-3 py-1.5 bg-destructive text-destructive-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon icon="trash" size={14} /> DELETE</button>
                   </div>
                   <p className="text-[9px] text-muted-foreground font-body">
                     {(Array.isArray(stage.platforms) ? stage.platforms : []).length} platforms · {BACKDROPS.find(b => b.id === stage.backdrop)?.name || 'Default'}{((stage.hazards || []).length || (stage.objects || []).length) ? ` · ${(stage.hazards || []).length} hazards · ${(stage.objects || []).length} items` : ''}
@@ -1086,7 +1086,7 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
               {motionPattern === 'chain' && <><span className="text-[10px] font-heading text-muted-foreground">LOOP</span><button onClick={()=>setMotionLoop(v=>!v)} className={`px-2 py-1 rounded text-[10px] border-2 ${motionLoop?'border-accent bg-accent/20':'border-border'}`}>{motionLoop?'ON ↻':'OFF'}</button><button onClick={()=>setMotionChain(c=>c.length>=10?c:[...c,makeMotionStep(motionDirection,motionDistance,motionSpeed*100)])} className="px-2 py-1 rounded text-[10px] bg-secondary">+ STEP</button><span className="text-[9px]">{motionChain.length}/10</span><button onClick={()=>setMotionChain(c=>c.length>1?c.slice(0,-1):c)} className="px-2 py-1 rounded text-[10px] bg-secondary">− STEP</button></>}
               <button onClick={()=>applyMotionToTarget(buildMotion(motionPattern,motionDirection,motionDistance,motionSpeed*100,motionLoop,motionChain))} disabled={!motionTarget} className="px-2 py-1 rounded text-[10px] bg-primary text-primary-foreground disabled:opacity-40">APPLY</button>
               <button onClick={()=>{if(motionTarget?.kind==='platform')setPlatforms(p=>p.map((q,i)=>i===motionTarget.index?{...q,move:null,motion:null}:q)); if(motionTarget?.kind==='hazard')setHazards(h=>h.map((q,i)=>i===motionTarget.index?{...q,move:null,motion:null}:q)); if(motionTarget?.kind==='freehand')setFreehandStrokes(st=>st.map((q,i)=>i===motionTarget.index?{...q,move:null,motion:null}:q));}} disabled={!motionTarget} className="px-2 py-1 rounded text-[10px] bg-destructive text-destructive-foreground disabled:opacity-40">CLEAR</button>
-              {motionTarget?.kind === 'platform' && <button onClick={()=>setPlatforms(p=>p.map((q,i)=>i===motionTarget.index?{...q,destroyable:!q.destroyable}:q))} className={`px-2 py-1 rounded text-[10px] border-2 ${platforms[motionTarget.index]?.destroyable ? 'border-accent bg-accent/20' : 'border-border'}`}>{platforms[motionTarget.index]?.destroyable ? 'DESTROY ON 💥' : 'DESTROY OFF'}</button>}
+              {motionTarget?.kind === 'platform' && <button onClick={()=>setPlatforms(p=>p.map((q,i)=>i===motionTarget.index?{...q,destroyable:!q.destroyable}:q))} className={`px-2 py-1 rounded text-[10px] border-2 ${platforms[motionTarget.index]?.destroyable ? 'border-accent bg-accent/20' : 'border-border'}`}>{platforms[motionTarget.index]?.destroyable ? 'DESTROY ON ' : 'DESTROY OFF'}</button>}
               <span className="text-[9px] text-muted-foreground">Chain steps are executed in order. Loop continues from the current endpoint instead of snapping back.</span>
             </div>
           )}
@@ -1112,13 +1112,13 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           <button onClick={() => setShowGrid(g => !g)} className={`px-3 py-1 rounded font-heading text-xs ${showGrid ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>GRID: {showGrid ? 'ON' : 'OFF'}</button>
           <button onClick={() => setGridLock(g => !g)} className={`px-3 py-1 rounded font-heading text-xs ${gridLock ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>LOCK: {gridLock ? 'ON' : 'OFF'}</button>
           {material === 'conveyor' && (
-            <button onClick={() => setConveyorDir(d => -d)} className="px-3 py-1 rounded font-heading text-xs bg-accent text-accent-foreground">CONVEYOR: {conveyorDir > 0 ? <GameIcon emoji="→" size={14} /> : <GameIcon emoji="←" size={14} />}</button>
+            <button onClick={() => setConveyorDir(d => -d)} className="px-3 py-1 rounded font-heading text-xs bg-accent text-accent-foreground">CONVEYOR: {conveyorDir > 0 ? <GameIcon icon="arrowRight" size={14} /> : <GameIcon icon="info" size={14} />}</button>
           )}
           <button onClick={() => setPlatforms([{ x: 40, y: PLAY_H - 120, w: PLAY_W - 80, h: 40, material: 'normal' }, { x: PLAY_W / 2 - 160, y: PLAY_H / 2, w: 320, h: 18, material: 'normal' }])} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs">RESET</button>
           <button onClick={async () => {
             // Platforms/hazards/objects/spawns are stored in game coords (1280×720),
             // so no scaling is needed — they map 1:1 to the match canvas.
-            const stageData = { platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)], freehandStrokes, name: stageName || 'Custom Stage', emoji: stageEmoji, backdrop, killPerimeter: perimeter, stageCamera: { ...stageCamera, zoom: Number(stageCamera.zoom || 1), motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null }, cameraZoom: Number(stageCamera.zoom || 1), cameraMotion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null, spawnPoints, hazards, objects, _editingIndex: editingIndex, downloaded: isDownloaded, originalOwnerId };
+            const stageData = { platforms: [...platforms.filter(p => !p?._freehandSegment), ...expandFreehandToPlatforms(freehandStrokes)], freehandStrokes, name: stageName || 'Custom Stage', icon: stageIcon, backdrop, killPerimeter: perimeter, stageCamera: { ...stageCamera, zoom: Number(stageCamera.zoom || 1), motion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null }, cameraZoom: Number(stageCamera.zoom || 1), cameraMotion: cameraMotionEnabled ? buildMotion(cameraMotionPattern, cameraMotionDirection, cameraMotionDistance, cameraMotionSpeed, cameraMotionLoop, cameraMotionChain) : null, spawnPoints, hazards, objects, _editingIndex: editingIndex, downloaded: isDownloaded, originalOwnerId };
             onSave(stageData);
             // Auto-publish to world — only for stages you created (downloaded stages stay local)
             if (userId && !isDownloaded) {
@@ -1131,15 +1131,15 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
                   // Keep only the most-recently-updated record; update it and delete any older duplicates
                   existing.sort((a, b) => (b.updated_date || '').localeCompare(a.updated_date || ''));
                   const keep = existing[0];
-                  await entity.update(keep.id, { stage_data: stageData, backdrop, emoji: stageEmoji });
+                  await entity.update(keep.id, { stage_data: stageData, backdrop, icon: stageIcon });
                   for (const dup of existing.slice(1)) {
                     try { await entity.delete(dup.id); } catch (e) {}
                   }
                 } else {
-                  await entity.create({ owner_user_id: userId, owner_username: username, name: stageName || 'Custom Stage', description: '', emoji: stageEmoji, backdrop, stage_data: stageData });
+                  await entity.create({ owner_user_id: userId, owner_username: username, name: stageName || 'Custom Stage', description: '', icon: stageIcon, backdrop, stage_data: stageData });
                 }
                 sfx.purchaseSuccess();
-                setPublishStatus('Published to world! ✓');
+                setPublishStatus('Published to world! ');
               } catch (e) { setPublishStatus('Publish failed'); sfx.warning(); }
               setTimeout(() => setPublishStatus(''), 3000);
             } else if (isDownloaded) {
@@ -1172,8 +1172,10 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
           <input type="text" value={stageName} onChange={e => setStageName(e.target.value)} placeholder="Stage name" maxLength={20}
             className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs font-body w-32" />
           <span className="text-[10px] font-heading text-muted-foreground">ICON:</span>
-          <input type="text" value={stageEmoji} onChange={e => setStageEmoji(e.target.value)} maxLength={2}
-            className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-sm w-10 text-center" />
+          <GameIcon icon={stageIcon} size={16} className="text-accent" />
+          <select value={stageIcon} onChange={e => setStageIcon(e.target.value)} className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs" aria-label="Stage icon">
+            <option value="map">Map</option><option value="flag">Flag</option><option value="layers">Layers</option><option value="flower">Flower</option><option value="game">Arena</option>
+          </select>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] font-heading text-muted-foreground">BACKDROP:</span>
@@ -1221,15 +1223,15 @@ export default function StageEditor({ onSave, onBack, onDeleteStage, savedStages
         <p>• <b>Right-click:</b> Right-click anywhere on the canvas to instantly place a default-sized block (160×20) using the currently selected material.</p>
         <p>• <b>Grid toggle:</b> Turn the grid on/off for easier alignment.</p>
         <p>• <b>Grid Lock:</b> When ON, platforms snap to 40px grid lines for perfect symmetry.</p>
-        <p>• <b>Conveyor Direction:</b> When Conveyor material is selected, use the <GameIcon emoji="→" size={14} />/<GameIcon emoji="←" size={14} /> button to set push direction.</p>
+        <p>• <b>Conveyor Direction:</b> When Conveyor material is selected, use the <GameIcon icon="arrowRight" size={14} />/<GameIcon icon="info" size={14} /> button to set push direction.</p>
         <p>• <b>REMOVE mode:</b> Click on any platform to delete it.</p>
         <p>• <b>SEE STAGES tab:</b> View, edit, or delete your saved stages.</p>
         <p>• <b>Materials:</b> Ice = near-zero friction. Lava = fall through slowly, take damage, swim up. Water = fall through slowly, swim up. Bounce = launches you upward. Cloud = pass-through, no effect. Spike = damage + knockback. Conveyor = pushes you sideways (direction settable). Acid = damages + disables powers temporarily. Sand = slow to walk on. Quicksand = slowly sinks you. Snow = slowly sinks you, weak jumps. Tar = traps you until hit by an attack. Metal/Glass/Wood/Grass/Rubber/Crystal = normal solid.</p>
-        <p>• <b>Name & Icon:</b> Give your stage a name and pick an emoji icon — it shows in the map select screen.</p>
+        <p>• <b>Name & Icon:</b> Give your stage a name and choose a vector icon for the map select screen.</p>
         <p>• <b>Backdrop:</b> Choose from every real stage backdrop already built into Element 6.</p>
         <p>• You can save up to 10 custom stages (this includes stages you download from World Stages — downloads count toward the 10-slot limit).</p>
         <p>• <b>SPAWN mode:</b> Click on the canvas to place a spawn point for P1-P4. Use the P1/P2/P3/P4 buttons to select which player's spawn to move. Spawn points are saved with the stage.</p>
-        <p>• <b>MOTION mode:</b> Click any platform to make it move. Set the motion type (<GameIcon emoji="←" size={14} /> <GameIcon emoji="→" size={14} /> horizontal, <GameIcon emoji="↑" size={14} /> <GameIcon emoji="↓" size={14} /> vertical, or STATIC), then adjust SPEED and DISTANCE. A dashed gold line shows the platform's travel range. Click CLEAR to remove motion from the currently selected (orange box) platform. Moving platforms carry any fighter standing on them during a match. Use the DESTROY toggle to mark a platform as destructible — it shows a 💥 icon and crack overlay. Destructible platforms break when hit by attacks during matches and regenerate after 10 seconds.</p>
+        <p>• <b>MOTION mode:</b> Click any platform to make it move. Set the motion type (<GameIcon icon="info" size={14} /> <GameIcon icon="arrowRight" size={14} /> horizontal, <GameIcon icon="arrowUp" size={14} /> <GameIcon icon="arrowDown" size={14} /> vertical, or STATIC), then adjust SPEED and DISTANCE. A dashed gold line shows the platform's travel range. Click CLEAR to remove motion from the currently selected (orange box) platform. Moving platforms carry any fighter standing on them during a match. Use the DESTROY toggle to mark a platform as destructible — it shows a  icon and crack overlay. Destructible platforms break when hit by attacks during matches and regenerate after 10 seconds.</p>
         <p>• <b>HAZARD mode:</b> Pick a hazard type and click the canvas to place it. Hazards damage fighters during matches. Use REMOVE mode to delete placed hazards.</p>
         <p>• <b>Moving Saw motion:</b> With the Moving Saw type selected, use AXIS (←→ / ↑↓), SPD (speed), and RNG (travel range) to set how a newly placed saw moves. Click an existing saw to select it (orange) and edit its motion live. A dashed line shows the travel path.</p>
         <p>• <b>Portals:</b> Place portals in pairs — they auto-link (1&2, 3&4…). A random-colored dotted line connects each linked pair so you can track them. Fighters teleport between linked portals (1s cooldown).</p>

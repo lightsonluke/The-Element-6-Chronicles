@@ -28,7 +28,7 @@ function normalizeStage(row) {
     ...row,
     stage_data: data,
     backdrop: row.backdrop || data.backdrop || 'splitcity',
-    emoji: row.emoji || data.emoji || '🎨',
+    icon: row.icon || data.icon || 'map',
     name: row.name || data.name || 'Untitled Stage',
   };
 }
@@ -169,7 +169,7 @@ export default function WorldStages({ onBack, onPlay, onDownload }) {
           <p className="text-xs text-muted-foreground font-body">Public stages from every creator — no owner or region filter.</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={load} disabled={loading} className="px-3 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs disabled:opacity-50"><GameIcon emoji="↻" size={14} /> REFRESH</button>
+          <button onClick={load} disabled={loading} className="px-3 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs disabled:opacity-50"><GameIcon icon="redo" size={14} /> REFRESH</button>
           <button onClick={onBack} className="px-3 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs">← BACK</button>
         </div>
       </div>
@@ -191,7 +191,7 @@ export default function WorldStages({ onBack, onPlay, onDownload }) {
             <div key={stage.id || `${stage.owner_user_id}-${stage.name}`} className="bg-card border border-border rounded-xl p-3 flex flex-col gap-2">
               <Thumbnail stage={stage} />
               <div className="flex items-center gap-2">
-                <span className="text-2xl">{stage.emoji || '🎨'}</span>
+                <GameIcon icon={stage.icon || "map"} size={20} />
                 <div className="min-w-0">
                   <div className="font-heading text-sm truncate">{stage.name || 'Untitled Stage'}</div>
                   <div className="text-[10px] text-muted-foreground truncate">by {stage.owner_username || 'Player'} · {formatDate(stage.updated_date || stage.created_date)}</div>
@@ -199,11 +199,11 @@ export default function WorldStages({ onBack, onPlay, onDownload }) {
               </div>
               {stage.description && <p className="text-[10px] text-muted-foreground line-clamp-2">{stage.description}</p>}
               <div className="text-[9px] text-muted-foreground flex gap-3 flex-wrap">
-                <span>{platformCount(stage)} platforms</span><span>▶ {stage.plays || 0}</span><span>♥ {stage.likes || 0}</span>
+                <span>{platformCount(stage)} platforms</span><span> {stage.plays || 0}</span><span> {stage.likes || 0}</span>
               </div>
               <div className="flex gap-2 mt-auto">
                 <button onClick={() => onPlay?.(stage)} className="flex-1 px-3 py-2 bg-accent text-accent-foreground rounded font-heading text-xs hover:opacity-80">PLAY / IMPORT</button>
-                <button onClick={() => likeStage(stage)} disabled={!!liking[stage.id]} aria-pressed={!!likedIds[stage.id]} title="Like this stage" className="px-3 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80 disabled:opacity-50">{likedIds[stage.id] ? '♥ LIKED' : '♡ LIKE'}</button>
+                <button onClick={() => likeStage(stage)} disabled={!!liking[stage.id]} aria-pressed={!!likedIds[stage.id]} title="Like this stage" className="px-3 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80 disabled:opacity-50">{likedIds[stage.id] ? ' LIKED' : ' LIKE'}</button>
                 <button onClick={() => onDownload?.(stage)} className="px-3 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80">SAVE</button>
               </div>
             </div>

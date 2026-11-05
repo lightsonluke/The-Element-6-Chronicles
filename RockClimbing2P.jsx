@@ -341,10 +341,10 @@ export default function RockClimbing2P({ onExit, onAward, unlockedIds = ['yellow
       <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
         <div className="flex justify-between items-center w-full">
           <div>
-            <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="🧗" size={14} /> 2P COUCH CLIMB</h2>
+            <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="running" size={14} /> 2P COUCH CLIMB</h2>
             <p className="text-[11px] text-muted-foreground font-body mt-1 max-w-xl">Two climbers race up the SAME mountain with the directional launch system — time the oscillating arrow to fly hold-to-hold. Split-screen is side-by-side so each view stays properly proportioned, just smaller. Fall and you lose; first to the summit wins!</p>
           </div>
-          <button onClick={onExit} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={onExit} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
 
         <div className="grid grid-cols-2 gap-4 w-full">
@@ -372,9 +372,9 @@ export default function RockClimbing2P({ onExit, onAward, unlockedIds = ['yellow
           })}
         </div>
 
-        <button onClick={startRun} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon emoji="▶" size={14} /> START RACE</button>
+        <button onClick={startRun} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon icon="play" size={14} /> START RACE</button>
         <div className="text-[10px] text-muted-foreground font-body text-center">
-          <p><span className="text-accent font-bold">P1: <GameIcon emoji="↑" size={14} /></span> Launch (time the arrow!) · <span className="text-accent font-bold"><GameIcon emoji="↓" size={14} /></span> Let go · <span className="text-accent font-bold"><GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} /></span> Steer while falling</p>
+          <p><span className="text-accent font-bold">P1: <GameIcon icon="arrowUp" size={14} /></span> Launch (time the arrow!) · <span className="text-accent font-bold"><GameIcon icon="arrowDown" size={14} /></span> Let go · <span className="text-accent font-bold"><GameIcon icon="info" size={14} /><GameIcon icon="arrowRight" size={14} /></span> Steer while falling</p>
           <p><span className="text-accent font-bold">P2: W</span> Launch (time the arrow!) · <span className="text-accent font-bold">S</span> Let go · <span className="text-accent font-bold">A/D</span> Steer while falling</p>
           <p className="mt-1">The arrow above your head sets your launch direction. You can only steer left/right while falling after dropping. Same holds, grip, walls & fall-death as single player.</p>
         </div>
@@ -385,16 +385,16 @@ export default function RockClimbing2P({ onExit, onAward, unlockedIds = ['yellow
   if (phase === 'over' && result) {
     return (
       <div className="flex flex-col items-center gap-4 w-full max-w-lg">
-        <h2 className="text-3xl font-heading text-accent tracking-wider"><GameIcon emoji="🏁" size={14} /> RACE OVER!</h2>
+        <h2 className="text-3xl font-heading text-accent tracking-wider"><GameIcon icon="flag" size={14} /> RACE OVER!</h2>
         <p className="text-lg font-heading" style={{ color: result.winner === 0 ? '#3577E8' : '#E04646' }}>
-          {result.winner === 0 ? '<GameIcon emoji="🔵" size={14} /> P1 WINS!' : '<GameIcon emoji="🔴" size={14} /> P2 WINS!'}
+          {result.winner === 0 ? <><GameIcon icon="trophy" size={16} /> P1 WINS!</> : <><GameIcon icon="trophy" size={16} /> P2 WINS!</>}
         </p>
         <div className="w-full rounded-xl border border-border bg-card p-6 flex flex-col gap-2 items-center">
           <p className="text-[11px] font-heading text-muted-foreground tracking-wider">TIME</p>
           <p className="text-4xl font-heading text-primary">{fmtTime(result.time)}</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={startRun} className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="↻" size={14} /> RACE AGAIN</button>
+          <button onClick={startRun} className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="redo" size={14} /> RACE AGAIN</button>
           <button onClick={onExit} className="px-5 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">BACK</button>
         </div>
       </div>
@@ -404,8 +404,8 @@ export default function RockClimbing2P({ onExit, onAward, unlockedIds = ['yellow
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
-        <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-        <span className="text-[10px] text-muted-foreground font-body">P1: <GameIcon emoji="↑" size={14} />/<GameIcon emoji="↓" size={14} />/<GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} /> · P2: W/S/A/D · ESC: Quit — time the arrow to launch!</span>
+        <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Quit</button>
+        <span className="text-[10px] text-muted-foreground font-body">P1: <GameIcon icon="arrowUp" size={14} />/<GameIcon icon="arrowDown" size={14} />/<GameIcon icon="info" size={14} /><GameIcon icon="arrowRight" size={14} /> · P2: W/S/A/D · ESC: Quit — time the arrow to launch!</span>
       </div>
       {/* Side-by-side split-screen: two 900×720 viewports, left & right.
           The whole canvas scales down to fit the width, so each view keeps its

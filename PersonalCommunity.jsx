@@ -245,7 +245,7 @@ function nextTarget(st, id) {
   // Sleep check — go home and stay inside (per-character wake jitter)
   if (isCharSleeping(st, id)) {
     r.target = { x: r.home.x, y: r.home.y };
-    r.activity = 'Sleeping 💤';
+    r.activity = 'Sleeping ';
     r.insideBid = 'home';
     r.dwell = 400 + Math.floor(Math.random() * 400);
     return;
@@ -254,7 +254,7 @@ function nextTarget(st, id) {
   const hg = (st.hangouts || []).find(h => h.members.includes(id) && h.until > (st.tick || 0));
   if (hg) {
     r.target = { x: hg.spot + (r._hgOffset || 0), y: GROUND_Y };
-    r.activity = 'Hanging out 👥';
+    r.activity = 'Hanging out ';
     r.insideBid = null;
     r.dwell = Math.max(r.dwell, 80);
     return;
@@ -273,7 +273,7 @@ function nextTarget(st, id) {
     const dest = ALL_BUILDINGS.find(b => b.id === bid) || BUILDINGS.find(b => b.id === 'plaza');
     if (dest) {
       const dx = dest.x + dest.w / 2;
-      r.target = { x: dx, y: GROUND_Y }; r.activity = `On a date with ${resolveChar(partner, {}).name} 💕`;
+      r.target = { x: dx, y: GROUND_Y }; r.activity = `On a date with ${resolveChar(partner, {}).name} `;
       r.dwell = 300 + Math.floor(Math.random() * 200);
       return;
     }
@@ -391,7 +391,7 @@ function resolveInstantMeeting(st, aId, bId, customCharsData) {
   const ta = PC_TRAITS[aId], tb = PC_TRAITS[bId];
   const relAB = getRel(st, aId, bId);
   const relBA = getRel(st, bId, aId);
-  if (!relAB.met) { relAB.met = true; relAB.friend = Math.max(relAB.friend, 6); logNews(st, `👋 ${resolveChar(aId, customCharsData).name} met ${resolveChar(bId, customCharsData).name} for the first time.`); }
+  if (!relAB.met) { relAB.met = true; relAB.friend = Math.max(relAB.friend, 6); logNews(st, ` ${resolveChar(aId, customCharsData).name} met ${resolveChar(bId, customCharsData).name} for the first time.`); }
   if (!relBA.met) { relBA.met = true; relBA.friend = Math.max(relBA.friend, 6); }
   const compat = (PC_COMPAT[ta.personality]?.[tb.personality] ?? 0.4) + relAB.friend / 250;
   const oppositeGenders = ta.gender !== tb.gender;
@@ -405,19 +405,19 @@ function resolveInstantMeeting(st, aId, bId, customCharsData) {
   if (romanceEligible) {
     // none → interested
     if (relAB.romance === 'none' && relBA.romance === 'none' && relAB.friend >= 25 && Math.random() < 0.12 * compat) {
-      relAB.romance = 'interested'; logNews(st, `✨ ${resolveChar(aId, customCharsData).name} is interested in ${resolveChar(bId, customCharsData).name}.`);
+      relAB.romance = 'interested'; logNews(st, ` ${resolveChar(aId, customCharsData).name} is interested in ${resolveChar(bId, customCharsData).name}.`);
     }
     // both interested → 50% one upgrades to crushing
     if (relAB.romance === 'interested' && relBA.romance === 'interested' && Math.random() < 0.5) {
       (Math.random() < 0.5 ? relAB : relBA).romance = 'crushing';
-      logNews(st, `💕 ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} are crushing on each other.`);
+      logNews(st, ` ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} are crushing on each other.`);
     }
     // both crushing → 50% begin dating
     if (relAB.romance === 'crushing' && relBA.romance === 'crushing' && Math.random() < 0.5) {
       relAB.romance = 'dating'; relBA.romance = 'dating';
       st.couples = st.couples || [];
       st.couples.push({ a: aId, b: bId });
-      logNews(st, `💑 ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} started dating!`);
+      logNews(st, ` ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} started dating!`);
       checkAchievements(st, aId); checkAchievements(st, bId);
     }
   }
@@ -426,8 +426,8 @@ function resolveInstantMeeting(st, aId, bId, customCharsData) {
     const positive = Math.random() < 0.5;
     relAB.romance = 'none'; relBA.romance = 'none';
     st.couples = (st.couples || []).filter(c => !(c.a === aId && c.b === bId));
-    if (positive) { relAB.friend = clamp(relAB.friend + 5, -100, 100); relBA.friend = clamp(relBA.friend + 5, -100, 100); logNews(st, `💔 ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} broke up but stayed friends.`); }
-    else { relAB.neg = clamp(relAB.neg + 20, 0, 100); relBA.neg = clamp(relBA.neg + 20, 0, 100); logNews(st, `💔 ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} broke up badly.`); }
+    if (positive) { relAB.friend = clamp(relAB.friend + 5, -100, 100); relBA.friend = clamp(relBA.friend + 5, -100, 100); logNews(st, ` ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} broke up but stayed friends.`); }
+    else { relAB.neg = clamp(relAB.neg + 20, 0, 100); relBA.neg = clamp(relBA.neg + 20, 0, 100); logNews(st, ` ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} broke up badly.`); }
   }
   relAB.friend = clamp(relAB.friend + dFriend, -100, 100);
   relBA.friend = clamp(relBA.friend + dFriend * (compat > 0.3 ? 1 : 0.6), -100, 100);
@@ -707,9 +707,9 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
           if (!r._hadParty) {
             r._hadParty = true;
             const plaza = BUILDINGS.find(b => b.id === 'plaza');
-            if (plaza) { r.target = { x: plaza.x + 60, y: GROUND_Y }; r.activity = 'Birthday party! 🎂'; r.insideBid = null; r.dwell = 120; }
-            setToasts(t => [...t, `🎂 It's ${resolveChar(id, customCharsData).name}'s birthday! Party at the Plaza!`]);
-            logNews(st, `🎂 ${resolveChar(id, customCharsData).name} celebrated their birthday!`);
+            if (plaza) { r.target = { x: plaza.x + 60, y: GROUND_Y }; r.activity = 'Birthday party! '; r.insideBid = null; r.dwell = 120; }
+            setToasts(t => [...t, ` It's ${resolveChar(id, customCharsData).name}'s birthday! Party at the Plaza!`]);
+            logNews(st, ` ${resolveChar(id, customCharsData).name} celebrated their birthday!`);
             // nearby friends walk toward the plaza and congratulate
             const bdayName = resolveChar(id, customCharsData).name;
             const rels = (st.rel && st.rel[id]) || {};
@@ -725,7 +725,7 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
                 orb.target = { x: plaza.x + 40 + Math.random() * 80, y: GROUND_Y };
                 orb.activity = `Going to ${bdayName}'s birthday party`;
                 orb.insideBid = null; orb.dwell = 200;
-                orb.bubble = dating ? `Happy for you, love! 💂` : `Happy birthday, ${bdayName}! 🎂`;
+                orb.bubble = dating ? `Happy for you, love! ` : `Happy birthday, ${bdayName}! `;
                 orb.bubbleT = 220;
               }
             }
@@ -748,7 +748,7 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
       }
       if (r.bubbleT > 0) r.bubbleT -= dt * 60;
     }
-    // advance meetings: walk-together <GameIcon emoji="→" size={14} /> dialogue <GameIcon emoji="→" size={14} /> resolve
+    // advance meetings: walk-together <GameIcon icon="arrowRight" size={14} /> dialogue <GameIcon icon="arrowRight" size={14} /> resolve
     st.tick = (st.tick || 0) + 1;
     const meetings = st.meetings || {};
     for (const mkey of Object.keys(meetings)) {
@@ -801,7 +801,7 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
           if (bd) {
             group.forEach((mid, i) => { st.residents[mid]._hgOffset = (i - group.length / 2) * 26; st.residents[mid].dwell = 20; st.residents[mid].insideBid = null; });
             st.hangouts.push({ members: group, spot: bd.x + bd.w / 2, until: (st.tick || 0) + 240 + Math.floor(Math.random() * 120) });
-            if (group.length >= 3) logNews(st, `👥 ${group.map(g => resolveChar(g, customCharsData).name).join(', ')} hung out together.`);
+            if (group.length >= 3) logNews(st, ` ${group.map(g => resolveChar(g, customCharsData).name).join(', ')} hung out together.`);
           }
           break;
         }
@@ -859,7 +859,7 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
     const oppositeGenders = ta.gender !== tb.gender;
     const sameCat = ta.category === tb.category;
     const romanceEligible = oppositeGenders && sameCat && ta.personality !== 'hates' && tb.personality !== 'hates';
-    if (!relAB.met) { relAB.met = true; relAB.friend = Math.max(relAB.friend, 6); logNews(st, `👋 ${resolveChar(aId, customCharsData).name} met ${resolveChar(bId, customCharsData).name}.`); }
+    if (!relAB.met) { relAB.met = true; relAB.friend = Math.max(relAB.friend, 6); logNews(st, ` ${resolveChar(aId, customCharsData).name} met ${resolveChar(bId, customCharsData).name}.`); }
     if (!relBA.met) { relBA.met = true; relBA.friend = Math.max(relBA.friend, 6); }
     const cat = chooseCategory(st, aId, bId);
     let dFriend = 4 + Math.random() * 6;
@@ -871,19 +871,19 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
     // romance progression
     if (romanceEligible) {
       if (relAB.romance === 'none' && relBA.romance === 'none' && relAB.friend >= 25 && Math.random() < 0.12 * compat) {
-        relAB.romance = 'interested'; logNews(st, `✨ ${resolveChar(aId, customCharsData).name} is interested in ${resolveChar(bId, customCharsData).name}.`);
+        relAB.romance = 'interested'; logNews(st, ` ${resolveChar(aId, customCharsData).name} is interested in ${resolveChar(bId, customCharsData).name}.`);
       }
       if (relAB.romance === 'interested' && relBA.romance === 'interested' && Math.random() < 0.5) {
         (Math.random() < 0.5 ? relAB : relBA).romance = 'crushing';
-        logNews(st, `💕 ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} are crushing on each other.`);
+        logNews(st, ` ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} are crushing on each other.`);
       }
       if (relAB.romance === 'crushing' && relBA.romance === 'crushing' && Math.random() < 0.5) {
         relAB.romance = 'dating'; relBA.romance = 'dating';
         st.couples = st.couples || [];
         st.couples.push({ a: aId, b: bId });
-        logNews(st, `💑 ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} started dating!`);
-        ra.bubble = `We're dating! 💕`; ra.bubbleT = 240;
-        setToasts(t => [...t, `💍 ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} are now dating!`]);
+        logNews(st, ` ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} started dating!`);
+        ra.bubble = `We're dating! `; ra.bubbleT = 240;
+        setToasts(t => [...t, ` ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} are now dating!`]);
         sfx.purchaseSuccess(); setTimeout(() => setToasts(t => t.slice(1)), 6000);
       }
     }
@@ -892,8 +892,8 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
       const positive = Math.random() < 0.5;
       relAB.romance = 'none'; relBA.romance = 'none';
       st.couples = (st.couples || []).filter(c => !(c.a === aId && c.b === bId));
-      if (positive) { relAB.friend = clamp(relAB.friend + 5, -100, 100); relBA.friend = clamp(relBA.friend + 5, -100, 100); logNews(st, `💔 ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} broke up but stayed friends.`); }
-      else { relAB.neg = clamp(relAB.neg + 20, 0, 100); relBA.neg = clamp(relBA.neg + 20, 0, 100); logNews(st, `💔 ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} broke up badly.`); }
+      if (positive) { relAB.friend = clamp(relAB.friend + 5, -100, 100); relBA.friend = clamp(relBA.friend + 5, -100, 100); logNews(st, ` ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} broke up but stayed friends.`); }
+      else { relAB.neg = clamp(relAB.neg + 20, 0, 100); relBA.neg = clamp(relBA.neg + 20, 0, 100); logNews(st, ` ${resolveChar(aId, customCharsData).name} and ${resolveChar(bId, customCharsData).name} broke up badly.`); }
     }
     if (!oppositeGenders || !sameCat) { relAB.romance = 'none'; relBA.romance = 'none'; }
     relAB.friend = clamp(relAB.friend + dFriend, -100, 100);
@@ -1061,7 +1061,7 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
 
     const holiday = currentHoliday();
     ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = 'bold 16px Orbitron'; ctx.textAlign = 'center';
-    ctx.fillText('☁ GUARDIAN DISTRICT ☁', G_START_X + (GUARDIANS.length * G_SPACING) / 2, G_Y - 16);
+    ctx.fillText(' GUARDIAN DISTRICT ', G_START_X + (GUARDIANS.length * G_SPACING) / 2, G_Y - 16);
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
     for (let i = 0; i < 6; i++) { const cx = G_START_X - 100 + i * (G_SPACING * GUARDIANS.length) / 6; ctx.beginPath(); ctx.ellipse(cx, G_Y + G_H + 18, 180, 34, 0, 0, Math.PI * 2); ctx.fill(); }
     GUARDIANS.forEach(b => drawGuardianBuilding(ctx, b));
@@ -1104,9 +1104,9 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
     const holName = holiday ? PC_HOLIDAYS[holiday].name : '';
     const wlabel = PC_WEATHER_LABELS[st.weather] || '';
     const clk = clockRef.current.clock || clock, ds = clockRef.current.dateStr || dateStr;
-    ctx.fillText(`🕐 ${clk} · 📅 ${ds} · ${PC_SEASONS[st.season]} · ${timeOfDay}${wlabel ? ' · ' + wlabel : ''}${holName ? ' · ' + holName : ''}`, 10, 20);
+    ctx.fillText(` ${clk} ·  ${ds} · ${PC_SEASONS[st.season]} · ${timeOfDay}${wlabel ? ' · ' + wlabel : ''}${holName ? ' · ' + holName : ''}`, 10, 20);
     ctx.textAlign = 'right'; ctx.fillStyle = '#FFD700';
-    ctx.fillText(`🪙 ${st.pcCoins || 0} · ${Object.keys(st.residents).length} residents · 💍 ${(st.couples||[]).length} couples`, W - 10, 20);
+    ctx.fillText(` ${st.pcCoins || 0} · ${Object.keys(st.residents).length} residents ·  ${(st.couples||[]).length} couples`, W - 10, 20);
   }
 
   function drawWeatherBG(ctx, st) {
@@ -1140,12 +1140,12 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
     ctx.fillStyle = ch.color; ctx.beginPath(); ctx.moveTo(x - 4, y + 2); ctx.lineTo(x + HOME_W / 2, y - 16); ctx.lineTo(x + HOME_W + 4, y + 2); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#1a1a2a'; ctx.fillRect(x + HOME_W / 2 - 9, y + HOME_H - 26, 18, 26);
     const furn = (st && st.furniture) ? (st.furniture[id] || []) : [];
-    furn.slice(0, 3).forEach((f, i) => { const it = PC_FURNITURE.find(x => x.id === f); if (it) { ctx.font = '11px serif'; ctx.textAlign = 'center'; ctx.fillText(it.emoji, x + 12 + i * 18, y + HOME_H - 8); } });
-    if (r.insideBid === 'home' && r.activity.includes('Sleeping')) { ctx.font = '12px serif'; ctx.textAlign = 'center'; ctx.fillText('💤', x + HOME_W / 2, y + 18); }
-    else if (r.insideBid === 'home') { ctx.font = '11px serif'; ctx.textAlign = 'center'; ctx.fillText('🏠', x + HOME_W / 2, y + 18); }
+    furn.slice(0, 3).forEach((f, i) => { const it = PC_FURNITURE.find(x => x.id === f); if (it) { ctx.font = '11px serif'; ctx.textAlign = 'center'; ctx.fillText((it.name || 'F').slice(0, 1).toUpperCase(), x + 12 + i * 18, y + HOME_H - 8); } });
+    if (r.insideBid === 'home' && r.activity.includes('Sleeping')) { ctx.font = '12px serif'; ctx.textAlign = 'center'; ctx.fillText('', x + HOME_W / 2, y + 18); }
+    else if (r.insideBid === 'home') { ctx.font = '11px serif'; ctx.textAlign = 'center'; ctx.fillText('', x + HOME_W / 2, y + 18); }
     if (holiday) { ctx.font = '13px serif'; ctx.textAlign = 'center'; ctx.fillText(PC_HOLIDAYS[holiday].decor, x + HOME_W - 6, y + 4); }
     const today = new Date();
-    if (r.birthday && r.birthday.m === today.getMonth() + 1 && r.birthday.d === today.getDate()) { ctx.font = '14px serif'; ctx.textAlign = 'center'; ctx.fillText('🎂', x + 6, y + 4); }
+    if (r.birthday && r.birthday.m === today.getMonth() + 1 && r.birthday.d === today.getDate()) { ctx.font = '14px serif'; ctx.textAlign = 'center'; ctx.fillText('', x + 6, y + 4); }
     ctx.textAlign = 'left';
   }
 
@@ -1153,7 +1153,7 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
     ctx.fillStyle = '#3a3a5a'; roundRect(ctx, b.x, b.y, b.w, b.h, 8); ctx.fill();
     ctx.fillStyle = '#2a2a44'; roundRect(ctx, b.x + 6, b.y + 8, b.w - 12, 18, 4); ctx.fill();
     ctx.fillStyle = '#1a1a2a'; ctx.fillRect(b.x + b.w / 2 - 12, b.y + b.h - 28, 24, 28);
-    ctx.font = '24px serif'; ctx.textAlign = 'center'; ctx.fillText(b.emoji, b.x + b.w / 2, b.y + 32);
+    ctx.font = '24px serif'; ctx.textAlign = 'center'; ctx.fillText((b.name || 'B').slice(0, 1).toUpperCase(), b.x + b.w / 2, b.y + 32);
     ctx.fillStyle = '#fff'; ctx.font = 'bold 8px Orbitron'; ctx.fillText(b.name.toUpperCase(), b.x + b.w / 2, b.y + 14);
     if (holiday) { ctx.font = '14px serif'; ctx.fillText(PC_HOLIDAYS[holiday].decor, b.x + b.w - 8, b.y + 12); }
     ctx.textAlign = 'left';
@@ -1163,7 +1163,7 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
     ctx.fillStyle = '#e8e0ff'; roundRect(ctx, b.x, b.y, b.w, b.h, 8); ctx.fill();
     ctx.fillStyle = '#c8b8ff'; roundRect(ctx, b.x + 6, b.y + 8, b.w - 12, 18, 4); ctx.fill();
     ctx.fillStyle = '#fff'; ctx.fillRect(b.x + b.w / 2 - 12, b.y + b.h - 28, 24, 28);
-    ctx.font = '26px serif'; ctx.textAlign = 'center'; ctx.fillText(b.emoji, b.x + b.w / 2, b.y + 34);
+    ctx.font = '26px serif'; ctx.textAlign = 'center'; ctx.fillText((b.name || 'B').slice(0, 1).toUpperCase(), b.x + b.w / 2, b.y + 34);
     ctx.fillStyle = '#fff'; ctx.font = 'bold 8px Orbitron'; ctx.fillText(b.name.toUpperCase(), b.x + b.w / 2, b.y + 14);
     ctx.textAlign = 'left';
   }
@@ -1172,7 +1172,7 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
     const moving = Math.abs(r.target.x - r.x) > 6;
     drawSportChar(ctx, r.x, r.y, ch, { facing: r.facing, frame: r.frame, scale: 0.62, jersey: false, state: moving ? 'moving' : 'idle', equippedSkins, equippedAccessories });
     const clothId = (st.clothing && st.clothing[id]) || null; const cloth = clothId ? PC_CLOTHING.find(c => c.id === clothId) : null;
-    if (cloth) { ctx.font = '10px serif'; ctx.textAlign = 'center'; ctx.fillText(cloth.emoji, r.x + 8, r.y - 40); }
+    if (cloth) { ctx.font = '10px serif'; ctx.textAlign = 'center'; ctx.fillText((cloth.name || 'C').slice(0, 1).toUpperCase(), r.x + 8, r.y - 40); }
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(r.x - 34, r.y - 78, 68, 12);
     ctx.fillStyle = ch.color; ctx.font = 'bold 8px Orbitron'; ctx.textAlign = 'center'; ctx.fillText((ch.name || id).slice(0, 10), r.x, r.y - 69);
     const moodCol = { Happy:'#44ff66', Calm:'#66ccff', Excited:'#ffcc44', Focused:'#aa66ff', Tired:'#888888', Hungry:'#ff8844', Nervous:'#6688aa', Sad:'#5588cc', Angry:'#ff4444', Relaxed:'#88ddaa', Motivated:'#ffaa44', Embarrassed:'#ff88cc', Irritated:'#ff4444' }[r.mood] || '#ffffff';
@@ -1180,7 +1180,7 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
     // dating couple heart
     const rels = (st.rel && st.rel[id]) || {};
     const dating = Object.keys(rels).some(oid => rels[oid].romance === 'dating');
-    if (dating) { ctx.font = '10px serif'; ctx.textAlign = 'center'; ctx.fillText('💕', r.x - 26, r.y - 70); }
+    if (dating) { ctx.font = '10px serif'; ctx.textAlign = 'center'; ctx.fillText('', r.x - 26, r.y - 70); }
     if (r.bubbleT > 0 && r.bubble) {
       const bw = Math.min(170, 60 + r.bubble.length * 5), bh = 22;
       ctx.fillStyle = 'rgba(255,255,255,0.92)'; roundRect(ctx, r.x - bw / 2, r.y - 110, bw, bh, 6); ctx.fill();
@@ -1199,11 +1199,11 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
   return (
     <div className="flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
-        <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Back to Menu</button>
-        <span className="text-[11px] text-muted-foreground font-body"><GameIcon emoji="🏘️" size={14} /> Personal Community — heroes have lives between battles · click residents & buildings · arrows to scroll</span>
+        <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Back to Menu</button>
+        <span className="text-[11px] text-muted-foreground font-body"><GameIcon icon="home" size={14} /> Personal Community — heroes have lives between battles · click residents & buildings · arrows to scroll</span>
         <div className="flex gap-1">
-          <button onClick={() => { const st=stRef.current; const nn=(st.newsLog||[]); if(nn.length){ setNewsItems(nn.map(n=>n.text)); setHighlights(computeHighlights(st)); setShowNews(true);} }} className="px-3 py-1 bg-primary/30 border border-primary text-primary rounded font-heading text-xs hover:bg-primary hover:text-primary-foreground"><GameIcon emoji="📰" size={14} /> NEWS</button>
-          <button onClick={() => { if (!selected) { sfx.warning(); return; } setShopOpen(true); }} className="px-3 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon emoji="🛒" size={14} /> SHOP</button>
+          <button onClick={() => { const st=stRef.current; const nn=(st.newsLog||[]); if(nn.length){ setNewsItems(nn.map(n=>n.text)); setHighlights(computeHighlights(st)); setShowNews(true);} }} className="px-3 py-1 bg-primary/30 border border-primary text-primary rounded font-heading text-xs hover:bg-primary hover:text-primary-foreground"><GameIcon icon="file" size={14} /> NEWS</button>
+          <button onClick={() => { if (!selected) { sfx.warning(); return; } setShopOpen(true); }} className="px-3 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon icon="cart" size={14} /> SHOP</button>
         </div>
       </div>
       <canvas
@@ -1213,15 +1213,15 @@ export default function PersonalCommunity({ onBack, unlockedIds = [], progress =
         style={{ width: '100%', maxWidth: '800px', height: 'auto', aspectRatio: `${CANVAS_W} / ${CANVAS_H}` }}
       />
       <div className="flex gap-1.5 justify-center mt-1">
-        <button onPointerDown={holdPan('left', true)} onPointerUp={holdPan('left', false)} onPointerLeave={holdPan('left', false)} onPointerCancel={holdPan('left', false)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-sm hover:bg-accent hover:text-accent-foreground select-none"><GameIcon emoji="◀" size={14} /></button>
-        <button onPointerDown={holdPan('up', true)} onPointerUp={holdPan('up', false)} onPointerLeave={holdPan('up', false)} onPointerCancel={holdPan('up', false)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-sm hover:bg-accent hover:text-accent-foreground select-none"><GameIcon emoji="▲" size={14} /></button>
-        <button onPointerDown={holdPan('down', true)} onPointerUp={holdPan('down', false)} onPointerLeave={holdPan('down', false)} onPointerCancel={holdPan('down', false)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-sm hover:bg-accent hover:text-accent-foreground select-none"><GameIcon emoji="▼" size={14} /></button>
-        <button onPointerDown={holdPan('right', true)} onPointerUp={holdPan('right', false)} onPointerLeave={holdPan('right', false)} onPointerCancel={holdPan('right', false)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-sm hover:bg-accent hover:text-accent-foreground select-none"><GameIcon emoji="▶" size={14} /></button>
+        <button onPointerDown={holdPan('left', true)} onPointerUp={holdPan('left', false)} onPointerLeave={holdPan('left', false)} onPointerCancel={holdPan('left', false)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-sm hover:bg-accent hover:text-accent-foreground select-none"><GameIcon icon="info" size={14} /></button>
+        <button onPointerDown={holdPan('up', true)} onPointerUp={holdPan('up', false)} onPointerLeave={holdPan('up', false)} onPointerCancel={holdPan('up', false)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-sm hover:bg-accent hover:text-accent-foreground select-none"><GameIcon icon="info" size={14} /></button>
+        <button onPointerDown={holdPan('down', true)} onPointerUp={holdPan('down', false)} onPointerLeave={holdPan('down', false)} onPointerCancel={holdPan('down', false)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-sm hover:bg-accent hover:text-accent-foreground select-none"><GameIcon icon="info" size={14} /></button>
+        <button onPointerDown={holdPan('right', true)} onPointerUp={holdPan('right', false)} onPointerLeave={holdPan('right', false)} onPointerCancel={holdPan('right', false)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-sm hover:bg-accent hover:text-accent-foreground select-none"><GameIcon icon="play" size={14} /></button>
       </div>
       <div className="w-full max-w-md pointer-events-none relative z-30">
         {toasts.map((t, i) => (
           <div key={i} className="bg-card border-2 border-accent rounded-lg px-4 py-2 shadow-xl mb-1 animate-pulse">
-            <p className="text-[11px] font-heading text-accent"><GameIcon emoji="🏘️" size={14} /> EVENT</p>
+            <p className="text-[11px] font-heading text-accent"><GameIcon icon="home" size={14} /> EVENT</p>
             <p className="text-xs font-body text-foreground">{t}</p>
           </div>
         ))}
@@ -1311,11 +1311,11 @@ function RelationshipTree({ st, customCharsData, onSummon, selected, onSelect, o
       const meaningful = rel.met && (rel.friend >= 20 || rel.romance !== 'none' || rel.neg >= 12);
       if (!meaningful) continue;
       let color = '#888', label = fl, dashed = false;
-      if (rel.romance === 'dating') { color = '#ff3366'; label = '💍 Dating'; }
-      else if (rel.romance === 'crushing') { color = '#ff66aa'; label = '💕 Crushing'; }
-      else if (rel.romance === 'interested') { color = '#ff99cc'; label = '✨ Interested'; }
-      else if (rel.neg >= 40) { color = '#ff4444'; label = '⚔ Enemy'; dashed = true; }
-      else if (rel.neg >= 12) { color = '#cc6644'; label = '⚔ Rival'; dashed = true; }
+      if (rel.romance === 'dating') { color = '#ff3366'; label = ' Dating'; }
+      else if (rel.romance === 'crushing') { color = '#ff66aa'; label = ' Crushing'; }
+      else if (rel.romance === 'interested') { color = '#ff99cc'; label = ' Interested'; }
+      else if (rel.neg >= 40) { color = '#ff4444'; label = ' Enemy'; dashed = true; }
+      else if (rel.neg >= 12) { color = '#cc6644'; label = ' Rival'; dashed = true; }
       else if (rel.friend >= 80) { color = '#44ff88'; label = 'Best Friends'; }
       else if (rel.friend >= 60) { color = '#66dd88'; label = 'Good Friends'; }
       else if (rel.friend >= 40) { color = '#88ccaa'; label = 'Friends'; }
@@ -1328,8 +1328,8 @@ function RelationshipTree({ st, customCharsData, onSummon, selected, onSelect, o
   return (
     <div className="w-full max-w-4xl bg-card/80 border-2 border-border rounded-xl p-2 shadow-xl relative z-10">
       <div className="flex justify-between items-center mb-1">
-        <p className="text-[10px] font-heading text-accent"><GameIcon emoji="🌳" size={14} /> RELATIONSHIP TREE — one-directional arrows · click a node to summon</p>
-        <button onClick={onToggle} className="text-[9px] font-heading text-muted-foreground hover:text-foreground">{open ? <><GameIcon emoji="▼" size={14} /> HIDE</> : <><GameIcon emoji="▶" size={14} /> SHOW</>}</button>
+        <p className="text-[10px] font-heading text-accent"><GameIcon icon="trees" size={14} /> RELATIONSHIP TREE — one-directional arrows · click a node to summon</p>
+        <button onClick={onToggle} className="text-[9px] font-heading text-muted-foreground hover:text-foreground">{open ? <><GameIcon icon="info" size={14} /> HIDE</> : <><GameIcon icon="play" size={14} /> SHOW</>}</button>
       </div>
       {open && (
         <div className="overflow-auto max-h-72 bg-muted/20 rounded-lg p-1">
@@ -1368,7 +1368,7 @@ function RelationshipTree({ st, customCharsData, onSummon, selected, onSelect, o
                 <g key={id} style={{ cursor: 'pointer' }} onClick={() => { onSummon(id); }}>
                   <circle cx={p.x} cy={p.y} r={NODE / 2} fill={ch.color} stroke={isSel ? '#FFD700' : '#00000055'} strokeWidth={isSel ? 3 : 1.5} />
                   <text x={p.x} y={p.y + 3} fontSize="7" fill="#fff" textAnchor="middle" fontWeight="bold" style={{ paintOrder: 'stroke', stroke: '#00000088', strokeWidth: 2 }}>{(ch.name || id).slice(0, 8)}</text>
-                  {dating && <text x={p.x + NODE / 2 - 2} y={p.y - NODE / 2 + 6} fontSize="10" textAnchor="middle"><GameIcon emoji="💕" size={14} /></text>}
+                  {dating && <text x={p.x + NODE / 2 - 2} y={p.y - NODE / 2 + 6} fontSize="10" textAnchor="middle"><GameIcon icon="heart" size={14} /></text>}
                 </g>
               );
             })}
@@ -1384,7 +1384,7 @@ function ConversationLog({ st, customCharsData, onSelect }) {
   const convs = st.convLog || [];
   return (
     <div className="w-full max-w-4xl bg-card/70 border border-border rounded-xl p-2 shadow-xl relative z-10">
-      <p className="text-[10px] font-heading text-accent mb-1"><GameIcon emoji="💬" size={14} /> RECENT CONVERSATIONS</p>
+      <p className="text-[10px] font-heading text-accent mb-1"><GameIcon icon="comment" size={14} /> RECENT CONVERSATIONS</p>
       {convs.length === 0 && <p className="text-[10px] text-muted-foreground">No conversations yet — residents will talk as they meet.</p>}
       <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto">
         {convs.map((c, i) => {
@@ -1396,7 +1396,7 @@ function ConversationLog({ st, customCharsData, onSelect }) {
                   <span className="w-3 h-3 rounded-full" style={{ background: aCh.color }} />
                   <span className="text-[10px] font-heading text-accent">{c.a}</span>
                 </button>
-                <span className="text-[9px] text-muted-foreground"><GameIcon emoji="↔" size={14} /> {c.cat}</span>
+                <span className="text-[9px] text-muted-foreground"><GameIcon icon="arrowRight" size={14} /> {c.cat}</span>
                 <button onClick={() => onSelect(c.bId)} className="flex items-center gap-1 hover:underline ml-auto">
                   <span className="text-[10px] font-heading text-accent">{c.b}</span>
                   <span className="w-3 h-3 rounded-full" style={{ background: bCh.color }} />
@@ -1428,8 +1428,8 @@ function InteriorView({ interior, st, customCharsData, onBringOut, onSelect, onC
       <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
         <div className={card} onClick={e => e.stopPropagation()}>
           <div className="flex justify-between items-center mb-2">
-            <p className="font-heading text-accent text-lg">{b.emoji} {b.name}</p>
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><GameIcon emoji="✕" size={14} /></button>
+            <p className="font-heading text-accent text-lg"><span className="mr-2 inline-grid h-7 w-7 place-items-center rounded-full bg-primary/15 text-primary text-xs font-heading">{(b.name || 'B').slice(0, 1)}</span> {b.name}</p>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><GameIcon icon="close" size={14} /></button>
           </div>
           <p className="text-[11px] font-body text-muted-foreground mb-2">Inside {b.name}:</p>
           <div className="flex flex-wrap gap-2 mb-3 min-h-[28px]">
@@ -1458,7 +1458,7 @@ function InteriorView({ interior, st, customCharsData, onBringOut, onSelect, onC
       <div className={card} onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-2">
           <p className="font-heading text-accent text-lg">{ch.name}'s Home</p>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><GameIcon emoji="✕" size={14} /></button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><GameIcon icon="close" size={14} /></button>
         </div>
         <div className="flex items-center gap-2 mb-3">
           <span className="w-9 h-9 rounded-full border-2 border-border" style={{ background: ch.color }} />
@@ -1470,10 +1470,10 @@ function InteriorView({ interior, st, customCharsData, onBringOut, onSelect, onC
         <p className="text-[10px] font-heading text-muted-foreground mb-1">FURNITURE</p>
         <div className="flex flex-wrap gap-1 mb-3 min-h-[24px]">
           {furn.length === 0 && <span className="text-[10px] text-muted-foreground">Empty — buy furniture in the Shop.</span>}
-          {furn.map(fid => { const it = PC_FURNITURE.find(f => f.id === fid); return it ? <span key={fid} className="text-xl">{it.emoji}</span> : null; })}
+          {furn.map(fid => { const it = PC_FURNITURE.find(f => f.id === fid); return it ? <span key={fid} className="inline-grid h-7 w-7 place-items-center rounded-lg bg-primary/15 text-primary text-xs font-heading">{(it.name || 'F').slice(0, 1)}</span> : null; })}
         </div>
         <div className="flex gap-2">
-          {isHome && <button onClick={() => { onBringOut(id); onClose(); }} className="flex-1 px-3 py-1.5 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon emoji="🚪" size={14} /> BRING OUTSIDE</button>}
+          {isHome && <button onClick={() => { onBringOut(id); onClose(); }} className="flex-1 px-3 py-1.5 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon icon="arrowRight" size={14} /> BRING OUTSIDE</button>}
           <button onClick={() => { onSelect(id); onClose(); }} className="flex-1 px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs">VIEW JOURNAL</button>
         </div>
       </div>

@@ -137,7 +137,7 @@ export default function SaveCodes({ progress, onImport, onBack }) {
           disabled={busy}
           className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80 disabled:opacity-50"
         >
-          <GameIcon emoji="←" size={14} /> BACK
+          <GameIcon icon="info" size={14} /> BACK
         </button>
       </div>
 

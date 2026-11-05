@@ -124,7 +124,7 @@ export default function PrematchAnimation({ participants, sport = 'volleyball', 
         ctx.save();
         ctx.globalAlpha = ep;
         ctx.textAlign = 'center';
-        const emblem = sport === 'volleyball' ? '🏐' : sport === 'baseball' ? '⚾' : '⚽';
+        const emblem = sport === 'volleyball' ? '' : sport === 'baseball' ? '' : '';
         ctx.font = 'bold 56px sans-serif';
         ctx.textAlign = 'center';
         ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 20;

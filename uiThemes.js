@@ -3,7 +3,7 @@
 // variables (card, border, secondary, etc.) for a more complete visual overhaul.
 
 export const THEMES = [
-  { id: 'default', name: 'Purple & Gold', primary: '260 80% 60%', accent: '45 90% 55%', bg: '220 25% 8%' },
+  { id: 'default', name: 'Automatic', primary: '292 78% 66%', accent: '326 84% 68%', bg: '258 52% 7%', card: '258 32% 14%', border: '288 38% 35%', secondary: '264 28% 20%', muted: '261 28% 17%', ring: '326 84% 68%', foreground: '275 38% 96%', mutedFg: '276 18% 70%', input: '260 25% 18%', popover: '258 32% 14%', sidebarBg: '260 36% 9%', sidebarBorder: '288 38% 35%' },
   { id: 'ocean', name: 'Ocean Blue', primary: '210 80% 55%', accent: '190 90% 50%', bg: '220 30% 6%' },
   { id: 'forest', name: 'Forest Green', primary: '140 70% 45%', accent: '60 90% 50%', bg: '150 25% 6%' },
   { id: 'fire', name: 'Fire & Brimstone', primary: '0 75% 55%', accent: '30 90% 55%', bg: '0 20% 6%' },

@@ -95,8 +95,8 @@ ctx.font = 'bold 9px Orbitron';
 ctx.textAlign = 'center';
 ctx.fillStyle = '#ffff00';
 ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
-ctx.fillText('★ Yellow', 110, floorY + 22);
-ctx.fillText('★ Indigo', 310, floorY + 22);
+ctx.fillText(' Yellow', 110, floorY + 22);
+ctx.fillText(' Indigo', 310, floorY + 22);
 ctx.shadowBlur = 0;
 
       raf = requestAnimationFrame(loop);

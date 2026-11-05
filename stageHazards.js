@@ -10,23 +10,23 @@ export { updateSandboxHazards, updateSandboxObjects, processSandboxObjectHits };
 
 // ── Hazard types ──
 export const HAZARD_TYPES = [
-  { id: 'fire',    name: 'Fire Zone',    color: '#FF6600', icon: '🔥', defaultW: 80,  defaultH: 40 },
-  { id: 'electric',name: 'Electric Zone', color: '#66CCFF', icon: '⚡', defaultW: 100, defaultH: 40 },
-  { id: 'moving',  name: 'Moving Saw',   color: '#FFAA00', icon: '⚙',  defaultW: 44,  defaultH: 44 },
-  { id: 'water',   name: 'Water Pool',   color: '#3388CC', icon: '💧', defaultW: 200, defaultH: 60 },
-  { id: 'portal',   name: 'Portal',      color: '#AA44FF', icon: '🌀', defaultW: 50,  defaultH: 50 },
-  { id: 'catapult', name: 'Catapult',     color: '#FF4488', icon: '🚀', defaultW: 64,  defaultH: 40 },
-  { id: 'wind',     name: 'Wind',         color: '#88FFEE', icon: '💨', defaultW: 120, defaultH: 120 },
+  { id: 'fire',    name: 'Fire Zone',    color: '#FF6600', icon: '', defaultW: 80,  defaultH: 40 },
+  { id: 'electric',name: 'Electric Zone', color: '#66CCFF', icon: '', defaultW: 100, defaultH: 40 },
+  { id: 'moving',  name: 'Moving Saw',   color: '#FFAA00', icon: '',  defaultW: 44,  defaultH: 44 },
+  { id: 'water',   name: 'Water Pool',   color: '#3388CC', icon: '', defaultW: 200, defaultH: 60 },
+  { id: 'portal',   name: 'Portal',      color: '#AA44FF', icon: '', defaultW: 50,  defaultH: 50 },
+  { id: 'catapult', name: 'Catapult',     color: '#FF4488', icon: '', defaultW: 64,  defaultH: 40 },
+  { id: 'wind',     name: 'Wind',         color: '#88FFEE', icon: '', defaultW: 120, defaultH: 120 },
 ];
 
 // ── Knockback object types ──
 export const OBJECT_TYPES = [
-  { id: 'heavy',     name: 'Heavy',     color: '#8B7355', icon: '🟫', size: 32 },
-  { id: 'light',     name: 'Light',     color: '#88CCFF', icon: '🔵', size: 22 },
-  { id: 'bouncing',  name: 'Bouncing',  color: '#FF88CC', icon: '🩷', size: 26 },
-  { id: 'breakable', name: 'Breakable', color: '#FFDD88', icon: '🟡', size: 28 },
-  { id: 'boomerang', name: 'Boomerang', color: '#FFAA00', icon: '🪃', size: 24 },
-  { id: 'ball', name: 'Ball', color: '#E53935', icon: '🔴', size: 64 },
+  { id: 'heavy',     name: 'Heavy',     color: '#8B7355', icon: '', size: 32 },
+  { id: 'light',     name: 'Light',     color: '#88CCFF', icon: '', size: 22 },
+  { id: 'bouncing',  name: 'Bouncing',  color: '#FF88CC', icon: '', size: 26 },
+  { id: 'breakable', name: 'Breakable', color: '#FFDD88', icon: '', size: 28 },
+  { id: 'boomerang', name: 'Boomerang', color: '#FFAA00', icon: '', size: 24 },
+  { id: 'ball', name: 'Ball', color: '#E53935', icon: '', size: 64 },
 ];
 
 // Full object property table (mirrors sandboxHazards OBJECT_TYPES)

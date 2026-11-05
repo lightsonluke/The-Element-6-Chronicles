@@ -53,9 +53,9 @@ function Tile({ char, selected, isP1, isP2, locked, favorite, equippedCX, master
       }}
       title={locked ? `${char.name} (locked)` : `${char.name} (right-click to favorite)`}
     >
-      {favorite && !locked && <span className="absolute top-0 left-0.5 text-[7px] text-accent leading-none" style={{ filter: 'drop-shadow(0 0 3px #FFD700)' }}><GameIcon emoji="★" size={14} /></span>}
-      {equippedCX && !locked && <span className="absolute top-0 right-0.5 text-[6px] leading-none"><GameIcon emoji="🔀" size={14} /></span>}
-      {locked && <span className="absolute top-0 right-0.5 text-[6px] leading-none opacity-60"><GameIcon emoji="🔒" size={14} /></span>}
+      {favorite && !locked && <span className="absolute top-0 left-0.5 text-[7px] text-accent leading-none" style={{ filter: 'drop-shadow(0 0 3px #FFD700)' }}><GameIcon icon="star" size={14} /></span>}
+      {equippedCX && !locked && <span className="absolute top-0 right-0.5 text-[6px] leading-none"><GameIcon icon="shuffle" size={14} /></span>}
+      {locked && <span className="absolute top-0 right-0.5 text-[6px] leading-none opacity-60"><GameIcon icon="lock" size={14} /></span>}
       {masteryRank && masteryRank.id > 0 && !locked && (
         <span className="absolute bottom-0.5 right-0 text-[8px] leading-none" style={{ filter: `drop-shadow(0 0 2px ${masteryRank.color})` }} title={`${masteryRank.name} Mastery`}>
           {masteryRank.icon}
@@ -77,7 +77,7 @@ function EraDropdown({ value, onChange }) {
     <div className="relative">
       <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 px-2 py-1 bg-card border rounded font-heading text-[10px]" style={{ borderColor: current.accent + '66' }}>
         <span style={{ color: current.accent }}>{current.short}</span>
-        <span className="text-[7px] text-muted-foreground"><GameIcon emoji="▼" size={14} /></span>
+        <span className="text-[7px] text-muted-foreground"><GameIcon icon="info" size={14} /></span>
       </button>
       {open && (
         <>
@@ -131,7 +131,7 @@ function StatPopup({ char, locked, charMastery }) {
           <span className="text-[7px] font-heading text-accent">{statTotal}/35</span>
         </div>
       </div>
-      {locked && <p className="text-[7px] text-destructive font-heading mt-1 text-center"><GameIcon emoji="🔒" size={14} /> LOCKED — unlock in Shop</p>}
+      {locked && <p className="text-[7px] text-destructive font-heading mt-1 text-center"><GameIcon icon="lock" size={14} /> LOCKED — unlock in Shop</p>}
       {/* Mastery rank + progress bar */}
       {!locked && charMastery && char.id && (() => {
         const mp = getMasteryProgress(charMastery, char.id);
@@ -168,7 +168,7 @@ function CrossoverSection({ ownedCrossovers, equippedCrossovers, onEquipCrossove
   return (
     <div className="bg-card/50 border border-border rounded-lg p-1.5">
       <div className="flex items-center gap-2 mb-1">
-        <button onClick={() => setExpanded(e => !e)} className="text-[9px] font-heading text-accent"><GameIcon emoji="🔀" size={14} /> CROSSOVERS {expanded ? <GameIcon emoji="▼" size={14} /> : <GameIcon emoji="▶" size={14} />}</button>
+        <button onClick={() => setExpanded(e => !e)} className="text-[9px] font-heading text-accent"><GameIcon icon="shuffle" size={14} /> CROSSOVERS {expanded ? <GameIcon icon="info" size={14} /> : <GameIcon icon="play" size={14} />}</button>
         <div className="flex gap-1">
           <button onClick={() => setTab('all')} className={`px-1.5 py-0.5 rounded text-[8px] font-heading ${tab === 'all' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>ALL</button>
           <button onClick={() => setTab('char')} className={`px-1.5 py-0.5 rounded text-[8px] font-heading ${tab === 'char' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>THIS CHAR</button>
@@ -187,7 +187,7 @@ function CrossoverSection({ ownedCrossovers, equippedCrossovers, onEquipCrossove
                 title={`${cx.name} (${cxChar?.name})`}>
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cx.colorMap.primary }} />
                 <span className="text-[7px] font-heading text-foreground">{cx.name}</span>
-                {equipped && <span className="text-[7px] text-accent"><GameIcon emoji="✓" size={14} /></span>}
+                {equipped && <span className="text-[7px] text-accent"><GameIcon icon="check" size={14} /></span>}
               </button>
             );
           })}
@@ -210,7 +210,7 @@ function AccessorySection({ ownedAccessories, equippedAccessories, onEquipAccess
   return (
     <div className="bg-card/50 border border-border rounded-lg p-1.5">
       <div className="flex items-center gap-2 mb-1">
-        <button onClick={() => setExpanded(e => !e)} className="text-[9px] font-heading text-accent"><GameIcon emoji="🎩" size={14} /> ACCESSORIES {expanded ? <GameIcon emoji="▼" size={14} /> : <GameIcon emoji="▶" size={14} />}</button>
+        <button onClick={() => setExpanded(e => !e)} className="text-[9px] font-heading text-accent"><GameIcon icon="tag" size={14} /> ACCESSORIES {expanded ? <GameIcon icon="info" size={14} /> : <GameIcon icon="play" size={14} />}</button>
         <span className="text-[7px] text-muted-foreground ml-auto">{equippedIds.length}/4 equipped · {shown.length} owned</span>
       </div>
       {expanded && (
@@ -222,7 +222,7 @@ function AccessorySection({ ownedAccessories, equippedAccessories, onEquipAccess
                 className={`flex items-center gap-1 rounded px-1 py-0.5 border ${equipped ? 'border-accent bg-accent/20' : 'border-border'}`}>
                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: a.color }} />
                 <span className="text-[7px] font-heading text-foreground">{a.name}</span>
-                {equipped && <span className="text-[7px] text-accent"><GameIcon emoji="✓" size={14} /></span>}
+                {equipped && <span className="text-[7px] text-accent"><GameIcon icon="check" size={14} /></span>}
               </button>
             );
           })}
@@ -504,8 +504,8 @@ export default function UniversalCharacterSelect({
       <div className="e6-character-select-header flex justify-between items-center">
         <h2 className="text-xl font-heading text-foreground tracking-wider">MANAGE MATCH</h2>
         <div className="flex gap-2 items-center">
-          {rankedRandom && <span className="text-[9px] text-muted-foreground"><GameIcon emoji="🔒" size={14} /> P2: Random</span>}
-          <button onClick={onBack} className="px-2 py-1 bg-muted text-muted-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          {rankedRandom && <span className="text-[9px] text-muted-foreground"><GameIcon icon="lock" size={14} /> P2: Random</span>}
+          <button onClick={onBack} className="px-2 py-1 bg-muted text-muted-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
           {enableMatchSettings && <button onClick={() => setSettingsOpen(true)} className="px-2 py-1 bg-primary text-primary-foreground rounded font-heading text-xs hover:opacity-80">MATCH SETTINGS</button>}
         </div>
       </div>
@@ -524,7 +524,7 @@ export default function UniversalCharacterSelect({
             const random = pool[Math.floor(Math.random() * pool.length)].id;
             sfx.click();
             setPicks(prev => { const next = [...prev]; next[selecting - 1] = random; return next; });
-          }} className="px-2 py-1 rounded font-heading text-[10px] bg-primary/40 text-primary-foreground"><GameIcon emoji="🎲" size={14} /> RANDOM</button>
+          }} className="px-2 py-1 rounded font-heading text-[10px] bg-primary/40 text-primary-foreground"><GameIcon icon="shuffle" size={14} /> RANDOM</button>
         </div>
       )}
 
@@ -551,7 +551,7 @@ export default function UniversalCharacterSelect({
         <div className="e6-character-grid-panel flex-1 bg-card/40 border border-border rounded-lg p-1.5">
           <div className="flex items-center justify-between mb-0.5">
             <div className="text-[8px] font-heading text-muted-foreground">{filtered.length} characters</div>
-            <div className="text-[7px] font-heading text-accent"><GameIcon emoji="★" size={14} /> {favoriteIds.length}/5 FAVORITES (right-click)</div>
+            <div className="text-[7px] font-heading text-accent"><GameIcon icon="star" size={14} /> {favoriteIds.length}/5 FAVORITES (right-click)</div>
           </div>
           <div className="e6-character-grid grid gap-1" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(48px, 1fr))' }}>
             {filtered.map(c => {
@@ -594,7 +594,7 @@ export default function UniversalCharacterSelect({
       {ownedShikigami.length > 0 && (
         <div className="bg-card/50 border border-border rounded-lg p-1.5">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[9px] font-heading text-accent">🪶 SHIKIGAMI (this match)</span>
+            <span className="text-[9px] font-heading text-accent"> SHIKIGAMI (this match)</span>
             <span className="text-[7px] text-muted-foreground ml-auto">P{selecting}: {shikigami[(activePlayerCount === 1 || rankedRandom) ? 0 : selecting - 1] || 'none'}</span>
           </div>
           <div className="flex gap-1 flex-wrap max-h-20 overflow-y-auto">
@@ -685,8 +685,8 @@ export default function UniversalCharacterSelect({
 
       {/* Start button */}
       <div className="flex flex-col gap-1 items-center">
-        {p1Locked && <p className="text-[9px] text-destructive font-heading"><GameIcon emoji="⚠" size={14} /> P1 character is locked — unlock in Shop to use</p>}
-        {p2Locked && <p className="text-[9px] text-destructive font-heading"><GameIcon emoji="⚠" size={14} /> P2 character is locked — unlock in Shop to use</p>}
+        {p1Locked && <p className="text-[9px] text-destructive font-heading"><GameIcon icon="warning" size={14} /> P1 character is locked — unlock in Shop to use</p>}
+        {p2Locked && <p className="text-[9px] text-destructive font-heading"><GameIcon icon="warning" size={14} /> P2 character is locked — unlock in Shop to use</p>}
         <button onClick={handleStart} disabled={!canStart}
           className={`px-8 py-2.5 rounded-lg font-heading text-base transition shadow-lg ${canStart ? 'bg-accent text-accent-foreground hover:opacity-90' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>
           {startLabel}

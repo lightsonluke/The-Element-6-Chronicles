@@ -50,8 +50,8 @@ export default function LeaderboardHall({ onBack }) {
   return (
     <div className="w-full max-w-5xl mx-auto bg-card border border-border rounded-2xl p-5 shadow-2xl">
       <div className="flex justify-between items-center mb-3">
-        <h2 className="font-heading text-xl text-accent tracking-wider"><GameIcon emoji="🏛" size={14} /> LEADERBOARD HALL</h2>
-        <button onClick={onBack} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="←" size={14} /> BACK</button>
+        <h2 className="font-heading text-xl text-accent tracking-wider"><GameIcon icon="home" size={14} /> LEADERBOARD HALL</h2>
+        <button onClick={onBack} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
       <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search username…"
         className="w-full bg-secondary text-secondary-foreground rounded px-3 py-2 text-xs font-heading mb-3" />
@@ -80,7 +80,7 @@ export default function LeaderboardHall({ onBack }) {
           <div className="bg-card border-2 border-accent rounded-xl p-5 w-96 max-w-[94%]" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-heading text-base text-accent">{profile.user_name || 'Player'}</h3>
-              <button onClick={() => setProfile(null)} className="text-xs text-muted-foreground"><GameIcon emoji="✕" size={14} /></button>
+              <button onClick={() => setProfile(null)} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs font-body">
               <Stat label="Total XP" v={profile.total_xp} />

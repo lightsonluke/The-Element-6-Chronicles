@@ -110,10 +110,10 @@ export default function TradesGiftsPanel({ userId, username, progress, room, onT
     if (!items) return [];
     const s = [];
     if (items.tokens > 0) s.push(`${items.tokens} ◆ Tokens`);
-    if (items.skins?.length) items.skins.forEach(id => { const sk = getSkin(id); s.push(`🎨 ${sk?.name || id}`); });
-    if (items.accessories?.length) items.accessories.forEach(id => { const a = getAccessory(id); s.push(`⚔ ${a?.name || id}`); });
-    if (items.killFX?.length) items.killFX.forEach(id => { const fx = getKillFX(id); s.push(`✨ ${fx?.name || id}`); });
-    if (items.chars?.length) items.chars.forEach(id => { const c = ALL.find(x => x.id === id); s.push(`👤 ${c?.name || id}`); });
+    if (items.skins?.length) items.skins.forEach(id => { const sk = getSkin(id); s.push(` ${sk?.name || id}`); });
+    if (items.accessories?.length) items.accessories.forEach(id => { const a = getAccessory(id); s.push(` ${a?.name || id}`); });
+    if (items.killFX?.length) items.killFX.forEach(id => { const fx = getKillFX(id); s.push(` ${fx?.name || id}`); });
+    if (items.chars?.length) items.chars.forEach(id => { const c = ALL.find(x => x.id === id); s.push(` ${c?.name || id}`); });
     return s;
   };
 
@@ -123,7 +123,7 @@ export default function TradesGiftsPanel({ userId, username, progress, room, onT
     <div className="bg-muted/30 border border-border rounded-lg p-2.5 flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
         <span className="font-heading text-[10px] text-accent">
-          {rec.type === 'gift' ? '🎁 GIFT' : '🔄 TRADE'} {isIncoming ? 'FROM' : 'TO'} {isIncoming ? rec.from_username : rec.to_username}
+          {rec.type === 'gift' ? ' GIFT' : ' TRADE'} {isIncoming ? 'FROM' : 'TO'} {isIncoming ? rec.from_username : rec.to_username}
         </span>
         <span className={`text-[9px] px-1.5 py-0.5 rounded font-heading ${
           rec.status === 'completed' ? 'bg-green-600/30 text-green-400' :
@@ -151,8 +151,8 @@ export default function TradesGiftsPanel({ userId, username, progress, room, onT
       </div>
       {isIncoming && rec.status === 'pending' && rec.type === 'trade_request' && (
         <div className="flex gap-1.5">
-          <button onClick={() => acceptTrade(rec)} className="flex-1 px-2 py-1 bg-accent text-accent-foreground rounded font-heading text-[10px]"><GameIcon emoji="✓" size={14} /> ACCEPT</button>
-          <button onClick={() => declineTrade(rec)} className="flex-1 px-2 py-1 bg-destructive text-destructive-foreground rounded font-heading text-[10px]"><GameIcon emoji="✕" size={14} /> DECLINE</button>
+          <button onClick={() => acceptTrade(rec)} className="flex-1 px-2 py-1 bg-accent text-accent-foreground rounded font-heading text-[10px]"><GameIcon icon="check" size={14} /> ACCEPT</button>
+          <button onClick={() => declineTrade(rec)} className="flex-1 px-2 py-1 bg-destructive text-destructive-foreground rounded font-heading text-[10px]"><GameIcon icon="close" size={14} /> DECLINE</button>
         </div>
       )}
     </div>
@@ -162,10 +162,10 @@ export default function TradesGiftsPanel({ userId, username, progress, room, onT
     <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center" onClick={onClose}>
       <div className="bg-card border-2 border-primary rounded-xl p-5 w-[540px] max-w-[94%] max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-heading text-base text-accent"><GameIcon emoji="📦" size={14} /> TRADES & GIFTS</h3>
+          <h3 className="font-heading text-base text-accent"><GameIcon icon="package" size={14} /> TRADES & GIFTS</h3>
           <div className="flex gap-2">
-            <button onClick={load} className="text-[10px] text-accent"><GameIcon emoji="↻" size={14} /></button>
-            <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon emoji="✕" size={14} /></button>
+            <button onClick={load} className="text-[10px] text-accent"><GameIcon icon="redo" size={14} /></button>
+            <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button>
           </div>
         </div>
 
@@ -186,8 +186,8 @@ export default function TradesGiftsPanel({ userId, username, progress, room, onT
                 <div key={p.id} className="flex items-center gap-2 bg-muted/30 border border-border rounded-lg px-2.5 py-2">
                   <div className="w-3 h-3 rounded-full" style={{ background: p.color || '#66dd66' }} />
                   <span className="font-heading text-xs text-foreground flex-1">{p.name || p.username || 'Player'}</span>
-                  <button onClick={() => { onTrade?.({ ...p, id: p.id, username: p.name || p.username }); sfx.click(); }} className="px-2 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[10px]"><GameIcon emoji="🔄" size={14} /> TRADE</button>
-                  <button onClick={() => { onGift?.({ ...p, id: p.id, username: p.name || p.username }); sfx.click(); }} className="px-2 py-1 bg-accent text-accent-foreground rounded font-heading text-[10px]"><GameIcon emoji="🎁" size={14} /> GIFT</button>
+                  <button onClick={() => { onTrade?.({ ...p, id: p.id, username: p.name || p.username }); sfx.click(); }} className="px-2 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[10px]"><GameIcon icon="refresh" size={14} /> TRADE</button>
+                  <button onClick={() => { onGift?.({ ...p, id: p.id, username: p.name || p.username }); sfx.click(); }} className="px-2 py-1 bg-accent text-accent-foreground rounded font-heading text-[10px]"><GameIcon icon="gift" size={14} /> GIFT</button>
                 </div>
               ))}
             </div>

@@ -154,15 +154,15 @@ export default function Sandbox({ progress, customCharsData = {}, onBack }) {
 
   const Toggle = ({ label, checked, onChange }) => (
     <button onClick={() => { onChange(!checked); sfx.click(); }} className={`px-2 py-1.5 rounded font-heading text-[10px] border-2 ${checked ? 'bg-accent text-accent-foreground border-accent' : 'bg-secondary text-secondary-foreground border-border'}`}>
-      {checked ? '✓ ' : ''}{label}
+      {checked ? ' ' : ''}{label}
     </button>
   );
 
   return (
     <div className="w-full max-w-5xl flex flex-col gap-3">
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="🛠" size={14} /> SANDBOX</h2>
-        <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
+        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="settings" size={14} /> SANDBOX</h2>
+        <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
       <p className="text-[10px] text-muted-foreground font-body bg-card border border-border rounded-lg px-3 py-2">Sandbox is offline. No XP, tokens, unlocks, or achievements are awarded. Press P / Esc in-match to pause.</p>
 
@@ -183,7 +183,7 @@ export default function Sandbox({ progress, customCharsData = {}, onBack }) {
                   <div className="w-6 h-6 rounded-full" style={{ backgroundColor: cd.color, boxShadow: `0 0 6px ${cd.color}88` }} />
                   <span className="text-xs font-heading">{i === 0 ? 'YOU (P1)' : `BOT ${i}`}</span>
                   {i > 0 && (
-                    <button onClick={() => removePlayer(i)} className="ml-auto text-[10px] text-destructive hover:opacity-70"><GameIcon emoji="✕" size={14} /></button>
+                    <button onClick={() => removePlayer(i)} className="ml-auto text-[10px] text-destructive hover:opacity-70"><GameIcon icon="close" size={14} /></button>
                   )}
                 </div>
                 <CharGrid value={p.char} onChange={(id) => setPlayerChar(i, id)} era={p.era} setEra={(e) => setPlayerEra(i, e)} />
@@ -221,7 +221,7 @@ export default function Sandbox({ progress, customCharsData = {}, onBack }) {
             {BUILTIN_STAGES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </optgroup>
           {customStages.length > 0 && <optgroup label="Custom">
-            {customStages.map((s, i) => <option key={i} value={`custom_${i}`}>{s.emoji || '🎨'} {s.name || 'Custom'}</option>)}
+            {customStages.map((s, i) => <option key={i} value={`custom_${i}`}>{s.name || 'Custom'}</option>)}
           </optgroup>}
         </select>
       </div>
@@ -285,7 +285,7 @@ export default function Sandbox({ progress, customCharsData = {}, onBack }) {
       </div>
 
       <div className="flex gap-2">
-        <button onClick={startMatch} className="flex-1 px-4 py-3 bg-primary text-primary-foreground rounded-xl font-heading text-base hover:opacity-80"><GameIcon emoji="▶" size={14} /> START MATCH</button>
+        <button onClick={startMatch} className="flex-1 px-4 py-3 bg-primary text-primary-foreground rounded-xl font-heading text-base hover:opacity-80"><GameIcon icon="play" size={14} /> START MATCH</button>
         <button onClick={() => setMods(defaultMods())} className="px-4 py-3 bg-secondary text-secondary-foreground rounded-xl font-heading text-xs">RESET MODS</button>
       </div>
     </div>

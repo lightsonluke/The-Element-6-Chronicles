@@ -25,12 +25,12 @@ export const REL_CATEGORY = { family: 'family', friend: 'friend', romance: 'roma
 
 // ── Friendship ranks ──
 export const FRIEND_RANKS = [
-  { min: 0, key: 'stranger', label: 'Stranger', emoji: '👤' },
-  { min: 5, key: 'familiar', label: 'Familiar', emoji: '🤝' },
-  { min: 20, key: 'acquaintance', label: 'Acquaintance', emoji: '🙂' },
-  { min: 40, key: 'friend', label: 'Friend', emoji: '😊' },
-  { min: 60, key: 'close', label: 'Close Friend', emoji: '😄' },
-  { min: 80, key: 'best', label: 'Best Friend', emoji: '🤗' },
+  { min: 0, key: 'stranger', label: 'Stranger' },
+  { min: 5, key: 'familiar', label: 'Familiar' },
+  { min: 20, key: 'acquaintance', label: 'Acquaintance' },
+  { min: 40, key: 'friend', label: 'Friend' },
+  { min: 60, key: 'close', label: 'Close Friend' },
+  { min: 80, key: 'best', label: 'Best Friend' },
 ];
 
 export function getFriendRank(v) {
@@ -41,11 +41,11 @@ export function getFriendRank(v) {
 
 // ── Romance stages ──
 export const ROMANCE_STAGES = [
-  { key: 'none', label: 'Stranger', min: 0, emoji: '💬' },
-  { key: 'interested', label: 'Interested', min: 40, emoji: '❤' },
-  { key: 'dating', label: 'Dating', min: 55, emoji: '💕' },
-  { key: 'engaged', label: 'Engaged', min: 75, emoji: '💍' },
-  { key: 'married', label: 'Married', min: 90, emoji: '👰' },
+  { key: 'none', label: 'Stranger', min: 0 },
+  { key: 'interested', label: 'Interested', min: 40 },
+  { key: 'dating', label: 'Dating', min: 55 },
+  { key: 'engaged', label: 'Engaged', min: 75 },
+  { key: 'married', label: 'Married', min: 90 },
 ];
 
 export function getRomanceStage(v) {

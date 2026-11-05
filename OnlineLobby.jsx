@@ -129,7 +129,7 @@ export default function OnlineLobby({ mode, onBack, onEnd, unlockedIds, favorite
   return <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
     <div className="flex justify-between items-center w-full">
       <h2 className="text-2xl font-heading text-accent tracking-wider">{modeLabel}</h2>
-      <button onClick={() => { cancelSearch(); onBack(); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+      <button onClick={() => { cancelSearch(); onBack(); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
     </div>
     <div className="bg-card border border-border rounded-xl p-3 w-full max-w-md text-center">
       <p className="text-xs text-muted-foreground font-body">GLOBAL MATCHMAKING</p>
@@ -138,7 +138,7 @@ export default function OnlineLobby({ mode, onBack, onEnd, unlockedIds, favorite
     </div>
     {error && <p className="text-xs text-destructive font-body">{error}</p>}
     {phase === 'pick' && <UniversalCharacterSelect
-      title="PICK YOUR FIGHTER" startLabel="🔍 FIND MATCH" unlockedIds={unlockedIds || ['yellow']} favoriteId={favoriteId} playerCount={1} banCustomChars
+      title="PICK YOUR FIGHTER" startLabel=" FIND MATCH" unlockedIds={unlockedIds || ['yellow']} favoriteId={favoriteId} playerCount={1} banCustomChars
       equippedSkins={equippedSkins} equippedAccessories={equippedAccessories} ownedAccessories={ownedAccessories} onEquipAccessory={onEquipAccessory}
       charLevels={charLevels} equippedElements={equippedElements} onEquipElement={onEquipElement} equippedShikigami={equippedShikigami} ownedShikigami={ownedShikigami}
       onStart={(c1) => { setMyChar(c1); setMyElement(equippedElements?.[c1] || 'basic'); findMatch(c1); }} onBack={onBack}

@@ -49,7 +49,7 @@ export default function TradeModal({ me, peer, inventory, onAccept, onConfirm, o
     <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center" onClick={onClose}>
       <div className="bg-card border-2 border-accent rounded-xl p-5 w-[640px] max-w-[96%] max-h-[86vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-heading text-base text-accent"><GameIcon emoji="🤝" size={14} /> TRADE — {peer.name}</h3>
+          <h3 className="font-heading text-base text-accent"><GameIcon icon="users" size={14} /> TRADE — {peer.name}</h3>
           {peerAccepted && <span className="text-[10px] px-2 py-0.5 rounded bg-green-600/30 text-green-400 font-heading">{peer.name} accepted</span>}
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -72,7 +72,7 @@ export default function TradeModal({ me, peer, inventory, onAccept, onConfirm, o
                 {peer.offer.accs?.map(id => <li key={id}>Accessory: {nameOf(id, getAccessory)}</li>)}
                 {peer.offer.skins?.map(id => <li key={id}>Skin: {nameOf(id, getSkin)}</li>)}
                 {peer.offer.killfx?.map(id => <li key={id}>FX: {nameOf(id, getKillFX)}</li>)}
-                {peer.offer.tokens > 0 && <li><GameIcon emoji="◆" size={14} /> {peer.offer.tokens} tokens</li>}
+                {peer.offer.tokens > 0 && <li><GameIcon icon="star" size={14} /> {peer.offer.tokens} tokens</li>}
                 {!peer.offer.chars?.length && !peer.offer.accs?.length && !peer.offer.skins?.length && !peer.offer.killfx?.length && !peer.offer.tokens && <li className="text-muted-foreground italic">Nothing offered yet.</li>}
               </ul>
             ) : <p className="text-[11px] text-muted-foreground italic">Waiting for {peer.name} to set their offer…</p>}

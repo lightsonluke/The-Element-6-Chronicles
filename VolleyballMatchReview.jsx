@@ -24,13 +24,13 @@ export default function VolleyballMatchReview({ p1Name, p2Name, p1Color, p2Color
   const winnerLabel = !decided ? 'DRAW' : p1Won ? p1Name : p2Name;
 
   const STAT_ROWS = [
-    { key: 'points',   label: '🏆 Points' },
-    { key: 'spikes',   label: '💥 Spikes' },
-    { key: 'assists',  label: '🤝 Assists' },
-    { key: 'sets',     label: '✋ Sets' },
-    { key: 'bumps',    label: '🤲 Bumps' },
-    { key: 'receives', label: '🛡 Receives' },
-    { key: 'digs',     label: '🤿 Digs' },
+    { key: 'points',   label: ' Points' },
+    { key: 'spikes',   label: ' Spikes' },
+    { key: 'assists',  label: ' Assists' },
+    { key: 'sets',     label: ' Sets' },
+    { key: 'bumps',    label: ' Bumps' },
+    { key: 'receives', label: ' Receives' },
+    { key: 'digs',     label: ' Digs' },
   ];
 
   const CharCard = ({ c, color }) => {

@@ -671,14 +671,14 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
       <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
         <div className="flex justify-between items-center w-full">
           <div>
-            <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="🧗" size={14} /> ROCK CLIMBING</h2>
+            <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="running" size={14} /> ROCK CLIMBING</h2>
             <p className="text-[11px] text-muted-foreground font-body mt-1 max-w-xl">Scale a massive mountain with a timing-based launch system. An arrow oscillates above your head while you hang — press Jump to launch exactly where it points. Time it right to chain holds; mistime it and you fall. Routes are brutal — big gaps, side-to-side leaps, and walls you must launch over.</p>
           </div>
-          <button onClick={onExit} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> SPORTS</button>
+          <button onClick={onExit} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> SPORTS</button>
         </div>
         <div className="w-full flex gap-2 justify-center">
-          <button onClick={() => { setPhase('lb'); sfx.click(); }} className="px-4 py-1.5 bg-primary/20 border border-primary text-primary rounded-lg font-heading text-xs hover:bg-primary hover:text-primary-foreground"><GameIcon emoji="🏆" size={14} /> LEADERBOARD</button>
-          <button onClick={() => { setMode2P(true); sfx.click(); }} className="px-4 py-1.5 bg-accent/20 border border-accent text-accent rounded-lg font-heading text-xs hover:bg-accent hover:text-accent-foreground"><GameIcon emoji="👥" size={14} /> 2P COUCH SPLIT</button>
+          <button onClick={() => { setPhase('lb'); sfx.click(); }} className="px-4 py-1.5 bg-primary/20 border border-primary text-primary rounded-lg font-heading text-xs hover:bg-primary hover:text-primary-foreground"><GameIcon icon="trophy" size={14} /> LEADERBOARD</button>
+          <button onClick={() => { setMode2P(true); sfx.click(); }} className="px-4 py-1.5 bg-accent/20 border border-accent text-accent rounded-lg font-heading text-xs hover:bg-accent hover:text-accent-foreground"><GameIcon icon="users" size={14} /> 2P COUCH SPLIT</button>
         </div>
         <p className="text-[11px] font-heading text-muted-foreground tracking-wider mt-2">SELECT TRACK</p>
         <div className="grid grid-cols-3 sm:grid-cols-9 gap-1.5 w-full">
@@ -708,12 +708,12 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
         {charId && (
           <ElementSelect charId={charId} currentElement={selElement} onSelect={(el) => { setSelElement(el); sfx.click(); }} charLevels={charLevels} label="ELEMENT (affects climb stats)" />
         )}
-        <button onClick={() => startRun(charId)} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon emoji="▶" size={14} /> START CLIMB</button>
+        <button onClick={() => startRun(charId)} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon icon="play" size={14} /> START CLIMB</button>
         <div className="text-[10px] text-muted-foreground font-body text-center max-w-xl mt-1">
           <p className="font-heading text-foreground/80 mb-1">CONTROLS</p>
-          <p><span className="text-accent font-bold"><GameIcon emoji="↑" size={14} /> / W / SPACE</span> Launch in the direction the arrow points (time it!)</p>
-          <p><span className="text-accent font-bold"><GameIcon emoji="↓" size={14} /> / S</span> Let go of the hold (drop)</p>
-          <p className="mt-1">The oscillating arrow above your head sets your launch direction — press Jump at the right moment to fly to the next hold. You can only steer left/right while falling after dropping; launches are committed. Chain launches to climb fast. Power <GameIcon emoji="→" size={14} /> launch force · Utility <GameIcon emoji="→" size={14} /> grip. Reach the summit!</p>
+          <p><span className="text-accent font-bold"><GameIcon icon="arrowUp" size={14} /> / W / SPACE</span> Launch in the direction the arrow points (time it!)</p>
+          <p><span className="text-accent font-bold"><GameIcon icon="arrowDown" size={14} /> / S</span> Let go of the hold (drop)</p>
+          <p className="mt-1">The oscillating arrow above your head sets your launch direction — press Jump at the right moment to fly to the next hold. You can only steer left/right while falling after dropping; launches are committed. Chain launches to climb fast. Power <GameIcon icon="arrowRight" size={14} /> launch force · Utility <GameIcon icon="arrowRight" size={14} /> grip. Reach the summit!</p>
         </div>
       </div>
     );
@@ -725,11 +725,11 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
   if (phase === 'over' && result) {
     return (
       <div className="flex flex-col items-center gap-4 w-full max-w-lg">
-        <h2 className={`text-3xl font-heading tracking-wider ${result.finished ? 'text-accent' : 'text-destructive'}`}>{result.finished ? <><GameIcon emoji="⛰️" size={14} /> SUMMIT REACHED!</> : 'YOU FELL!'}</h2>
+        <h2 className={`text-3xl font-heading tracking-wider ${result.finished ? 'text-accent' : 'text-destructive'}`}>{result.finished ? <><GameIcon icon="map" size={14} /> SUMMIT REACHED!</> : 'YOU FELL!'}</h2>
         <p className="text-sm text-muted-foreground font-body">{result.finished ? 'You conquered the mountain!' : 'You slipped and fell — try again!'}</p>
         <div className="w-full rounded-xl border border-border bg-card p-6 flex flex-col gap-3 items-center">
-          {result.isRecord && <p className="font-heading text-accent text-lg animate-pulse"><GameIcon emoji="⭐" size={14} /> NEW PERSONAL RECORD! <GameIcon emoji="⭐" size={14} /></p>}
-          {result.noCP && result.finished && <p className="font-heading text-primary text-sm"><GameIcon emoji="🏅" size={14} /> NO-CHECKPOINT RUN!</p>}
+          {result.isRecord && <p className="font-heading text-accent text-lg animate-pulse"><GameIcon icon="star" size={14} /> NEW PERSONAL RECORD! <GameIcon icon="star" size={14} /></p>}
+          {result.noCP && result.finished && <p className="font-heading text-primary text-sm"><GameIcon icon="medal" size={14} /> NO-CHECKPOINT RUN!</p>}
           <div className="text-center">
             <p className="text-[11px] font-heading text-muted-foreground tracking-wider">COMPLETION TIME</p>
             <p className="text-4xl font-heading text-primary">{fmtTime(result.time)}</p>
@@ -742,8 +742,8 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
           {!result.saved && result.finished && <p className="text-[9px] text-muted-foreground font-body">Sign in to save your time to the global leaderboard.</p>}
         </div>
         <div className="flex gap-2">
-          <button onClick={() => startRun(charId)} className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="↻" size={14} /> CLIMB AGAIN</button>
-          <button onClick={() => { setPhase('lb'); sfx.click(); }} className="px-5 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="🏆" size={14} /> LEADERBOARD</button>
+          <button onClick={() => startRun(charId)} className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="redo" size={14} /> CLIMB AGAIN</button>
+          <button onClick={() => { setPhase('lb'); sfx.click(); }} className="px-5 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="trophy" size={14} /> LEADERBOARD</button>
           <button onClick={onExit} className="px-5 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">SPORTS</button>
         </div>
       </div>
@@ -754,15 +754,15 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
-        <button onClick={onExit} className="el6-rockclimb-quit-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-controller-pause-trigger el6-rockclimb-pause-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause</button>
-        <span className="text-[10px] text-muted-foreground font-body"><GameIcon emoji="↑" size={14} />/W/SPACE: Launch (time the arrow!) · <GameIcon emoji="↓" size={14} />/S: Let go · <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} />/AD: Steer while falling · ESC/P: Pause</span>
+        <button onClick={onExit} className="el6-rockclimb-quit-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Quit</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-controller-pause-trigger el6-rockclimb-pause-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"> Pause</button>
+        <span className="text-[10px] text-muted-foreground font-body"><GameIcon icon="arrowUp" size={14} />/W/SPACE: Launch (time the arrow!) · <GameIcon icon="arrowDown" size={14} />/S: Let go · <GameIcon icon="info" size={14} /><GameIcon icon="arrowRight" size={14} />/AD: Steer while falling · ESC/P: Pause</span>
       </div>
       {paused && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-lg gap-4 z-10">
           <h2 className="text-3xl font-heading text-accent">PAUSED</h2>
           <div className="flex gap-2">
-            <button onClick={() => { pausedRef.current = false; setPaused(false); }} className="el6-controller-pause-trigger px-6 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="▶" size={14} /> RESUME</button>
+            <button onClick={() => { pausedRef.current = false; setPaused(false); }} className="el6-controller-pause-trigger px-6 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="play" size={14} /> RESUME</button>
             <button onClick={onExit} className="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">QUIT TO MENU</button>
           </div>
         </div>
@@ -813,7 +813,7 @@ function draw(ctx, s, charId, customCharsData, skins, accs) {
   if (s.windActive && s.windWarn > 0) {
     ctx.fillStyle = `rgba(255,200,80,${0.1 + 0.1 * Math.sin(Date.now() * 0.02)})`; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#ffcc44'; ctx.font = 'bold 14px Orbitron'; ctx.textAlign = 'center';
-    ctx.fillText('<GameIcon emoji="⚠" size={14} /> WIND GUST INCOMING', W / 2, 60);
+    ctx.fillText('<GameIcon icon="warning" size={14} /> WIND GUST INCOMING', W / 2, 60);
   } else if (s.windActive) {
     ctx.fillStyle = `rgba(120,180,220,${0.05 + 0.05 * Math.sin(Date.now() * 0.02)})`; ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = 'rgba(200,220,255,0.2)'; ctx.lineWidth = 1;
@@ -1180,7 +1180,7 @@ function drawHUD(ctx, s, env, progress, camY) {
   if (s.track?.endless) {
     const lavaGap = Math.max(0, Math.floor((s.player.y - s.lavaY) / 10));
     ctx.fillStyle = '#ff6633'; ctx.font = 'bold 13px Orbitron';
-    ctx.fillText(`🌋 LAVA ${lavaGap}m BELOW`, W - 16, 44);
+    ctx.fillText(` LAVA ${lavaGap}m BELOW`, W - 16, 44);
   } else {
     const barW = 160, barX = W - barW - 16, barY = 26;
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(barX, barY, barW, 8);

@@ -162,7 +162,7 @@ export default function VirtualKeyboard() {
   return (
     <div data-el6-virtual-keyboard="true" className="fixed bottom-0 left-0 right-0 z-[200] flex flex-col items-center gap-2 p-3 bg-background/95 backdrop-blur border-t-2 border-accent shadow-2xl">
       <div className="flex items-center gap-3 w-full max-w-2xl justify-center">
-        <p className="text-[10px] font-heading text-muted-foreground whitespace-nowrap"><GameIcon emoji="🎮" size={14} /> D-Pad: move · A: type · B: close</p>
+        <p className="text-[10px] font-heading text-muted-foreground whitespace-nowrap"><GameIcon icon="controller" size={14} /> D-Pad: move · A: type · B: close</p>
         <div className="flex-1 min-w-0 px-3 py-1 bg-muted/50 rounded font-body text-sm text-foreground truncate text-center">
           {preview || <span className="text-muted-foreground italic">(empty)</span>}
           <span className="inline-block w-0.5 h-4 bg-accent ml-0.5 animate-pulse align-middle" />
@@ -183,7 +183,7 @@ export default function VirtualKeyboard() {
                   className={`font-heading rounded-lg transition-all select-none ${wide ? 'px-5' : 'px-3'} py-2.5 text-sm
                     ${sel ? 'bg-accent text-accent-foreground scale-110 shadow-lg ring-2 ring-accent' : 'bg-secondary text-secondary-foreground'}`}
                 >
-                  {key === 'BACK' ? '⌫' : key === 'SPACE' ? '␣ SPACE' : key === 'DONE' ? '✓ DONE' : key}
+                  {key === 'BACK' ? '⌫' : key === 'SPACE' ? '␣ SPACE' : key === 'DONE' ? ' DONE' : key}
                 </button>
               );
             })}

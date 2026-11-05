@@ -31,10 +31,10 @@ export default function TradeGiftModal({ mode, peerName, progress, onConfirm, on
 
   const summary = [];
   if (tokenAmount > 0) summary.push(`${tokenAmount} ◆ Tokens`);
-  selected.skins.forEach(id => { const sk = getSkin(id); if (sk) summary.push(`🎨 ${sk.name}`); });
-  selected.accessories.forEach(id => { const a = getAccessory(id); if (a) summary.push(`⚔ ${a.name}`); });
-  selected.killFX.forEach(id => { const fx = getKillFX(id); if (fx) summary.push(`✨ ${fx.name}`); });
-  selected.chars.forEach(id => { const c = ALL.find(x => x.id === id); if (c) summary.push(`👤 ${c.name}`); });
+  selected.skins.forEach(id => { const sk = getSkin(id); if (sk) summary.push(` ${sk.name}`); });
+  selected.accessories.forEach(id => { const a = getAccessory(id); if (a) summary.push(` ${a.name}`); });
+  selected.killFX.forEach(id => { const fx = getKillFX(id); if (fx) summary.push(` ${fx.name}`); });
+  selected.chars.forEach(id => { const c = ALL.find(x => x.id === id); if (c) summary.push(` ${c.name}`); });
 
   const confirm = () => {
     if (summary.length === 0) { sfx.warning(); return; }
@@ -62,7 +62,7 @@ export default function TradeGiftModal({ mode, peerName, progress, onConfirm, on
         {color && <span className="w-3 h-3 rounded-full" style={{ background: color }} />}
         {name}
       </span>
-      <span className={`text-[10px] ${selected ? 'text-accent' : 'text-muted-foreground'}`}>{selected ? '✓ Selected' : '+ Select'}</span>
+      <span className={`text-[10px] ${selected ? 'text-accent' : 'text-muted-foreground'}`}>{selected ? ' Selected' : '+ Select'}</span>
     </button>
   );
 
@@ -70,8 +70,8 @@ export default function TradeGiftModal({ mode, peerName, progress, onConfirm, on
     <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center" onClick={onClose}>
       <div className="bg-card border-2 border-accent rounded-xl p-5 w-[520px] max-w-[94%] max-h-[88vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-heading text-base text-accent">{mode === 'trade' ? '🔄 TRADE' : '🎁 GIFT'} — {peerName}</h3>
-          <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon emoji="✕" size={14} /></button>
+          <h3 className="font-heading text-base text-accent">{mode === 'trade' ? ' TRADE' : ' GIFT'} — {peerName}</h3>
+          <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button>
         </div>
         <p className="text-[10px] text-muted-foreground mb-3">
           {mode === 'trade'
@@ -82,10 +82,10 @@ export default function TradeGiftModal({ mode, peerName, progress, onConfirm, on
         {/* Tabs */}
         <div className="flex gap-1 flex-wrap mb-3">
           <Tab id="tokens" label="◆ TOKENS" count={tokenAmount} />
-          <Tab id="skins" label="🎨 SKINS" count={selected.skins.length} />
-          <Tab id="accs" label="⚔ GEAR" count={selected.accessories.length} />
-          <Tab id="fx" label="✨ KILL FX" count={selected.killFX.length} />
-          <Tab id="chars" label="👤 CHARS" count={selected.chars.length} />
+          <Tab id="skins" label=" SKINS" count={selected.skins.length} />
+          <Tab id="accs" label=" GEAR" count={selected.accessories.length} />
+          <Tab id="fx" label=" KILL FX" count={selected.killFX.length} />
+          <Tab id="chars" label=" CHARS" count={selected.chars.length} />
         </div>
 
         {/* Tab content */}
@@ -94,7 +94,7 @@ export default function TradeGiftModal({ mode, peerName, progress, onConfirm, on
             <div className="flex flex-col gap-2">
               <p className="text-xs text-muted-foreground">You have <span className="text-accent font-heading">{progress?.coins || 0}</span> tokens.</p>
               <input type="range" min={0} max={progress?.coins || 0} value={tokenAmount} onChange={e => setSelected({ ...selected, tokens: parseInt(e.target.value) })} className="w-full" />
-              <p className="font-heading text-lg text-accent text-center">{tokenAmount} <GameIcon emoji="◆" size={14} /></p>
+              <p className="font-heading text-lg text-accent text-center">{tokenAmount} <GameIcon icon="star" size={14} /></p>
             </div>
           )}
           {tab === 'skins' && (

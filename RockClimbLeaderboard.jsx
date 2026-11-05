@@ -69,8 +69,8 @@ export default function RockClimbLeaderboard({ onBack, customCharsData = {} }) {
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
       <div className="flex justify-between items-center w-full">
-        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="⛰️" size={14} /> ROCK CLIMBING LEADERBOARD</h2>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="map" size={14} /> ROCK CLIMBING LEADERBOARD</h2>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-2">
         <span className="text-[10px] font-heading text-muted-foreground">TRACK:</span>
@@ -102,7 +102,7 @@ export default function RockClimbLeaderboard({ onBack, customCharsData = {} }) {
           ) : filtered.map((e, i) => (
             <div key={e.id || i} className="grid grid-cols-[60px_1fr_110px_100px_70px_90px] gap-2 px-4 py-2 text-xs font-body border-t border-border/40 items-center hover:bg-accent/5">
               <span className="font-heading text-accent">#{e.rank || (i + 1)}</span>
-              <span className="truncate text-foreground">{e.user_name || 'Unknown'}{e.no_checkpoint_run ? ' ⭐' : ''}</span>
+              <span className="truncate text-foreground">{e.user_name || 'Unknown'}{e.no_checkpoint_run ? ' ' : ''}</span>
               <span className="truncate text-muted-foreground">{e.char_name || charName(e.char_id, customCharsData)}</span>
               <span className="text-right font-heading text-primary">{fmtTime(e.time_ms)}</span>
               <span className="text-right text-muted-foreground">{e.checkpoints_used ?? '—'}</span>
@@ -111,7 +111,7 @@ export default function RockClimbLeaderboard({ onBack, customCharsData = {} }) {
           ))}
         </div>
       </div>
-      <p className="text-[10px] text-muted-foreground font-body text-center">Times update automatically after every completed climb. <GameIcon emoji="⭐" size={14} /> = no-checkpoint run. Rock Climbing is single-player and offline.</p>
+      <p className="text-[10px] text-muted-foreground font-body text-center">Times update automatically after every completed climb. <GameIcon icon="star" size={14} /> = no-checkpoint run. Rock Climbing is single-player and offline.</p>
     </div>
   );
 }

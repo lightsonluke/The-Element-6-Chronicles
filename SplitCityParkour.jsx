@@ -18,11 +18,11 @@ import GameCanvasPortal from './GameCanvasPortal.jsx';
 // ── Canvas / physics constants ──
 const W = 1100, H = 620;
 const GRAV = 0.55;
-const PW = 11, PH = 46;            // player half-width, full height (feet<GameIcon emoji="→" size={14} />head)
+const PW = 11, PH = 46;            // player half-width, full height (feet<GameIcon icon="arrowRight" size={14} />head)
 const CLIMB_SPEED = 2.6;
 const PLAYER_SCREEN_X = 330;
 const FALL_DEATH_Y = 1000;
-const DIST_SCALE = 8;              // world px <GameIcon emoji="→" size={14} /> meters
+const DIST_SCALE = 8;              // world px <GameIcon icon="arrowRight" size={14} /> meters
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -506,13 +506,13 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
       <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
         <div className="flex justify-between items-center w-full">
           <div>
-            <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="🏃" size={14} /> SPLIT CITY PARKOUR</h2>
+            <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="running" size={14} /> SPLIT CITY PARKOUR</h2>
             <p className="text-[11px] text-muted-foreground font-body mt-1 max-w-xl">Race across the rooftops of Split City in an endless parkour challenge. Master wall jumps, climb towering buildings, outrun the advancing wall, and compete for the highest distance on the global leaderboard.</p>
           </div>
-          <button onClick={onExit} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> SPORTS</button>
+          <button onClick={onExit} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> SPORTS</button>
         </div>
         <div className="w-full flex gap-2 justify-center">
-          <button onClick={() => { setPhase('lb'); sfx.click(); }} className="px-4 py-1.5 bg-primary/20 border border-primary text-primary rounded-lg font-heading text-xs hover:bg-primary hover:text-primary-foreground"><GameIcon emoji="🏆" size={14} /> LEADERBOARD</button>
+          <button onClick={() => { setPhase('lb'); sfx.click(); }} className="px-4 py-1.5 bg-primary/20 border border-primary text-primary rounded-lg font-heading text-xs hover:bg-primary hover:text-primary-foreground"><GameIcon icon="trophy" size={14} /> LEADERBOARD</button>
         </div>
         <p className="text-[11px] font-heading text-muted-foreground tracking-wider mt-2">CHOOSE YOUR RUNNER</p>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 w-full">
@@ -531,13 +531,13 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
         {charId && (
           <ElementSelect charId={charId} currentElement={selElement} onSelect={(el) => { setSelElement(el); sfx.click(); }} charLevels={charLevels} label="ELEMENT (affects run stats)" />
         )}
-        <button onClick={() => startRun(charId)} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon emoji="▶" size={14} /> START RUN</button>
+        <button onClick={() => startRun(charId)} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon icon="play" size={14} /> START RUN</button>
         <div className="text-[10px] text-muted-foreground font-body text-center max-w-xl mt-1">
           <p className="font-heading text-foreground/80 mb-1">CONTROLS</p>
-          <p><span className="text-accent font-bold">D / <GameIcon emoji="→" size={14} /></span> Run forward · <span className="text-accent font-bold">A / <GameIcon emoji="←" size={14} /></span> Run back</p>
-          <p><span className="text-accent font-bold">SPACE / <GameIcon emoji="↑" size={14} /> / W</span> Jump · Wall-Jump off any wall</p>
-          <p>Walk into any building side to auto-climb it · <span className="text-accent font-bold"><GameIcon emoji="↓" size={14} />/S</span> climb down · <span className="text-accent font-bold">SPACE</span> wall-jump off</p>
-          <p className="mt-1">Speed <GameIcon emoji="→" size={14} /> run · Utility <GameIcon emoji="→" size={14} /> jump · Power <GameIcon emoji="→" size={14} /> wall-jump · Control <GameIcon emoji="→" size={14} /> climb stamina. No double jump.</p>
+          <p><span className="text-accent font-bold">D / <GameIcon icon="arrowRight" size={14} /></span> Run forward · <span className="text-accent font-bold">A / <GameIcon icon="info" size={14} /></span> Run back</p>
+          <p><span className="text-accent font-bold">SPACE / <GameIcon icon="arrowUp" size={14} /> / W</span> Jump · Wall-Jump off any wall</p>
+          <p>Walk into any building side to auto-climb it · <span className="text-accent font-bold"><GameIcon icon="arrowDown" size={14} />/S</span> climb down · <span className="text-accent font-bold">SPACE</span> wall-jump off</p>
+          <p className="mt-1">Speed <GameIcon icon="arrowRight" size={14} /> run · Utility <GameIcon icon="arrowRight" size={14} /> jump · Power <GameIcon icon="arrowRight" size={14} /> wall-jump · Control <GameIcon icon="arrowRight" size={14} /> climb stamina. No double jump.</p>
         </div>
       </div>
     );
@@ -552,7 +552,7 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
         <h2 className="text-3xl font-heading text-destructive tracking-wider">YOU FELL!</h2>
         <p className="text-sm text-muted-foreground font-body">{result.cause === 'wall' ? 'The advancing wall caught you!' : 'You slipped and fell from the rooftops!'}</p>
         <div className="w-full rounded-xl border border-border bg-card p-6 flex flex-col gap-3 items-center">
-          {result.isRecord && <p className="font-heading text-accent text-lg animate-pulse"><GameIcon emoji="⭐" size={14} /> NEW PERSONAL RECORD! <GameIcon emoji="⭐" size={14} /></p>}
+          {result.isRecord && <p className="font-heading text-accent text-lg animate-pulse"><GameIcon icon="star" size={14} /> NEW PERSONAL RECORD! <GameIcon icon="star" size={14} /></p>}
           <div className="text-center">
             <p className="text-[11px] font-heading text-muted-foreground tracking-wider">DISTANCE</p>
             <p className="text-5xl font-heading text-primary">{result.distance}<span className="text-2xl">m</span></p>
@@ -564,8 +564,8 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
           {!result.saved && <p className="text-[9px] text-muted-foreground font-body">Sign in to save your score to the global leaderboard.</p>}
         </div>
         <div className="flex gap-2">
-          <button onClick={() => startRun(charId)} className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="↻" size={14} /> RETRY</button>
-          <button onClick={() => { setPhase('lb'); sfx.click(); }} className="px-5 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="🏆" size={14} /> LEADERBOARD</button>
+          <button onClick={() => startRun(charId)} className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="redo" size={14} /> RETRY</button>
+          <button onClick={() => { setPhase('lb'); sfx.click(); }} className="px-5 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="trophy" size={14} /> LEADERBOARD</button>
           <button onClick={onExit} className="px-5 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">SPORTS</button>
         </div>
       </div>
@@ -576,9 +576,9 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
-        <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-controller-pause-trigger el6-sport-pause-top-center px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>
-        <span className="text-[10px] text-muted-foreground font-body">D/<GameIcon emoji="→" size={14} />: Run · SPACE: Jump/Wall-Jump · Walk into wall to climb · ESC/P: Pause</span>
+        <button onClick={onExit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Quit</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-controller-pause-trigger el6-sport-pause-top-center px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? ' RESUME' : ' PAUSE (ESC)'}</button>
+        <span className="text-[10px] text-muted-foreground font-body">D/<GameIcon icon="arrowRight" size={14} />: Run · SPACE: Jump/Wall-Jump · Walk into wall to climb · ESC/P: Pause</span>
       </div>
       {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onExit} /></div>}
       <GameCanvasPortal>
@@ -845,7 +845,7 @@ function drawHUD(ctx, s) {
   const screenX = s.wallX - (s.player.x - PLAYER_SCREEN_X);
   if (screenX > -200 && screenX < PLAYER_SCREEN_X) {
     ctx.textAlign = 'left'; ctx.fillStyle = '#ff4444'; ctx.font = 'bold 11px Orbitron';
-    ctx.fillText('⚠ THE WALL IS CLOSE — KEEP MOVING!', 16, 54);
+    ctx.fillText(' THE WALL IS CLOSE — KEEP MOVING!', 16, 54);
   }
   // climb stamina bar (always show when climbing or recently drained)
   const p = s.player;

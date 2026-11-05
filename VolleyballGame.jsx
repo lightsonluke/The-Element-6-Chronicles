@@ -1545,7 +1545,7 @@ function drawTeamPlayer(ctx, s, team, active, ids, jersey, teamColor, side, equi
       ctx.shadowBlur = 0;
     }
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(p.x - 44, ny - 12, 88, 16);
-    if (isActive) { ctx.fillStyle = '#FFD700'; ctx.font = 'bold 10px Orbitron'; ctx.textAlign = 'center'; ctx.fillText('▶', p.x - 30, ny + 1); }
+    if (isActive) { ctx.fillStyle = '#FFD700'; ctx.font = 'bold 10px Orbitron'; ctx.textAlign = 'center'; ctx.fillText('', p.x - 30, ny + 1); }
     ctx.fillStyle = isActive ? '#FFD700' : charObj.color;
     ctx.font = 'bold 10px Orbitron'; ctx.textAlign = 'center';
     ctx.shadowColor = isActive ? '#FFD700' : charObj.color; ctx.shadowBlur = 5;

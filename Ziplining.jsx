@@ -24,7 +24,7 @@ const LANES = [205, 335, 465];            // top, middle, bottom cables
 const PLAYER_X = 320;
 const PW = 16, PH = 56;
 const HANG_OFF = 24;                       // player hangs this far below the cable
-const DIST_SCALE = 12;                     // world px <GameIcon emoji="→" size={14} /> meters
+const DIST_SCALE = 12;                     // world px <GameIcon icon="arrowRight" size={14} /> meters
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -248,12 +248,12 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
       <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
         <div className="flex justify-between items-center w-full">
           <div>
-            <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="🪢" size={14} /> ZIPLINING</h2>
+            <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="link" size={14} /> ZIPLINING</h2>
             <p className="text-[11px] text-muted-foreground font-body mt-1 max-w-xl">Ride three forest ziplines forever — auto-advancing, no stopping. Tap Up/Down to switch cables and dodge an endless array of forest obstacles. The longer you survive, the higher you climb on the global leaderboard. Stats & Elements are cosmetic only here — every character rides the same!</p>
           </div>
-          <button onClick={onExit} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> SPORTS</button>
+          <button onClick={onExit} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> SPORTS</button>
         </div>
-        <button onClick={() => { setPhase('lb'); sfx.click(); }} className="px-4 py-1.5 bg-primary/20 border border-primary text-primary rounded-lg font-heading text-xs hover:bg-primary hover:text-primary-foreground"><GameIcon emoji="🏆" size={14} /> LEADERBOARD</button>
+        <button onClick={() => { setPhase('lb'); sfx.click(); }} className="px-4 py-1.5 bg-primary/20 border border-primary text-primary rounded-lg font-heading text-xs hover:bg-primary hover:text-primary-foreground"><GameIcon icon="trophy" size={14} /> LEADERBOARD</button>
         <p className="text-[11px] font-heading text-muted-foreground tracking-wider mt-1">CHOOSE YOUR RIDER</p>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 w-full">
           {charPool.map(({ id, char }) => {
@@ -271,10 +271,10 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
         {charId && (
           <ElementSelect charId={charId} currentElement={selElement} onSelect={(el) => { setSelElement(el); sfx.click(); }} charLevels={charLevels} label="ELEMENT (cosmetic only)" />
         )}
-        <button onClick={() => startRun(charId)} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon emoji="▶" size={14} /> START RUN</button>
+        <button onClick={() => startRun(charId)} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon icon="play" size={14} /> START RUN</button>
         <div className="text-[10px] text-muted-foreground font-body text-center max-w-xl">
           <p className="font-heading text-foreground/80 mb-1">CONTROLS</p>
-          <p><span className="text-accent font-bold"><GameIcon emoji="↑" size={14} /> / W</span> Zipline up &nbsp;·&nbsp; <span className="text-accent font-bold"><GameIcon emoji="↓" size={14} /> / S</span> Zipline down &nbsp;·&nbsp; ESC to pause</p>
+          <p><span className="text-accent font-bold"><GameIcon icon="arrowUp" size={14} /> / W</span> Zipline up &nbsp;·&nbsp; <span className="text-accent font-bold"><GameIcon icon="arrowDown" size={14} /> / S</span> Zipline down &nbsp;·&nbsp; ESC to pause</p>
           <p className="mt-1">You can't stop, slow, or steer — only switch cables. Tap Up/Down to dodge obstacles, chain switches fluidly, and survive as long as you can!</p>
         </div>
       </div>
@@ -286,10 +286,10 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
   if (phase === 'over' && result) {
     return (
       <div className="flex flex-col items-center gap-4 w-full max-w-lg">
-        <h2 className="text-3xl font-heading tracking-wider text-destructive"><GameIcon emoji="💨" size={14} /> RUN OVER!</h2>
+        <h2 className="text-3xl font-heading tracking-wider text-destructive"><GameIcon icon="cloud" size={14} /> RUN OVER!</h2>
         <p className="text-sm text-muted-foreground font-body">You slammed into an obstacle!</p>
         <div className="w-full rounded-xl border border-border bg-card p-6 flex flex-col gap-3 items-center">
-          {result.newBest && <p className="font-heading text-accent text-lg animate-pulse"><GameIcon emoji="⭐" size={14} /> NEW PERSONAL BEST! <GameIcon emoji="⭐" size={14} /></p>}
+          {result.newBest && <p className="font-heading text-accent text-lg animate-pulse"><GameIcon icon="star" size={14} /> NEW PERSONAL BEST! <GameIcon icon="star" size={14} /></p>}
           <div className="flex gap-8 text-center">
             <div><p className="text-[10px] font-heading text-muted-foreground tracking-wider">DISTANCE</p><p className="text-4xl font-heading text-primary">{result.distance}m</p></div>
             <div><p className="text-[10px] font-heading text-muted-foreground tracking-wider">TIME</p><p className="text-4xl font-heading text-accent">{result.time}s</p></div>
@@ -302,8 +302,8 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
           {!result.saved && <p className="text-[9px] text-muted-foreground font-body">Sign in to save your distance to the global leaderboard.</p>}
         </div>
         <div className="flex gap-2">
-          <button onClick={() => startRun(charId)} className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="↻" size={14} /> RETRY</button>
-          <button onClick={() => { setPhase('lb'); sfx.click(); }} className="px-5 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="🏆" size={14} /> LEADERBOARD</button>
+          <button onClick={() => startRun(charId)} className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="redo" size={14} /> RETRY</button>
+          <button onClick={() => { setPhase('lb'); sfx.click(); }} className="px-5 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="trophy" size={14} /> LEADERBOARD</button>
           <button onClick={onExit} className="px-5 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">SPORTS</button>
         </div>
       </div>
@@ -314,15 +314,15 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2">
-        <button onClick={onExit} className="el6-sport-quit-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-        <span className="text-[10px] text-muted-foreground font-body"><GameIcon emoji="↑" size={14} />/W: Zipline up · <GameIcon emoji="↓" size={14} />/S: Zipline down · ESC: Pause — survive as long as you can!</span>
-        <button onClick={() => setPaused(p => !p)} className="el6-controller-pause-trigger el6-sport-pause-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? <GameIcon emoji="▶" size={14} /> : <GameIcon emoji="⏸" size={14} />}</button>
+        <button onClick={onExit} className="el6-sport-quit-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Quit</button>
+        <span className="text-[10px] text-muted-foreground font-body"><GameIcon icon="arrowUp" size={14} />/W: Zipline up · <GameIcon icon="arrowDown" size={14} />/S: Zipline down · ESC: Pause — survive as long as you can!</span>
+        <button onClick={() => setPaused(p => !p)} className="el6-controller-pause-trigger el6-sport-pause-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? <GameIcon icon="play" size={14} /> : <GameIcon icon="pause" size={14} />}</button>
       </div>
       {paused && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-lg gap-4 z-10">
           <h2 className="text-3xl font-heading text-accent">PAUSED</h2>
           <div className="flex gap-2">
-            <button onClick={() => setPaused(false)} className="el6-controller-pause-trigger px-6 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="▶" size={14} /> RESUME</button>
+            <button onClick={() => setPaused(false)} className="el6-controller-pause-trigger px-6 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="play" size={14} /> RESUME</button>
             <button onClick={onExit} className="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">QUIT TO MENU</button>
           </div>
         </div>

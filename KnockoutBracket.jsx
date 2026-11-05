@@ -34,7 +34,7 @@ export default function KnockoutBracket({ rounds = {}, currentRound, currentMatc
       <g>
         <rect x={x} y={y - 14} width={PW} height={PH} rx={14} fill={isChamp ? '#fde68a' : 'white'} stroke={current ? '#f59e0b' : '#000'} strokeWidth={current ? 3 : 2} />
         <circle cx={x + 11} cy={y} r={4.5} fill={color} stroke="#000" strokeWidth={0.5} />
-        {human && <text x={x + 19} y={y + 4} fontSize={9} fill="#f59e0b"><GameIcon emoji="★" size={14} /></text>}
+        {human && <text x={x + 19} y={y + 4} fontSize={9} fill="#f59e0b"><GameIcon icon="star" size={14} /></text>}
         <text x={x + (human ? 27 : 20)} y={y + 4} fontSize={8.5} fontFamily="Orbitron, sans-serif" fill="#111" fontWeight={won ? 700 : 400}>{name}</text>
         {score != null && <text x={x + PW - 7} y={y + 4} fontSize={10} fontFamily="Orbitron, sans-serif" fill="#000" fontWeight={700} textAnchor="end">{score}</text>}
       </g>
@@ -51,7 +51,7 @@ export default function KnockoutBracket({ rounds = {}, currentRound, currentMatc
     </g>
   );
 
-  // match <GameIcon emoji="→" size={14} /> pill helpers
+  // match <GameIcon icon="arrowRight" size={14} /> pill helpers
   const mp = (m, home) => ({
     charId: home ? m?.home : m?.away,
     score: m?.played ? (home ? m.homeScore : m.awayScore) : null,

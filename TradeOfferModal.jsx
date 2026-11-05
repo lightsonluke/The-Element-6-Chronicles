@@ -52,10 +52,10 @@ export default function TradeOfferModal({ mode = 'trade', peer, progress, userId
   const summary = (items) => {
     const s = [];
     if (items.tokens > 0) s.push(`${items.tokens} ◆`);
-    if (items.skins?.length) s.push(`🎨 ${items.skins.length} skin${items.skins.length > 1 ? 's' : ''}`);
-    if (items.accessories?.length) s.push(`⚔ ${items.accessories.length} gear`);
-    if (items.killFX?.length) s.push(`✨ ${items.killFX.length} FX`);
-    if (items.chars?.length) s.push(`👤 ${items.chars.length} char${items.chars.length > 1 ? 's' : ''}`);
+    if (items.skins?.length) s.push(` ${items.skins.length} skin${items.skins.length > 1 ? 's' : ''}`);
+    if (items.accessories?.length) s.push(` ${items.accessories.length} gear`);
+    if (items.killFX?.length) s.push(` ${items.killFX.length} FX`);
+    if (items.chars?.length) s.push(` ${items.chars.length} char${items.chars.length > 1 ? 's' : ''}`);
     return s;
   };
 
@@ -73,7 +73,7 @@ export default function TradeOfferModal({ mode = 'trade', peer, progress, userId
         request: { tokens: request.tokens || 0, skins: request.skins, accessories: request.accessories, killFX: request.killFX, chars: request.chars },
       }).select('id').single();
       if (tradeError) throw tradeError;
-      await supabase.from('player_direct_messages').insert({ sender_id: userId, recipient_id: peer.id, sender_username: username || 'Player', body: `🔄 Sent you a trade offer. [E6TRADE:${trade?.id || ''}]` });
+      await supabase.from('player_direct_messages').insert({ sender_id: userId, recipient_id: peer.id, sender_username: username || 'Player', body: ` Sent you a trade offer. [E6TRADE:${trade?.id || ''}]` });
       sfx.purchaseSuccess();
       onConfirm?.({ give: offer, request });
     } catch (e) { sfx.warning(); }
@@ -86,7 +86,7 @@ export default function TradeOfferModal({ mode = 'trade', peer, progress, userId
         {color && <span className="w-3 h-3 rounded-full" style={{ background: color }} />}
         {name}
       </span>
-      <span className={`text-[10px] ${selected ? 'text-accent' : 'text-muted-foreground'}`}>{selected ? <GameIcon emoji="✓" size={14} /> : '+'}</span>
+      <span className={`text-[10px] ${selected ? 'text-accent' : 'text-muted-foreground'}`}>{selected ? <GameIcon icon="check" size={14} /> : '+'}</span>
     </button>
   );
 
@@ -113,7 +113,7 @@ export default function TradeOfferModal({ mode = 'trade', peer, progress, userId
           <div className="flex flex-col gap-2">
             <p className="text-xs text-muted-foreground">{side === 'offer' ? 'You have' : 'They have'} <span className="text-accent font-heading">{prog.coins || 0}</span> tokens.</p>
             <input type="range" min={0} max={prog.coins || 0} value={sel.tokens} onChange={e => { const v = parseInt(e.target.value); side === 'offer' ? setOffer({ ...offer, tokens: v }) : setRequest({ ...request, tokens: v }); sfx.click(); }} className="w-full" />
-            <p className="font-heading text-lg text-accent text-center">{sel.tokens} <GameIcon emoji="◆" size={14} /></p>
+            <p className="font-heading text-lg text-accent text-center">{sel.tokens} <GameIcon icon="star" size={14} /></p>
           </div>
         )}
         {tab === 'skins' && (
@@ -143,8 +143,8 @@ export default function TradeOfferModal({ mode = 'trade', peer, progress, userId
     <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center" onClick={onClose}>
       <div className="bg-card border-2 border-accent rounded-xl p-5 w-[680px] max-w-[94%] max-h-[88vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-heading text-base text-accent"><GameIcon emoji="🔄" size={14} /> TRADE — {peer.username || peer.name || 'Player'}</h3>
-          <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon emoji="✕" size={14} /></button>
+          <h3 className="font-heading text-base text-accent"><GameIcon icon="refresh" size={14} /> TRADE — {peer.username || peer.name || 'Player'}</h3>
+          <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button>
         </div>
         <p className="text-[10px] text-muted-foreground mb-3">Select what you'll offer (left) and what you want from them (right). They must accept before the trade is official.</p>
 
@@ -161,10 +161,10 @@ export default function TradeOfferModal({ mode = 'trade', peer, progress, userId
             {/* Tabs */}
             <div className="flex gap-1 flex-wrap mb-2">
               <Tab id="tokens" label="◆ TOKENS" />
-              <Tab id="skins" label="🎨 SKINS" />
-              <Tab id="accs" label="⚔ GEAR" />
-              <Tab id="fx" label="✨ FX" />
-              <Tab id="chars" label="👤 CHARS" />
+              <Tab id="skins" label=" SKINS" />
+              <Tab id="accs" label=" GEAR" />
+              <Tab id="fx" label=" FX" />
+              <Tab id="chars" label=" CHARS" />
             </div>
 
             {renderInventory(activeSide)}

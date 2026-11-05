@@ -84,7 +84,7 @@ export default function OnlineSportsHub({ onBack, unlockedIds, favoriteId, equip
   }
 
   return <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
-    <div className="flex justify-between items-center w-full"><h2 className="text-2xl font-heading text-accent">ONLINE SPORTS</h2><button onClick={onBack} className="px-4 py-2 bg-secondary rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> SPORTS</button></div>
+    <div className="flex justify-between items-center w-full"><h2 className="text-2xl font-heading text-accent">ONLINE SPORTS</h2><button onClick={onBack} className="px-4 py-2 bg-secondary rounded font-heading text-sm"><GameIcon icon="info" size={14} /> SPORTS</button></div>
     <p className="text-xs text-muted-foreground text-center">Global queues start only when the required number of players joins.</p>
     {error && <p className="text-xs text-destructive">{error}</p>}
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">

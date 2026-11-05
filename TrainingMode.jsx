@@ -28,7 +28,7 @@ export function TrainingOverlay({ ctl, p1, p2, onCharacters, onClose }) {
         <button onClick={()=>update({repeatJump:!ctl.current.repeatJump})} className={`px-2 py-1 rounded ${ctl.current.repeatJump?'bg-accent text-black':'bg-secondary'}`}>REPEAT JUMP</button>
         <button onClick={()=>ctl.current.togglePause?.()} className="px-2 py-1 rounded bg-secondary">{ctl.current.paused?'RESUME':'PAUSE'}</button>
         <button onClick={()=>ctl.current.stepBack?.()} className="px-2 py-1 rounded bg-secondary">◀ FRAME</button>
-        <button onClick={()=>ctl.current.stepForward?.()} className="px-2 py-1 rounded bg-secondary">FRAME ▶</button>
+        <button onClick={()=>ctl.current.stepForward?.()} className="px-2 py-1 rounded bg-secondary">FRAME </button>
         <button onClick={()=>ctl.current.resetDamage?.()} className="px-2 py-1 rounded bg-secondary">RESET DAMAGE</button>
         <button onClick={()=>ctl.current.capturePosition?.()} className="px-2 py-1 rounded bg-secondary">SET POSITION</button>
         <button onClick={()=>ctl.current.resetPosition?.()} className="px-2 py-1 rounded bg-secondary">RESET POSITION</button>

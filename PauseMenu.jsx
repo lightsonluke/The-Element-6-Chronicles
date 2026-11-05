@@ -4,8 +4,8 @@ import GameIcon from "./GameIcon.jsx";
 const CONTROLS = [
   { section: 'PLAYER 1', color: '#FFD700', items: [
     { key: '← →', action: 'Move' },
-    { key: <GameIcon emoji="↑" size={14} />, action: 'Jump / Double Jump' },
-    { key: <GameIcon emoji="↓" size={14} />, action: 'Fast Fall' },
+    { key: <GameIcon icon="arrowUp" size={14} />, action: 'Jump / Double Jump' },
+    { key: <GameIcon icon="arrowDown" size={14} />, action: 'Fast Fall' },
     { key: ', (comma)', action: 'Signature Attack' },
     { key: ', + ↑ (air)', action: 'Recovery Attack' },
     { key: '. (period)', action: 'Activate Power' },

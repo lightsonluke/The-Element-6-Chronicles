@@ -26,8 +26,8 @@ export default function OnlineSettings({ onBack, settings = {}, onSave }) {
   return (
     <div className="w-full max-w-2xl flex flex-col gap-4 max-h-[85vh] overflow-y-auto pr-1">
       <div className="flex justify-between items-center sticky top-0 z-10 bg-background/80 backdrop-blur py-2 -mx-1 px-1">
-        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="🌐" size={14} /> ONLINE &amp; LAN</h2>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="globe" size={14} /> ONLINE &amp; LAN</h2>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       <div className="bg-card border border-border rounded-xl p-5">

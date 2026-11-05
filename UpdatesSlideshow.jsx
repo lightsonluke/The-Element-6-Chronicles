@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { sfx } from './sfx.js';
 import { UPDATES } from './updates.js';
+import GameIcon from './GameIcon.jsx';
+import GameIcon from './GameIcon.jsx';
 
 export default function UpdatesSlideshow() {
   const [idx, setIdx] = useState(0);
@@ -25,7 +27,7 @@ export default function UpdatesSlideshow() {
           className="absolute inset-0 flex flex-col items-center justify-center transition-all duration-500"
           style={{ background: `linear-gradient(135deg, ${u.color}cc, ${u.color2})` }}
         >
-          <span className="text-6xl mb-2 drop-shadow-lg">{u.emoji}</span>
+          <GameIcon icon="calendar" size={40} className="mb-2 text-white drop-shadow-lg" />
           <h3 className="font-heading text-base text-white text-center px-4 drop-shadow">{u.title}</h3>
           <p className="text-[10px] font-body text-white/70 text-center px-4 mt-0.5">{u.date}</p>
         </div>

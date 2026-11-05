@@ -56,7 +56,7 @@ export default function MobileControlsTest({ settings = {}, onSave, onBack }) {
           <h2 className="text-2xl font-heading text-accent tracking-wider">MOBILE CONTROL LAYOUT TEST</h2>
           <p className="text-xs text-muted-foreground font-body">Drag the controls around the game screen to preview exactly where they will appear during Mobile Mode.</p>
         </div>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       <div className="grid lg:grid-cols-[1fr_260px] gap-4">
@@ -65,7 +65,7 @@ export default function MobileControlsTest({ settings = {}, onSave, onBack }) {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(80,120,255,.22),transparent_45%),linear-gradient(180deg,#10182d,#070b17)]" />
           <div className="absolute inset-x-0 bottom-0 h-[18%] bg-slate-800/70 border-t border-white/10" />
           <div className="absolute top-3 left-3 text-[10px] font-heading text-white/60">MOBILE GAMEPLAY PREVIEW</div>
-          <div className="absolute left-1/2 top-[48%] -translate-x-1/2 text-5xl">🟡</div>
+          <div className="absolute left-1/2 top-[48%] -translate-x-1/2 text-5xl"></div>
 
           {controls.mode === 'joystick' ? (
             <div onPointerDown={e => beginDrag('joystick', 'joystick', e)}

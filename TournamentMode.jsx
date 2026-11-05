@@ -107,8 +107,8 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
         if (locked.length) {
           const u = locked[Math.floor(Math.random() * locked.length)];
           onUnlock(u.id);
-          setLog(l => [...l, `🏆 CHAMPION! You unlocked ${nameOf(u.id)}!`]);
-        } else { setLog(l => [...l, '🏆 CHAMPION! All characters already unlocked!']); }
+          setLog(l => [...l, ` CHAMPION! You unlocked ${nameOf(u.id)}!`]);
+        } else { setLog(l => [...l, ' CHAMPION! All characters already unlocked!']); }
         onAwardCoins?.(50);
         onAwardXP?.(playerChar, 50);
       } else { setPhase('post-fight'); }
@@ -142,12 +142,12 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
       <div className="w-full max-w-4xl flex flex-col gap-4">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-heading text-accent tracking-wider">TOURNAMENT MODE</h2>
-          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
 
         <div className="bg-card border-2 border-accent rounded-xl p-6 text-center">
           <h3 className="font-heading text-lg text-accent mb-2">CHOOSE YOUR FIGHTER</h3>
-          <p className="text-xs text-muted-foreground font-body mb-4"><GameIcon emoji="⚠" size={14} /> This is locked for the entire tournament — choose wisely!</p>
+          <p className="text-xs text-muted-foreground font-body mb-4"><GameIcon icon="warning" size={14} /> This is locked for the entire tournament — choose wisely!</p>
           <div className="flex items-center justify-center gap-2 mb-4">
             <span className="text-xs font-heading text-muted-foreground">CPU Difficulty:</span>
             <select value={cpuDifficulty} onChange={e => setCpuDifficulty(e.target.value)}
@@ -170,7 +170,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
                   disabled={locked}
                   className={`flex flex-col items-center p-2 rounded border-2 transition ${locked ? 'border-border/30 opacity-30 cursor-not-allowed' : 'border-border hover:border-accent hover:scale-105'}`}>
                   <div className="w-6 h-6 rounded-full" style={{ backgroundColor: locked ? '#333' : c?.color, boxShadow: locked ? 'none' : `0 0 8px ${c?.color}55` }} />
-                  <span className="text-[8px] font-heading text-foreground mt-1 leading-tight">{locked ? <GameIcon emoji="🔒" size={14} /> : c?.name}</span>
+                  <span className="text-[8px] font-heading text-foreground mt-1 leading-tight">{locked ? <GameIcon icon="lock" size={14} /> : c?.name}</span>
                 </button>
               );
             })}
@@ -186,7 +186,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
       <div className="w-full max-w-4xl flex flex-col gap-4">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-heading text-accent tracking-wider">TOURNAMENT MODE</h2>
-          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
 
         <div className="bg-card border border-border rounded-xl p-4">
@@ -234,7 +234,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
       <div className="w-full max-w-4xl flex flex-col gap-4">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-heading text-accent tracking-wider">TOURNAMENT MODE</h2>
-          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
 
         <div className="bg-card border border-border rounded-xl p-4">
@@ -249,7 +249,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
         </div>
 
         <div className="bg-card border-2 border-green-600 rounded-xl p-6 text-center">
-          <p className="text-xl font-heading text-green-500 mb-2"><GameIcon emoji="✓" size={14} /> {ROUND_NAMES[currentRound]} WON!</p>
+          <p className="text-xl font-heading text-green-500 mb-2"><GameIcon icon="check" size={14} /> {ROUND_NAMES[currentRound]} WON!</p>
           <p className="text-sm text-muted-foreground font-body mb-4">You defeated {nameOf(opponent)}!</p>
           <button onClick={advanceRound} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-80">
             CONTINUE TO {currentRound < 3 ? ROUND_NAMES[currentRound + 1] : 'FINAL'}
@@ -269,10 +269,10 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
       <div className="w-full max-w-4xl flex flex-col gap-4">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-heading text-accent tracking-wider">TOURNAMENT MODE</h2>
-          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
         <div className="bg-card border-2 border-accent rounded-xl p-8 text-center">
-          <p className="text-4xl font-heading text-accent mb-4"><GameIcon emoji="🏆" size={14} /> CHAMPION! <GameIcon emoji="🏆" size={14} /></p>
+          <p className="text-4xl font-heading text-accent mb-4"><GameIcon icon="trophy" size={14} /> CHAMPION! <GameIcon icon="trophy" size={14} /></p>
           <div className="text-left max-h-40 overflow-y-auto mb-4">
             {log.map((l, i) => <p key={i} className="text-xs text-muted-foreground font-body">{l}</p>)}
           </div>
@@ -288,7 +288,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
       <div className="w-full max-w-4xl flex flex-col gap-4">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-heading text-accent tracking-wider">TOURNAMENT MODE</h2>
-          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
         <div className="bg-card border-2 border-destructive rounded-xl p-8 text-center">
           <p className="text-3xl font-heading text-destructive mb-4">ELIMINATED!</p>

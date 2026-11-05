@@ -501,12 +501,12 @@ export default function RollbackOnlineFight({
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="el6-online-match-topbar flex justify-between items-start gap-3">
-        <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Forfeit</button>
+        <button onClick={handleQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Forfeit</button>
         <div className="flex flex-col items-center gap-0.5 text-center">
           <span className="text-[10px] font-heading text-accent">{connectionText}</span>
           <span className="text-[9px] text-muted-foreground font-body">Your device controls your selected fighter. Use Arrows, WASD, or your Settings custom control preset.</span>
         </div>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80">⏸ PAUSE (ESC)</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80"> PAUSE (ESC)</button>
       </div>
       {networkError && <p className="text-xs text-destructive font-body">{networkError}</p>}
       {resyncing && <div className="absolute inset-0 z-20 grid place-items-center bg-black/70 font-heading text-accent text-2xl">RESYNCING MATCH…</div>}

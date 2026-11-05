@@ -191,7 +191,7 @@ export default function PrologueCutscene({ onComplete, onBack }) {
           <button
             onClick={(e) => { e.stopPropagation(); onBack(); }}
             className="text-muted-foreground hover:text-foreground text-xs font-body px-3 py-1 rounded border border-border/50"
-          ><GameIcon emoji="←" size={14} /> Menu</button>
+          ><GameIcon icon="info" size={14} /> Menu</button>
         )}
         <button
           onClick={(e) => { e.stopPropagation(); onComplete(); }}
