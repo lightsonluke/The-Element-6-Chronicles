@@ -30,7 +30,6 @@ const MODES = [
     tournament: '4-round Round of 16 bracket. Win the tournament for 50 tokens. Soccer Kits are buyable in the Shop.',
   },
   {
-  {
     name: 'VOLLEYBALL',
     color: '#FF8800',
     controls: 'Signature = bump/serve. Power = set up. Super = switch to your teammate. Flow: Bump → Set → Switch → Jump (↑) → Spike (Sig).',
