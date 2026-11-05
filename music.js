@@ -8,7 +8,7 @@ const A = (name) => `${import.meta.env.BASE_URL}audio/${name}`;
 // Homescreen music is intentionally separate from battle music. The selected
 // track changes every two hours, never while the player is already on a match.
 const MENU_TRACKS = [
-  A('pixelated-skyline.mp3'),
+  A('the-shattering.mp3'),
 ];
 const HOME_ROTATION_MS = 2 * 60 * 60 * 1000;
 const PARKOUR_TRACK = A('parkour.mp3');
@@ -17,6 +17,7 @@ const ROCKCLIMB_TRACK = A('parkour.mp3');
 // in Settings → Fight & Sports Music (and join the auto-rotation).
 export const FIGHT_TRACK_LIBRARY = [
   { id: 'element-6-track', name: 'Element 6 Track', url: A('element-6-track.mp3') },
+  { id: 'the-shattering', name: 'The Shattering', url: A('the-shattering.mp3') },
   { id: 'pixel-launch', name: 'Pixel Launch', url: A('pixel-launch.mp3') },
   { id: 'pixel-create', name: 'Pixel Create', url: A('pixel-create.mp3') },
   { id: 'pixel-king', name: 'Pixel King', url: A('pixel-king.mp3') },
