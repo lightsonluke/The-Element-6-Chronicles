@@ -112,7 +112,7 @@ export default function DailyRewards({ onClaim, onClose, coins }) {
     <div className="e6-daily-reward-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
       <div className="e6-daily-reward-panel bg-card border border-border rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
         <h2 className="text-2xl font-heading text-accent text-center tracking-wider mb-1 flex items-center justify-center gap-2">
-          <GameIcon emoji="🎁" size={22} color="var(--accent)" /> DAILY REWARD
+          <GameIcon icon="gift" size={22} color="var(--accent)" /> DAILY REWARD
         </h2>
         <p className="text-center text-muted-foreground text-xs font-heading mb-4">
           {claimed ? "You've already claimed today's reward!" : `Day ${displayStreak + 1} streak`}
@@ -138,7 +138,7 @@ export default function DailyRewards({ onClaim, onClose, coins }) {
         {/* Reward display */}
         <div className="text-center mb-4">
           <div className="text-4xl font-heading text-accent font-bold flex items-center justify-center gap-2">
-            <GameIcon emoji="💰" size={28} color="var(--accent)" />
+            <GameIcon icon="bag" size={28} color="var(--accent)" />
             {todayReward}
           </div>
           <div className="text-xs text-muted-foreground font-heading mt-1">TOKENS</div>

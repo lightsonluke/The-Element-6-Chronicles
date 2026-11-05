@@ -17,11 +17,11 @@ const DIFFICULTIES = ['newcomer', 'beginner', 'easy', 'amateur', 'regular', 'pro
 const FIGHT_MAPS = ['splitcity', 'skyarena', 'lavarift', 'icepalace', 'cloudkingdom'];
 
 const SPORT_COMPONENTS = {
-  soccer: { Comp: SoccerFighter, label: 'SOCCER', emoji: '⚽', desc: 'First to 10 goals', color: 'bg-chart-3' },
-  volleyball: { Comp: VolleyballGame, label: 'VOLLEYBALL', emoji: '🏐', desc: 'Bump set spike', color: 'bg-accent' },
-  baseball: { Comp: BaseballGame, label: 'BASEBALL', emoji: '⚾', desc: '3 innings duel', color: 'bg-chart-3' },
-  dodgeball: { Comp: DodgeballGame, label: 'DODGEBALL', emoji: '🎯', desc: 'Last one standing', color: 'bg-chart-5' },
-  banger: { Comp: BangerGame, label: 'BANGER', emoji: '🏈', desc: 'Net-drop side-rolling', color: 'bg-primary' },
+  soccer: { Comp: SoccerFighter, label: 'SOCCER', icon: 'game', desc: 'First to 10 goals', color: 'bg-chart-3' },
+  volleyball: { Comp: VolleyballGame, label: 'VOLLEYBALL', icon: 'game', desc: 'Bump set spike', color: 'bg-accent' },
+  baseball: { Comp: BaseballGame, label: 'BASEBALL', icon: 'game', desc: '3 innings duel', color: 'bg-chart-3' },
+  dodgeball: { Comp: DodgeballGame, label: 'DODGEBALL', icon: 'game', desc: 'Last one standing', color: 'bg-chart-5' },
+  banger: { Comp: BangerGame, label: 'BANGER', icon: 'game', desc: 'Net-drop side-rolling', color: 'bg-primary' },
 };
 
 export default function ExperimentalMode({ onBack, unlockedIds, favoriteId, equippedAccessories, equippedSkins, settings, sfxVolume, musicVolume }) {
@@ -103,8 +103,8 @@ export default function ExperimentalMode({ onBack, unlockedIds, favoriteId, equi
   return (
     <div className="w-full max-w-3xl flex flex-col gap-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="🧪" size={14} /> EXPERIMENTAL</h2>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="package" size={14} /> EXPERIMENTAL</h2>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
       <p className="text-xs text-muted-foreground font-body">
         A sandbox to quickly test features in any game mode against the CPU or a local player. No rewards are given here.
@@ -160,13 +160,13 @@ export default function ExperimentalMode({ onBack, unlockedIds, favoriteId, equi
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <button onClick={() => launch('fight')} className="px-4 py-5 bg-primary text-primary-foreground rounded-xl font-heading text-sm hover:opacity-90 transition shadow-lg flex flex-col items-center gap-1">
-          <span className="text-2xl"><GameIcon emoji="⚔️" size={14} /></span>
+          <span className="text-2xl"><GameIcon icon="info" size={14} /></span>
           TEST FIGHT
           <span className="text-[9px] font-body opacity-70">Platform fighter</span>
         </button>
         {Object.entries(SPORT_COMPONENTS).map(([id, cfg]) => (
           <button key={id} onClick={() => launch(id)} className="px-4 py-5 bg-accent text-accent-foreground rounded-xl font-heading text-sm hover:opacity-90 transition shadow-lg flex flex-col items-center gap-1">
-            <span className="text-2xl">{cfg.emoji}</span>
+            <GameIcon icon={cfg.icon || "game"} size={24} />
             {cfg.label}
             <span className="text-[9px] font-body opacity-70">{cfg.desc}</span>
           </button>

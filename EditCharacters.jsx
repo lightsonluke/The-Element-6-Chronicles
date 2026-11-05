@@ -83,7 +83,7 @@ export default function EditCharacters({ onBack, progress, onEquipAccessory, onE
     <div className="w-full max-w-7xl flex flex-col gap-5">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-heading text-accent tracking-wider">EDIT YOUR CHARACTERS</h2>
-        <button onClick={onBack} className="px-5 py-2.5 bg-secondary text-secondary-foreground rounded-lg font-heading text-base hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onBack} className="px-5 py-2.5 bg-secondary text-secondary-foreground rounded-lg font-heading text-base hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       <div className="flex gap-6 flex-wrap">
@@ -106,7 +106,7 @@ export default function EditCharacters({ onBack, progress, onEquipAccessory, onE
             <p className="font-heading text-lg text-foreground">{char?.name}</p>
             <button onClick={() => onSetFavorite?.(selected)}
               className={`px-3 py-1 rounded text-xs font-heading ${selected === progress?.favoriteId ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground hover:opacity-80'}`}>
-              {selected === progress?.favoriteId ? '★ Favorite' : '☆ Set Favorite'}
+              {selected === progress?.favoriteId ? ' Favorite' : ' Set Favorite'}
             </button>
           </div>
           <p className="text-sm text-muted-foreground">{char?.title}</p>
@@ -125,7 +125,7 @@ export default function EditCharacters({ onBack, progress, onEquipAccessory, onE
                   <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: `${val * 10}%`, backgroundColor: isBoosted ? '#FFFFFF' : char?.color, boxShadow: isBoosted ? '0 0 8px #FFFFFF' : 'none' }} />
                   </div>
-                  <span className="text-sm font-heading w-10" style={{ color: isBoosted ? '#FFFFFF' : isReduced ? '#FF6666' : 'inherit', textShadow: isBoosted ? '0 0 6px #FFFFFF' : 'none' }}>{val}{isBoosted ? ' ⬆' : isReduced ? ' ⬇' : ''}</span>
+                  <span className="text-sm font-heading w-10" style={{ color: isBoosted ? '#FFFFFF' : isReduced ? '#FF6666' : 'inherit', textShadow: isBoosted ? '0 0 6px #FFFFFF' : 'none' }}>{val}{isBoosted ? ' ↑' : isReduced ? ' ↓' : ''}</span>
                 </div>
               );
             })}
@@ -156,8 +156,8 @@ export default function EditCharacters({ onBack, progress, onEquipAccessory, onE
                       <div className="flex items-center gap-3">
                         <div className="w-5 h-5 rounded-full" style={{ backgroundColor: el.color }} />
                         <span className="text-sm font-heading" style={{ color: isEquipped ? 'var(--accent)' : 'inherit' }}>{el.name}</span>
-                        {isEquipped && <span className="text-xs text-accent ml-auto"><GameIcon emoji="✓" size={14} /></span>}
-                        {!isUnlocked && <span className="text-xs text-muted-foreground ml-auto"><GameIcon emoji="🔒" size={14} /> Lv {el.unlockLevel}</span>}
+                        {isEquipped && <span className="text-xs text-accent ml-auto"><GameIcon icon="check" size={14} /></span>}
+                        {!isUnlocked && <span className="text-xs text-muted-foreground ml-auto"><GameIcon icon="lock" size={14} /> Lv {el.unlockLevel}</span>}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">{el.desc}</p>
                     </button>
@@ -181,7 +181,7 @@ export default function EditCharacters({ onBack, progress, onEquipAccessory, onE
                       <div className="w-10 h-10 rounded-full border-2" style={{ backgroundColor: s.color, borderColor: RARITY_COLORS[s.rarity] }} />
                       <p className="text-sm font-heading mt-2">{s.name}</p>
                       <p className="text-xs" style={{ color: RARITY_COLORS[s.rarity] }}>{(s.rarity || 'common').toUpperCase()}</p>
-                      {isEquipped && <p className="text-xs text-accent"><GameIcon emoji="✓" size={14} /> EQUIPPED</p>}
+                      {isEquipped && <p className="text-xs text-accent"><GameIcon icon="check" size={14} /> EQUIPPED</p>}
                     </button>
                   );
                 })}
@@ -202,7 +202,7 @@ export default function EditCharacters({ onBack, progress, onEquipAccessory, onE
                       className={`p-3 rounded border-2 ${isEquipped ? 'border-accent' : 'border-border'}`}>
                       <div className="w-10 h-10 rounded mx-auto" style={{ backgroundColor: a.color }} />
                       <p className="text-sm font-heading mt-2 text-center">{a.name}</p>
-                      {isEquipped && <p className="text-xs text-accent text-center"><GameIcon emoji="✓" size={14} /></p>}
+                      {isEquipped && <p className="text-xs text-accent text-center"><GameIcon icon="check" size={14} /></p>}
                     </button>
                   );
                 })}

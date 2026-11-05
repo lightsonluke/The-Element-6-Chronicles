@@ -11,18 +11,18 @@
 //   0 = B   1 = A   2 = Y   3 = X   (4 = L, 5 = R, 6 = ZL, 7 = ZR, 8 = -, 9 = +)
 
 export const CONTROLLER_TYPES = [
-  { id: 'xbox_one', label: 'Xbox One', icon: '🟩' },
-  { id: 'xbox_series', label: 'Xbox Series X|S', icon: '🟩' },
-  { id: 'xbox_elite', label: 'Xbox Elite Series 2', icon: '🟩' },
-  { id: 'ds4', label: 'PlayStation DualShock 4', icon: '🟦' },
-  { id: 'dualsense', label: 'PlayStation DualSense', icon: '🟦' },
-  { id: 'switch_pro', label: 'Nintendo Switch Pro', icon: '🟥' },
-  { id: 'joy_con_pair', label: 'Joy-Con (Paired)', icon: '🟥' },
-  { id: 'joy_con_left', label: 'Joy-Con L (Single)', icon: '🟥' },
-  { id: 'joy_con_right', label: 'Joy-Con R (Single)', icon: '🟥' },
-  { id: 'xinput', label: 'Generic XInput', icon: '🎮' },
-  { id: 'directinput', label: 'Generic DirectInput', icon: '🎮' },
-  { id: 'fightstick', label: 'Fight Stick', icon: '🕹' },
+  { id: 'xbox_one', label: 'Xbox One', icon: '' },
+  { id: 'xbox_series', label: 'Xbox Series X|S', icon: '' },
+  { id: 'xbox_elite', label: 'Xbox Elite Series 2', icon: '' },
+  { id: 'ds4', label: 'PlayStation DualShock 4', icon: '' },
+  { id: 'dualsense', label: 'PlayStation DualSense', icon: '' },
+  { id: 'switch_pro', label: 'Nintendo Switch Pro', icon: '' },
+  { id: 'joy_con_pair', label: 'Joy-Con (Paired)', icon: '' },
+  { id: 'joy_con_left', label: 'Joy-Con L (Single)', icon: '' },
+  { id: 'joy_con_right', label: 'Joy-Con R (Single)', icon: '' },
+  { id: 'xinput', label: 'Generic XInput', icon: '' },
+  { id: 'directinput', label: 'Generic DirectInput', icon: '' },
+  { id: 'fightstick', label: 'Fight Stick', icon: '' },
 ];
 
 // Default family assumed when no controller is detected yet. Nintendo is the
@@ -32,8 +32,8 @@ export const DEFAULT_FAMILY = 'nintendo';
 
 // Button display glyphs per controller family.
 export const PROMPT_GLYPHS = {
-  xbox: { 0: 'A', 1: 'B', 2: 'X', 3: 'Y', 4: 'LB', 5: 'RB', 6: 'LT', 7: 'RT', 8: '☰', 9: '☰', 10: 'LS', 11: 'RS', 12: '↑', 13: '↓', 14: '←', 15: '→', 16: '⌂' },
-  playstation: { 0: '✕', 1: '○', 2: '□', 3: '△', 4: 'L1', 5: 'R1', 6: 'L2', 7: 'R2', 8: 'SHARE', 9: 'OPTIONS', 10: 'L3', 11: 'R3', 12: '↑', 13: '↓', 14: '←', 15: '→', 16: 'PS' },
+  xbox: { 0: 'A', 1: 'B', 2: 'X', 3: 'Y', 4: 'LB', 5: 'RB', 6: 'LT', 7: 'RT', 8: '', 9: '', 10: 'LS', 11: 'RS', 12: '↑', 13: '↓', 14: '←', 15: '→', 16: '⌂' },
+  playstation: { 0: '', 1: '○', 2: '□', 3: '△', 4: 'L1', 5: 'R1', 6: 'L2', 7: 'R2', 8: 'SHARE', 9: 'OPTIONS', 10: 'L3', 11: 'R3', 12: '↑', 13: '↓', 14: '←', 15: '→', 16: 'PS' },
   nintendo: { 0: 'B', 1: 'A', 2: 'Y', 3: 'X', 4: 'L', 5: 'R', 6: 'ZL', 7: 'ZR', 8: '−', 9: '+', 10: 'L stk', 11: 'R stk', 12: '↑', 13: '↓', 14: '←', 15: '→', 16: '⌂' },
   generic: { 0: '1', 1: '2', 2: '3', 3: '4', 4: 'L1', 5: 'R1', 6: 'L2', 7: 'R2', 8: 'S', 9: 'O', 10: 'LS', 11: 'RS', 12: '↑', 13: '↓', 14: '←', 15: '→', 16: '⌂' },
 };

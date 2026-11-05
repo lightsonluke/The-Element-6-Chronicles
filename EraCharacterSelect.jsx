@@ -102,14 +102,14 @@ export default function EraCharacterSelect({
     <div className="min-h-screen bg-background flex flex-col">
       {/* ── TOP HEADER ── */}
       <div className="flex items-center justify-between px-4 py-2 bg-card/80 border-b-2 border-border">
-        <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Back</button>
+        <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Back</button>
         <div className="flex items-center gap-3">
           <span className="font-heading text-sm text-accent">{gameMode.toUpperCase()}</span>
           <span className="text-[10px] text-muted-foreground">{p2Mode === 'cpu' ? '1P vs CPU' : '1P vs 2P'}</span>
           <span className="text-[10px] text-muted-foreground">Stock: 3</span>
         </div>
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="⚙" size={14} /> Settings</button>
+          <button className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon icon="settings" size={14} /> Settings</button>
         </div>
       </div>
 
@@ -151,8 +151,8 @@ export default function EraCharacterSelect({
           }}
         />
         <div className="flex items-center gap-1 ml-auto">
-          <button onClick={handleRandomEra} className="px-2 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[9px] hover:opacity-80"><GameIcon emoji="🎲" size={14} /> RANDOM ERA</button>
-          <button onClick={handleRandomChar} className="px-2 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[9px] hover:opacity-80"><GameIcon emoji="🎲" size={14} /> RANDOM CHAR</button>
+          <button onClick={handleRandomEra} className="px-2 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[9px] hover:opacity-80"><GameIcon icon="shuffle" size={14} /> RANDOM ERA</button>
+          <button onClick={handleRandomChar} className="px-2 py-1 bg-secondary text-secondary-foreground rounded font-heading text-[9px] hover:opacity-80"><GameIcon icon="shuffle" size={14} /> RANDOM CHAR</button>
         </div>
         <input
           type="text"
@@ -226,7 +226,7 @@ export default function EraCharacterSelect({
           onClick={handleStart}
           className="px-8 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm shadow-xl hover:scale-105 transition"
         >
-          <GameIcon emoji="⚔" size={14} /> START BATTLE
+          <GameIcon icon="info" size={14} /> START BATTLE
         </button>
       </div>
     </div>

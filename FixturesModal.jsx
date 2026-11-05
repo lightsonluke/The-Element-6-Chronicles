@@ -31,7 +31,7 @@ export default function FixturesModal({ matches, knockoutStage, charById, humanI
           {homeChar ? (
             <>
               <span className="font-heading truncate max-w-[80px]" style={{ color: homeChar.color }}>{homeChar.name}</span>
-              {homeIsHuman && <span className="text-accent"><GameIcon emoji="★" size={14} /></span>}
+              {homeIsHuman && <span className="text-accent"><GameIcon icon="star" size={14} /></span>}
               <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: homeChar.color }} />
             </>
           ) : (
@@ -45,7 +45,7 @@ export default function FixturesModal({ matches, knockoutStage, charById, humanI
           {awayChar ? (
             <>
               <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: awayChar.color }} />
-              {awayIsHuman && <span className="text-accent"><GameIcon emoji="★" size={14} /></span>}
+              {awayIsHuman && <span className="text-accent"><GameIcon icon="star" size={14} /></span>}
               <span className="font-heading truncate max-w-[80px]" style={{ color: awayChar.color }}>{awayChar.name}</span>
             </>
           ) : (
@@ -61,7 +61,7 @@ export default function FixturesModal({ matches, knockoutStage, charById, humanI
       <div onClick={e => e.stopPropagation()} className="bg-background border border-border rounded-xl p-4 max-w-2xl w-full max-h-[85vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-3">
           <h3 className="font-heading text-sm text-accent">FIXTURES</h3>
-          <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon emoji="✕" size={14} /></button>
+          <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button>
         </div>
         {/* Group Stage */}
         <p className="text-xs font-heading text-accent mb-1">GROUP STAGE</p>

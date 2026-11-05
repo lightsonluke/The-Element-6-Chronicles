@@ -130,7 +130,7 @@ function generateEvents() {
         id: `event_star_skin_${i}_${char.id}`,
         eventId: `event_${i}`,
         charId: char.id,
-        name: `${theme.prefix} ${char.name} ★ STAR`,
+        name: `${theme.prefix} ${char.name}  STAR`,
         color: theme.color,
         customParts: generateEventParts(theme, charIndex, true),
         rarity: 'legendary',
@@ -182,7 +182,7 @@ function generateEvents() {
     }
     const starBpAccessories = STAR_ACC_TYPES.map((t, si) => ({
       id: `event_bp_star_${i}_${si}`, eventId: `event_${i}`,
-      name: `${theme.prefix} ${t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} ★`,
+      name: `${theme.prefix} ${t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} `,
       type: t, color: theme.color, isEvent: true, isStar: true,
     }));
 
@@ -203,7 +203,7 @@ function generateEvents() {
       let reward;
       if (tier === 50) {
         // Ultimate: grants every event accessory
-        reward = { type: 'allaccessories', items: bpAccessories, name: `${theme.prefix} All-Accessory Pack ★`, rarity: 'legendary' };
+        reward = { type: 'allaccessories', items: bpAccessories, name: `${theme.prefix} All-Accessory Pack `, rarity: 'legendary' };
       } else if (tier === 10 || tier === 20 || tier === 30 || tier === 40) {
         // Milestone: star accessory (extra special multi-colored)
         const starIdx = (tier / 10 - 1) % starBpAccessories.length;

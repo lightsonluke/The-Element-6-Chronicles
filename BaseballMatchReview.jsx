@@ -36,9 +36,9 @@ export default function BaseballMatchReview({ p1Name, p2Name, p1Color, p2Color, 
               <span className="text-[9px] font-heading text-muted-foreground">+{p1XP} XP</span>
             </div>
             <div className="rounded-lg border border-border bg-background/50 p-3">
-              <StatRow label="🏆 Runs" val={p1Stats.runs || 0} color={p1Color} />
-              <StatRow label="💥 Hits" val={p1Stats.hits || 0} color={p1Color} />
-              <StatRow label="🎯 Strikeouts (pitched)" val={p1Stats.strikeouts || 0} color={p1Color} />
+              <StatRow label=" Runs" val={p1Stats.runs || 0} color={p1Color} />
+              <StatRow label=" Hits" val={p1Stats.hits || 0} color={p1Color} />
+              <StatRow label=" Strikeouts (pitched)" val={p1Stats.strikeouts || 0} color={p1Color} />
             </div>
           </div>
           <div className="flex flex-col gap-2">
@@ -47,9 +47,9 @@ export default function BaseballMatchReview({ p1Name, p2Name, p1Color, p2Color, 
               <span className="text-[9px] font-heading text-muted-foreground">+{p2XP} XP</span>
             </div>
             <div className="rounded-lg border border-border bg-background/50 p-3">
-              <StatRow label="🏆 Runs" val={p2Stats.runs || 0} color={p2Color} />
-              <StatRow label="💥 Hits" val={p2Stats.hits || 0} color={p2Color} />
-              <StatRow label="🎯 Strikeouts (pitched)" val={p2Stats.strikeouts || 0} color={p2Color} />
+              <StatRow label=" Runs" val={p2Stats.runs || 0} color={p2Color} />
+              <StatRow label=" Hits" val={p2Stats.hits || 0} color={p2Color} />
+              <StatRow label=" Strikeouts (pitched)" val={p2Stats.strikeouts || 0} color={p2Color} />
             </div>
           </div>
         </div>

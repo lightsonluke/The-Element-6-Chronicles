@@ -42,6 +42,7 @@ const AuthenticatedApp = () => {
 function App() {
 
   return (
+    <div className="e6-app-root" style={{ '--e6-home-image': `url("${import.meta.env.BASE_URL}assets/e6-home-menu-background.png")` }}>
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
@@ -50,6 +51,7 @@ function App() {
         <Toaster />
       </QueryClientProvider>
     </AuthProvider>
+    </div>
   )
 }
 

@@ -88,7 +88,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
           <h2 className="text-2xl font-heading text-accent tracking-wider">EQUIP</h2>
           <p className="text-xs text-muted-foreground font-body">Equip skins, gear, accessories, and kill FX on any character</p>
         </div>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       {/* Sub-tabs */}
@@ -96,7 +96,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
         <button onClick={() => setSubTab('gear')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'gear' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>GEAR / ACCESSORIES</button>
         <button onClick={() => setSubTab('killfx')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'killfx' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>KILL FX</button>
         <button onClick={() => setSubTab('crossovers')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'crossovers' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>CROSSOVERS</button>
-        <button onClick={() => setSubTab('shikigami')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'shikigami' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>🪶 SHIKIGAMI</button>
+        <button onClick={() => setSubTab('shikigami')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'shikigami' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}> SHIKIGAMI</button>
         <button onClick={() => setSubTab('elements')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'elements' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>ELEMENTS</button>
         <button onClick={() => setSubTab('emotes')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'emotes' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>EMOTES</button>
         <button onClick={() => setSubTab('mastery')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'mastery' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>MASTERY</button>
@@ -185,7 +185,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
                 {a.isEvent && <span className="text-[6px] text-primary font-heading">EVENT</span>}
                 <button onClick={() => onEquipAccessory?.(selectedChar, a.id)}
                   className={`px-2 py-0.5 rounded text-[8px] font-heading mt-1 w-full ${isEquipped ? 'bg-secondary text-secondary-foreground' : 'bg-accent text-accent-foreground'}`}>
-                  {isEquipped ? `✓ SLOT ${slotNum}` : 'EQUIP'}
+                  {isEquipped ? ` SLOT ${slotNum}` : 'EQUIP'}
                 </button>
               </div>
             );
@@ -214,7 +214,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
             <p className="text-[8px] font-heading text-center py-4">None</p>
             <button onClick={() => onEquipKillFX?.('none')}
               className={`px-2 py-0.5 rounded text-[8px] font-heading mt-1 w-full ${equippedKillFX === 'none' ? 'bg-secondary text-secondary-foreground' : 'bg-accent text-accent-foreground'}`}>
-              {equippedKillFX === 'none' ? '✓ EQUIPPED' : 'EQUIP'}
+              {equippedKillFX === 'none' ? ' EQUIPPED' : 'EQUIP'}
             </button>
           </div>
           {ownedKillFX.map(id => {
@@ -229,7 +229,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
                 {fx.isEvent && <span className="text-[6px] text-primary font-heading">EVENT</span>}
                 <button onClick={() => onEquipKillFX?.(isEquipped ? 'none' : id)}
                   className={`px-2 py-0.5 rounded text-[8px] font-heading mt-1 w-full ${isEquipped ? 'bg-secondary text-secondary-foreground' : 'bg-accent text-accent-foreground'}`}>
-                  {isEquipped ? '✓ EQUIPPED' : 'EQUIP'}
+                  {isEquipped ? ' EQUIPPED' : 'EQUIP'}
                 </button>
               </div>
             );
@@ -248,7 +248,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
             <p className="text-[8px] font-heading mt-1 text-center">None</p>
             <button onClick={() => onEquipCrossover?.(selectedChar, null)}
               className={`px-2 py-0.5 rounded text-[8px] font-heading mt-1 w-full ${!equippedCrossoverId ? 'bg-secondary text-secondary-foreground' : 'bg-accent text-accent-foreground'}`}>
-              {!equippedCrossoverId ? '✓ EQUIPPED' : 'EQUIP'}
+              {!equippedCrossoverId ? ' EQUIPPED' : 'EQUIP'}
             </button>
           </div>
           {charOwnedCrossovers.map(cx => {
@@ -265,7 +265,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
                 </div>
                 <button onClick={() => onEquipCrossover?.(selectedChar, isEquipped ? null : cx.id)}
                   className={`px-2 py-0.5 rounded text-[8px] font-heading mt-1 w-full ${isEquipped ? 'bg-secondary text-secondary-foreground' : 'bg-accent text-accent-foreground'}`}>
-                  {isEquipped ? '✓ EQUIPPED' : 'EQUIP'}
+                  {isEquipped ? ' EQUIPPED' : 'EQUIP'}
                 </button>
               </div>
             );
@@ -284,7 +284,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
             <p className="text-[8px] font-heading mt-1 text-center">None</p>
             <button onClick={() => onEquipShikigami?.(selectedChar, null)}
               className={`px-2 py-0.5 rounded text-[8px] font-heading mt-1 w-full ${!equippedShikigamiId ? 'bg-secondary text-secondary-foreground' : 'bg-accent text-accent-foreground'}`}>
-              {!equippedShikigamiId ? '✓ EQUIPPED' : 'EQUIP'}
+              {!equippedShikigamiId ? ' EQUIPPED' : 'EQUIP'}
             </button>
           </div>
           {SHIKIGAMI.filter(s => ownedShikigami.includes(s.id)).map(s => {
@@ -295,7 +295,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
                 <p className="text-[8px] font-heading mt-1 text-center">{s.name}</p>
                 <button onClick={() => onEquipShikigami?.(selectedChar, isEquipped ? null : s.id)}
                   className={`px-2 py-0.5 rounded text-[8px] font-heading mt-1 w-full ${isEquipped ? 'bg-secondary text-secondary-foreground' : 'bg-accent text-accent-foreground'}`}>
-                  {isEquipped ? '✓ EQUIPPED' : 'EQUIP'}
+                  {isEquipped ? ' EQUIPPED' : 'EQUIP'}
                 </button>
               </div>
             );

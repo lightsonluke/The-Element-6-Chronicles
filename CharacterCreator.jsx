@@ -37,7 +37,7 @@ const ELEMENT_POWERS = [
   {
     id: 'grass',
     name: 'Grass',
-    emoji: '🌿',
+    icon: 'leaf',
     desc: 'Shoots a vine straight forward — deals damage and knockback.',
     color: '#44CC44',
     power_effect: { type: 'homing_projectile', name: 'Vine Shot', duration: 0, cooldown: 14, damage: 18, knockback: 1.2, color: '#44CC44', projectileType: 'energy' },
@@ -45,7 +45,7 @@ const ELEMENT_POWERS = [
   {
     id: 'electric',
     name: 'Electric',
-    emoji: '⚡',
+    icon: 'warning',
     desc: 'Shoots a lightning bolt forward — deals damage and knockback.',
     color: '#FFDD00',
     power_effect: { type: 'homing_projectile', name: 'Lightning Bolt', duration: 0, cooldown: 13, damage: 20, knockback: 1.3, color: '#FFDD00', projectileType: 'electric' },
@@ -53,7 +53,7 @@ const ELEMENT_POWERS = [
   {
     id: 'ice',
     name: 'Ice',
-    emoji: '❄️',
+    icon: 'snow',
     desc: 'Shoots ice forward — deals damage and knockback.',
     color: '#88DDFF',
     power_effect: { type: 'homing_projectile', name: 'Ice Shard', duration: 0, cooldown: 14, damage: 18, knockback: 1.2, color: '#88DDFF', projectileType: 'energy' },
@@ -61,7 +61,7 @@ const ELEMENT_POWERS = [
   {
     id: 'water',
     name: 'Water',
-    emoji: '💧',
+    icon: 'water',
     desc: 'Shoots water forward — deals damage and knockback.',
     color: '#4488FF',
     power_effect: { type: 'homing_projectile', name: 'Water Blast', duration: 0, cooldown: 14, damage: 17, knockback: 1.2, color: '#4488FF', projectileType: 'energy' },
@@ -69,7 +69,7 @@ const ELEMENT_POWERS = [
   {
     id: 'fire',
     name: 'Fire',
-    emoji: '🔥',
+    icon: 'fire',
     desc: 'Shoots fire forward — deals damage and knockback.',
     color: '#FF4422',
     power_effect: { type: 'homing_projectile', name: 'Fireball', duration: 0, cooldown: 13, damage: 22, knockback: 1.3, color: '#FF4422', projectileType: 'fireball' },
@@ -77,7 +77,7 @@ const ELEMENT_POWERS = [
   {
     id: 'wind',
     name: 'Wind',
-    emoji: '🌪️',
+    icon: 'cloud',
     desc: 'Shoots wind forward — no damage but massive knockback.',
     color: '#AADDFF',
     power_effect: { type: 'homing_projectile', name: 'Wind Blast', duration: 0, cooldown: 12, damage: 0, knockback: 2.5, color: '#AADDFF', projectileType: 'energy' },
@@ -295,12 +295,12 @@ export default function CharacterCreator({ onBack, onSave, onDelete, progress })
       <div className="w-full max-w-lg flex flex-col items-center gap-5 text-center">
         <h2 className="text-2xl font-heading text-accent tracking-wider">CHARACTER CREATOR</h2>
         <div className="bg-card border-2 border-accent/50 rounded-xl p-8 flex flex-col items-center gap-4">
-          <div className="text-5xl"><GameIcon emoji="🔒" size={14} /></div>
+          <div className="text-5xl"><GameIcon icon="lock" size={14} /></div>
           <p className="font-heading text-lg text-foreground">Purchase Required</p>
           <p className="text-sm text-muted-foreground font-body">The Character Creator requires at least one purchase or donation to unlock. Visit the Shop to get started!</p>
           <p className="text-xs text-accent font-body">Any pack purchase or donation unlocks this feature permanently.</p>
         </div>
-        <button onClick={onBack} className="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onBack} className="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
     );
   }
@@ -310,20 +310,20 @@ export default function CharacterCreator({ onBack, onSave, onDelete, progress })
     return (
       <div className="w-full max-w-3xl flex flex-col gap-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="📋" size={14} /> MY CHARACTERS</h2>
+          <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="clipboard" size={14} /> MY CHARACTERS</h2>
           <div className="flex gap-2 items-center">
             <SoundButton onClick={() => {
               if (myChars.length >= slotLimit) { sfx.warning(); alert(`Slot limit reached (${myChars.length}/${slotLimit}). Purchase more slots in the Shop.`); return; }
               resetEditor(); setView('create');
             }} sound="click" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm">+ CREATE NEW</SoundButton>
             <span className="text-[10px] font-heading text-muted-foreground">{myChars.length}/{slotLimit} SLOTS</span>
-            <SoundButton onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</SoundButton>
+            <SoundButton onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm"><GameIcon icon="info" size={14} /> BACK</SoundButton>
           </div>
         </div>
         {myChars.length === 0 ? (
           <div className="bg-card border border-border rounded-xl p-8 text-center">
             <p className="text-sm text-muted-foreground font-body">You haven't created any characters yet.</p>
-            <SoundButton onClick={() => { resetEditor(); setView('create'); }} sound="click" className="mt-4 px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm"><GameIcon emoji="🎨" size={14} /> CREATE YOUR FIRST</SoundButton>
+            <SoundButton onClick={() => { resetEditor(); setView('create'); }} sound="click" className="mt-4 px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm"><GameIcon icon="palette" size={14} /> CREATE YOUR FIRST</SoundButton>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -333,8 +333,8 @@ export default function CharacterCreator({ onBack, onSave, onDelete, progress })
                 <p className="font-heading text-sm text-foreground text-center">{c.name}</p>
                 <p className="text-[9px] text-muted-foreground">{c.title}</p>
                 <div className="flex gap-1 mt-2 w-full">
-                  <SoundButton onClick={() => handleEdit(c)} sound="click" className="flex-1 px-2 py-1.5 bg-accent text-accent-foreground rounded font-heading text-[10px]"><GameIcon emoji="✏" size={14} /> EDIT</SoundButton>
-                  <SoundButton onClick={() => handleDelete(c)} className="flex-1 px-2 py-1.5 bg-destructive/50 text-destructive-foreground rounded font-heading text-[10px]"><GameIcon emoji="🗑" size={14} /> DELETE</SoundButton>
+                  <SoundButton onClick={() => handleEdit(c)} sound="click" className="flex-1 px-2 py-1.5 bg-accent text-accent-foreground rounded font-heading text-[10px]"><GameIcon icon="edit" size={14} /> EDIT</SoundButton>
+                  <SoundButton onClick={() => handleDelete(c)} className="flex-1 px-2 py-1.5 bg-destructive/50 text-destructive-foreground rounded font-heading text-[10px]"><GameIcon icon="trash" size={14} /> DELETE</SoundButton>
                 </div>
               </div>
             ))}
@@ -351,10 +351,10 @@ export default function CharacterCreator({ onBack, onSave, onDelete, progress })
   return (
     <div className="w-full max-w-4xl flex flex-col gap-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-heading text-accent tracking-wider">{editingId ? <><GameIcon emoji="✏" size={14} /> EDIT CHARACTER</> : <><GameIcon emoji="🎨" size={14} /> CREATE CHARACTER</>}</h2>
+        <h2 className="text-2xl font-heading text-accent tracking-wider">{editingId ? <><GameIcon icon="edit" size={14} /> EDIT CHARACTER</> : <><GameIcon icon="palette" size={14} /> CREATE CHARACTER</>}</h2>
         <div className="flex gap-2">
-          <SoundButton onClick={() => setView('list')} sound="click" className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm"><GameIcon emoji="📋" size={14} /> SEE CHARACTERS</SoundButton>
-          <SoundButton onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</SoundButton>
+          <SoundButton onClick={() => setView('list')} sound="click" className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm"><GameIcon icon="clipboard" size={14} /> SEE CHARACTERS</SoundButton>
+          <SoundButton onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm"><GameIcon icon="info" size={14} /> BACK</SoundButton>
         </div>
       </div>
 
@@ -366,8 +366,8 @@ export default function CharacterCreator({ onBack, onSave, onDelete, progress })
             onMouseDown={handleDown} onMouseMove={handleMove} onMouseUp={handleUp} onMouseLeave={handleUp}
             className="rounded-lg w-full" style={{ maxWidth: W, touchAction: 'none' }} />
           <div className="flex gap-2 mt-2">
-            <SoundButton onClick={() => setTool(FILL)} sound="click" className={`px-3 py-1.5 rounded font-heading text-xs ${tool === FILL ? 'bg-accent text-accent-foreground' : 'bg-secondary'}`}><GameIcon emoji="🪣" size={14} /> FILL</SoundButton>
-            <SoundButton onClick={() => setTool(ERASE)} sound="click" className={`px-3 py-1.5 rounded font-heading text-xs ${tool === ERASE ? 'bg-accent text-accent-foreground' : 'bg-secondary'}`}><GameIcon emoji="🧹" size={14} /> ERASE (<GameIcon emoji="→" size={14} /> white)</SoundButton>
+            <SoundButton onClick={() => setTool(FILL)} sound="click" className={`px-3 py-1.5 rounded font-heading text-xs ${tool === FILL ? 'bg-accent text-accent-foreground' : 'bg-secondary'}`}><GameIcon icon="info" size={14} /> FILL</SoundButton>
+            <SoundButton onClick={() => setTool(ERASE)} sound="click" className={`px-3 py-1.5 rounded font-heading text-xs ${tool === ERASE ? 'bg-accent text-accent-foreground' : 'bg-secondary'}`}><GameIcon icon="trash" size={14} /> ERASE (<GameIcon icon="arrowRight" size={14} /> white)</SoundButton>
           </div>
           <div className="grid grid-cols-9 gap-1 mt-2">
             {COLORS.map(c => (
@@ -403,18 +403,18 @@ export default function CharacterCreator({ onBack, onSave, onDelete, progress })
 
           {/* Element Power Picker */}
           <div className="bg-card border border-accent/40 rounded-xl p-4">
-            <h3 className="font-heading text-sm text-accent mb-2"><GameIcon emoji="⚡" size={14} /> CHOOSE YOUR POWER ELEMENT</h3>
+            <h3 className="font-heading text-sm text-accent mb-2"><GameIcon icon="warning" size={14} /> CHOOSE YOUR POWER ELEMENT</h3>
             <div className="grid grid-cols-3 gap-2 mb-3">
               {ELEMENT_POWERS.map(el => (
                 <button key={el.id} onClick={() => { sfx.click(); setSelectedElement(el.id); }}
                   className={`flex flex-col items-center p-2 rounded-lg border-2 transition ${selectedElement === el.id ? 'border-accent bg-accent/10' : 'border-border hover:border-muted-foreground'}`}>
-                  <span className="text-lg">{el.emoji}</span>
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted/60"><GameIcon icon={el.icon} size={21} color={el.color} /></span>
                   <span className="text-[10px] font-heading" style={{ color: el.color }}>{el.name}</span>
                 </button>
               ))}
             </div>
             <div className="bg-muted/30 rounded-lg p-2">
-              <p className="text-[10px] font-heading text-accent">{selectedEl.emoji} {selectedEl.name} — {selectedEl.power_effect.name}</p>
+              <p className="text-[10px] font-heading text-accent"><GameIcon icon={selectedEl.icon} size={14} /> {selectedEl.name} — {selectedEl.power_effect.name}</p>
               <p className="text-[9px] text-muted-foreground mt-1">{selectedEl.desc}</p>
               {selectedEl.power_effect.damage > 0
                 ? <p className="text-[9px] text-foreground/70 mt-1">DMG: {selectedEl.power_effect.damage} · KB: {selectedEl.power_effect.knockback}x · CD: {selectedEl.power_effect.cooldown}s</p>
@@ -425,7 +425,7 @@ export default function CharacterCreator({ onBack, onSave, onDelete, progress })
 
           <SoundButton onClick={handleSave} sound="success" disabled={!name.trim()}
             className={`py-3 rounded-lg font-heading text-lg ${name.trim() ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-            {editingId ? <><GameIcon emoji="💾" size={14} /> SAVE CHANGES</> : <><GameIcon emoji="💾" size={14} /> SAVE CHARACTER</>}
+            {editingId ? <><GameIcon icon="save" size={14} /> SAVE CHANGES</> : <><GameIcon icon="save" size={14} /> SAVE CHARACTER</>}
           </SoundButton>
         </div>
       </div>

@@ -1,5 +1,5 @@
 // Emotes system — 35 animated character poses triggered by number keys.
-// Replaces the old emoji-based system with actual character body animations.
+// Uses character body animations for expressive in-game emotes.
 // Emotes are drawn by overriding the character's limb pose (see emotePose.js).
 
 export const EMOTES = [

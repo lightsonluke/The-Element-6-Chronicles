@@ -37,7 +37,7 @@ export default function CreatorMode({ progress, customCharsData = {}, onBack, pl
   const newCampaign = () => {
     setEdit({
       _local: true,
-      name: 'Untitled Campaign', description: '', thumbnail: '🎮',
+      name: 'Untitled Campaign', description: '', thumbnail: '',
       difficulty: 'normal', estimated_minutes: 15, is_public: true,
       battles: [], dialogues: [],
     });
@@ -107,8 +107,8 @@ export default function CreatorMode({ progress, customCharsData = {}, onBack, pl
     return (
       <div className="w-full max-w-5xl flex flex-col gap-3">
         <div className="flex justify-between items-center flex-wrap gap-2">
-          <h2 className="text-xl font-heading text-accent tracking-wider"><GameIcon emoji="✎" size={14} /> CAMPAIGN — EDITOR</h2>
-          <button onClick={() => { saveLocal(); setView('browse'); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
+          <h2 className="text-xl font-heading text-accent tracking-wider"><GameIcon icon="edit" size={14} /> CAMPAIGN — EDITOR</h2>
+          <button onClick={() => { saveLocal(); setView('browse'); }} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
 
         <div className="bg-card border border-border rounded-xl p-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -134,21 +134,21 @@ export default function CreatorMode({ progress, customCharsData = {}, onBack, pl
               <div className="flex items-center justify-between">
                 <span className="font-heading text-xs text-accent">BATTLE {i + 1}</span>
                 <div className="flex gap-1">
-                  <button onClick={() => moveBattle(i, -1)} className="px-2 py-0.5 bg-secondary rounded text-xs"><GameIcon emoji="↑" size={14} /></button>
-                  <button onClick={() => moveBattle(i, 1)} className="px-2 py-0.5 bg-secondary rounded text-xs"><GameIcon emoji="↓" size={14} /></button>
-                  <button onClick={() => removeBattle(i)} className="px-2 py-0.5 bg-destructive text-destructive-foreground rounded text-xs"><GameIcon emoji="🗑" size={14} /></button>
+                  <button onClick={() => moveBattle(i, -1)} className="px-2 py-0.5 bg-secondary rounded text-xs"><GameIcon icon="arrowUp" size={14} /></button>
+                  <button onClick={() => moveBattle(i, 1)} className="px-2 py-0.5 bg-secondary rounded text-xs"><GameIcon icon="arrowDown" size={14} /></button>
+                  <button onClick={() => removeBattle(i)} className="px-2 py-0.5 bg-destructive text-destructive-foreground rounded text-xs"><GameIcon icon="trash" size={14} /></button>
                 </div>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px]">
                 <label className="flex flex-col gap-0.5"><span className="font-heading text-muted-foreground">STAGE</span>
                   <select value={b.stage} onChange={e => updateBattle(i, { stage: e.target.value })} className="bg-secondary text-secondary-foreground rounded px-1 py-0.5">
                     {STAGE_LIST.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    {customStages.map((s, ci) => <option key={ci} value={`custom_${ci}`}>{s.emoji || <GameIcon emoji="🎨" size={14} />} {s.name || 'Custom'}</option>)}
+                    {customStages.map((s, ci) => <option key={ci} value={`custom_${ci}`}>{s.name || 'Custom'}</option>)}
                   </select>
                 </label>
                 <label className="flex flex-col gap-0.5"><span className="font-heading text-muted-foreground">YOUR CHAR</span>
                   <select value={b.p1Char} onChange={e => updateBattle(i, { p1Char: e.target.value })} className="bg-secondary text-secondary-foreground rounded px-1 py-0.5">
-                    <option value="__playerselect"><GameIcon emoji="🎭" size={14} /> Player Select</option>
+                    <option value="__playerselect"><GameIcon icon="game" size={14} /> Player Select</option>
                     {ALL.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </label>
@@ -199,12 +199,12 @@ export default function CreatorMode({ progress, customCharsData = {}, onBack, pl
   return (
     <div className="w-full max-w-5xl flex flex-col gap-3">
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="🧩" size={14} /> CAMPAIGN</h2>
-        <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
+        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="box" size={14} /> CAMPAIGN</h2>
+        <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
       <div className="flex gap-2">
         <button onClick={newCampaign} className="px-4 py-2 bg-accent text-accent-foreground rounded font-heading text-sm">+ NEW CAMPAIGN</button>
-        <button onClick={() => setShowWorld(true)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon emoji="🌐" size={14} /> WORLD CAMPAIGNS</button>
+        <button onClick={() => setShowWorld(true)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon icon="globe" size={14} /> WORLD CAMPAIGNS</button>
       </div>
       <p className="font-heading text-xs text-primary mt-2">MY DRAFTS</p>
       {myCampaigns.length === 0 ? (
@@ -213,14 +213,14 @@ export default function CreatorMode({ progress, customCharsData = {}, onBack, pl
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {myCampaigns.map((c, idx) => (
             <div key={idx} className="bg-card border border-border rounded-xl p-3 flex flex-col gap-2">
-              <div className="flex items-center justify-between"><span className="text-3xl">{c.thumbnail || <GameIcon emoji="🎮" size={14} />}</span><span className="text-[9px] px-2 py-0.5 rounded bg-primary/20 text-primary font-heading">{DIFFS[['easy','normal','hard','expert','nightmare'].indexOf(c.difficulty)] || 'Normal'}</span></div>
+              <div className="flex items-center justify-between"><span className="text-3xl">{c.thumbnail || <GameIcon icon="controller" size={14} />}</span><span className="text-[9px] px-2 py-0.5 rounded bg-primary/20 text-primary font-heading">{DIFFS[['easy','normal','hard','expert','nightmare'].indexOf(c.difficulty)] || 'Normal'}</span></div>
               <p className="font-heading text-sm text-foreground">{c.name}</p>
-              <div className="flex items-center gap-3 text-[10px] text-muted-foreground font-heading"><span><GameIcon emoji="⚔" size={14} /> {c.battles.length} battles</span><span>{c.is_public ? '🌐 Public' : '🔒 Private'}</span></div>
+              <div className="flex items-center gap-3 text-[10px] text-muted-foreground font-heading"><span><GameIcon icon="info" size={14} /> {c.battles.length} battles</span><span>{c.is_public ? ' Public' : ' Private'}</span></div>
               <div className="flex gap-1.5 flex-wrap">
-                <button onClick={() => { setPlayCur({ campaign: c, index: 0, finishedBattles: [] }); setView('play'); sfx.click(); }} className="flex-1 px-2 py-1.5 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon emoji="▶" size={14} /> PLAY</button>
-                <button onClick={() => editCampaign(c, idx)} className="px-2 py-1.5 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon emoji="✎" size={14} /> EDIT</button>
+                <button onClick={() => { setPlayCur({ campaign: c, index: 0, finishedBattles: [] }); setView('play'); sfx.click(); }} className="flex-1 px-2 py-1.5 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon icon="play" size={14} /> PLAY</button>
+                <button onClick={() => editCampaign(c, idx)} className="px-2 py-1.5 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon icon="edit" size={14} /> EDIT</button>
                 <button onClick={() => persist([c, ...myCampaigns.filter((_, i) => i !== idx)])} className="px-2 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs">⧉ DUP</button>
-                <button onClick={() => deleteCampaign(idx)} className="px-2 py-1.5 bg-destructive text-destructive-foreground rounded font-heading text-xs"><GameIcon emoji="🗑" size={14} /></button>
+                <button onClick={() => deleteCampaign(idx)} className="px-2 py-1.5 bg-destructive text-destructive-foreground rounded font-heading text-xs"><GameIcon icon="trash" size={14} /></button>
               </div>
             </div>
           ))}
@@ -248,7 +248,7 @@ function CampaignPlayer({ cur, setCur, progress, customCharsData, customStages, 
       <div className="w-full max-w-2xl flex flex-col items-center gap-4 text-center">
         <h2 className="text-2xl font-heading text-destructive">NO BATTLES</h2>
         <p className="font-body text-sm text-muted-foreground">This campaign has no battles yet.</p>
-        <button onClick={onExit} className="px-5 py-2 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onExit} className="px-5 py-2 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
     );
   }
@@ -295,8 +295,8 @@ function CampaignPlayer({ cur, setCur, progress, customCharsData, customStages, 
           })}
         </div>
         <div className="flex gap-2 justify-center">
-          <button onClick={() => { setPhase('intro'); sfx.click(); }} className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-heading text-sm">{isFirst ? '▶ START CAMPAIGN' : '▶ FIGHT'}</button>
-          <button onClick={onExit} className="px-6 py-3 bg-secondary text-secondary-foreground rounded-xl font-heading text-sm"><GameIcon emoji="←" size={14} /> EXIT</button>
+          <button onClick={() => { setPhase('intro'); sfx.click(); }} className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-heading text-sm">{isFirst ? ' START CAMPAIGN' : ' FIGHT'}</button>
+          <button onClick={onExit} className="px-6 py-3 bg-secondary text-secondary-foreground rounded-xl font-heading text-sm"><GameIcon icon="info" size={14} /> EXIT</button>
         </div>
       </div>
     );
@@ -305,7 +305,7 @@ function CampaignPlayer({ cur, setCur, progress, customCharsData, customStages, 
   if (phase === 'done') {
     return (
       <div className="w-full max-w-2xl flex flex-col items-center gap-4 text-center">
-        <h2 className="text-3xl font-heading text-accent"><GameIcon emoji="🏆" size={14} /> CAMPAIGN COMPLETE</h2>
+        <h2 className="text-3xl font-heading text-accent"><GameIcon icon="trophy" size={14} /> CAMPAIGN COMPLETE</h2>
         <p className="font-body text-sm text-muted-foreground">You cleared "{c.name}" by {c.owner_username || 'the community'}.</p>
         <button onClick={onExit} className="px-5 py-2 bg-primary text-primary-foreground rounded font-heading text-sm">FINISH</button>
       </div>
@@ -341,14 +341,14 @@ function CampaignPlayer({ cur, setCur, progress, customCharsData, customStages, 
   return (
     <div className="w-full max-w-2xl flex flex-col gap-4">
       <div className="bg-card border border-border rounded-xl p-5 flex flex-col gap-3">
-        <p className="font-heading text-xs text-accent">{phase === 'intro' ? '⚔ BATTLE ' + (cur.index + 1) : '✓ BATTLE CLEARED'}</p>
+        <p className="font-heading text-xs text-accent">{phase === 'intro' ? ' BATTLE ' + (cur.index + 1) : ' BATTLE CLEARED'}</p>
         <p className="font-heading text-lg text-foreground">{c.name} — Battle {cur.index + 1}/{battles.length}</p>
         <p className="font-body text-sm text-muted-foreground min-h-[3em]">{phase === 'intro' ? (b.introText || 'Prepare for the next battle…') : (b.outroText || 'Victory! Onward.')}</p>
         {phase === 'intro' ? (
-          <button onClick={() => { setFightKey(k => k + 1); setPhase('fight'); sfx.click(); }} className="px-5 py-2.5 bg-primary text-primary-foreground rounded font-heading text-sm self-start"><GameIcon emoji="▶" size={14} /> FIGHT</button>
+          <button onClick={() => { setFightKey(k => k + 1); setPhase('fight'); sfx.click(); }} className="px-5 py-2.5 bg-primary text-primary-foreground rounded font-heading text-sm self-start"><GameIcon icon="play" size={14} /> FIGHT</button>
         ) : (
           <div className="flex gap-2">
-            {cur.index + 1 < battles.length ? <button onClick={nextBattle} className="px-5 py-2 bg-accent text-accent-foreground rounded font-heading text-sm">NEXT BATTLE <GameIcon emoji="→" size={14} /></button> : <button onClick={() => setPhase('done')} className="px-5 py-2 bg-accent text-accent-foreground rounded font-heading text-sm">FINISH</button>}
+            {cur.index + 1 < battles.length ? <button onClick={nextBattle} className="px-5 py-2 bg-accent text-accent-foreground rounded font-heading text-sm">NEXT BATTLE <GameIcon icon="arrowRight" size={14} /></button> : <button onClick={() => setPhase('done')} className="px-5 py-2 bg-accent text-accent-foreground rounded font-heading text-sm">FINISH</button>}
             <button onClick={onExit} className="px-5 py-2 bg-secondary text-secondary-foreground rounded font-heading text-sm">EXIT CAMPAIGN</button>
           </div>
         )}

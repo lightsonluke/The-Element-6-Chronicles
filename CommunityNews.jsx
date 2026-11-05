@@ -6,7 +6,7 @@ export default function CommunityNews({ news, highlights, onClose }) {
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
       <div className="bg-card border-2 border-accent rounded-xl p-5 max-w-lg w-full shadow-2xl my-4" onClick={e => e.stopPropagation()}>
         <div className="text-center border-b-2 border-accent pb-2 mb-3">
-          <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="📰" size={14} /> TODAY'S COMMUNITY NEWS</h2>
+          <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="file" size={14} /> TODAY'S COMMUNITY NEWS</h2>
           <p className="text-[10px] font-heading text-muted-foreground tracking-widest mt-1">WHILE YOU WERE AWAY</p>
         </div>
 
@@ -22,7 +22,7 @@ export default function CommunityNews({ news, highlights, onClose }) {
 
         {highlights.length > 0 && (
           <div className="border-t-2 border-border pt-3">
-            <p className="text-xs font-heading text-accent text-center mb-2"><GameIcon emoji="⭐" size={14} /> TODAY'S FUN FACTS</p>
+            <p className="text-xs font-heading text-accent text-center mb-2"><GameIcon icon="star" size={14} /> TODAY'S FUN FACTS</p>
             <div className="grid grid-cols-1 gap-1">
               {highlights.map((h, i) => (
                 <p key={i} className="text-[10px] font-body text-foreground flex justify-between"><span className="text-muted-foreground">{h.label}</span><span className="text-accent">{h.value}</span></p>

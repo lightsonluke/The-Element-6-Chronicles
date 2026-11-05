@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import GameIcon from "./GameIcon.jsx";
 
 const DONATION_AMOUNTS = [
-  { amount: 1, label: '$1', emoji: '☕' },
-  { amount: 5, label: '$5', emoji: '🍔' },
-  { amount: 10, label: '$10', emoji: '🎮' },
-  { amount: 25, label: '$25', emoji: '💎' },
-  { amount: 50, label: '$50', emoji: '👑' },
+  { amount: 1, label: '$1' },
+  { amount: 5, label: '$5' },
+  { amount: 10, label: '$10' },
+  { amount: 25, label: '$25' },
+  { amount: 50, label: '$50' },
 ];
 
 // ──── CONFIG: Replace this with your Stripe Payment Link URL ────
@@ -27,7 +27,7 @@ export default function DonateTab() {
   return (
     <div>
       <div className="bg-gradient-to-r from-accent/20 to-primary/20 border-2 border-accent rounded-xl p-6 text-center mb-4">
-        <h3 className="font-heading text-xl text-accent mb-2"><GameIcon emoji="💖" size={14} /> DONATE TO US</h3>
+        <h3 className="font-heading text-xl text-accent mb-2"><GameIcon icon="heart" size={14} /> DONATE TO US</h3>
         <p className="text-sm text-muted-foreground font-body">
           Support the development of The Element 6! Every donation, big or small, helps us keep building new characters, stages, and features.
         </p>
@@ -40,7 +40,7 @@ export default function DonateTab() {
             onClick={() => handleDonate(d.amount)}
             className="bg-card border-2 border-border hover:border-accent rounded-xl p-4 flex flex-col items-center transition hover:scale-105"
           >
-            <span className="text-2xl mb-1">{d.emoji}</span>
+            <GameIcon icon="heart" size={20} className="mb-1 text-accent" />
             <span className="text-lg font-heading text-accent">{d.label}</span>
           </button>
         ))}

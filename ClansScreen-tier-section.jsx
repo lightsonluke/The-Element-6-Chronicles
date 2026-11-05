@@ -143,7 +143,7 @@ async function loadTierProgressData(clanId) {
                         : 'border-border bg-secondary text-muted-foreground'
                   }`}
                 >
-                  {isComplete ? '✓' : t.tier}
+                  {isComplete ? '' : t.tier}
                 </div>
 
                 <div className={`mt-2 text-[10px] font-semibold ${isCurrent ? 'text-primary' : 'text-muted-foreground'}`}>
@@ -176,7 +176,7 @@ async function loadTierProgressData(clanId) {
             {tier >= 10 ? 'All tier rewards are unlocked.' : `${formatXp(currentXp)} total current XP`}
           </div>
           {currentMilestone && (
-            <div className="mt-2 text-xs text-primary">✓ Completion milestone reached</div>
+            <div className="mt-2 text-xs text-primary"> Completion milestone reached</div>
           )}
         </div>
 
@@ -196,7 +196,7 @@ async function loadTierProgressData(clanId) {
           ) : (
             <div className="mt-1 text-sm font-semibold">Tier 10 Final Milestone</div>
           )}
-          {nextMilestone && <div className="mt-2 text-xs text-accent">✓ Milestone already reached</div>}
+          {nextMilestone && <div className="mt-2 text-xs text-accent"> Milestone already reached</div>}
         </div>
 
         <div className="rounded-xl border bg-secondary/30 p-4">

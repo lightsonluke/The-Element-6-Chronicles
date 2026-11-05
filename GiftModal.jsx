@@ -34,8 +34,8 @@ export default function GiftModal({ peer, inventory, onApply, onClose }) {
     <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center" onClick={onClose}>
       <div className="bg-card border-2 border-primary rounded-xl p-5 w-[480px] max-w-[94%] max-h-[86vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-heading text-base text-primary"><GameIcon emoji="🎁" size={14} /> GIFT — {peer.name}</h3>
-          <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon emoji="✕" size={14} /></button>
+          <h3 className="font-heading text-base text-primary"><GameIcon icon="gift" size={14} /> GIFT — {peer.name}</h3>
+          <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button>
         </div>
         <p className="text-[10px] text-muted-foreground mb-3">Choose one item to gift. Ownership transfers permanently — you will no longer own it.</p>
 
@@ -47,7 +47,7 @@ export default function GiftModal({ peer, inventory, onApply, onClose }) {
         </div>
 
         <div className="flex items-center gap-2 mt-3">
-          <span className="text-[10px] font-heading text-foreground">Tokens (<GameIcon emoji="◆" size={14} /> {myTokens})</span>
+          <span className="text-[10px] font-heading text-foreground">Tokens (<GameIcon icon="star" size={14} /> {myTokens})</span>
           <input type="number" min={0} max={myTokens} value={tokens} onChange={e => setTokens(Math.max(0, Math.min(myTokens, +e.target.value || 0)))} className="flex-1 bg-secondary text-secondary-foreground rounded px-2 py-1 text-xs font-heading" />
         </div>
 

@@ -305,9 +305,9 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
       <div className="flex justify-between w-full max-w-[1280px] mb-1">
-        <button onClick={() => onEnd?.(p2Char)} className="px-3 py-1 bg-destructive/80 text-destructive-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Forfeit</button>
+        <button onClick={() => onEnd?.(p2Char)} className="px-3 py-1 bg-destructive/80 text-destructive-foreground rounded font-body text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Forfeit</button>
         <MatchPauseButtonPortal>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-controller-pause-trigger el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80">⏸ Pause (ESC)</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-controller-pause-trigger el6-match-pause-button px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"> Pause (ESC)</button>
         </MatchPauseButtonPortal>
       </div>
       <GameCanvasPortal>

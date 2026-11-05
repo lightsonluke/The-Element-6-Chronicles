@@ -44,39 +44,6 @@ const ICONS = Object.freeze({
   undo: pick('UilUndo', 'UilCornerUpLeft'),
 });
 
-const EMOJI_MAP = Object.freeze({
-  '←': ICONS.arrowLeft, '→': ICONS.arrowRight, '↑': ICONS.arrowUp, '↓': ICONS.arrowDown,
-  '⬆': ICONS.arrowUp, '⬇': ICONS.arrowDown, '‹': ICONS.angleLeft, '›': ICONS.angleRight,
-  '⌄': ICONS.angleDown, '⌃': ICONS.angleUp, '↔': ICONS.arrowRight, '↺': ICONS.undo,
-  '↻': ICONS.redo, '➤': ICONS.arrowRight, '?': ICONS.info,
-  'X': ICONS.close, '✕': ICONS.close, '✖': ICONS.close, '✗': ICONS.close,
-  '✓': ICONS.check, '✔': ICONS.checkCircle, '✅': ICONS.checkCircle,
-  '▶': ICONS.play, '⏸': ICONS.pause, '⏯': ICONS.pause, '⏱': ICONS.clock, '🕐': ICONS.clock,
-  '◆': ICONS.star, '◎': ICONS.box, '●': ICONS.box, '★': ICONS.star, '⭐': ICONS.star,
-  '🌟': ICONS.star, '✦': ICONS.star, '✨': ICONS.star,
-  '♥': ICONS.heart, '❤': ICONS.heart, '💕': ICONS.heart, '💖': ICONS.heart,
-  '⚑': ICONS.flag, '🚩': ICONS.flag, '🏁': ICONS.flag,
-  '⚙': ICONS.settings, '⚠': ICONS.warning, '⚡': ICONS.warning, '💥': ICONS.exclamationCircle,
-  '💨': ICONS.cloud, '🌍': ICONS.globe, '🌐': ICONS.globe, '🏠': ICONS.home, '🏘️': ICONS.home,
-  '🏙️': ICONS.home, '🏛': ICONS.home, '🌳': ICONS.trees, '⛰️': ICONS.map, '❄️': ICONS.snow,
-  '💧': ICONS.water, '🔥': ICONS.fire,
-  '⚽': ICONS.game, '🏀': ICONS.game, '🏐': ICONS.game, '⚾': ICONS.game,
-  '🏃': ICONS.running, '🧗': ICONS.running, '🏆': ICONS.trophy, '🏅': ICONS.medal,
-  '👑': ICONS.trophy, '👤': ICONS.user, '👥': ICONS.users, '🎁': ICONS.gift,
-  '🎉': ICONS.star, '🎓': ICONS.book, '🎨': ICONS.palette, '🎩': ICONS.tag, '🎬': ICONS.video,
-  '🎭': ICONS.game, '🎮': ICONS.controller, '🎲': ICONS.shuffle, '💬': ICONS.comment,
-  '📅': ICONS.calendar, '📊': ICONS.chart, '📋': ICONS.clipboard, '📎': ICONS.paperclip,
-  '📖': ICONS.book, '📜': ICONS.package, '📦': ICONS.package, '📰': ICONS.file, '📁': ICONS.folder,
-  '💾': ICONS.save, '💰': ICONS.bag, '🪙': ICONS.bag, '🛒': ICONS.cart, '🛋️': ICONS.home,
-  '🛠': ICONS.settings, '🛠️': ICONS.settings, '🤝': ICONS.users, '🧩': ICONS.box, '🧪': ICONS.package,
-  '🧹': ICONS.trash, '🪢': ICONS.link, '🧤': ICONS.bag, '💍': ICONS.star, '💀': ICONS.exclamationCircle,
-  '🔀': ICONS.shuffle, '🔄': ICONS.refresh, '🔍': ICONS.search, '🔒': ICONS.lock, '🔓': ICONS.unlock,
-  '🔴': ICONS.box, '🔵': ICONS.box, '🚪': ICONS.arrowRight, '✎': ICONS.edit, '✏': ICONS.edit,
-  '👁': ICONS.eye, '🗑': ICONS.trash, '🗑️': ICONS.trash, '🏷️': ICONS.tag,
-  '↗': ICONS.arrowRight, '↖': ICONS.arrowUp, '↙': ICONS.arrowDown, '↘': ICONS.arrowRight,
-  '+': ICONS.plus, '-': ICONS.minus,
-});
-
 const ICON_ALIASES = Object.freeze({
   add: ICONS.plus, remove: ICONS.minus, trash: ICONS.trash, close: ICONS.close,
   check: ICONS.checkCircle, play: ICONS.play, stop: ICONS.stop, pause: ICONS.pause,
@@ -96,8 +63,8 @@ const ICON_ALIASES = Object.freeze({
   undo: ICONS.undo, redo: ICONS.redo, refresh: ICONS.refresh, file: ICONS.file,
 });
 
-export default function GameIcon({ emoji = '', icon, size = 16, color = 'currentColor', className = '', style = {}, title }) {
-  const Icon = ICON_ALIASES[icon] || EMOJI_MAP[emoji] || FALLBACK;
+export default function GameIcon({ icon, size = 16, color = 'currentColor', className = '', style = {}, title }) {
+  const Icon = ICON_ALIASES[icon] || ICONS[icon] || FALLBACK;
   const safeSize = typeof size === 'number' ? size : 16;
 
   return (
@@ -126,4 +93,4 @@ export default function GameIcon({ emoji = '', icon, size = 16, color = 'current
   );
 }
 
-export { EMOJI_MAP, ICON_ALIASES, ICONS };
+export { ICON_ALIASES, ICONS };

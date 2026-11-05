@@ -11,10 +11,10 @@ const SCORE_LIMITS = [5, 7, 10, 15];
 const BALL_SPEEDS = [{ id: 0.85, label: 'Slow' }, { id: 1.0, label: 'Normal' }, { id: 1.2, label: 'Fast' }];
 const SUPER_CDS = [{ id: 45, label: '45s' }, { id: 60, label: '60s' }, { id: 75, label: '75s' }];
 const WEATHERS = [
-  { id: 'clear', label: '☀️ Clear' }, { id: 'rain', label: '🌧️ Rain' }, { id: 'snow', label: '❄️ Snow' },
-  { id: 'wind', label: '💨 Wind' }, { id: 'fog', label: '🌫️ Fog' },
+  { id: 'clear', label: ' Clear' }, { id: 'rain', label: ' Rain' }, { id: 'snow', label: ' Snow' },
+  { id: 'wind', label: ' Wind' }, { id: 'fog', label: ' Fog' },
 ];
-const MUSIC = [{ id: 'arena', label: '🏟️ Arena' }, { id: 'chill', label: '🎵 Chill' }, { id: 'epic', label: '🔥 Epic' }];
+const MUSIC = [{ id: 'arena', label: ' Arena' }, { id: 'chill', label: ' Chill' }, { id: 'epic', label: ' Epic' }];
 const DIFFICULTIES = ['newcomer', 'beginner', 'easy', 'amateur', 'regular', 'pro', 'hard', 'insane', 'honored'];
 
 export default function DodgeballMode({
@@ -86,7 +86,7 @@ export default function DodgeballMode({
               { c: p2C, st: result.p2Stats, col: TEAM_COLOR_P2, lbl: !result.p1Won ? 'WINNER' : '' }].map((row, i) => (
               <div key={i} className="bg-muted/40 rounded-lg p-3 border" style={{ borderColor: row.col + '66' }}>
                 <p className="font-heading text-sm" style={{ color: row.col }}>{row.c?.name}</p>
-                {row.lbl && <span className="text-[9px] text-accent font-heading"><GameIcon emoji="🏆" size={14} /> {row.lbl}</span>}
+                {row.lbl && <span className="text-[9px] text-accent font-heading"><GameIcon icon="trophy" size={14} /> {row.lbl}</span>}
                 <table className="w-full text-[10px] font-body mt-1">
                   <tbody>
                     <tr><td className="text-muted-foreground">Throws</td><td className="text-right font-heading">{row.st?.throws || 0}</td></tr>
@@ -110,8 +110,8 @@ export default function DodgeballMode({
   // ── Select / settings ──
   return (
     <UniversalCharacterSelect
-      title="🟡 DODGEBALL"
-      startLabel={p1IsCPU && p2IsCPU ? '▶ CPU vs CPU (TEST)' : '▶ START MATCH'}
+      title=" DODGEBALL"
+      startLabel={p1IsCPU && p2IsCPU ? ' CPU vs CPU (TEST)' : ' START MATCH'}
       unlockedIds={unlockedIds || ['yellow']}
       favoriteId={favoriteId}
       customCharsData={customCharsData}
@@ -134,7 +134,7 @@ export default function DodgeballMode({
           <span className="font-heading text-accent">MATCH SETTINGS</span>
           <Setting label="WEATHER" options={WEATHERS} value={ms.weather} onChange={(v) => setMs(m => ({ ...m, weather: v }))} />
           <div className="text-[9px] text-muted-foreground text-center">
-            Power<GameIcon emoji="→" size={14} />throw · Speed<GameIcon emoji="→" size={14} />move · Utility<GameIcon emoji="→" size={14} />jump · Control<GameIcon emoji="→" size={14} />super CD · Defense<GameIcon emoji="→" size={14} />stun
+            Power<GameIcon icon="arrowRight" size={14} />throw · Speed<GameIcon icon="arrowRight" size={14} />move · Utility<GameIcon icon="arrowRight" size={14} />jump · Control<GameIcon icon="arrowRight" size={14} />super CD · Defense<GameIcon icon="arrowRight" size={14} />stun
           </div>
         </div>
       }

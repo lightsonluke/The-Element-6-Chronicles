@@ -874,7 +874,7 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
           }
         }
       } else {
-        // Pitcher has the ball <GameIcon emoji="→" size={14} /> play ends immediately (no auto-walk back to mound)
+        // Pitcher has the ball <GameIcon icon="arrowRight" size={14} /> play ends immediately (no auto-walk back to mound)
         s.phase = 'resolve'; s.phaseTimer = 0.5;
         s.message = 'PLAY'; s.msgT = 60;
       }
@@ -950,7 +950,7 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
 
   function cpuThrowDecision(s, mult) {
     if (s.runners.length === 0 || s.playResolved) { s.playResolved = true; s.returningBall = true; return; }
-    // All runners safe at bases <GameIcon emoji="→" size={14} /> return ball to pitcher
+    // All runners safe at bases <GameIcon icon="arrowRight" size={14} /> return ball to pitcher
     const allSafe = s.runners.every(r => r.atBase);
     if (allSafe) { s.playResolved = true; s.returningBall = true; return; }
     // Find the lead runner (not at base, not reached)
@@ -983,7 +983,7 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
     s.cpuRunCd += dt;
     if (s.cpuRunCd > 0.3) {
       s.cpuRunCd = 0;
-      // Situational awareness: 2 outs <GameIcon emoji="→" size={14} /> run aggressively; loose ball <GameIcon emoji="→" size={14} /> run sooner
+      // Situational awareness: 2 outs <GameIcon icon="arrowRight" size={14} /> run aggressively; loose ball <GameIcon icon="arrowRight" size={14} /> run sooner
       const twoOuts = s.outs >= 2;
       const ballHeld = s.fieldBall.heldBy !== null;
       const advanceThreshold = twoOuts ? 100 : 150;
@@ -1112,12 +1112,12 @@ export default function BaseballGame({ p1Chars, p2Chars, p2IsCPU, difficulty, on
 <button onClick={() => toggleElementFullscreen(fullscreenRef.current)} className="absolute top-3 right-3 z-50 px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">FULLSCREEN</button>
       <div className="w-full flex items-center justify-between gap-2 flex-wrap">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] font-body text-white/80 px-2">
-          <button onClick={onQuit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
+          <button onClick={onQuit} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Quit</button>
           <span className="font-heading text-accent ml-1">P1:</span>
           <span><span className="text-accent font-bold">,</span> Pitch/Swing/Throw</span>
           <span><span className="text-accent font-bold">/</span> Switch</span>
           <span><span className="text-accent font-bold">.</span> Bunt/Cycle/Retreat</span>
-          <span><GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} /><GameIcon emoji="↑" size={14} /><GameIcon emoji="↓" size={14} /> Move</span>
+          <span><GameIcon icon="info" size={14} /><GameIcon icon="arrowRight" size={14} /><GameIcon icon="arrowUp" size={14} /><GameIcon icon="arrowDown" size={14} /> Move</span>
         </div>
         {!p2IsCPU && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] font-body text-white/80 px-2">
@@ -1354,7 +1354,7 @@ function drawAtBatView(ctx, s, c1, c2, j1, j2, p1Els, p2Els, skins, accs) {
     if (p1Pitching) {
       ctx.fillText('PRESS , TO PITCH', W / 2, H / 2 - 5);
       ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = 'bold 10px Orbitron';
-      ctx.fillText('Hold arrows DURING flight for tiny curve: <GameIcon emoji="↑" size={14} />/<GameIcon emoji="↓" size={14} />/<GameIcon emoji="←" size={14} />/<GameIcon emoji="→" size={14} />', W / 2, H / 2 + 14);
+      ctx.fillText('Hold arrows DURING flight for tiny curve: <GameIcon icon="arrowUp" size={14} />/<GameIcon icon="arrowDown" size={14} />/<GameIcon icon="info" size={14} />/<GameIcon icon="arrowRight" size={14} />', W / 2, H / 2 + 14);
     } else if (p2Pitching) {
       ctx.fillText('P2: PRESS X TO PITCH', W / 2, H / 2 - 5);
       ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = 'bold 10px Orbitron';

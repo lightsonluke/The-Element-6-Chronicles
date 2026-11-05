@@ -64,7 +64,7 @@ function EightSlotBracket({ slots, results = {}, currentRound = 0, playerSlot = 
         <span className={`text-[8px] font-heading truncate ${isPlayer ? 'text-accent font-bold' : 'text-foreground'}`}>
           {revealed ? (c?.name || '?') : '?'}
         </span>
-        {isWinner && <span className="text-[7px] text-green-500 flex-shrink-0"><GameIcon emoji="✓" size={14} /></span>}
+        {isWinner && <span className="text-[7px] text-green-500 flex-shrink-0"><GameIcon icon="check" size={14} /></span>}
       </div>
     );
   };
@@ -111,7 +111,7 @@ function EightSlotBracket({ slots, results = {}, currentRound = 0, playerSlot = 
         <div>{renderMatchup(2, 0, true)}</div>
         {allDone && (
           <div className="text-center mt-2">
-            <span className="text-lg"><GameIcon emoji="🏆" size={14} /></span>
+            <span className="text-lg"><GameIcon icon="trophy" size={14} /></span>
             <p className="text-[8px] font-heading text-accent">{getChar(results[2][0])?.name}</p>
           </div>
         )}
@@ -189,8 +189,8 @@ function LinearBracket({ participants, results = [], currentIdx = 0, playerChar 
                     <span className="text-[7px] font-heading text-foreground text-center leading-tight max-w-[60px] truncate">
                       {opp?.name || '?'}
                     </span>
-                    {won && <span className="text-[9px] text-green-500 font-bold"><GameIcon emoji="✓" size={14} /></span>}
-                    {lost && <span className="text-[9px] text-destructive font-bold"><GameIcon emoji="✗" size={14} /></span>}
+                    {won && <span className="text-[9px] text-green-500 font-bold"><GameIcon icon="check" size={14} /></span>}
+                    {lost && <span className="text-[9px] text-destructive font-bold"><GameIcon icon="close" size={14} /></span>}
                     {isCurrent && <span className="text-[8px] text-accent font-bold animate-pulse">NEXT</span>}
                   </>
                 )}
@@ -202,7 +202,7 @@ function LinearBracket({ participants, results = [], currentIdx = 0, playerChar 
         {/* Trophy at the end */}
         <div className="flex items-center">
           <div className={`h-0.5 w-6 ${results.every(r => r === true) ? 'bg-accent' : 'bg-border'}`} />
-          <div className={`text-2xl ${results.every(r => r === true) ? 'opacity-100' : 'opacity-30'}`}><GameIcon emoji="🏆" size={14} /></div>
+          <div className={`text-2xl ${results.every(r => r === true) ? 'opacity-100' : 'opacity-30'}`}><GameIcon icon="trophy" size={14} /></div>
         </div>
       </div>
     </div>
@@ -246,7 +246,7 @@ function TreeBracket({ slots, results = {}, currentRound = 0, playerSlot = 0, al
         <span className={`text-[8px] font-heading truncate ${isPlayer ? 'text-accent font-bold' : 'text-foreground'}`}>
           {revealed ? (c?.name || '?') : '?'}
         </span>
-        {isWinner && <span className="text-[7px] text-green-500 flex-shrink-0"><GameIcon emoji="✓" size={14} /></span>}
+        {isWinner && <span className="text-[7px] text-green-500 flex-shrink-0"><GameIcon icon="check" size={14} /></span>}
       </div>
     );
   };
@@ -301,7 +301,7 @@ function TreeBracket({ slots, results = {}, currentRound = 0, playerSlot = 0, al
         <div>{renderMatchup(3, 0, true)}</div>
         {results[3]?.[0] && (
           <div className="text-center mt-2">
-            <span className="text-lg"><GameIcon emoji="🏆" size={14} /></span>
+            <span className="text-lg"><GameIcon icon="trophy" size={14} /></span>
             <p className="text-[8px] font-heading text-accent">{getChar(results[3][0])?.name}</p>
           </div>
         )}

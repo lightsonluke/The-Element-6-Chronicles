@@ -157,9 +157,9 @@ export default function GCBracket({ slots, results, humanIds, charById, onSwap, 
         {c ? (
           <>
             <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: c.color, boxShadow: `0 0 4px ${c.color}88` }} />
-            {isHuman && <span className="shrink-0" style={{ color: c.color, fontSize: 8 }}>★</span>}
+            {isHuman && <span className="shrink-0" style={{ color: c.color, fontSize: 8 }}></span>}
             <span className="text-[7px] font-heading truncate flex-1 text-foreground">{c.name.slice(0, 10)}</span>
-            {isWinner && <span className="shrink-0 text-green-500" style={{ fontSize: 8 }}>✓</span>}
+            {isWinner && <span className="shrink-0 text-green-500" style={{ fontSize: 8 }}></span>}
           </>
         ) : (
           <span className="text-[7px] text-muted-foreground pl-2">?</span>
@@ -190,7 +190,7 @@ export default function GCBracket({ slots, results, humanIds, charById, onSwap, 
         )}
         {results[4]?.[0] && (
           <div className="absolute text-center" style={{ left: (xPos(4) + BW + 10) * scale, top: (yPositions(1)[0] - 20) * scale, width: 60 * scale }}>
-            <span className="text-lg">🏆</span>
+            <span className="text-lg"></span>
             <p className="text-[7px] font-heading text-accent">{charById(results[4][0])?.name?.slice(0, 8)}</p>
           </div>
         )}

@@ -649,9 +649,9 @@ export default function ClansScreen({
 
             <div className="grid gap-3 md:grid-cols-3">
               {[
-                ['wealthy','💰 Wealthy Founder',`Pay ${CREATE_COST.toLocaleString()} tokens.`],
-                ['proven','🏆 Proven Founder',`${PROVEN_WINS_REQUIRED} wins + ${PROVEN_PLAYTIME_REQUIRED / 3600} hours playtime.`],
-                ['community','🤝 Community Founder',`${COMMUNITY_FOUNDERS_REQUIRED} other players confirm + ${COMMUNITY_CREATE_COST.toLocaleString()} tokens.`],
+                ['wealthy',' Wealthy Founder',`Pay ${CREATE_COST.toLocaleString()} tokens.`],
+                ['proven',' Proven Founder',`${PROVEN_WINS_REQUIRED} wins + ${PROVEN_PLAYTIME_REQUIRED / 3600} hours playtime.`],
+                ['community',' Community Founder',`${COMMUNITY_FOUNDERS_REQUIRED} other players confirm + ${COMMUNITY_CREATE_COST.toLocaleString()} tokens.`],
               ].map(([id,title,desc]) => (
                 <button key={id} type="button" onClick={() => setFounderMethod(id)} className={`rounded-xl border p-4 text-left ${founderMethod === id ? 'border-primary bg-primary/10' : 'bg-secondary/40'}`}>
                   <div className="font-semibold">{title}</div>
@@ -726,7 +726,7 @@ export default function ClansScreen({
               <div className="mt-3 h-3 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary" style={{width:`${tierProgress(myClan).percent}%`}} /></div>
               {(isLeader || isLieutenant) && <div className="mt-3 rounded-xl border border-accent/30 bg-secondary/30 p-3">
                 <div className="flex items-center gap-3">
-                  {myClan.icon_url ? <img src={myClan.icon_url} alt="" className="h-12 w-12 rounded-xl object-cover border border-accent/40" /> : <div className="h-12 w-12 rounded-xl border border-dashed border-accent/40 flex items-center justify-center text-xl">🏳️</div>}
+                  {myClan.icon_url ? <img src={myClan.icon_url} alt="" className="h-12 w-12 rounded-xl object-cover border border-accent/40" /> : <div className="h-12 w-12 rounded-xl border border-dashed border-accent/40 flex items-center justify-center text-xl"></div>}
                   <div className="flex-1">
                     <p className="font-heading text-xs text-accent">CLAN BADGE</p>
 {isLeader && <p className="text-[10px] text-muted-foreground">Change it whenever you want. There is no cooldown.</p>}
@@ -861,7 +861,7 @@ export default function ClansScreen({
             </div>}
             <div className="rounded-2xl border bg-card p-4">
               <h2 className="font-heading">MEETINGS</h2>
-              <div className="mt-3 space-y-2">{meetings.map(m=>{ const passed = new Date(m.scheduled_at).getTime() <= Date.now(); return <div key={m.id} className={`rounded-xl border p-3 ${passed ? 'opacity-70' : ''}`}><div className="flex items-start justify-between gap-3"><div><b>{m.title}</b><div className="text-xs text-muted-foreground">{new Date(m.scheduled_at).toLocaleString()}</div></div>{passed && <span aria-label="Meeting passed" title="Meeting passed" className="text-lg font-bold text-destructive">✕</span>}</div><p className="text-sm">{m.notes}</p><span className="text-xs">{passed ? 'PASSED' : m.status}</span></div>})}</div>
+              <div className="mt-3 space-y-2">{meetings.map(m=>{ const passed = new Date(m.scheduled_at).getTime() <= Date.now(); return <div key={m.id} className={`rounded-xl border p-3 ${passed ? 'opacity-70' : ''}`}><div className="flex items-start justify-between gap-3"><div><b>{m.title}</b><div className="text-xs text-muted-foreground">{new Date(m.scheduled_at).toLocaleString()}</div></div>{passed && <span aria-label="Meeting passed" title="Meeting passed" className="text-lg font-bold text-destructive"></span>}</div><p className="text-sm">{m.notes}</p><span className="text-xs">{passed ? 'PASSED' : m.status}</span></div>})}</div>
             </div>
           </section>
         )}

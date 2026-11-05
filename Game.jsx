@@ -96,7 +96,7 @@ import { loadCloudProgress, saveCloudProgress } from './cloudSaves.js';
 import { supabase } from './supabaseClient.js';
 import { syncSharedLeaderboard } from './sharedLeaderboard.js';
 
-const DEFAULT_SPLIT_CITY_BACKDROP = `${import.meta.env.BASE_URL}assets/split-city-background.png`;
+const DEFAULT_SPLIT_CITY_BACKDROP = `${import.meta.env.BASE_URL}assets/e6-home-menu-background.png`;
 import { getKeybinds } from './keybinds.js';
 import UsernamePrompt from './UsernamePrompt.jsx';
 import GameIcon from "./GameIcon.jsx";
@@ -277,6 +277,19 @@ export default function Game() {
   const initialSportFromPath = ({ '/volleyball':'volleyball','/baseball':'baseball','/parkour':'parkour','/rock-climbing':'rockclimb','/capture-the-flag':'ctf','/dodgeball':'dodgeball','/ziplining':'zipline','/banger':'banger' })[rawInitialPath] || null;
   const routePathRef = useRef(rawInitialPath || '/home');
   const [screen, setScreen] = useState(initialScreenFromPath);
+  const [screenTransition, setScreenTransition] = useState(null);
+  const previousScreenForTransition = useRef(initialScreenFromPath);
+
+  useEffect(() => {
+    const previous = previousScreenForTransition.current;
+    previousScreenForTransition.current = screen;
+    if (previous === screen) return undefined;
+    const kind = previous === 'menu' || screen === 'menu' ? 'scene' : 'light';
+    const transition = { kind, id: `${screen}-${Date.now()}` };
+    setScreenTransition(transition);
+    const timer = window.setTimeout(() => setScreenTransition(null), kind === 'scene' ? 720 : 360);
+    return () => window.clearTimeout(timer);
+  }, [screen]);
   const [returnScreen, setReturnScreen] = useState('menu');
   const [hubServer, setHubServer] = useState(null);
   const [fighters, setFighters] = useState(null);
@@ -1498,7 +1511,7 @@ export default function Game() {
         const freshDecline = myDeclined.find(r => !seenIds.has(`d_${r.id}`));
         if (freshDecline) {
           seenIds.add(`d_${freshDecline.id}`);
-          setChatToast({ name: '⚔️ Match Request', text: `${freshDecline.to_username} declined your ${freshDecline.sport} challenge.` });
+          setChatToast({ name: ' Match Request', text: `${freshDecline.to_username} declined your ${freshDecline.sport} challenge.` });
           setTimeout(() => setChatToast(null), 4000);
         }
       } catch {}
@@ -1578,7 +1591,7 @@ export default function Game() {
     }
   }, []);
 
-  // Flow: mode <GameIcon emoji="→" size={14} /> fighters <GameIcon emoji="→" size={14} /> map <GameIcon emoji="→" size={14} /> fight
+  // Flow: mode selection, fighter selection, map selection, then the match.
   const handleModePick = (mode) => {
     if (mode === 'custom') { setScreen('custombattle'); return; }
     if (mode === 'tournament') { setScreen('tournament'); return; }
@@ -2000,7 +2013,7 @@ export default function Game() {
       .filter(Boolean)
       .slice(0, 64);
     const name = stageData.name || 'Custom Stage';
-    const emoji = stageData.emoji || 'palette';
+    const icon = 'map';
     const spawnPoints = stageData.spawnPoints || null;
     const backdrop = stageData.backdrop || null;
     const hazards = stageData.hazards || null;
@@ -2016,10 +2029,10 @@ export default function Game() {
       const list = [...(prev.customStages || [])];
       if (editIdx != null && editIdx >= 0 && editIdx < list.length) {
         // Editing an existing stage — update in place (no duplicate)
-        list[editIdx] = { platforms, freehandStrokes, name, emoji, spawnPoints, backdrop, hazards, objects, killPerimeter, stageCamera, cameraZoom, cameraMotion, downloaded, originalOwnerId };
+        list[editIdx] = { platforms, freehandStrokes, name, icon, spawnPoints, backdrop, hazards, objects, killPerimeter, stageCamera, cameraZoom, cameraMotion, downloaded, originalOwnerId };
       } else {
         if (list.length >= 10) list.shift(); // max 10 stages (includes downloads)
-        list.push({ platforms, freehandStrokes, name, emoji, spawnPoints, backdrop, hazards, objects, killPerimeter, stageCamera, cameraZoom, cameraMotion, downloaded, originalOwnerId });
+        list.push({ platforms, freehandStrokes, name, icon, spawnPoints, backdrop, hazards, objects, killPerimeter, stageCamera, cameraZoom, cameraMotion, downloaded, originalOwnerId });
       }
       const next = { ...prev, customStages: list, customStage: platforms };
       saveProgress(next);
@@ -2033,11 +2046,12 @@ export default function Game() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-start p-4 relative overflow-y-auto"
+      className="e6-app-shell min-h-screen flex flex-col items-center justify-start p-4 relative overflow-y-auto"
       style={{ background: progress?.settings?.displayMode === 'light'
         ? `radial-gradient(ellipse at top, ${disableEventBg ? '#aaa8bb' : effectiveEventColor}22 0%, #e8e4f0 50%, #ddd8e8 100%)`
         : `radial-gradient(ellipse at top, ${disableEventBg ? '#5544aa' : effectiveEventColor}22 0%, #0a0820 50%, #06040f 100%)` }}
     >
+      {screenTransition && <div key={screenTransition.id} aria-hidden="true" className={`e6-screen-transition e6-screen-transition--${screenTransition.kind}`} />}
       <UsernamePrompt onSet={(name) => setUserProfile(prev => ({ ...prev, username: name }))} />
       {/* Global splitcity backdrop — visible on menu screens, covered by game canvases during sport/fight */}
       {progress?.settings?.displayMode !== 'light' && !['fighting', 'soccer', 'sports', 'story', 'lan', 'onlinelobby', 'customrooms'].includes(screen) && (
@@ -2048,12 +2062,12 @@ export default function Game() {
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
-            opacity: progress?.settings?.customBackdrop ? 0.4 : 0.32,
+            opacity: progress?.settings?.customBackdrop ? 0.4 : 0.28,
             zIndex: 0,
           }}
         />
       )}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {screen !== 'menu' && <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {Array.from({ length: (progress.settings?.bgParticleDensity ?? 30) }).map((_, i) => (
           <div key={i} className="absolute rounded-full animate-pulse" style={{
             left: `${(i * 137.5) % 100}%`, top: `${(i * 79.3) % 100}%`,
@@ -2063,7 +2077,7 @@ export default function Game() {
             animationDelay: `${(i * 0.4) % 3}s`, animationDuration: `${2 + (i % 4)}s`,
           }} />
         ))}
-      </div>
+      </div>}
 
       <div
         className={`relative z-10 w-full flex flex-col items-center my-auto${useUnifiedUi ? ' e6-unified-ui' : ''}`}
@@ -2071,14 +2085,14 @@ export default function Game() {
       >
         {tokenFlash && (
           <div className="e6-global-toast fixed top-4 right-4 z-50 bg-accent text-accent-foreground px-4 py-2 rounded-lg font-heading text-sm shadow-2xl animate-pulse">
-            +{formatNumber(tokenFlash)} <GameIcon emoji="◆" size={14} /> Element 6 Tokens!
+            +{formatNumber(tokenFlash)} <GameIcon icon="star" size={14} /> Element 6 Tokens!
           </div>
         )}
         {storyRewardToast && (
           <div className="e6-global-toast fixed top-4 left-4 z-50 bg-card border-2 border-accent rounded-lg px-5 py-4 shadow-2xl max-w-sm">
             <div className="flex justify-between items-start mb-2">
-              <p className="font-heading text-sm text-accent"><GameIcon emoji="🏆" size={14} /> STORY COMPLETE!</p>
-              <button onClick={() => setStoryRewardToast(null)} className="text-muted-foreground hover:text-foreground text-xs ml-2"><GameIcon emoji="✕" size={14} /></button>
+              <p className="font-heading text-sm text-accent"><GameIcon icon="trophy" size={14} /> STORY COMPLETE!</p>
+              <button onClick={() => setStoryRewardToast(null)} className="text-muted-foreground hover:text-foreground text-xs ml-2"><GameIcon icon="close" size={14} /></button>
             </div>
             <div className="space-y-1 text-xs font-body">
               <p className="text-foreground"><span className="text-muted-foreground">Characters:</span> <span className="text-accent font-heading">{storyRewardToast.chars.join(', ')}</span></p>
@@ -2090,7 +2104,7 @@ export default function Game() {
         <GlobalNotifications settings={progress.settings || {}} />
         {chatToast && (
           <div className="e6-global-toast fixed top-16 right-4 z-50 bg-card border-2 border-accent rounded-lg px-4 py-3 shadow-2xl max-w-xs animate-pulse">
-            <p className="text-[10px] font-heading text-accent"><GameIcon emoji="💬" size={14} /> NEW MESSAGE — {chatToast.name}</p>
+            <p className="text-[10px] font-heading text-accent"><GameIcon icon="comment" size={14} /> NEW MESSAGE — {chatToast.name}</p>
             <p className="text-xs font-body text-foreground truncate">{chatToast.text}</p>
           </div>
         )}
@@ -2105,14 +2119,14 @@ export default function Game() {
             <p className="text-[10px] font-heading text-accent">MATCH REQUEST</p>
             <p className="text-xs font-body text-foreground mb-2"><span className="text-accent font-heading">{matchRequestToast.from_username}</span> challenged you to <span className="font-heading text-primary">{matchRequestToast.sport.toUpperCase()}</span>!</p>
             <div className="flex gap-2">
-              <button onClick={() => acceptMatchRequest(matchRequestToast)} className="flex-1 px-3 py-1 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon emoji="✓" size={14} /> ACCEPT</button>
-              <button onClick={() => declineMatchRequest(matchRequestToast)} className="flex-1 px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs"><GameIcon emoji="✕" size={14} /> DECLINE</button>
+              <button onClick={() => acceptMatchRequest(matchRequestToast)} className="flex-1 px-3 py-1 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon icon="check" size={14} /> ACCEPT</button>
+              <button onClick={() => declineMatchRequest(matchRequestToast)} className="flex-1 px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs"><GameIcon icon="close" size={14} /> DECLINE</button>
             </div>
           </div>
         )}
         {tradeGiftToast && (
           <div className="e6-global-toast fixed top-60 right-4 z-50 bg-card border-2 border-accent rounded-lg px-4 py-3 shadow-2xl max-w-xs animate-pulse">
-            <p className="text-[10px] font-heading text-accent inline-flex items-center gap-1">{tradeGiftToast.type === 'gift' ? <><GameIcon emoji="🎁" size={14} /> GIFT RECEIVED</> : tradeGiftToast.type === 'trade' ? <><GameIcon emoji="🔄" size={14} /> TRADE OFFER</> : <><GameIcon emoji="✅" size={14} /> TRADE ACCEPTED</>}</p>
+            <p className="text-[10px] font-heading text-accent inline-flex items-center gap-1">{tradeGiftToast.type === 'gift' ? <><GameIcon icon="gift" size={14} /> GIFT RECEIVED</> : tradeGiftToast.type === 'trade' ? <><GameIcon icon="refresh" size={14} /> TRADE OFFER</> : <><GameIcon icon="checkCircle" size={14} /> TRADE ACCEPTED</>}</p>
             <p className="text-xs font-body text-foreground"><span className="text-accent font-heading">{tradeGiftToast.name}</span> {tradeGiftToast.text}</p>
           </div>
         )}

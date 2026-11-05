@@ -63,10 +63,10 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
   return (
     <div className="e6-season-pass-screen">
       <header className="e6-pass-topbar">
-        <button type="button" onClick={onBack} className="e6-pass-back"><GameIcon emoji="←" size={17} /> LOBBY</button>
+        <button type="button" onClick={onBack} className="e6-pass-back"><GameIcon icon="info" size={17} /> LOBBY</button>
         <div className="e6-pass-brand"><span>ELEMENT 6 / SEASONAL</span><strong>REWARD TRACK</strong></div>
         <div className="e6-pass-actions">
-          <button type="button" onClick={() => onNavigateEquip?.()} className="e6-pass-secondary">VIEW COLLECTION <GameIcon emoji="→" size={14} /></button>
+          <button type="button" onClick={() => onNavigateEquip?.()} className="e6-pass-secondary">VIEW COLLECTION <GameIcon icon="arrowRight" size={14} /></button>
           <button type="button" onClick={handleClaimAll} className="e6-pass-claim-all" disabled={!claimableCount}>
             CLAIM AVAILABLE <span>{claimableCount}</span>
           </button>
@@ -87,7 +87,7 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
               <div className="e6-pass-progress-foot"><span>{eventXP.toLocaleString()} TOTAL XP</span><span>{battlePassPlus ? 'ALL TIERS UNLOCKED' : `${xpInTier} / ${XP_PER_TIER} XP TO NEXT TIER`}</span></div>
             </div>
             <div className={`e6-pass-premium-status ${battlePassPlus ? 'is-active' : ''}`}>
-              <span className="e6-pass-premium-mark">✦</span>
+              <span className="e6-pass-premium-mark"></span>
               <div><strong>{battlePassPlus ? 'BATTLE PASS+ ACTIVE' : 'BATTLE PASS+'}</strong><small>{battlePassPlus ? 'Bonus rewards are included when you claim a tier.' : 'Premium rewards are shown on each tier.'}</small></div>
               <span className="e6-pass-premium-state">{battlePassPlus ? 'ACTIVE' : 'PREMIUM'}</span>
             </div>
@@ -98,7 +98,7 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
           <div className="e6-pass-section-head">
             <div><span className="e6-pass-section-kicker">THE REWARD ROAD</span><h2>Season track</h2><p>Claim rewards you’ve earned. Milestone tiers bring featured seasonal drops.</p></div>
             <div className="e6-pass-track-tools"><span className="e6-pass-claimed-count"><b>{claimedTiers.length}</b> / {MAX_TIERS} CLAIMED</span>
-              <button type="button" onClick={() => { const c = timelineRef.current; if (c) { const t = c.children[Math.max(0, currentTier - 1)]; if (t) t.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); } }} className="e6-pass-jump">JUMP TO TIER {Math.min(currentTier, MAX_TIERS)} <GameIcon emoji="→" size={13} /></button>
+              <button type="button" onClick={() => { const c = timelineRef.current; if (c) { const t = c.children[Math.max(0, currentTier - 1)]; if (t) t.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); } }} className="e6-pass-jump">JUMP TO TIER {Math.min(currentTier, MAX_TIERS)} <GameIcon icon="arrowRight" size={13} /></button>
             </div>
           </div>
           <div className="e6-pass-lane-labels"><span>FREE TRACK <small>Available through play</small></span><span className="e6-pass-premium-lane">PREMIUM TRACK <small>{battlePassPlus ? 'Pass active' : 'Bonus tier rewards'}</small></span><span className="e6-pass-tier-guide">TIER</span></div>
@@ -131,17 +131,17 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
                       <RewardPreview bp={bp} event={activeEvent} />
                       <strong title={label}>{label}</strong>
                       <small>{(bp.type || 'reward').replace(/([A-Z])/g, ' $1').toUpperCase()}{(isMilestone || isStar) && ' · FEATURED'}</small>
-                      {claimed ? <span className="e6-pass-reward-status is-done"><GameIcon emoji="✓" size={13} /> CLAIMED</span>
+                      {claimed ? <span className="e6-pass-reward-status is-done"><GameIcon icon="check" size={13} /> CLAIMED</span>
                         : canClaim ? <button type="button" onClick={() => handleClaim(bp.tier)} className="e6-pass-tier-claim">CLAIM FREE</button>
-                        : <span className="e6-pass-reward-status"><GameIcon emoji="🔒" size={12} /> TIER {bp.tier}</span>}
+                        : <span className="e6-pass-reward-status"><GameIcon icon="lock" size={12} /> TIER {bp.tier}</span>}
                     </div>
                     <div className={`e6-pass-reward-cell e6-pass-bonus-cell ${battlePassPlus ? 'is-unlocked' : ''} ${!bp.premiumReward ? 'is-empty' : ''}`}>
-                      <span className="e6-pass-cell-label">✦ PREMIUM</span>
+                      <span className="e6-pass-cell-label"> PREMIUM</span>
                       {bp.premiumReward ? <>
                         <RewardPreview bp={bp.premiumReward} event={activeEvent} />
                         <strong title={premiumLabel}>{premiumLabel}</strong>
                         <small>{(bp.premiumReward.type || 'bonus reward').toUpperCase()}</small>
-                        <span className="e6-pass-reward-status">{battlePassPlus ? 'INCLUDED WITH CLAIM' : <><GameIcon emoji="🔒" size={12} /> BONUS TRACK</>}</span>
+                        <span className="e6-pass-reward-status">{battlePassPlus ? 'INCLUDED WITH CLAIM' : <><GameIcon icon="lock" size={12} /> BONUS TRACK</>}</span>
                       </> : <><span className="e6-pass-no-reward">—</span><strong>NO BONUS DROP</strong><small>FREE TIER</small><span className="e6-pass-reward-status">FREE REWARD TIER</span></>}
                     </div>
                   </div>
@@ -150,8 +150,8 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
             })}
           </div>
         </section>
-        <footer className="e6-pass-footnote"><span>✦</span><p><strong>How progression works</strong> Earn Event XP from battles. Every {XP_PER_TIER} XP advances your free track by one tier. Claiming a tier uses the existing reward system; Battle Pass+ adds its bonus reward when active.</p></footer>
-      </> : <section className="e6-pass-empty"><span>✦</span><p className="e6-pass-section-kicker">SEASONAL REWARDS</p><h1>No active season</h1><p>There isn’t an active reward track right now. Check back when the next event begins.</p>
+        <footer className="e6-pass-footnote"><span></span><p><strong>How progression works</strong> Earn Event XP from battles. Every {XP_PER_TIER} XP advances your free track by one tier. Claiming a tier uses the existing reward system; Battle Pass+ adds its bonus reward when active.</p></footer>
+      </> : <section className="e6-pass-empty"><span></span><p className="e6-pass-section-kicker">SEASONAL REWARDS</p><h1>No active season</h1><p>There isn’t an active reward track right now. Check back when the next event begins.</p>
         {nextEventInfo?.event && nextEventInfo?.startDate && (() => {
           const diff = Math.max(0, nextEventInfo.startDate.getTime() - now);
           const totalSec = Math.floor(diff / 1000); const days = Math.floor(totalSec / 86400); const hours = Math.floor((totalSec % 86400) / 3600); const mins = Math.floor((totalSec % 3600) / 60); const secs = totalSec % 60;
@@ -234,7 +234,7 @@ function EventShowcaseCanvas({ event, starChars }) {
         ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 10;
         ctx.font = 'bold 14px Orbitron, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('★', cx, cy - 100);
+        ctx.fillText('', cx, cy - 100);
         ctx.fillStyle = char.color;
         ctx.font = 'bold 11px Orbitron';
         ctx.fillText(char.name, cx, cy - 115);
@@ -298,7 +298,7 @@ function RewardPreview({ bp, event }) {
         }
         if (bp.isStar) {
           ctx.fillStyle = '#FFD700'; ctx.font = 'bold 10px Orbitron'; ctx.textAlign = 'center';
-          ctx.fillText('★', 40, 12);
+          ctx.fillText('', 40, 12);
         }
       } else if (bp.type === 'accessory' && bp.item) {
         drawAccessory(ctx, 24, 36, bp.item.type, bp.item.color, f, 0.4, '');
@@ -319,7 +319,7 @@ function RewardPreview({ bp, event }) {
         // Draw a mini character doing a pose with emote label
         ctx.fillStyle = '#FFD700'; ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 6;
         ctx.font = 'bold 10px Orbitron'; ctx.textAlign = 'center';
-        ctx.fillText('💃', 24, 30);
+        ctx.fillText('', 24, 30);
         ctx.shadowBlur = 0;
         ctx.fillStyle = '#FFD700'; ctx.font = 'bold 6px Orbitron';
         ctx.fillText((bp.name || 'EMOTE').substring(0, 8).toUpperCase(), 24, 42);

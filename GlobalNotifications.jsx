@@ -20,7 +20,7 @@ export default function GlobalNotifications({ settings = {} }) {
     let channel = null;
     let timer = null;
 
-    const push = (title, text, icon = '🔔', key = '') => {
+    const push = (title, text, icon = '', key = '') => {
       if (!alive || !enabledFrom(settings)) return;
       if (key && seen.current.has(key)) return;
       if (key) {
@@ -68,7 +68,7 @@ export default function GlobalNotifications({ settings = {} }) {
       channel = supabase.channel(`element6-global-notifications:${user.id}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'player_direct_messages', filter: `recipient_id=eq.${user.id}` }, payload => {
           const row = payload.new;
-          push('NEW CHAT', `${row.sender_username || 'Someone'} sent you a message.`, '💬', `dm_${row.id}`);
+          push('NEW CHAT', `${row.sender_username || 'Someone'} sent you a message.`, '', `dm_${row.id}`);
         })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'player_friend_requests', filter: `recipient_id=eq.${user.id}` }, async payload => {
           const row = payload.new;
@@ -77,7 +77,7 @@ export default function GlobalNotifications({ settings = {} }) {
             const { data: p } = await supabase.from('player_profiles').select('username').eq('user_id', row.sender_id).maybeSingle();
             name = p?.username || name;
           } catch {}
-          push('FRIEND REQUEST', `${name} sent you a friend request.`, '👥', `fr_${row.id}_pending`);
+          push('FRIEND REQUEST', `${name} sent you a friend request.`, '', `fr_${row.id}_pending`);
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'player_friend_requests', filter: `sender_id=eq.${user.id}` }, async payload => {
           const row = payload.new;
@@ -87,7 +87,7 @@ export default function GlobalNotifications({ settings = {} }) {
             const { data: p } = await supabase.from('player_profiles').select('username').eq('user_id', row.recipient_id).maybeSingle();
             name = p?.username || name;
           } catch {}
-          push('FRIEND REQUEST ACCEPTED', `${name} accepted your friend request.`, '✅', `fr_${row.id}_accepted`);
+          push('FRIEND REQUEST ACCEPTED', `${name} accepted your friend request.`, '', `fr_${row.id}_accepted`);
         })
         .subscribe();
 
@@ -117,7 +117,7 @@ export default function GlobalNotifications({ settings = {} }) {
           const online = Number.isFinite(stamp) && now - stamp < 120000;
           const wasOnline = Number.isFinite(was) && now - was < 120000;
           if (online && !wasOnline) {
-            push('FRIEND ONLINE', `${p.username || 'Your friend'} is now online.`, '🟢', `online_${p.user_id}_${Math.floor(stamp / 60000)}`);
+            push('FRIEND ONLINE', `${p.username || 'Your friend'} is now online.`, '', `online_${p.user_id}_${Math.floor(stamp / 60000)}`);
           }
           previousPresence.current.set(p.user_id, stamp);
         });
@@ -146,7 +146,7 @@ export default function GlobalNotifications({ settings = {} }) {
       {items.map(item => (
         <div key={item.id} className="e6-global-notification-item pointer-events-none rounded-xl border-2 border-accent bg-card/95 px-3 py-2 shadow-2xl backdrop-blur animate-in slide-in-from-left-3">
           <div className="flex items-center gap-2">
-            <span className="text-lg"><GameIcon emoji={item.icon} size={14} /></span>
+            <span className="text-lg"><GameIcon icon={item.icon} size={14} /></span>
             <div className="min-w-0">
               <p className="font-heading text-[10px] text-accent">{item.title}</p>
               <p className="text-xs text-foreground truncate">{item.text}</p>

@@ -520,7 +520,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
     // gold sword in arch with glow
     ctx.shadowColor = '#FFC107'; ctx.shadowBlur = 6;
     ctx.fillStyle = '#FFC107'; ctx.font = '14px serif'; ctx.textAlign = 'center';
-    ctx.fillText('⚔', sx, baseY - 10 - H + 16);
+    ctx.fillText('', sx, baseY - 10 - H + 16);
     ctx.shadowBlur = 0;
     // cork interior
     const corkGrad = ctx.createLinearGradient(0, baseY - 10 - H + 24, 0, baseY - 10);
@@ -617,7 +617,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
       }
     }
 
-    // ── emote as speech bubble with emoji ──
+    // ── emote animation as a speech bubble ──
     if (emote && emoteT > 0) {
       drawEmote(ctx, x, y - 55, emote, emoteT, emoteMaxT, frame);
     }
@@ -782,9 +782,9 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
     <div className="w-full max-w-5xl flex flex-col gap-2">
       {/* Account stats HUD (replaces the "apples & vigor" from the reference) */}
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <h2 className="text-xl font-heading text-accent tracking-wider"><GameIcon emoji="🌐" size={14} /> COMMUNITY HUB <span className="text-xs text-muted-foreground ml-2"><GameIcon emoji="🕐" size={14} /> {clock} · {timeOfDay}</span></h2>
+        <h2 className="text-xl font-heading text-accent tracking-wider"><GameIcon icon="globe" size={14} /> COMMUNITY HUB <span className="text-xs text-muted-foreground ml-2"><GameIcon icon="clock" size={14} /> {clock} · {timeOfDay}</span></h2>
         <div className="flex items-center gap-2 bg-card/80 border border-border rounded-lg px-3 py-1.5 text-[10px] font-heading">
-          <span className="text-muted-foreground"><GameIcon emoji="◆" size={14} /> <span className="text-accent">{progress?.coins || 0}</span></span>
+          <span className="text-muted-foreground"><GameIcon icon="star" size={14} /> <span className="text-accent">{progress?.coins || 0}</span></span>
           <span className="text-muted-foreground">XP <span className="text-primary">{stats.xp}</span></span>
           <span className="text-muted-foreground">W <span className="text-primary">{stats.wins}</span></span>
           <span className="text-muted-foreground">KO <span className="text-primary">{stats.kos}</span></span>
@@ -793,18 +793,18 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
       </div>
 
       <div className="flex gap-1.5 flex-wrap">
-        <button onClick={() => setShowEquip(true)} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon emoji="⚔" size={14} /> EQUIP</button>
-        <button onClick={() => setShowCampaigns(true)} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="🏆" size={14} /> CAMPAIGNS</button>
-        <button onClick={() => onNavigate?.('leaderboardhall')} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="🌍" size={14} /> LEADERBOARD</button>
-        <button onClick={() => setShowFlyers(true)} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="📎" size={14} /> FLYERS</button>
-        <button onClick={() => setShowServers(true)} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="🌐" size={14} /> SERVERS</button>
-        <button onClick={() => setShowOnlineUsers(true)} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="👥" size={14} /> ONLINE</button>
-        <button onClick={refreshHub} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon emoji="↻" size={14} /> REFRESH</button>
-        <button onClick={() => setShowTradesGifts(true)} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon emoji="📦" size={14} /> TRADES</button>
-        <button onClick={() => setShowParty(true)} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon emoji="👥" size={14} /> PARTY{party ? ` (${(party.member_ids || []).length})` : ''}</button>
-        <button onClick={() => setShowChat(true)} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon emoji="💬" size={14} /> CHAT</button>
-        <button onClick={() => onNavigate?.('friends')} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="👥" size={14} /> FRIENDS</button>
-        <button onClick={onBack} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={() => setShowEquip(true)} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon icon="info" size={14} /> EQUIP</button>
+        <button onClick={() => setShowCampaigns(true)} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="trophy" size={14} /> CAMPAIGNS</button>
+        <button onClick={() => onNavigate?.('leaderboardhall')} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="globe" size={14} /> LEADERBOARD</button>
+        <button onClick={() => setShowFlyers(true)} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="paperclip" size={14} /> FLYERS</button>
+        <button onClick={() => setShowServers(true)} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="globe" size={14} /> SERVERS</button>
+        <button onClick={() => setShowOnlineUsers(true)} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="users" size={14} /> ONLINE</button>
+        <button onClick={refreshHub} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon icon="redo" size={14} /> REFRESH</button>
+        <button onClick={() => setShowTradesGifts(true)} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon icon="package" size={14} /> TRADES</button>
+        <button onClick={() => setShowParty(true)} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon icon="users" size={14} /> PARTY{party ? ` (${(party.member_ids || []).length})` : ''}</button>
+        <button onClick={() => setShowChat(true)} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon icon="comment" size={14} /> CHAT</button>
+        <button onClick={() => onNavigate?.('friends')} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="users" size={14} /> FRIENDS</button>
+        <button onClick={onBack} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       {/* Matchmaking quick queue — back returns to Hub */}
@@ -825,13 +825,13 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
         className="w-full rounded-xl border-2 border-border shadow-2xl outline-none" style={{ aspectRatio: '800 / 420', cursor: 'pointer' }} />
 
       <div className="flex justify-between items-center flex-wrap gap-2 bg-card/60 border border-border rounded-xl px-3 py-1.5 text-[10px]">
-        <div className="flex gap-3 font-heading text-muted-foreground"><span>A/D <GameIcon emoji="←" size={14} /> Move</span><span>Space/W Jump</span><span>1-5 Emote</span><span>Click a board to read · Click a player to interact</span></div>
+        <div className="flex gap-3 font-heading text-muted-foreground"><span>A/D <GameIcon icon="info" size={14} /> Move</span><span>Space/W Jump</span><span>1-5 Emote</span><span>Click a board to read · Click a player to interact</span></div>
         <div className="font-heading text-muted-foreground">Players here: <span className="text-foreground">{(players || []).length + 1}</span></div>
       </div>
 
       {joinToast && (
         <div className="fixed top-16 right-4 z-50 bg-card border-2 border-primary rounded-lg px-4 py-3 shadow-2xl max-w-xs animate-pulse">
-          <p className="text-[10px] font-heading text-primary"><GameIcon emoji="🌐" size={14} /> PLAYER JOINED</p>
+          <p className="text-[10px] font-heading text-primary"><GameIcon icon="globe" size={14} /> PLAYER JOINED</p>
           <p className="text-xs font-body text-foreground"><span className="text-accent font-heading">{joinToast.name}</span> {joinToast.text}</p>
         </div>
       )}
@@ -904,7 +904,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
 
       {partyInviteToast && (
         <div className="fixed top-72 right-4 z-50 bg-card border-2 border-primary rounded-lg px-4 py-3 shadow-2xl max-w-xs">
-          <p className="text-[10px] font-heading text-primary"><GameIcon emoji="👥" size={14} /> PARTY INVITE</p>
+          <p className="text-[10px] font-heading text-primary"><GameIcon icon="users" size={14} /> PARTY INVITE</p>
           <p className="text-xs font-body text-foreground mb-2"><span className="text-accent font-heading">{partyInviteToast.from_username}</span> invited you to <span className="text-primary font-heading">{partyInviteToast.party_name}</span></p>
           <div className="flex gap-2">
             <button onClick={async () => {
@@ -919,12 +919,12 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
                 setPartyInviteToast(null);
                 sfx.purchaseSuccess();
               } catch { sfx.warning(); }
-            }} className="flex-1 px-3 py-1 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon emoji="✓" size={14} /> JOIN</button>
+            }} className="flex-1 px-3 py-1 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon icon="check" size={14} /> JOIN</button>
             <button onClick={async () => {
               try { await db.entities.PartyInvite.update(partyInviteToast.id, { status: 'declined' }); } catch {}
               setPartyInviteToast(null);
               sfx.click();
-            }} className="flex-1 px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs"><GameIcon emoji="✕" size={14} /> DECLINE</button>
+            }} className="flex-1 px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs"><GameIcon icon="close" size={14} /> DECLINE</button>
           </div>
         </div>
       )}

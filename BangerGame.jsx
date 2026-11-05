@@ -521,7 +521,7 @@ export default function BangerGame({
         ctx.save(); ctx.globalAlpha = 0.3;
         ctx.fillStyle = '#1a1a22'; ctx.fillRect(p.baseX - 14, FLOOR - 56, 28, 56);
         ctx.strokeStyle = '#FF3355'; ctx.lineWidth = 2; ctx.strokeRect(p.baseX - 14, FLOOR - 56, 28, 56);
-        ctx.fillStyle = '#FF3355'; ctx.font = 'bold 20px Orbitron'; ctx.textAlign = 'center'; ctx.fillText('✖', p.baseX, FLOOR - 24);
+        ctx.fillStyle = '#FF3355'; ctx.font = 'bold 20px Orbitron'; ctx.textAlign = 'center'; ctx.fillText('', p.baseX, FLOOR - 24);
         ctx.restore(); return;
       }
       const ch = charAt(side, p.slot);
@@ -579,7 +579,7 @@ export default function BangerGame({
     const a1 = alivePlayers(1).length, a2 = alivePlayers(2).length;
     ctx.textAlign = 'left'; ctx.fillStyle = TEAM_COLOR_P1; ctx.font = 'bold 16px Orbitron'; ctx.fillText(`BLUE ${a1}/3`, 14, 23);
     ctx.textAlign = 'right'; ctx.fillStyle = TEAM_COLOR_P2; ctx.fillText(`${a2}/3 RED`, CW - 14, 23);
-    ctx.textAlign = 'center'; ctx.fillStyle = '#FF4D6D'; ctx.font = 'bold 10px Orbitron'; ctx.fillText('💥 BANGER — ELEMENT 6 ORIGINAL', CW / 2, 19);
+    ctx.textAlign = 'center'; ctx.fillStyle = '#FF4D6D'; ctx.font = 'bold 10px Orbitron'; ctx.fillText(' BANGER — ELEMENT 6 ORIGINAL', CW / 2, 19);
     ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '10px Orbitron';
     const hint = p2IsCPU ? 'P1:  , (or V) STRIKE   ·   . (or C) BANGER   ·   time the arrow (60°-120°)' : 'P1: , Strike  . Banger    |    P2: V Strike  C Banger';
     ctx.fillText(hint, 14, CH - 10);
@@ -587,7 +587,7 @@ export default function BangerGame({
 
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
-      <button onClick={onQuit} className="el6-sport-quit-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
+      <button onClick={onQuit} className="el6-sport-quit-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Quit</button>
       <MatchPauseButtonPortal>
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-controller-pause-trigger el6-banger-pause-button el6-match-pause-button el6-sport-pause-bottom-right px-3 py-1.5 bg-black/60 text-white rounded font-heading text-xs border border-white/20">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
       </MatchPauseButtonPortal>

@@ -107,7 +107,7 @@ export default function CharacterPedestal({
         <span className="text-[8px] font-heading text-muted-foreground">{isCPU ? 'CPU' : 'PLAYER'}</span>
         {ready !== undefined && (
           <button onClick={onToggleReady} className={`text-[8px] font-heading px-1.5 py-0.5 rounded ${ready ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>
-            {ready ? '✓ READY' : 'NOT READY'}
+            {ready ? ' READY' : 'NOT READY'}
           </button>
         )}
       </div>

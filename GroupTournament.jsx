@@ -522,7 +522,7 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
       <div className="flex flex-col items-center gap-4 w-full max-w-2xl">
         <div className="flex justify-between items-center w-full">
           <h2 className="text-2xl font-heading text-accent tracking-wider">GROUP TOURNAMENT</h2>
-          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
 
         {savedTournaments.length > 0 && (
@@ -575,7 +575,7 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
               <option value="honored">Honored</option>
             </select>
           </div>
-          <button onClick={startRandomize} className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90">START NEW TOURNAMENT <GameIcon emoji="→" size={14} /></button>
+          <button onClick={startRandomize} className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90">START NEW TOURNAMENT <GameIcon icon="arrowRight" size={14} /></button>
         </div>
       </div>
     );
@@ -597,8 +597,8 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
           <>
             <p className="text-sm text-muted-foreground">{participants.length} fighters selected! {notChosen.length} not chosen (greyed out). Double-click a selected fighter, then double-click a greyed-out one to swap.</p>
             <div className="flex gap-2">
-              <button onClick={doRandomize} className="px-4 py-2 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon emoji="🎲" size={14} /> RE-RANDOMIZE</button>
-              <button onClick={() => setPhase('humanSelect')} className="px-4 py-2 bg-accent text-accent-foreground rounded font-heading text-xs">NEXT <GameIcon emoji="→" size={14} /></button>
+              <button onClick={doRandomize} className="px-4 py-2 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon icon="shuffle" size={14} /> RE-RANDOMIZE</button>
+              <button onClick={() => setPhase('humanSelect')} className="px-4 py-2 bg-accent text-accent-foreground rounded font-heading text-xs">NEXT <GameIcon icon="arrowRight" size={14} /></button>
             </div>
           </>
         )}
@@ -639,7 +639,7 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
           })}
         </div>
         {selectedForSwap !== null && !randomizing && (
-          <p className="text-xs text-accent animate-pulse"><GameIcon emoji="↑" size={14} /> Now double-click a greyed-out character to swap it in!</p>
+          <p className="text-xs text-accent animate-pulse"><GameIcon icon="arrowUp" size={14} /> Now double-click a greyed-out character to swap it in!</p>
         )}
       </div>
     );
@@ -663,7 +663,7 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
                   'border-border hover:border-accent/50'
                 }`}>
                 <div className="w-10 h-10 rounded-full" style={{ backgroundColor: c.color, boxShadow: isHuman ? `0 0 10px ${c.color}` : 'none' }} />
-                {isHuman && <span className="text-[8px] text-accent font-heading"><GameIcon emoji="★" size={14} /> HUMAN</span>}
+                {isHuman && <span className="text-[8px] text-accent font-heading"><GameIcon icon="star" size={14} /> HUMAN</span>}
                 <span className="text-[8px] font-heading text-foreground mt-0.5">{c.name.slice(0, 7)}</span>
                 <span className="text-[6px] text-muted-foreground">#{getCharNumber(id)}</span>
               </button>
@@ -686,7 +686,7 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
           </div>
         )}
         <button onClick={proceedToGroupDraw} disabled={humanIds.size !== humanCount}
-          className={`px-6 py-3 rounded-lg font-heading text-lg ${humanIds.size === humanCount ? 'bg-accent text-accent-foreground hover:opacity-90' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>NEXT <GameIcon emoji="→" size={14} /></button>
+          className={`px-6 py-3 rounded-lg font-heading text-lg ${humanIds.size === humanCount ? 'bg-accent text-accent-foreground hover:opacity-90' : 'bg-muted text-muted-foreground cursor-not-allowed'}`}>NEXT <GameIcon icon="arrowRight" size={14} /></button>
       </div>
     );
   }
@@ -697,11 +697,11 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
     return (
       <div className="flex flex-col items-center gap-3 w-full max-w-4xl max-h-[85vh] overflow-y-auto p-2">
         <h2 className="text-2xl font-heading text-accent tracking-wider">GROUP DRAW</h2>
-        <p className="text-[10px] text-muted-foreground text-center">Drag a fighter onto another to swap — the hovered fighter gets a yellow box. Click to view stats. <GameIcon emoji="★" size={14} /> = human.</p>
+        <p className="text-[10px] text-muted-foreground text-center">Drag a fighter onto another to swap — the hovered fighter gets a yellow box. Click to view stats. <GameIcon icon="star" size={14} /> = human.</p>
         <div className="flex gap-2 flex-wrap justify-center">
-          <button onClick={saveAndExit} className="px-4 py-2 bg-destructive/70 text-destructive-foreground rounded font-heading text-xs"><GameIcon emoji="💾" size={14} /> SAVE &amp; EXIT</button>
-          <button onClick={reRandomizeGroups} className="px-4 py-2 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon emoji="🎲" size={14} /> RE-RANDOMIZE GROUPS</button>
-          <button onClick={startMatchPlay} className="px-6 py-2 bg-accent text-accent-foreground rounded font-heading text-sm">START TOURNAMENT <GameIcon emoji="→" size={14} /></button>
+          <button onClick={saveAndExit} className="px-4 py-2 bg-destructive/70 text-destructive-foreground rounded font-heading text-xs"><GameIcon icon="save" size={14} /> SAVE &amp; EXIT</button>
+          <button onClick={reRandomizeGroups} className="px-4 py-2 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon icon="shuffle" size={14} /> RE-RANDOMIZE GROUPS</button>
+          <button onClick={startMatchPlay} className="px-6 py-2 bg-accent text-accent-foreground rounded font-heading text-sm">START TOURNAMENT <GameIcon icon="arrowRight" size={14} /></button>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full">
           {groups.map((group, gi) => (
@@ -728,7 +728,7 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
                       isDragging ? 'opacity-40' : 'hover:bg-accent/10 bg-background/40'
                     }`}>
                     <div className="w-4 h-4 rounded-full" style={{ backgroundColor: c.color }} />
-                    {isHuman && <span className="text-[8px] text-accent"><GameIcon emoji="★" size={14} /></span>}
+                    {isHuman && <span className="text-[8px] text-accent"><GameIcon icon="star" size={14} /></span>}
                     <span className="text-[8px] font-heading text-foreground truncate flex-1">{c.name}</span>
                     <span className="text-[6px] text-muted-foreground">#{getCharNumber(id)}</span>
                   </div>
@@ -742,7 +742,7 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
             <div className="flex items-center gap-2 mb-2">
               <div className="w-6 h-6 rounded-full" style={{ backgroundColor: selectedChar.color }} />
               <span className="font-heading text-sm">{selectedChar.name}</span>
-              {humanIds.has(groupSelected) && <span className="text-[10px] text-accent"><GameIcon emoji="★" size={14} /> HUMAN</span>}
+              {humanIds.has(groupSelected) && <span className="text-[10px] text-accent"><GameIcon icon="star" size={14} /> HUMAN</span>}
             </div>
             <CharStats char={selectedChar} element={elements[groupSelected] || equippedElements?.[groupSelected] || 'basic'} />
           </div>
@@ -769,13 +769,13 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
             <div className="flex flex-col items-center gap-2">
               <div className="w-12 h-12 rounded-full" style={{ backgroundColor: homeChar?.color }} />
               <span className="font-heading text-xs">{homeChar?.name}</span>
-              {homeIsHuman && <span className="text-[8px] text-accent"><GameIcon emoji="★" size={14} /></span>}
+              {homeIsHuman && <span className="text-[8px] text-accent"><GameIcon icon="star" size={14} /></span>}
             </div>
             <span className="text-5xl font-heading text-accent">{simResult.homeScore} - {simResult.awayScore}</span>
             <div className="flex flex-col items-center gap-2">
               <div className="w-12 h-12 rounded-full" style={{ backgroundColor: awayChar?.color }} />
               <span className="font-heading text-xs">{awayChar?.name}</span>
-              {awayIsHuman && <span className="text-[8px] text-accent"><GameIcon emoji="★" size={14} /></span>}
+              {awayIsHuman && <span className="text-[8px] text-accent"><GameIcon icon="star" size={14} /></span>}
             </div>
           </div>
           <div className="w-full max-w-md">
@@ -784,13 +784,13 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
               {simResult.goalTimes.map((g, i) => (
                 <div key={i} className="flex items-center gap-2 text-xs py-0.5">
                   <span className="font-heading text-accent w-12">{g.second}'</span>
-                  <span style={{ color: g.team === 'home' ? homeChar?.color : awayChar?.color }}><GameIcon emoji="●" size={14} /></span>
+                  <span style={{ color: g.team === 'home' ? homeChar?.color : awayChar?.color }}><GameIcon icon="box" size={14} /></span>
                   <span className="font-body">{g.team === 'home' ? homeChar?.name : awayChar?.name} scored</span>
                 </div>
               ))}
             </div>
           </div>
-          <button onClick={advanceToNextMatch} className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm">CONTINUE <GameIcon emoji="→" size={14} /></button>
+          <button onClick={advanceToNextMatch} className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm">CONTINUE <GameIcon icon="arrowRight" size={14} /></button>
         </div>
       );
     }
@@ -799,9 +799,9 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
     if (matchActive) {
       const isPvP = homeIsHuman && awayIsHuman;
       let p1IsHome;
-      if (isPvP) p1IsHome = (sideChoice === 'arrows');       // home picks arrows <GameIcon emoji="→" size={14} /> home is p1
+      if (isPvP) p1IsHome = (sideChoice === 'arrows');       // home picks arrows <GameIcon icon="arrowRight" size={14} /> home is p1
       else if (homeIsHuman) p1IsHome = (sideChoice === 'arrows');
-      else if (awayIsHuman) p1IsHome = (sideChoice === 'wasd'); // away picks arrows <GameIcon emoji="→" size={14} /> p1 = away
+      else if (awayIsHuman) p1IsHome = (sideChoice === 'wasd'); // away picks arrows <GameIcon icon="arrowRight" size={14} /> p1 = away
       else p1IsHome = true;                                    // bot vs bot (shouldn't reach here)
       const p1Char = p1IsHome ? currentMatch.home : currentMatch.away;
       const p2Char = p1IsHome ? currentMatch.away : currentMatch.home;
@@ -858,13 +858,13 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
           </div>
           <p className="text-xs font-heading text-accent">{isPvP ? 'HOME PLAYER — CHOOSE YOUR CONTROLS' : 'CHOOSE YOUR CONTROLS'}</p>
           <div className="flex gap-3">
-            <button onClick={() => setSideChoice('arrows')} className={`px-6 py-3 rounded-lg font-heading text-sm border-2 ${sideChoice === 'arrows' ? 'border-accent bg-accent/20 text-accent' : 'border-border bg-secondary text-secondary-foreground'}`}><GameIcon emoji="↑" size={14} /><GameIcon emoji="↓" size={14} /><GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} /> ARROWS</button>
+            <button onClick={() => setSideChoice('arrows')} className={`px-6 py-3 rounded-lg font-heading text-sm border-2 ${sideChoice === 'arrows' ? 'border-accent bg-accent/20 text-accent' : 'border-border bg-secondary text-secondary-foreground'}`}><GameIcon icon="arrowUp" size={14} /><GameIcon icon="arrowDown" size={14} /><GameIcon icon="info" size={14} /><GameIcon icon="arrowRight" size={14} /> ARROWS</button>
             <button onClick={() => setSideChoice('wasd')} className={`px-6 py-3 rounded-lg font-heading text-sm border-2 ${sideChoice === 'wasd' ? 'border-accent bg-accent/20 text-accent' : 'border-border bg-secondary text-secondary-foreground'}`}>WASD</button>
           </div>
           <p className="text-[10px] text-muted-foreground">{isPvP ? `Home = ${sideChoice.toUpperCase()} · Away = ${sideChoice === 'arrows' ? 'WASD' : 'ARROWS'}` : `You will use ${sideChoice.toUpperCase()}`}</p>
           <div className="flex gap-3">
-            <button onClick={() => setShowSides(false)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="←" size={14} /> BACK</button>
-            <button onClick={() => { setShowSides(false); setMatchActive(true); }} className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90">START MATCH <GameIcon emoji="→" size={14} /></button>
+            <button onClick={() => setShowSides(false)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="info" size={14} /> BACK</button>
+            <button onClick={() => { setShowSides(false); setMatchActive(true); }} className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90">START MATCH <GameIcon icon="arrowRight" size={14} /></button>
           </div>
         </div>
       );
@@ -874,43 +874,43 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
     return (
       <div className="flex flex-col items-center gap-4 w-full max-w-2xl">
         {humanCount > 0 && (
-          <button onClick={simulateToNextHumanGroup} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-xs hover:opacity-80 shadow-md w-full"><GameIcon emoji="⚡" size={14} /> SIMULATE TO NEXT HUMAN MATCH</button>
+          <button onClick={simulateToNextHumanGroup} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-xs hover:opacity-80 shadow-md w-full"><GameIcon icon="warning" size={14} /> SIMULATE TO NEXT HUMAN MATCH</button>
         )}
         <div className="w-full flex justify-between items-center">
-          <button onClick={saveAndExit} className="px-3 py-1.5 bg-destructive/70 text-destructive-foreground rounded font-heading text-xs"><GameIcon emoji="💾" size={14} /> SAVE &amp; EXIT</button>
-          <button onClick={() => setShowGroups(true)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="📊" size={14} /> SEE GROUPS</button>
+          <button onClick={saveAndExit} className="px-3 py-1.5 bg-destructive/70 text-destructive-foreground rounded font-heading text-xs"><GameIcon icon="save" size={14} /> SAVE &amp; EXIT</button>
+          <button onClick={() => setShowGroups(true)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="chart" size={14} /> SEE GROUPS</button>
           <div className="text-center">
             <p className="text-[10px] text-muted-foreground">CURRENT GROUP</p>
             <p className="text-xl font-heading text-accent">GROUP {currentMatch.groupName}</p>
           </div>
-          <button onClick={() => setShowTop(true)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="🏆" size={14} /> TOP</button>
+          <button onClick={() => setShowTop(true)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="trophy" size={14} /> TOP</button>
         </div>
-        <button onClick={() => setShowFixtures(true)} className="px-4 py-1.5 bg-secondary/80 text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="📅" size={14} /> SEE FIXTURES</button>
+        <button onClick={() => setShowFixtures(true)} className="px-4 py-1.5 bg-secondary/80 text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon icon="calendar" size={14} /> SEE FIXTURES</button>
         <p className="text-xs text-muted-foreground">Match {currentMatchIdx + 1} of {matches.length}</p>
         <div className="flex items-center gap-8 bg-card border border-border rounded-xl p-8">
           <div className="flex flex-col items-center gap-2">
             <div className="w-16 h-16 rounded-full" style={{ backgroundColor: homeChar?.color, boxShadow: `0 0 12px ${homeChar?.color}` }} />
             <span className="font-heading text-sm">{homeChar?.name}</span>
-            {homeIsHuman ? <span className="text-[10px] text-accent"><GameIcon emoji="★" size={14} /> HUMAN (P1)</span> : <span className="text-[10px] text-muted-foreground">CPU</span>}
+            {homeIsHuman ? <span className="text-[10px] text-accent"><GameIcon icon="star" size={14} /> HUMAN (P1)</span> : <span className="text-[10px] text-muted-foreground">CPU</span>}
           </div>
           <span className="text-3xl font-heading text-destructive">VS</span>
           <div className="flex flex-col items-center gap-2">
             <div className="w-16 h-16 rounded-full" style={{ backgroundColor: awayChar?.color, boxShadow: `0 0 12px ${awayChar?.color}` }} />
             <span className="font-heading text-sm">{awayChar?.name}</span>
-            {awayIsHuman ? <span className="text-[10px] text-accent"><GameIcon emoji="★" size={14} /> HUMAN (P2)</span> : <span className="text-[10px] text-muted-foreground">CPU</span>}
+            {awayIsHuman ? <span className="text-[10px] text-accent"><GameIcon icon="star" size={14} /> HUMAN (P2)</span> : <span className="text-[10px] text-muted-foreground">CPU</span>}
           </div>
         </div>
         <div className="flex gap-3">
           {!isBotVsBot && (
             <button onClick={() => { setSideChoice('arrows'); setShowSides(true); }}
-              className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="▶" size={14} /> PLAY MATCH</button>
+              className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="play" size={14} /> PLAY MATCH</button>
           )}
           {isBotVsBot && (
             <button onClick={() => setMatchActive(true)}
-              className="px-6 py-3 bg-primary/80 text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="👁" size={14} /> WATCH</button>
+              className="px-6 py-3 bg-primary/80 text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="eye" size={14} /> WATCH</button>
           )}
           <button onClick={handleSimulate}
-            className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="⚡" size={14} /> SIMULATE</button>
+            className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="warning" size={14} /> SIMULATE</button>
         </div>
         <div className="w-full max-w-3xl">
           <p className="text-[9px] text-muted-foreground text-center mb-1">ALL {participants.length} PARTICIPANTS</p>
@@ -952,14 +952,14 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: c?.color }} />
                     <span className="text-[7px] font-heading text-foreground truncate flex-1">{c?.name}</span>
                     <span className="text-[7px] text-muted-foreground">{s.points}p</span>
-                    {humanIds.has(s.charId) && <span className="text-[7px] text-accent"><GameIcon emoji="★" size={14} /></span>}
+                    {humanIds.has(s.charId) && <span className="text-[7px] text-accent"><GameIcon icon="star" size={14} /></span>}
                   </div>
                 );
               })}
             </div>
           ))}
         </div>
-        <button onClick={proceedToKnockout} className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90">PROCEED TO KNOCKOUT <GameIcon emoji="→" size={14} /></button>
+        <button onClick={proceedToKnockout} className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90">PROCEED TO KNOCKOUT <GameIcon icon="arrowRight" size={14} /></button>
       </div>
     );
   }
@@ -987,7 +987,7 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
               <span className="font-heading text-xs">{awayChar?.name}</span>
             </div>
           </div>
-          <button onClick={advanceKnockout} className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm">CONTINUE <GameIcon emoji="→" size={14} /></button>
+          <button onClick={advanceKnockout} className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm">CONTINUE <GameIcon icon="arrowRight" size={14} /></button>
         </div>
       );
     }
@@ -1056,13 +1056,13 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
           </div>
           <p className="text-xs font-heading text-accent">{isPvP ? 'HOME PLAYER — CHOOSE YOUR CONTROLS' : 'CHOOSE YOUR CONTROLS'}</p>
           <div className="flex gap-3">
-            <button onClick={() => setSideChoice('arrows')} className={`px-6 py-3 rounded-lg font-heading text-sm border-2 ${sideChoice === 'arrows' ? 'border-accent bg-accent/20 text-accent' : 'border-border bg-secondary text-secondary-foreground'}`}><GameIcon emoji="↑" size={14} /><GameIcon emoji="↓" size={14} /><GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} /> ARROWS</button>
+            <button onClick={() => setSideChoice('arrows')} className={`px-6 py-3 rounded-lg font-heading text-sm border-2 ${sideChoice === 'arrows' ? 'border-accent bg-accent/20 text-accent' : 'border-border bg-secondary text-secondary-foreground'}`}><GameIcon icon="arrowUp" size={14} /><GameIcon icon="arrowDown" size={14} /><GameIcon icon="info" size={14} /><GameIcon icon="arrowRight" size={14} /> ARROWS</button>
             <button onClick={() => setSideChoice('wasd')} className={`px-6 py-3 rounded-lg font-heading text-sm border-2 ${sideChoice === 'wasd' ? 'border-accent bg-accent/20 text-accent' : 'border-border bg-secondary text-secondary-foreground'}`}>WASD</button>
           </div>
           <p className="text-[10px] text-muted-foreground">{isPvP ? `Home = ${sideChoice.toUpperCase()} · Away = ${sideChoice === 'arrows' ? 'WASD' : 'ARROWS'}` : `You will use ${sideChoice.toUpperCase()}`}</p>
           <div className="flex gap-3">
-            <button onClick={() => setShowSides(false)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="←" size={14} /> BACK</button>
-            <button onClick={() => { setShowSides(false); setMatchActive(true); }} className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90">START MATCH <GameIcon emoji="→" size={14} /></button>
+            <button onClick={() => setShowSides(false)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="info" size={14} /> BACK</button>
+            <button onClick={() => { setShowSides(false); setMatchActive(true); }} className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90">START MATCH <GameIcon icon="arrowRight" size={14} /></button>
           </div>
         </div>
       );
@@ -1071,15 +1071,15 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
     return (
       <div className="flex flex-col items-center gap-4 w-full max-w-2xl">
         <div className="w-full flex justify-between items-center">
-          <button onClick={saveAndExit} className="px-3 py-1.5 bg-destructive/70 text-destructive-foreground rounded font-heading text-xs"><GameIcon emoji="💾" size={14} /> SAVE &amp; EXIT</button>
-          <button onClick={() => setShowOriginalGroups(!showOriginalGroups)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs">{showOriginalGroups ? <><GameIcon emoji="📋" size={14} /> SHOW BRACKET</> : <><GameIcon emoji="📋" size={14} /> SHOW ORIGINAL GROUPS</>}</button>
+          <button onClick={saveAndExit} className="px-3 py-1.5 bg-destructive/70 text-destructive-foreground rounded font-heading text-xs"><GameIcon icon="save" size={14} /> SAVE &amp; EXIT</button>
+          <button onClick={() => setShowOriginalGroups(!showOriginalGroups)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs">{showOriginalGroups ? <><GameIcon icon="clipboard" size={14} /> SHOW BRACKET</> : <><GameIcon icon="clipboard" size={14} /> SHOW ORIGINAL GROUPS</>}</button>
           <div className="text-center">
             <p className="text-[10px] text-muted-foreground">STAGE</p>
             <p className="text-xl font-heading text-accent">{knockoutRoundName}</p>
           </div>
-          <button onClick={() => setShowTop(true)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="🏆" size={14} /> TOP</button>
+          <button onClick={() => setShowTop(true)} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="trophy" size={14} /> TOP</button>
         </div>
-        <button onClick={() => setShowFixtures(true)} className="px-4 py-1.5 bg-secondary/80 text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="📅" size={14} /> SEE FIXTURES</button>
+        <button onClick={() => setShowFixtures(true)} className="px-4 py-1.5 bg-secondary/80 text-secondary-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon icon="calendar" size={14} /> SEE FIXTURES</button>
         <p className="text-xs text-muted-foreground">Match {currentMatchIdx + 1} of {knockoutStage.matches.length}</p>
         {!showOriginalGroups ? (
           <div className="bg-card border border-border rounded-xl p-3 w-full">
@@ -1093,26 +1093,26 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
           <div className="flex flex-col items-center gap-2">
             <div className="w-16 h-16 rounded-full" style={{ backgroundColor: homeChar?.color, boxShadow: `0 0 12px ${homeChar?.color}` }} />
             <span className="font-heading text-sm">{homeChar?.name}</span>
-            {homeIsHuman ? <span className="text-[10px] text-accent"><GameIcon emoji="★" size={14} /> HUMAN (P1)</span> : <span className="text-[10px] text-muted-foreground">CPU</span>}
+            {homeIsHuman ? <span className="text-[10px] text-accent"><GameIcon icon="star" size={14} /> HUMAN (P1)</span> : <span className="text-[10px] text-muted-foreground">CPU</span>}
           </div>
           <span className="text-3xl font-heading text-destructive">VS</span>
           <div className="flex flex-col items-center gap-2">
             <div className="w-16 h-16 rounded-full" style={{ backgroundColor: awayChar?.color, boxShadow: `0 0 12px ${awayChar?.color}` }} />
             <span className="font-heading text-sm">{awayChar?.name}</span>
-            {awayIsHuman ? <span className="text-[10px] text-accent"><GameIcon emoji="★" size={14} /> HUMAN (P2)</span> : <span className="text-[10px] text-muted-foreground">CPU</span>}
+            {awayIsHuman ? <span className="text-[10px] text-accent"><GameIcon icon="star" size={14} /> HUMAN (P2)</span> : <span className="text-[10px] text-muted-foreground">CPU</span>}
           </div>
         </div>
         <div className="flex gap-3">
           {!isBotVsBot && (
             <button onClick={() => { setSideChoice('arrows'); setShowSides(true); }}
-              className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="▶" size={14} /> PLAY MATCH</button>
+              className="px-6 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="play" size={14} /> PLAY MATCH</button>
           )}
           {isBotVsBot && (
             <button onClick={() => setMatchActive(true)}
-              className="px-6 py-3 bg-primary/80 text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="👁" size={14} /> WATCH</button>
+              className="px-6 py-3 bg-primary/80 text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="eye" size={14} /> WATCH</button>
           )}
           <button onClick={handleKnockoutSim}
-            className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="⚡" size={14} /> SIMULATE</button>
+            className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="warning" size={14} /> SIMULATE</button>
         </div>
         <div className="w-full max-w-2xl">
           <p className="text-[9px] text-muted-foreground text-center mb-1">ALL {participants.length} PARTICIPANTS</p>
@@ -1140,11 +1140,11 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
     const topScorer = allScorers()[0];
     const topSheets = allCleanSheets()[0];
     const leastConceded = allGoalsConceded()[0];
-    const AwardCard = ({ emoji, title, charId, stat }) => {
+    const AwardCard = ({ icon, title, charId, stat }) => {
       const ac = charId ? charById(charId) : null;
       return (
         <div className="bg-card border border-border rounded-xl p-4 flex flex-col items-center gap-2 text-center">
-          <span className="text-3xl">{emoji}</span>
+          <GameIcon icon={icon || "trophy"} size={28} className="text-accent" />
           <p className="text-[10px] font-heading text-accent tracking-wider">{title}</p>
           {ac ? (
             <>
@@ -1161,10 +1161,10 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
         <h1 className="text-3xl font-heading text-accent tracking-wider">TOURNAMENT AWARDS</h1>
         {tournamentName && <p className="text-sm text-muted-foreground font-heading">“{tournamentName}”</p>}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full">
-          <AwardCard emoji="🏆" title="TOURNAMENT WINNER" charId={champion} />
-          <AwardCard emoji="⚽" title="MOST GOALS" charId={topScorer?.[0]} stat={topScorer ? `${topScorer[1]} goals` : null} />
-          <AwardCard emoji="🧤" title="MOST CLEAN SHEETS" charId={topSheets?.[0]} stat={topSheets ? `${topSheets[1]} clean sheets` : null} />
-          <AwardCard emoji="🛡️" title="LEAST GOALS CONCEDED" charId={leastConceded?.[0]} stat={leastConceded != null ? `${leastConceded[1]} conceded` : null} />
+          <AwardCard icon="trophy" title="TOURNAMENT WINNER" charId={champion} />
+          <AwardCard icon="game" title="MOST GOALS" charId={topScorer?.[0]} stat={topScorer ? `${topScorer[1]} goals` : null} />
+          <AwardCard icon="bag" title="MOST CLEAN SHEETS" charId={topSheets?.[0]} stat={topSheets ? `${topSheets[1]} clean sheets` : null} />
+          <AwardCard icon="info" title="LEAST GOALS CONCEDED" charId={leastConceded?.[0]} stat={leastConceded != null ? `${leastConceded[1]} conceded` : null} />
         </div>
         <div className="bg-card border border-accent rounded-xl p-3 text-center">
           <p className="text-xs font-heading text-accent">REWARDS CLAIMED</p>
@@ -1190,7 +1190,7 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
 function StandingsModal({ standings, groups, onClose, humanIds, embedded }) {
   const content = (
     <div className={`flex flex-col gap-3 ${embedded ? '' : 'bg-background border border-border rounded-xl p-4 max-h-[80vh] overflow-y-auto'}`}>
-      {!embedded && <div className="flex justify-between items-center mb-2"><h3 className="font-heading text-sm text-accent">GROUP STANDINGS</h3><button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon emoji="✕" size={14} /></button></div>}
+      {!embedded && <div className="flex justify-between items-center mb-2"><h3 className="font-heading text-sm text-accent">GROUP STANDINGS</h3><button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button></div>}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         {standings.map((groupStandings, gi) => (
           <div key={gi} className="bg-card border border-border rounded-lg p-3">
@@ -1204,7 +1204,7 @@ function StandingsModal({ standings, groups, onClose, humanIds, embedded }) {
                   <span className="font-heading truncate flex-1">{c?.name}</span>
                   <span className="text-muted-foreground">{s.points}p</span>
                   <span className="text-muted-foreground">{s.goalsFor}-{s.goalsAgainst}</span>
-                  {humanIds.has(s.charId) && <span className="text-accent"><GameIcon emoji="★" size={14} /></span>}
+                  {humanIds.has(s.charId) && <span className="text-accent"><GameIcon icon="star" size={14} /></span>}
                 </div>
               );
             })}
@@ -1222,8 +1222,8 @@ function TopModal({ scorers, cleanSheets, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div onClick={e => e.stopPropagation()} className="bg-background border border-border rounded-xl p-4 max-w-md w-full max-h-[80vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-3"><h3 className="font-heading text-sm text-accent">TOURNAMENT STATS</h3><button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon emoji="✕" size={14} /></button></div>
-        <p className="text-xs font-heading text-accent mb-1"><GameIcon emoji="⚽" size={14} /> TOP SCORERS</p>
+        <div className="flex justify-between items-center mb-3"><h3 className="font-heading text-sm text-accent">TOURNAMENT STATS</h3><button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button></div>
+        <p className="text-xs font-heading text-accent mb-1"><GameIcon icon="game" size={14} /> TOP SCORERS</p>
         {scorers.map(([id, goals], i) => {
           const c = charById(id);
           return (
@@ -1235,7 +1235,7 @@ function TopModal({ scorers, cleanSheets, onClose }) {
             </div>
           );
         })}
-        <p className="text-xs font-heading text-accent mt-3 mb-1"><GameIcon emoji="🧤" size={14} /> CLEAN SHEETS</p>
+        <p className="text-xs font-heading text-accent mt-3 mb-1"><GameIcon icon="bag" size={14} /> CLEAN SHEETS</p>
         {cleanSheets.map(([id, sheets], i) => {
           const c = charById(id);
           return (

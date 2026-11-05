@@ -236,7 +236,7 @@ export default function ClipsScreen({
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="🎬" size={14} /> CLIPS</h2>
+            <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="video" size={14} /> CLIPS</h2>
             <div className="flex gap-1 mt-2">
               <button onClick={() => setSection('clips')} className={`px-2 py-1 rounded text-[9px] font-heading ${section==='clips'?'bg-accent text-accent-foreground':'bg-secondary'}`}>CLIPS</button>
               <button onClick={() => setSection('replays')} className={`px-2 py-1 rounded text-[9px] font-heading ${section==='replays'?'bg-accent text-accent-foreground':'bg-secondary'}`}>MATCH REPLAYS</button>
@@ -326,7 +326,7 @@ export default function ClipsScreen({
                         className="absolute right-2 bottom-12 w-9 h-9 rounded-md bg-black/75 text-white font-bold"
                         title="Fullscreen"
                       >
-                        ⛶
+                        
                       </button>
                     </div>
                   ) : (
@@ -357,7 +357,7 @@ export default function ClipsScreen({
                       onClick={() => preview(clip.id)}
                       className="px-2 py-1 bg-primary/30 text-primary rounded text-[10px] font-heading disabled:opacity-40"
                     >
-                      ▶ PREVIEW
+                       PREVIEW
                     </button>
 
                     <button
@@ -365,7 +365,7 @@ export default function ClipsScreen({
                       onClick={() => download(clip)}
                       className="px-2 py-1 bg-primary/30 text-primary rounded text-[10px] font-heading disabled:opacity-40"
                     >
-                      <GameIcon emoji="⬇" size={14} /> SAVE {clip.replay ? 'MP4' : (clip.extension || 'MP4').toUpperCase()}
+                      <GameIcon icon="arrowDown" size={14} /> SAVE {clip.replay ? 'MP4' : (clip.extension || 'MP4').toUpperCase()}
                     </button>
                     {clip.replay && <select value={speed} onChange={e => { const v=Number(e.target.value); setSpeed(v); const vdo=getVideo(clip.id); if(vdo)vdo.playbackRate=v; }} className="px-2 py-1 bg-secondary rounded text-[10px]">
                       <option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1">1×</option><option value="1.5">1.5×</option><option value="2">2×</option>

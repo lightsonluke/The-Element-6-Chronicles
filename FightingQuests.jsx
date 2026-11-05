@@ -43,12 +43,12 @@ export default function FightingQuests({ progress, onClaim, onNextTier, onBack }
           <h2 className="text-2xl font-heading text-accent tracking-wider">FIGHTING QUESTS</h2>
           <p className="text-xs text-muted-foreground font-body">Tier {tier + 1} • Complete all 8 to unlock a new set. Targets scale each tier.</p>
         </div>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       {allClaimed && (
         <div className="bg-accent/10 border border-accent rounded-xl p-4 text-center">
-          <p className="font-heading text-sm text-accent mb-2"><GameIcon emoji="🎉" size={14} /> All Tier {tier + 1} quests complete!</p>
+          <p className="font-heading text-sm text-accent mb-2"><GameIcon icon="star" size={14} /> All Tier {tier + 1} quests complete!</p>
           <button onClick={advance} className="px-6 py-2 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-80">GENERATE TIER {tier + 2}</button>
         </div>
       )}
@@ -61,7 +61,7 @@ export default function FightingQuests({ progress, onClaim, onNextTier, onBack }
             <div key={q.id} className={`bg-card border rounded-xl p-3 ${done ? 'border-accent' : 'border-border'}`}>
               <div className="flex justify-between items-start mb-1">
                 <p className="font-heading text-sm text-foreground">{q.title}</p>
-                <span className="text-[10px] text-accent font-heading">{q.reward} <GameIcon emoji="◆" size={14} /></span>
+                <span className="text-[10px] text-accent font-heading">{q.reward} <GameIcon icon="star" size={14} /></span>
               </div>
               <p className="text-[11px] text-muted-foreground font-body mb-2">{q.desc}</p>
               <div className="h-2 bg-muted rounded-full overflow-hidden mb-1">
@@ -70,7 +70,7 @@ export default function FightingQuests({ progress, onClaim, onNextTier, onBack }
               <div className="flex justify-between items-center">
                 <span className="text-[10px] text-muted-foreground font-body">{Math.floor(v)} / {q.target}</span>
                 {done && !cl && <button onClick={() => claim(q)} className="px-3 py-1 bg-accent text-accent-foreground rounded font-heading text-[10px] hover:opacity-80">CLAIM</button>}
-                {cl && <span className="text-[10px] text-green-400 font-heading"><GameIcon emoji="✓" size={14} /> CLAIMED</span>}
+                {cl && <span className="text-[10px] text-green-400 font-heading"><GameIcon icon="check" size={14} /> CLAIMED</span>}
               </div>
             </div>
           );

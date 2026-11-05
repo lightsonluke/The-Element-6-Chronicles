@@ -607,7 +607,7 @@ export default function DodgeballGame({
     // stun stars
     if (p.stun > 0) {
       ctx.fillStyle = '#FFD700'; ctx.font = '12px Orbitron';
-      for (let i = 0; i < 3; i++) { const a = s.frame * 0.2 + i * 2; ctx.fillText('★', p.x - 12 + Math.cos(a) * 14, p.y - P_H - 8 + Math.sin(a) * 6); }
+      for (let i = 0; i < 3; i++) { const a = s.frame * 0.2 + i * 2; ctx.fillText('', p.x - 12 + Math.cos(a) * 14, p.y - P_H - 8 + Math.sin(a) * 6); }
     }
     // hit flash
     if (s.hitFlash[side - 1] > 0) {
@@ -647,7 +647,7 @@ export default function DodgeballGame({
     ctx.fillText(`${s.p2.superTimer <= 0 ? 'READY' : Math.ceil(s.p2.superTimer / 60) + 's'} SUPER P2`, W - 14, H - 14);
     // balls remaining
     ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = 'bold 9px Orbitron';
-    ctx.fillText(`🟡 ${s.balls.filter(b => b.heldBy === null).length} BALLS IN PLAY`, W / 2, H - 14);
+    ctx.fillText(` ${s.balls.filter(b => b.heldBy === null).length} BALLS IN PLAY`, W / 2, H - 14);
   }
 
   return (
@@ -662,7 +662,7 @@ export default function DodgeballGame({
           </span>
         </div>
         <div className="el6-dodgeball-match-controls flex gap-2">
-          <button onClick={() => setPaused(p => !p)} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs">{paused ? '▶ RESUME' : '⏸ PAUSE'}</button>
+          <button onClick={() => setPaused(p => !p)} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs">{paused ? ' RESUME' : ' PAUSE'}</button>
           <button onClick={onQuit} className="px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs">QUIT</button>
         </div>
       </div>
@@ -671,7 +671,7 @@ export default function DodgeballGame({
                 style={{ width: '100%', maxWidth: W + 'px', aspectRatio: `${W} / ${H}`, height: 'auto', background: '#15102a' }} />
       </GameCanvasPortal>
       <p className="el6-dodgeball-controls text-[10px] text-muted-foreground font-body text-center">
-        P1: <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} /> move · <GameIcon emoji="↑" size={14} /> jump · <GameIcon emoji="↓" size={14} /> fast-fall · <b>(.) power</b> pickup · <b>(,) sig</b> throw (<GameIcon emoji="↑" size={14} />/<GameIcon emoji="↓" size={14} />/neutral = high/low/straight) · <b>(/) super</b> · P2: WASD+v+c+x
+        P1: <GameIcon icon="info" size={14} /><GameIcon icon="arrowRight" size={14} /> move · <GameIcon icon="arrowUp" size={14} /> jump · <GameIcon icon="arrowDown" size={14} /> fast-fall · <b>(.) power</b> pickup · <b>(,) sig</b> throw (<GameIcon icon="arrowUp" size={14} />/<GameIcon icon="arrowDown" size={14} />/neutral = high/low/straight) · <b>(/) super</b> · P2: WASD+v+c+x
       </p>
     </div>
   );

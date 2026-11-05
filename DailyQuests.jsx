@@ -106,7 +106,7 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
           <h2 className="text-2xl font-heading text-accent tracking-wider">DAILY QUESTS</h2>
           <p className="text-xs text-muted-foreground font-body">Resets daily · Complete quests to earn chests!</p>
         </div>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -120,7 +120,7 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
             <div key={q.id} className={`bg-card border rounded-xl p-3 ${done ? 'border-accent' : 'border-border'}`}>
               <div className="flex justify-between items-start mb-1">
                 <p className="font-heading text-sm text-foreground">{q.title}</p>
-                <span className="text-2xl" style={{ color: chest?.color }}>{chest ? <GameIcon emoji="🎁" size={14} /> : ''}</span>
+                <span className="text-2xl" style={{ color: chest?.color }}>{chest ? <GameIcon icon="gift" size={14} /> : ''}</span>
               </div>
               <div className="flex items-center gap-2 mb-1">
                 <span className={`text-[9px] font-heading uppercase ${q.category === 'hard' ? 'text-red-400' : q.category === 'medium' ? 'text-yellow-400' : 'text-green-400'}`}>
@@ -134,11 +134,11 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
               <div className="flex justify-between items-center">
                 <span className="text-[10px] text-muted-foreground font-body">{Math.min(v, q.target)} / {q.target}</span>
                 {claimed ? (
-                  <span className="text-[10px] text-green-400 font-heading"><GameIcon emoji="✓" size={14} /> CLAIMED</span>
+                  <span className="text-[10px] text-green-400 font-heading"><GameIcon icon="check" size={14} /> CLAIMED</span>
                 ) : done ? (
                   <button onClick={() => handleClaim(q)} className="px-3 py-1 bg-accent text-accent-foreground rounded font-heading text-[10px] hover:opacity-80">CLAIM</button>
                 ) : (
-                  <span className="text-[10px] text-muted-foreground font-heading"><GameIcon emoji="🔒" size={14} /></span>
+                  <span className="text-[10px] text-muted-foreground font-heading"><GameIcon icon="lock" size={14} /></span>
                 )}
               </div>
             </div>
@@ -167,15 +167,15 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
                     }}
                     onClick={() => !isOpening && !result && handleOpenChest(questId, chestId)}
                   >
-                    {isOpening ? <GameIcon emoji="✨" size={14} /> : result ? <GameIcon emoji="🎉" size={14} /> : <GameIcon emoji="🎁" size={14} />}
+                    {isOpening ? <GameIcon icon="star" size={14} /> : result ? <GameIcon icon="star" size={14} /> : <GameIcon icon="gift" size={14} />}
                   </div>
                   <span className="text-[10px] font-heading" style={{ color: chest?.color }}>{chest?.name}</span>
                   {result && (
                     <div className="text-center animate-in fade-in">
-                      <p className="text-xs font-heading text-accent">+{result.coins} <GameIcon emoji="◆" size={14} /></p>
+                      <p className="text-xs font-heading text-accent">+{result.coins} <GameIcon icon="star" size={14} /></p>
                       {result.cosmetic && (
                         <p className="text-[10px] font-heading text-primary">
-                          {result.cosmetic.type === 'accessory' ? <GameIcon emoji="🎩" size={14} /> : result.cosmetic.type === 'skin' ? <GameIcon emoji="🎨" size={14} /> : <GameIcon emoji="💀" size={14} />} {result.cosmetic.name}!
+                          {result.cosmetic.type === 'accessory' ? <GameIcon icon="tag" size={14} /> : result.cosmetic.type === 'skin' ? <GameIcon icon="palette" size={14} /> : <GameIcon icon="exclamationCircle" size={14} />} {result.cosmetic.name}!
                         </p>
                       )}
                     </div>

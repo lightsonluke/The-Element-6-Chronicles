@@ -57,7 +57,7 @@ export default function EmoteEquipSection({ char, ownedEmotes = [], equippedEmot
             <EmotePreview emoteId={emote.id} char={char} size={48} />
             <p className="text-[7px] font-heading text-center leading-tight">{emote.name}</p>
             <button onClick={(e) => { e.stopPropagation(); handleClearSlot(playerId, slotIndex); }}
-              className="absolute top-0.5 right-0.5 text-[8px] text-muted-foreground hover:text-destructive">✕</button>
+              className="absolute top-0.5 right-0.5 text-[8px] text-muted-foreground hover:text-destructive"></button>
           </>
         ) : (
           <div className="w-12 h-12 flex items-center justify-center">
@@ -100,7 +100,7 @@ export default function EmoteEquipSection({ char, ownedEmotes = [], equippedEmot
 
       {/* Victory emote slot */}
       <div className="bg-accent/10 border-2 border-accent/40 rounded-xl p-3 flex flex-col gap-2">
-        <p className="text-[10px] font-heading text-accent">🏆 VICTORY EMOTE — Played automatically on the victory screen</p>
+        <p className="text-[10px] font-heading text-accent"> VICTORY EMOTE — Played automatically on the victory screen</p>
         <div className="flex items-center gap-3">
           <div className="relative rounded-lg border-2 border-accent bg-card p-1 flex flex-col items-center cursor-pointer transition hover:scale-105"
             onClick={() => setSelectingVictory(!selectingVictory)}>
@@ -109,7 +109,7 @@ export default function EmoteEquipSection({ char, ownedEmotes = [], equippedEmot
                 <EmotePreview emoteId={victoryEmoteId} char={char} size={48} />
                 <p className="text-[7px] font-heading text-center leading-tight">{getEmoteById(victoryEmoteId)?.name}</p>
                 <button onClick={(e) => { e.stopPropagation(); handleClearVictory(); }}
-                  className="absolute top-0.5 right-0.5 text-[8px] text-muted-foreground hover:text-destructive">✕</button>
+                  className="absolute top-0.5 right-0.5 text-[8px] text-muted-foreground hover:text-destructive"></button>
               </>
             ) : (
               <div className="w-12 h-12 flex items-center justify-center">

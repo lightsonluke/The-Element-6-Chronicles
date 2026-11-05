@@ -333,7 +333,7 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
         <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin" />
         <p className="text-sm text-muted-foreground">Establishing peer connection...</p>
         {lan.error && <p className="text-sm text-destructive">{lan.error}</p>}
-        <button onClick={() => { lan.closeConnection(); setPhase('lobby'); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="←" size={14} /> CANCEL</button>
+        <button onClick={() => { lan.closeConnection(); setPhase('lobby'); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="info" size={14} /> CANCEL</button>
       </div>
     );
   }
@@ -378,7 +378,7 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
       <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
         <div className="flex justify-between items-center w-full">
           <h2 className="text-2xl font-heading text-accent tracking-wider">ROOM {room.room_code}</h2>
-          <button onClick={leaveRoom} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> Leave</button>
+          <button onClick={leaveRoom} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> Leave</button>
         </div>
 
         {/* Room code display */}
@@ -412,7 +412,7 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
                         <select value={p.difficulty || 'regular'} onChange={e => setBotDifficulty(i, e.target.value)} className="text-[9px] bg-secondary text-secondary-foreground rounded px-1 border border-border">
                           {DIFFICULTIES.map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
-                        <button onClick={() => removePlayer(i)} className="text-[10px] text-destructive hover:opacity-70"><GameIcon emoji="✕" size={14} /></button>
+                        <button onClick={() => removePlayer(i)} className="text-[10px] text-destructive hover:opacity-70"><GameIcon icon="close" size={14} /></button>
                       </div>
                     )}
                     {!p.is_bot && !isMe && <p className="text-[9px] text-muted-foreground">{cd.name}</p>}
@@ -497,7 +497,7 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
     <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
       <div className="flex justify-between items-center w-full">
         <h2 className="text-2xl font-heading text-accent tracking-wider">CUSTOM ROOMS{(MODE_CONFIG[mode] || MODE_CONFIG.fight).label !== 'FIGHT' ? ` · ${(MODE_CONFIG[mode] || MODE_CONFIG.fight).label}` : ''}</h2>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       <div className="bg-card border border-border rounded-xl p-3 w-full max-w-md text-center">
@@ -543,7 +543,7 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
                       <p className="text-[10px] text-muted-foreground font-body">{numPlayers}/{r.max_players || 8} players{numBots > 0 ? ` (${numBots} bots)` : ''}</p>
                     </div>
                   </div>
-                  <button onClick={() => joinFromBrowse(r)} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-xs hover:opacity-80">JOIN <GameIcon emoji="→" size={14} /></button>
+                  <button onClick={() => joinFromBrowse(r)} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-xs hover:opacity-80">JOIN <GameIcon icon="arrowRight" size={14} /></button>
                 </div>
               );
             })}

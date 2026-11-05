@@ -72,7 +72,7 @@ export default function CommunityCampaignBrowser({ onBack, onPlay }) {
   return (
     <div className="w-full max-w-6xl flex flex-col gap-3">
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="🏆" size={14} /> COMMUNITY CAMPAIGNS</h2>
+        <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="trophy" size={14} /> COMMUNITY CAMPAIGNS</h2>
         <div className="flex gap-2 flex-wrap items-center">
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search campaigns or creators…" maxLength={28} className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs font-body w-48" />
           <select value={sort} onChange={e => setSort(e.target.value)} className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs font-heading">
@@ -80,8 +80,8 @@ export default function CommunityCampaignBrowser({ onBack, onPlay }) {
             <option value="played">Most Played</option>
             <option value="liked">Most Liked</option>
           </select>
-          <button onClick={refresh} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="↻" size={14} /></button>
-          <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={refresh} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="redo" size={14} /></button>
+          <button onClick={onBack} className="px-3 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
       </div>
       {loading ? <p className="text-muted-foreground text-sm">Loading…</p> : filtered.length === 0 ? (
@@ -92,21 +92,21 @@ export default function CommunityCampaignBrowser({ onBack, onPlay }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map(c => (
             <div key={c.id} className="bg-card border border-border rounded-xl p-3 flex flex-col gap-2">
-              <div className="flex items-center justify-between"><span className="text-3xl">{c.thumbnail || <GameIcon emoji="🎮" size={14} />}</span><span className="text-[9px] px-2 py-0.5 rounded bg-primary/20 text-primary font-heading">{DIFF_LABEL[c.difficulty] || 'Normal'}</span></div>
+              <div className="flex items-center justify-between"><span className="text-3xl">{c.thumbnail || <GameIcon icon="controller" size={14} />}</span><span className="text-[9px] px-2 py-0.5 rounded bg-primary/20 text-primary font-heading">{DIFF_LABEL[c.difficulty] || 'Normal'}</span></div>
               <p className="font-heading text-sm text-foreground truncate">{c.name || 'Untitled Campaign'}</p>
               <p className="text-[10px] text-muted-foreground font-body">by {c.owner_username || 'Unknown'}</p>
               {c.description && <p className="text-[9px] text-muted-foreground font-body line-clamp-2">{c.description}</p>}
               <div className="flex items-center gap-3 text-[10px] text-muted-foreground font-heading">
-                <span><GameIcon emoji="⚔" size={14} /> {(c.battles || []).length} battles</span>
-                <span><GameIcon emoji="⏱" size={14} /> ~{c.estimated_minutes || 15}m</span>
-                <span><GameIcon emoji="▶" size={14} /> {c.plays || 0}</span>
-                <span><GameIcon emoji="♥" size={14} /> {c.likes || 0}</span>
+                <span><GameIcon icon="info" size={14} /> {(c.battles || []).length} battles</span>
+                <span><GameIcon icon="clock" size={14} /> ~{c.estimated_minutes || 15}m</span>
+                <span><GameIcon icon="play" size={14} /> {c.plays || 0}</span>
+                <span><GameIcon icon="heart" size={14} /> {c.likes || 0}</span>
               </div>
               <div className="flex gap-1.5 flex-wrap">
-                <button onClick={() => play(c)} className="flex-1 px-2 py-1.5 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon emoji="▶" size={14} /> PLAY</button>
-                <button onClick={() => like(c)} disabled={(c.liked_by || []).includes(userId)} className="px-2 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs disabled:opacity-40"><GameIcon emoji="♥" size={14} /></button>
-                <button onClick={() => fav(c)} className="px-2 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="★" size={14} /></button>
-                <button onClick={() => report(c)} disabled={(c.reporters || []).includes(userId)} className="px-2 py-1.5 bg-destructive text-destructive-foreground rounded font-heading text-xs disabled:opacity-40"><GameIcon emoji="⚠" size={14} /></button>
+                <button onClick={() => play(c)} className="flex-1 px-2 py-1.5 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon icon="play" size={14} /> PLAY</button>
+                <button onClick={() => like(c)} disabled={(c.liked_by || []).includes(userId)} className="px-2 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs disabled:opacity-40"><GameIcon icon="heart" size={14} /></button>
+                <button onClick={() => fav(c)} className="px-2 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="star" size={14} /></button>
+                <button onClick={() => report(c)} disabled={(c.reporters || []).includes(userId)} className="px-2 py-1.5 bg-destructive text-destructive-foreground rounded font-heading text-xs disabled:opacity-40"><GameIcon icon="warning" size={14} /></button>
               </div>
             </div>
           ))}

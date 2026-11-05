@@ -140,7 +140,7 @@ export default function CustomBattle({ onBack, unlockedIds, favoriteId, equipped
       <div className="flex flex-col items-center gap-4 w-full max-w-5xl max-h-[85vh] overflow-y-auto pr-1">
         <div className="flex justify-between items-center w-full sticky top-0 z-10 bg-background/80 backdrop-blur py-2">
           <h2 className="text-2xl font-heading text-accent tracking-wider">CUSTOM BATTLE</h2>
-          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
 
         <div className="flex gap-4 items-center bg-card border border-border rounded-xl px-5 py-3 w-full flex-wrap">
@@ -196,8 +196,8 @@ export default function CustomBattle({ onBack, unlockedIds, favoriteId, equipped
             return (
               <div key={idx} className="flex flex-col gap-2 bg-card border-2 rounded-xl p-3" style={{ borderColor: PLAYER_COLORS[idx] + '66' }}>
                 <div className="flex items-center justify-between">
-                  <span className="font-heading text-xs" style={{ color: PLAYER_COLORS[idx] }}>P{idx + 1} {isHuman ? '👤 HUMAN' : '🤖 CPU'}</span>
-                  <button onClick={() => setFighterChar(idx, randomChar(fighters.slice(0, numPlayers).filter((_, j) => j !== idx).map(x => x.charId)))} className="text-xs px-2 py-0.5 bg-primary/30 rounded hover:opacity-80"><GameIcon emoji="🎲" size={14} /></button>
+                  <span className="font-heading text-xs" style={{ color: PLAYER_COLORS[idx] }}>P{idx + 1} {isHuman ? ' HUMAN' : ' CPU'}</span>
+                  <button onClick={() => setFighterChar(idx, randomChar(fighters.slice(0, numPlayers).filter((_, j) => j !== idx).map(x => x.charId)))} className="text-xs px-2 py-0.5 bg-primary/30 rounded hover:opacity-80"><GameIcon icon="shuffle" size={14} /></button>
                 </div>
                 <div className="w-10 h-10 rounded-full mx-auto" style={{ backgroundColor: charData?.color || '#888' }} />
                 <p className="text-center text-[10px] font-heading truncate">{charData?.name || '—'}</p>
@@ -228,7 +228,7 @@ export default function CustomBattle({ onBack, unlockedIds, favoriteId, equipped
             <div className="flex gap-2 flex-wrap">
               <button onClick={() => setUseCustomStage(null)} className={`px-3 py-2 rounded-lg font-heading text-[10px] ${useCustomStage === null ? 'bg-accent text-accent-foreground' : 'bg-secondary/60 hover:opacity-80'}`}>Use Built-in Map</button>
               {customStages.map((s, i) => (
-                <button key={i} onClick={() => setUseCustomStage(i)} className={`px-3 py-2 rounded-lg font-heading text-[10px] ${useCustomStage === i ? 'bg-accent text-accent-foreground' : 'bg-secondary/60 hover:opacity-80'}`}>{s.emoji || <GameIcon emoji="🎨" size={14} />} {s.name || `Custom ${i + 1}`}</button>
+                <button key={i} onClick={() => setUseCustomStage(i)} className={`px-3 py-2 rounded-lg font-heading text-[10px] ${useCustomStage === i ? 'bg-accent text-accent-foreground' : 'bg-secondary/60 hover:opacity-80'}`}><GameIcon icon={s.icon || "map"} size={14} /> {s.name || `Custom ${i + 1}`}</button>
               ))}
             </div>
           </div>
@@ -240,7 +240,7 @@ export default function CustomBattle({ onBack, unlockedIds, favoriteId, equipped
             <button onClick={() => { const pool = regularMapEntries.length > 0 ? regularMapEntries : STAGE_MAPS; setSelectedMap(pool[Math.floor(Math.random() * pool.length)].id); }}
               className="w-full mb-3 bg-card border-2 border-accent rounded-xl p-3 hover:opacity-80 transition flex items-center justify-center gap-3"
               style={{ borderColor: '#FFD700', background: 'linear-gradient(135deg, #FFD70015 0%, #0a0b16 50%)' }}>
-              <span className="text-2xl">🎲</span>
+              <span className="text-2xl"></span>
               <span className="font-heading text-sm text-accent">RANDOM STAGE</span>
               <span className="text-[8px] text-muted-foreground font-body">— picks a random non-custom stage</span>
             </button>
@@ -692,8 +692,8 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="flex justify-between w-full px-1 max-w-[1280px]">
-        <button onClick={finishQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Menu</button>
-        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80">⏸ PAUSE (ESC)</button>
+        <button onClick={finishQuit} className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Menu</button>
+        <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80"> PAUSE (ESC)</button>
       </div>
       <GameCanvasPortal>
         <canvas ref={canvasRef} width={W} height={H} className="border-2 border-border rounded-lg shadow-2xl w-full" style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />

@@ -24,11 +24,11 @@ function InitialTile({ char, selected, locked, isP1, isP2, onClick, onHover, onL
     >
       {hasCrossovers && !locked && (
         <div className="absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-accent flex items-center justify-center z-10" onClick={(e) => { e.stopPropagation(); onCrossoverClick?.(); }}>
-          <span className="text-[6px] text-accent-foreground font-bold"><GameIcon emoji="🔀" size={14} /></span>
+          <span className="text-[6px] text-accent-foreground font-bold"><GameIcon icon="shuffle" size={14} /></span>
         </div>
       )}
       {favorite && !locked && (
-        <span className="absolute top-0.5 left-0.5 text-[8px] text-accent z-10"><GameIcon emoji="★" size={14} /></span>
+        <span className="absolute top-0.5 left-0.5 text-[8px] text-accent z-10"><GameIcon icon="star" size={14} /></span>
       )}
       <div
         className="w-10 h-10 rounded-full flex items-center justify-center mt-1"
@@ -50,7 +50,7 @@ function EraDropdown({ value, onChange }) {
       <button onClick={() => setOpen(o => !o)} className="flex items-center gap-2 px-3 py-1.5 bg-card border-2 rounded-lg font-heading text-xs" style={{ borderColor: current.accent + '66' }}>
         <span className="text-[9px] text-muted-foreground">ERA</span>
         <span style={{ color: current.accent }}>{current.name.toUpperCase()}</span>
-        <span className="text-[8px] text-muted-foreground"><GameIcon emoji="▼" size={14} /></span>
+        <span className="text-[8px] text-muted-foreground"><GameIcon icon="info" size={14} /></span>
       </button>
       {open && (
         <>

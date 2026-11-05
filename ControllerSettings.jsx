@@ -122,8 +122,8 @@ export default function ControllerSettings({ onBack, settings, onSaveSettings })
   return (
     <div className="w-full max-w-3xl mx-auto bg-card border border-border rounded-2xl p-5 shadow-2xl">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="font-heading text-xl text-accent tracking-wider"><GameIcon emoji="🎮" size={14} /> CONTROLLER SETTINGS</h2>
-        <button onClick={onBack} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="←" size={14} /> BACK</button>
+        <h2 className="font-heading text-xl text-accent tracking-wider"><GameIcon icon="controller" size={14} /> CONTROLLER SETTINGS</h2>
+        <button onClick={onBack} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-4">
@@ -157,7 +157,7 @@ export default function ControllerSettings({ onBack, settings, onSaveSettings })
               return (
                 <li key={p.index} className="flex flex-col gap-1">
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-accent"><GameIcon emoji="●" size={14} /></span> Slot {p.index}: <span className="font-heading truncate flex-1">{p.id || 'Gamepad'}</span>
+                    <span className="text-accent"><GameIcon icon="box" size={14} /></span> Slot {p.index}: <span className="font-heading truncate flex-1">{p.id || 'Gamepad'}</span>
                     <span className={`text-[9px] px-1.5 py-0.5 rounded capitalize ${isJoyCon ? 'bg-accent/20 text-accent' : 'bg-primary/20 text-primary'}`}>{modelLabel}</span>
                   </div>
                   <div className="flex items-center gap-1 pl-5">

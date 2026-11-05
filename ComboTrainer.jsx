@@ -110,7 +110,7 @@ export default function ComboTrainer({ onBack, customCharsData = {}, equippedSki
             <h2 className="text-2xl font-heading text-accent tracking-wider">COMBO TRAINER</h2>
             <p className="text-xs text-muted-foreground font-body">Learn {COMBOS.length} combo chains — practice against a training dummy</p>
           </div>
-          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
 
         {/* Progress */}
@@ -119,7 +119,7 @@ export default function ComboTrainer({ onBack, customCharsData = {}, equippedSki
             <p className="text-[10px] font-heading text-muted-foreground">YOUR PROGRESS</p>
             <p className="text-sm font-heading text-accent">{Math.min(loadProgress(), COMBOS.length)} / {COMBOS.length} combos completed</p>
           </div>
-          <button onClick={handleReset} className="px-3 py-1.5 bg-destructive/80 text-destructive-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon emoji="↺" size={12} /> RESET PROGRESS</button>
+          <button onClick={handleReset} className="px-3 py-1.5 bg-destructive/80 text-destructive-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon icon="undo" size={12} /> RESET PROGRESS</button>
         </div>
 
         {/* Character grid — ordered by generation G1→G5, all characters, even locked ones */}
@@ -193,9 +193,9 @@ export default function ComboTrainer({ onBack, customCharsData = {}, equippedSki
       {/* Top bar with reset and back */}
       <div className="el6-combo-topbar flex justify-between w-full max-w-[1280px]">
         <button onClick={() => { setPhase('select'); }}
-          className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Character Select</button>
+          className="px-3 py-1 bg-secondary/80 text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Character Select</button>
         <button onClick={handleReset}
-          className="px-3 py-1 bg-destructive/80 text-destructive-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="↺" size={12} /> RESET COMBOS</button>
+          className="px-3 py-1 bg-destructive/80 text-destructive-foreground rounded font-body text-xs hover:opacity-80"><GameIcon icon="undo" size={12} /> RESET COMBOS</button>
       </div>
 
       <div className="relative w-full" style={{ maxWidth: '1280px' }}>
@@ -237,7 +237,7 @@ export default function ComboTrainer({ onBack, customCharsData = {}, equippedSki
                 return (
                   <div key={i} className={`flex items-center gap-1.5 px-1.5 py-1 rounded ${current ? 'bg-accent/20 border border-accent/40' : done ? 'opacity-50' : ''}`}>
                     <span className="text-xs" style={{ color: done ? '#44FF88' : current ? 'var(--accent)' : 'var(--muted-foreground)' }}>
-                      {done ? '☑' : '☐'}
+                      {done ? '' : ''}
                     </span>
                     <span className={`text-[10px] font-heading ${done ? 'text-muted-foreground line-through' : current ? 'text-accent font-bold' : 'text-foreground/70'}`}>
                       {move.display}

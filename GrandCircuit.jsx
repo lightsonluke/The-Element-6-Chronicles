@@ -233,7 +233,7 @@ export default function GrandCircuit({ onBack, onEnd, unlockedIds = [], favorite
       <div className="w-full max-w-2xl mx-auto flex flex-col gap-4 p-4">
         <div className="flex justify-between items-center">
           <h2 className="text-3xl font-heading text-accent tracking-wider">THE GRAND CIRCUIT</h2>
-          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
         <div className="bg-card border border-border rounded-xl p-6 flex flex-col gap-4">
           <p className="text-sm text-muted-foreground font-body">A 32-player single-elimination tournament. Pick your human players, fight through 5 rounds, and claim the circuit crown. Locked characters can appear as bots.</p>
@@ -263,7 +263,7 @@ export default function GrandCircuit({ onBack, onEnd, unlockedIds = [], favorite
       <div className="w-full max-w-2xl mx-auto flex flex-col gap-4 p-4">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-heading text-accent tracking-wider">HUMAN PLAYERS</h2>
-          <button onClick={() => setPhase('setup')} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={() => setPhase('setup')} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
         <div className="bg-card border border-border rounded-xl p-6 flex flex-col gap-4">
           <p className="text-sm text-muted-foreground font-body">How many human players will participate in this tournament? (Max: {selectableChars.length} — your unlocked characters)</p>
@@ -287,7 +287,7 @@ export default function GrandCircuit({ onBack, onEnd, unlockedIds = [], favorite
       <div className="w-full max-w-4xl mx-auto flex flex-col gap-4 p-4">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-heading text-accent tracking-wider">SELECT HUMAN CHARACTERS ({humanChars.length}/{humanCount})</h2>
-          <button onClick={() => setPhase('humanCount')} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={() => setPhase('humanCount')} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
         <p className="text-xs text-muted-foreground font-body">Pick {humanCount} character{humanCount > 1 ? 's' : ''} for the human player{humanCount > 1 ? 's' : ''}. Locked characters cannot be selected — but they can still appear as bots in the tournament.</p>
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-[55vh] overflow-y-auto p-2 bg-card/50 rounded-lg border border-border">
@@ -321,12 +321,12 @@ export default function GrandCircuit({ onBack, onEnd, unlockedIds = [], favorite
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-heading text-accent tracking-wider">BRACKET SETUP</h2>
           <div className="flex gap-2">
-            <button onClick={shuffleBracket} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="🔀" size={14} /> SHUFFLE</button>
+            <button onClick={shuffleBracket} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="shuffle" size={14} /> SHUFFLE</button>
             <button onClick={startTournament} className="px-6 py-2 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90">START</button>
-            <button onClick={() => setPhase('charSelect')} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+            <button onClick={() => setPhase('charSelect')} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground font-body">Drag and drop slots to swap fighters, or double-click a name to swap with the fighter across the bracket. Human players are marked with ★.</p>
+        <p className="text-xs text-muted-foreground font-body">Drag and drop slots to swap fighters, or double-click a name to swap with the fighter across the bracket. Human players are marked with .</p>
         <GCBracket slots={slots} results={results} humanIds={humanIds} charById={charById} onSwap={swapSlots} draggable={true} />
       </div>
     );
@@ -338,8 +338,8 @@ export default function GrandCircuit({ onBack, onEnd, unlockedIds = [], favorite
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-heading text-accent tracking-wider">THE GRAND CIRCUIT</h2>
           <div className="flex gap-2">
-            <button onClick={simToNextHuman} className="px-4 py-2 bg-primary/80 text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90">⏩ SIM TO NEXT HUMAN MATCH</button>
-            <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> QUIT</button>
+            <button onClick={simToNextHuman} className="px-4 py-2 bg-primary/80 text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"> SIM TO NEXT HUMAN MATCH</button>
+            <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> QUIT</button>
           </div>
         </div>
         <GCBracket slots={slots} results={results} humanIds={humanIds} charById={charById} glowMatch={glowMatch} compact />
@@ -388,13 +388,13 @@ export default function GrandCircuit({ onBack, onEnd, unlockedIds = [], favorite
           <div className="flex flex-col items-center gap-1">
             <div className="w-16 h-16 rounded-full" style={{ backgroundColor: c1?.color, boxShadow: `0 0 16px ${c1?.color}88` }} />
             <span className="font-heading text-sm" style={{ color: c1?.color }}>{c1?.name}</span>
-            {p1IsHuman && <span className="text-xs text-accent font-heading">★ YOU</span>}
+            {p1IsHuman && <span className="text-xs text-accent font-heading"> YOU</span>}
           </div>
           <span className="text-2xl font-heading text-muted-foreground">VS</span>
           <div className="flex flex-col items-center gap-1">
             <div className="w-16 h-16 rounded-full" style={{ backgroundColor: c2?.color, boxShadow: `0 0 16px ${c2?.color}88` }} />
             <span className="font-heading text-sm" style={{ color: c2?.color }}>{c2?.name}</span>
-            {p2IsHuman && <span className="text-xs text-accent font-heading">★ YOU</span>}
+            {p2IsHuman && <span className="text-xs text-accent font-heading"> YOU</span>}
           </div>
         </div>
 
@@ -402,8 +402,8 @@ export default function GrandCircuit({ onBack, onEnd, unlockedIds = [], favorite
           <div className="flex flex-col items-center gap-3">
             <p className="text-sm text-muted-foreground font-body">Bot vs Bot — choose how to proceed:</p>
             <div className="flex gap-3">
-              <button onClick={beginMatch} className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90">▶ WATCH</button>
-              <button onClick={simulateMatch} className="px-8 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading text-lg hover:opacity-80">⏩ SIM</button>
+              <button onClick={beginMatch} className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90"> WATCH</button>
+              <button onClick={simulateMatch} className="px-8 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading text-lg hover:opacity-80"> SIM</button>
             </div>
           </div>
         )}
@@ -413,8 +413,8 @@ export default function GrandCircuit({ onBack, onEnd, unlockedIds = [], favorite
             <p className="text-sm text-muted-foreground font-body">Player vs Bot — select your controls:</p>
             {p1IsHuman ? <SchemePicker label="Your Controls" value={p1Scheme} onChange={setP1Scheme} color={c1?.color} /> : <SchemePicker label="Your Controls" value={p2Scheme} onChange={setP2Scheme} color={c2?.color} />}
             <div className="flex gap-3 mt-2">
-              <button onClick={beginMatch} className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90">▶ PLAY</button>
-              <button onClick={simulateMatch} className="px-8 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading text-lg hover:opacity-80">⏩ SIMULATE</button>
+              <button onClick={beginMatch} className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90"> PLAY</button>
+              <button onClick={simulateMatch} className="px-8 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading text-lg hover:opacity-80"> SIMULATE</button>
             </div>
           </div>
         )}
@@ -427,13 +427,13 @@ export default function GrandCircuit({ onBack, onEnd, unlockedIds = [], favorite
               <SchemePicker label={`${c2?.name} Controls`} value={p2Scheme} onChange={setP2Scheme} color={c2?.color} />
             </div>
             <div className="flex gap-3 mt-2">
-              <button onClick={beginMatch} className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90">▶ PLAY</button>
-              <button onClick={simulateMatch} className="px-8 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading text-lg hover:opacity-80">⏩ SIMULATE</button>
+              <button onClick={beginMatch} className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90"> PLAY</button>
+              <button onClick={simulateMatch} className="px-8 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading text-lg hover:opacity-80"> SIMULATE</button>
             </div>
           </div>
         )}
 
-        <button onClick={simToNextHuman} className="mt-4 px-6 py-2 bg-primary/60 text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90">⏩ SIM TO NEXT HUMAN MATCH</button>
+        <button onClick={simToNextHuman} className="mt-4 px-6 py-2 bg-primary/60 text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"> SIM TO NEXT HUMAN MATCH</button>
       </div>
     );
   }
@@ -481,7 +481,7 @@ export default function GrandCircuit({ onBack, onEnd, unlockedIds = [], favorite
     return (
       <div className="w-full max-w-2xl mx-auto flex flex-col items-center gap-4 p-8">
         <div className="text-center">
-          <span className="text-7xl">🏆</span>
+          <span className="text-7xl"></span>
           <h2 className="text-4xl font-heading text-accent tracking-wider mt-2">GRAND CIRCUIT CHAMPION</h2>
           <div className="mt-4 flex flex-col items-center gap-2">
             <div className="w-20 h-20 rounded-full" style={{ backgroundColor: c?.color, boxShadow: `0 0 30px ${c?.color}88` }} />

@@ -81,10 +81,10 @@ export default function FlyerBoard({ onBack }) {
   return (
     <div className="w-full max-w-4xl mx-auto bg-card border border-border rounded-2xl p-5 shadow-2xl">
       <div className="flex justify-between items-center mb-3">
-        <h2 className="font-heading text-xl text-accent tracking-wider"><GameIcon emoji="📎" size={14} /> COMMUNITY FLYER BOARD</h2>
+        <h2 className="font-heading text-xl text-accent tracking-wider"><GameIcon icon="paperclip" size={14} /> COMMUNITY FLYER BOARD</h2>
         <div className="flex gap-1.5">
           <button onClick={() => setComposing(v => !v)} className="px-3 py-1.5 bg-primary text-primary-foreground rounded font-heading text-xs">+ POST</button>
-          <button onClick={onBack} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon emoji="←" size={14} /> BACK</button>
+          <button onClick={onBack} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="info" size={14} /> BACK</button>
         </div>
       </div>
       <p className="text-[10px] text-muted-foreground mb-3">Your active flyers: {myCount}/3. {(3 - myCount) > 0 ? `${3 - myCount} remaining.` : 'Remove one to post a new flyer.'}</p>
@@ -121,7 +121,7 @@ export default function FlyerBoard({ onBack }) {
             <button key={f.id} onClick={() => setReader(f)} className="text-left bg-muted/30 hover:bg-muted/60 rounded-lg p-3 border border-border">
               <div className="flex justify-between items-start">
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-heading">{f.category}</span>
-                <span className="text-[9px] text-muted-foreground">{(f.likes || 0)} <GameIcon emoji="♥" size={14} /></span>
+                <span className="text-[9px] text-muted-foreground">{(f.likes || 0)} <GameIcon icon="heart" size={14} /></span>
               </div>
               <p className="font-heading text-sm text-foreground mt-1">{f.title}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">by {f.owner_username || 'Unknown'}</p>
@@ -135,15 +135,15 @@ export default function FlyerBoard({ onBack }) {
           <div className="bg-card border-2 border-accent rounded-xl p-5 w-[460px] max-w-[94%]" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-2">
               <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-heading">{reader.category}</span>
-              <button onClick={() => setReader(null)} className="text-xs text-muted-foreground"><GameIcon emoji="✕" size={14} /></button>
+              <button onClick={() => setReader(null)} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button>
             </div>
             <h3 className="font-heading text-base text-foreground mb-1">{reader.title}</h3>
             <p className="text-[10px] text-muted-foreground mb-3">by {reader.owner_username || 'Unknown'}</p>
             <p className="text-sm text-foreground font-body whitespace-pre-wrap mb-4">{reader.body}</p>
             <div className="flex gap-2 flex-wrap">
-              <button onClick={() => like(reader)} className="px-3 py-1.5 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon emoji="♥" size={14} /> Like ({reader.likes || 0})</button>
-              <button onClick={() => report(reader)} className="px-3 py-1.5 bg-destructive/60 text-destructive-foreground rounded font-heading text-xs"><GameIcon emoji="⚑" size={14} /> Report</button>
-              {reader.owner_user_id === userId && <button onClick={() => { remove(reader.id); setReader(null); }} className="px-3 py-1.5 bg-destructive text-destructive-foreground rounded font-heading text-xs"><GameIcon emoji="🗑" size={14} /> Delete (mine)</button>}
+              <button onClick={() => like(reader)} className="px-3 py-1.5 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon icon="heart" size={14} /> Like ({reader.likes || 0})</button>
+              <button onClick={() => report(reader)} className="px-3 py-1.5 bg-destructive/60 text-destructive-foreground rounded font-heading text-xs"><GameIcon icon="flag" size={14} /> Report</button>
+              {reader.owner_user_id === userId && <button onClick={() => { remove(reader.id); setReader(null); }} className="px-3 py-1.5 bg-destructive text-destructive-foreground rounded font-heading text-xs"><GameIcon icon="trash" size={14} /> Delete (mine)</button>}
             </div>
           </div>
         </div>

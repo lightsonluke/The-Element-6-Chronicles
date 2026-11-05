@@ -46,8 +46,8 @@ export default function EraTabBar({ selectedEra, onEraChange, onRandom, compact 
         ))}
       </div>
       <div className="flex gap-1.5">
-        <button onClick={handleRandomEra} className="px-2 py-1 rounded text-[9px] font-heading bg-primary/30 text-primary-foreground hover:opacity-80 border border-primary/40"><GameIcon emoji="🎲" size={14} /> RANDOM ERA</button>
-        <button onClick={handleRandomAll} className="px-2 py-1 rounded text-[9px] font-heading bg-accent/30 text-accent-foreground hover:opacity-80 border border-accent/40"><GameIcon emoji="🎲" size={14} /> RANDOM (ALL ERAS)</button>
+        <button onClick={handleRandomEra} className="px-2 py-1 rounded text-[9px] font-heading bg-primary/30 text-primary-foreground hover:opacity-80 border border-primary/40"><GameIcon icon="shuffle" size={14} /> RANDOM ERA</button>
+        <button onClick={handleRandomAll} className="px-2 py-1 rounded text-[9px] font-heading bg-accent/30 text-accent-foreground hover:opacity-80 border border-accent/40"><GameIcon icon="shuffle" size={14} /> RANDOM (ALL ERAS)</button>
       </div>
     </div>
   );

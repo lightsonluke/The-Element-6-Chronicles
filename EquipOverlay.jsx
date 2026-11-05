@@ -47,8 +47,8 @@ export default function EquipOverlay({ progress, customCharsData = {}, onApply, 
     <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center" onClick={onClose}>
       <div className="bg-card border-2 border-accent rounded-xl p-5 w-[560px] max-w-[96%] max-h-[88vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-heading text-base text-accent"><GameIcon emoji="⚔" size={14} /> EQUIP (Hub)</h3>
-          <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon emoji="✕" size={14} /></button>
+          <h3 className="font-heading text-base text-accent"><GameIcon icon="info" size={14} /> EQUIP (Hub)</h3>
+          <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button>
         </div>
 
         {/* Character preview header */}

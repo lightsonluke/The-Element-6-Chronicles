@@ -546,10 +546,10 @@ export default function CaptureTheFlag({
       <div className="flex flex-col items-center gap-3 w-full max-w-4xl">
         <div className="flex justify-between items-center w-full">
           <div>
-            <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon emoji="🚩" size={14} /> CAPTURE THE FLAG</h2>
+            <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="flag" size={14} /> CAPTURE THE FLAG</h2>
             <p className="text-[11px] text-muted-foreground font-body mt-1">2v2 offline CTF across the rooftops of Split City at Night. Steal the enemy flag, defend your base, and dominate the skyline! Sigs, Heavies &amp; Supers — no powers.</p>
           </div>
-          <button onClick={onExit} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> SPORTS</button>
+          <button onClick={onExit} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> SPORTS</button>
         </div>
 
         {/* Team combo */}
@@ -668,7 +668,7 @@ export default function CaptureTheFlag({
           </label>
         </div>
 
-        <button onClick={startMatch} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon emoji="▶" size={14} /> START MATCH</button>
+        <button onClick={startMatch} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon icon="play" size={14} /> START MATCH</button>
       </div>
     );
   }
@@ -678,7 +678,7 @@ export default function CaptureTheFlag({
     return (
       <div className="flex flex-col items-center gap-4 w-full max-w-lg">
         <h2 className={`text-4xl font-heading tracking-wider ${result.winner === 'A' ? 'text-primary' : result.winner === 'B' ? 'text-destructive' : 'text-muted-foreground'}`}>
-          {result.winner === 'A' ? '🔵 BLUE TEAM WINS!' : result.winner === 'B' ? '🔴 RED TEAM WINS!' : 'DRAW!'}
+          {result.winner === 'A' ? ' BLUE TEAM WINS!' : result.winner === 'B' ? ' RED TEAM WINS!' : 'DRAW!'}
         </h2>
         <div className="w-full rounded-xl border border-border bg-card p-6 flex flex-col gap-3 items-center">
           <div className="flex gap-8 text-center">
@@ -687,7 +687,7 @@ export default function CaptureTheFlag({
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => { setPhase('setup'); setResult(null); sfx.click(); }} className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon emoji="↻" size={14} /> PLAY AGAIN</button>
+          <button onClick={() => { setPhase('setup'); setResult(null); sfx.click(); }} className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="redo" size={14} /> PLAY AGAIN</button>
           <button onClick={onExit} className="px-5 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">SPORTS</button>
         </div>
       </div>
@@ -698,9 +698,9 @@ export default function CaptureTheFlag({
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
       <div className="w-full flex justify-between items-center px-2 max-w-[1280px]">
-        <button onClick={onExit} className="el6-sport-quit-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon emoji="←" size={14} /> Quit</button>
-        <button onClick={() => { setPaused(p => { const next = !p; if (gameRef.current) gameRef.current.running = !next; return next; }); }} className="el6-controller-pause-trigger el6-sport-pause-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? '▶ RESUME' : '⏸ PAUSE (ESC)'}</button>
-        <span className="text-[10px] text-muted-foreground font-body">Move: <GameIcon emoji="←" size={14} /><GameIcon emoji="→" size={14} />/AD · Jump: <GameIcon emoji="↑" size={14} />/W · Sig: J/K/L · Heavy: I · ESC: Pause · Sigs, Heavies &amp; Supers — no powers</span>
+        <button onClick={onExit} className="el6-sport-quit-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> Quit</button>
+        <button onClick={() => { setPaused(p => { const next = !p; if (gameRef.current) gameRef.current.running = !next; return next; }); }} className="el6-controller-pause-trigger el6-sport-pause-bottom-right px-3 py-1 bg-secondary text-secondary-foreground rounded font-body text-xs hover:opacity-80">{paused ? ' RESUME' : ' PAUSE (ESC)'}</button>
+        <span className="text-[10px] text-muted-foreground font-body">Move: <GameIcon icon="info" size={14} /><GameIcon icon="arrowRight" size={14} />/AD · Jump: <GameIcon icon="arrowUp" size={14} />/W · Sig: J/K/L · Heavy: I · ESC: Pause · Sigs, Heavies &amp; Supers — no powers</span>
       </div>
       {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { setPaused(false); if (gameRef.current) gameRef.current.running = true; }} onQuit={onExit} /></div>}
       <GameCanvasPortal>

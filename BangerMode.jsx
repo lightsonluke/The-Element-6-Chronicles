@@ -11,8 +11,8 @@ const DIFFICULTIES = ['newcomer', 'beginner', 'easy', 'amateur', 'regular', 'pro
 const NET_STARTS = [{ id: 500, label: 'Floor' }, { id: 470, label: 'Low' }, { id: 430, label: 'Mid' }];
 const NET_MAX = [{ id: 360, label: 'Low' }, { id: 320, label: 'Mid' }, { id: 260, label: 'High' }];
 const BALL_SPEEDS = [{ id: 0.85, label: 'Slow' }, { id: 1.0, label: 'Normal' }, { id: 1.2, label: 'Fast' }];
-const WEATHERS = [{ id: 'clear', label: '☀️ Clear' }, { id: 'rain', label: '🌧️ Rain' }, { id: 'snow', label: '❄️ Snow' }];
-const MUSIC = [{ id: 'arena', label: '🏟️ Arena' }, { id: 'chill', label: '🎵 Chill' }, { id: 'epic', label: '🔥 Epic' }];
+const WEATHERS = [{ id: 'clear', label: ' Clear' }, { id: 'rain', label: ' Rain' }, { id: 'snow', label: ' Snow' }];
+const MUSIC = [{ id: 'arena', label: ' Arena' }, { id: 'chill', label: ' Chill' }, { id: 'epic', label: ' Epic' }];
 
 export default function BangerMode({
   onExit, onAward, unlockedIds, favoriteId, equippedAccessories = {}, equippedSkins = {}, settings = {},
@@ -72,7 +72,7 @@ export default function BangerMode({
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4">
         <div className="w-full max-w-md flex flex-col gap-4 p-6 bg-card border-2 border-accent rounded-2xl">
           <div className="text-center">
-            <h2 className="text-3xl font-heading text-accent tracking-wider"><GameIcon emoji="💥" size={14} /> BANGER</h2>
+            <h2 className="text-3xl font-heading text-accent tracking-wider"><GameIcon icon="exclamationCircle" size={14} /> BANGER</h2>
             <p className="text-[10px] font-heading text-muted-foreground tracking-widest mt-1">ELEMENT 6 ORIGINAL</p>
             <p className="text-2xl font-heading mt-3" style={{ color: winColor }}>{winName} WINS!</p>
             <p className="text-xs text-muted-foreground font-body mt-1">{result.elims ? `Eliminations — Blue ${result.elims[1]} · Red ${result.elims[2]}` : ''}</p>
@@ -105,9 +105,9 @@ export default function BangerMode({
 
   return (
     <UniversalCharacterSelect
-      title="💥 BANGER — 3v3"
+      title=" BANGER — 3v3"
       modeLabel="ELEMENT 6 ORIGINAL"
-      startLabel="▶ START MATCH"
+      startLabel=" START MATCH"
       unlockedIds={unlockedIds || ['yellow']}
       favoriteId={favoriteId}
       customCharsData={customCharsData}

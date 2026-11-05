@@ -210,7 +210,7 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
     <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
       <div className="flex justify-between items-center w-full">
         <h2 className="text-2xl font-heading text-accent tracking-wider">BATTLE ROYALE</h2>
-        <button onClick={() => { cancelSearch(); onBack(); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
+        <button onClick={() => { cancelSearch(); onBack(); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       <div className="bg-card border border-border rounded-xl p-3 w-full max-w-md text-center">
@@ -222,7 +222,7 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
           {error && <p className="text-xs text-destructive font-body">{error}</p>}
           <UniversalCharacterSelect
             title="PICK YOUR FIGHTER"
-            startLabel="➜ NEXT"
+            startLabel=" NEXT"
             unlockedIds={unlockedIds || ['yellow']}
             favoriteId={favoriteId}
             playerCount={1}
@@ -240,8 +240,8 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
           <p className="text-xs font-heading text-muted-foreground">FIGHTER: <span className="text-accent">{ALL.find(c => c.id === myChar)?.name}</span></p>
           <ElementSelect charId={myChar} currentElement={myElement} onSelect={setMyElement} charLevels={charLevels} label="YOUR ELEMENT" />
           <div className="flex gap-2">
-            <button onClick={() => setPhase('pick')} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon emoji="←" size={14} /> BACK</button>
-            <button onClick={() => findMatch()} className="px-6 py-2 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90 shadow-lg">🔍 FIND MATCH</button>
+            <button onClick={() => setPhase('pick')} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
+            <button onClick={() => findMatch()} className="px-6 py-2 bg-accent text-accent-foreground rounded-lg font-heading text-sm hover:opacity-90 shadow-lg"> FIND MATCH</button>
           </div>
         </div>
       )}
