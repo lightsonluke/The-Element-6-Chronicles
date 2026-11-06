@@ -5,10 +5,16 @@ import { getTitleById } from './profileTitles.js';
 import { sfx } from './sfx.js';
 
 const MODES = [
-  ['customrooms','Custom Rooms',true],['banger-online','Banger Online 3v3',false],['volleyball-online','Volleyball Online 2v2',false],
+  ['customrooms','Custom Rooms',true],['banger-online','Banger Online 3v3 · 6 players',true],['volleyball-online','Volleyball Online 2v2 · 4 players',true],
   ['thetable','The Table',true],['battleroyale','Battle Royale',false],['grandcircuit-online','Grand Circuit',false],
-  ['lan','LAN Play',false],['soccer-online','Soccer Online',false],['dodgeball-online','Dodgeball Online',false],['ctf-online','Capture the Flag',false],
+  ['lan','LAN Play',false],['soccer-online','Soccer Online 1v1 · 2 players',true],['dodgeball-online','Dodgeball Online 1v1 · 2 players',true],['ctf-online','Capture the Flag',false],
 ];
+const PARTY_SPORT_MODES = {
+  'soccer-online':'soccer_online',
+  'volleyball-online':'volleyball_2v2_online',
+  'dodgeball-online':'dodgeball_online',
+  'banger-online':'banger_online',
+};
 const nameOf = u => u?.user_metadata?.username || u?.user_metadata?.full_name || u?.email?.split('@')[0] || 'Player';
 
 export default function PartyScreen({ onBack, onQueueMode }) {
@@ -98,12 +104,12 @@ export default function PartyScreen({ onBack, onQueueMode }) {
   // the host from being launched twice by its own optimistic state update.
   useEffect(()=>{
     if(!party?.id || party.status!=='queued' || !party.queued_mode)return;
-    const sessionId=party.queued_mode==='customrooms'?party.active_room_id:party.queued_mode==='thetable'?party.active_table_id:null;
+    const sessionId=party.queued_mode==='customrooms'?party.active_room_id:party.queued_mode==='thetable'?party.active_table_id:party.queued_mode==='sports-match'?party.active_sport_match_id:null;
     const key=`${party.id}:${party.queued_mode}:${sessionId||''}`;
     if(launchedQueueRef.current===key)return;
     launchedQueueRef.current=key;
     onQueueMode?.(party.queued_mode,party);
-  },[party?.id,party?.status,party?.queued_mode,party?.active_room_id,party?.active_table_id,onQueueMode]);
+  },[party?.id,party?.status,party?.queued_mode,party?.active_room_id,party?.active_table_id,party?.active_sport_match_id,onQueueMode]);
 
   const create=async()=>{
     if(!user || busy)return;
@@ -208,15 +214,18 @@ export default function PartyScreen({ onBack, onQueueMode }) {
     if(party.host_user_id!==user?.id){setError('Only the party host can start a shared activity.');return;}
     setBusy(true);setError('');
     try {
-      const rpcName=mode==='customrooms'?'element6_party_create_custom_room':mode==='thetable'?'element6_party_join_the_table':null;
-      if(!rpcName) throw new Error('This activity does not yet have a shared party session. Choose Custom Rooms or The Table to keep everyone together.');
-      const {data,error:e}=await supabase.rpc(rpcName,{p_party_id:party.id});
+      const sportMode=PARTY_SPORT_MODES[mode];
+      const rpcName=sportMode?'element6_party_queue_online_sport':mode==='customrooms'?'element6_party_create_custom_room':mode==='thetable'?'element6_party_join_the_table':null;
+      if(!rpcName) throw new Error('This activity does not have a shared party session yet.');
+      const args=sportMode?{p_party_id:party.id,p_mode:sportMode}:{p_party_id:party.id};
+      const {data,error:e}=await supabase.rpc(rpcName,args);
       if(e)throw e;
-      const activeSessionId=mode==='customrooms'?data?.active_room_id:data?.active_table_id;
-      if(!activeSessionId)throw new Error(mode==='customrooms'?'The server did not create a party room.':'The server did not create a shared Table session.');
-      launchedQueueRef.current=`${party.id}:${mode}:${activeSessionId}`;
+      const activeSessionId=sportMode?data?.active_sport_match_id:mode==='customrooms'?data?.active_room_id:data?.active_table_id;
+      if(!activeSessionId)throw new Error(sportMode?'The server did not create a shared sport match.':mode==='customrooms'?'The server did not create a party room.':'The server did not create a shared Table session.');
+      const activityMode=sportMode?'sports-match':mode;
+      launchedQueueRef.current=`${party.id}:${activityMode}:${activeSessionId}`;
       setParty(data);
-      onQueueMode?.(mode,data);
+      onQueueMode?.(activityMode,data);
       sfx.matchFound();
       return;
     } catch(e) { setError(e?.message||'Could not queue party.'); }
@@ -225,6 +234,8 @@ export default function PartyScreen({ onBack, onQueueMode }) {
 
   if(loading)return <div className="py-20 text-center">Loading party…</div>;
   const isPartyHost=party?.host_user_id===user?.id;
+  const requiredPartyPlayers=mode==='banger-online'?6:mode==='volleyball-online'?4:PARTY_SPORT_MODES[mode]?2:null;
+  const partyPlayerCount=(party?.members||[]).filter(member=>!member.spectator).length;
   return <div className="w-full max-w-4xl flex flex-col gap-4">
     <div className="flex items-center justify-between"><button onClick={onBack} className="px-4 py-2 bg-secondary rounded-lg"><GameIcon icon="info" size={14}/> BACK</button><h2 className="text-2xl font-heading text-accent">PARTY</h2><div className="w-20"/></div>
     {error&&<div role="alert" className="text-destructive text-xs text-center">{error}</div>}
@@ -245,10 +256,12 @@ export default function PartyScreen({ onBack, onQueueMode }) {
         <div className="mt-4"><h4 className="text-xs font-heading text-primary">FRIENDS</h4>{friends.filter(f=>!(party.members||[]).some(m=>m.user_id===f.user_id)).map(f=><button key={f.user_id} disabled={busy || (party.member_count||0)>=8} onClick={()=>invite(f.user_id)} className="w-full mt-1 p-2 text-left rounded bg-secondary/30 text-xs">+ INVITE {f.username}</button>)}</div>
       </div>
       <div className="bg-card border rounded-xl p-5"><h3 className="font-heading text-primary">QUEUE AS A PARTY</h3><p className="text-xs text-muted-foreground">All party members are kept together.</p>
-        <div className="grid grid-cols-2 gap-2 mt-4">{MODES.map(([id,label,supported])=><button key={id} type="button" disabled={!supported} aria-disabled={!supported} title={supported?'':'Party launch is not connected to a shared match session yet.'} onClick={()=>supported&&setMode(id)} className={'p-2 rounded-xl border text-xs disabled:cursor-not-allowed disabled:opacity-45 '+(mode===id?'border-accent bg-accent/10':'border-border bg-secondary/30')}>{label}{!supported&&<span className="mt-1 block text-[9px] text-muted-foreground">UNAVAILABLE FOR PARTIES</span>}</button>)}</div>
+        <div className="grid grid-cols-2 gap-2 mt-4">{MODES.map(([id,label,supported])=><button key={id} type="button" disabled={!supported} aria-disabled={!supported} title={supported?'':'Party launch is not connected to a shared match session yet.'} onClick={()=>supported&&setMode(id)} className={'min-h-12 p-2 rounded-xl border text-xs disabled:cursor-not-allowed disabled:opacity-45 '+(mode===id?'border-accent bg-accent/10':'border-border bg-secondary/30')}>{label}{!supported&&<span className="mt-1 block text-[9px] text-muted-foreground">UNAVAILABLE FOR PARTIES</span>}</button>)}</div>
+        {PARTY_SPORT_MODES[mode]&&<p className="mt-2 text-[10px] text-muted-foreground">The whole party enters one private sport match. The server requires exactly {mode==='banger-online'?6:mode==='volleyball-online'?4:2} connected, ready members.</p>}
+        {requiredPartyPlayers&&partyPlayerCount!==requiredPartyPlayers&&<p role="status" className="mt-2 text-[10px] text-amber-300">{mode.replace('-online','')} needs exactly {requiredPartyPlayers} human party members; currently {partyPlayerCount}.</p>}
         <p className="mt-3 text-[10px] text-muted-foreground">{(party.members||[]).filter(m=>m.is_ready).length} / {party.member_count||0} members ready</p>
         {!isPartyHost&&<p className="mt-3 text-[10px] text-muted-foreground">Only the host can start a shared activity.</p>}
-        <button onClick={queue} disabled={!isPartyHost||!mode||busy||!(party.members||[]).length||(party.members||[]).some(m=>!m.is_ready)} className="mt-4 w-full py-3 rounded bg-primary text-primary-foreground font-heading disabled:opacity-40">{isPartyHost?'START PARTY':'WAITING FOR HOST'}{mode?' · '+mode.toUpperCase():''}</button>
+        <button onClick={queue} disabled={!isPartyHost||!mode||busy||!(party.members||[]).length||(party.members||[]).some(m=>!m.is_ready)||(requiredPartyPlayers!==null&&partyPlayerCount!==requiredPartyPlayers)} className="mt-4 w-full py-3 rounded bg-primary text-primary-foreground font-heading disabled:opacity-40">{isPartyHost?'START PARTY':'WAITING FOR HOST'}{mode?' · '+mode.toUpperCase():''}</button>
       </div>
       <div className="md:col-span-2 bg-card border rounded-2xl p-4">
         <div className="flex items-center justify-between gap-3"><h3 className="font-heading text-primary">PARTY CHAT</h3><span className="text-[10px] text-muted-foreground">Only current party members can read and send messages</span></div>

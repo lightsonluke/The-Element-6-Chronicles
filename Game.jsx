@@ -477,6 +477,7 @@ export default function Game() {
   const [partyLaunch, setPartyLaunch] = useState(null);
   const [onlineSport, setOnlineSport] = useState(null);        // sportId for online sports lobby
   const [onlineSportsLobby, setOnlineSportsLobby] = useState(null);
+  const [partySportsActive, setPartySportsActive] = useState(false);
   const [onlineSportsRole, setOnlineSportsRole] = useState(null);
   const [onlineSportsMatchId, setOnlineSportsMatchId] = useState(null);
   const [me, setMe] = useState(null);
@@ -2762,7 +2763,9 @@ export default function Game() {
             onEnd={(res) => {
               // Online wins grow only the fighter the player actually queued.
               // Online matches have no per-match token/XP reward.
-              setOnlineSportsLobby(null); setScreen('sports');
+              setOnlineSportsLobby(null);
+              if (partySportsActive) { setPartySportsActive(false); setScreen('party'); }
+              else setScreen('sports');
             }}
           />
         )}
@@ -2817,7 +2820,7 @@ export default function Game() {
           />
         )}
         {screen === 'party' && (
-          <PartyScreen onBack={goBack} onQueueMode={(mode, partyState) => {
+        <PartyScreen onBack={goBack} onQueueMode={async (mode, partyState) => {
             if (mode === 'thetable') setScreen('thetable');
             else if (mode === 'battleroyale') setScreen('battleroyale');
             else if (mode === 'sports') setScreen('onlinesports');
@@ -2825,6 +2828,28 @@ export default function Game() {
             else if (mode === 'lan') setScreen('lan');
             else if (mode === 'grandcircuit-online') setScreen('grandcircuit');
             else if (mode === 'ctf-online') { setScreen('sports'); }
+            else if (mode === 'sports-match') {
+              const matchId = partyState?.active_sport_match_id;
+              if (!matchId) { setChatToast({ name: 'PARTY MATCH', text: 'The party sport match is missing. Return to the party and try again.' }); return; }
+              let match; let players; let loadError;
+              try {
+                const [matchResult, playersResult] = await Promise.all([
+                  supabase.from('online_sport_matches').select('*').eq('id', matchId).single(),
+                  supabase.from('online_sport_players').select('*').eq('match_id', matchId).order('slot'),
+                ]);
+                match = matchResult.data; players = playersResult.data;
+                loadError = matchResult.error || playersResult.error;
+              } catch (requestError) { loadError = requestError; }
+              if (loadError || !match || !players?.length) {
+                console.error('Could not load party sport match', loadError);
+                setChatToast({ name: 'PARTY MATCH', text: 'Could not load the shared sport match. Return to the party and retry.' });
+                setScreen('party');
+                return;
+              }
+              setPartySportsActive(true);
+              setOnlineSportsLobby({ match, players });
+              setScreen('onlinesportsmatch');
+            }
             else if (mode === 'soccer-online' || mode === 'volleyball-online' || mode === 'dodgeball-online' || mode === 'banger-online') { setOnlineSport(mode.replace('-online','')); setScreen('onlinesports'); }
           }} />
         )}
