@@ -40,6 +40,9 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
   const [bracketSize, setBracketSize] = useState(16);
   const [stockCount, setStockCount] = useState(3);
   const [matchTime, setMatchTime] = useState(240);
+  const [localPlayerCount, setLocalPlayerCount] = useState(1);
+  const [secondPlayerChar, setSecondPlayerChar] = useState(null);
+  const [secondPlayerController, setSecondPlayerController] = useState(false);
 
   useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
 
@@ -58,6 +61,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
     setLog([]);
     // Always go to pick screen so the player chooses their fighter
     setPlayerChar(null);
+    setSecondPlayerChar(null);
     setPhase('pick');
   };
 
@@ -71,6 +75,18 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
     if (idx > 0) { [newSlots[0], newSlots[idx]] = [newSlots[idx], newSlots[0]]; }
     setSlots(newSlots);
     setPlayerChar(charId);
+    setSecondPlayerChar(null);
+    setPhase(localPlayerCount === 2 ? 'pick-second' : 'pre-fight');
+  };
+
+  const handlePickSecondChar = (charId) => {
+    if (!charId || charId === playerChar || !unlockedIds.includes(charId)) return;
+    const nextSlots = [...slots];
+    const idx = nextSlots.indexOf(charId);
+    if (idx > 1) [nextSlots[1], nextSlots[idx]] = [nextSlots[idx], nextSlots[1]];
+    else if (idx < 0) nextSlots[1] = charId;
+    setSlots(nextSlots);
+    setSecondPlayerChar(charId);
     setPhase('pre-fight');
   };
 
@@ -88,11 +104,11 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
     setPhase('fighting');
   };
 
-  const simulateOtherMatches = (round) => {
+  const simulateOtherMatches = (round, winnerChar = playerChar) => {
     const numMatches = Math.pow(2, Math.log2(bracketSize) - round - 1);
     const newResults = { ...results };
     newResults[round] = { ...(newResults[round] || {}) };
-    newResults[round][0] = playerChar;
+    newResults[round][0] = winnerChar;
 
     for (let m = 1; m < numMatches; m++) {
       if (newResults[round][m]) continue;
@@ -105,12 +121,18 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
   };
 
   const handleEnd = (result) => {
-    const won = result?.p1Won === true;
+    const winnerChar = result?.p1Won === true
+      ? playerChar
+      : result?.p1Won === false && currentRound === 0 && localPlayerCount === 2
+        ? opponent
+        : null;
+    const won = Boolean(winnerChar);
     if (won) {
-      simulateOtherMatches(currentRound);
+      setPlayerChar(winnerChar);
+      simulateOtherMatches(currentRound, winnerChar);
       setLog(l => [...l, `${tournamentRoundName(currentRound, bracketSize)}: You defeated ${nameOf(opponent)}!`]);
       onAwardCoins?.(15);
-      onAwardXP?.(playerChar, 10 + currentRound * 5);
+      onAwardXP?.(winnerChar, 10 + currentRound * 5);
       if (currentRound >= Math.log2(bracketSize) - 1) {
         setPhase('champion');
         onChampion?.();
@@ -121,7 +143,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
           setLog(l => [...l, ` CHAMPION! You unlocked ${nameOf(u.id)}!`]);
         } else { setLog(l => [...l, ' CHAMPION! All characters already unlocked!']); }
         onAwardCoins?.(50);
-        onAwardXP?.(playerChar, 50);
+        onAwardXP?.(winnerChar, 50);
       } else { setPhase('post-fight'); }
     } else {
       setLog(l => [...l, `Eliminated by ${nameOf(opponent)}. You must restart the tournament!`]);
@@ -138,13 +160,36 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
   if (phase === 'fighting' && slots) {
     return (
       <PlatformFighter
-        p1Char={playerChar} p2Char={opponent} p2IsCPU
+        p1Char={playerChar} p2Char={opponent} p2IsCPU={!(currentRound === 0 && localPlayerCount === 2)}
         gameMode="regular" selectedMap={roundMap} cpuDifficulty={cpuDifficulty}
         stockCount={stockCount} matchTime={matchTime}
+        localP2Controller={secondPlayerController}
         onEnd={handleEnd}
         equippedAccessories={equippedAccessories}
         equippedSkins={equippedSkins}
       />
+    );
+  }
+
+  if (phase === 'pick-second' && slots) {
+    return (
+      <div className="w-full max-w-4xl flex flex-col gap-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-heading text-accent tracking-wider">PLAYER 2 · CHOOSE FIGHTER</h2>
+          <button onClick={() => { setLocalPlayerCount(1); setPhase('pre-fight'); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm">BACK</button>
+        </div>
+        <p className="text-sm text-muted-foreground">Player 2 joins the same bracket and can use the WASD keyboard layout or a second connected controller.</p>
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
+          <label className="font-heading text-xs text-muted-foreground" htmlFor="tournament-p2-control">PLAYER 2 INPUT</label>
+          <select id="tournament-p2-control" value={secondPlayerController ? 'controller' : 'keyboard'} onChange={e => setSecondPlayerController(e.target.value === 'controller')} className="min-h-10 rounded-lg bg-secondary px-3 text-foreground">
+            <option value="keyboard">Keyboard · WASD</option>
+            <option value="controller">Second connected controller</option>
+          </select>
+        </div>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 rounded-xl border border-border bg-card p-4">
+          {ALL.filter(c => unlockedIds.includes(c.id) && c.id !== playerChar).map(c => <button key={c.id} onClick={() => handlePickSecondChar(c.id)} className="rounded-xl border border-border bg-secondary/40 p-3 hover:border-accent"><span className="mx-auto block h-8 w-8 rounded-full" style={{ backgroundColor: c.color }} /><span className="mt-2 block truncate text-xs font-heading">{c.name}</span></button>)}
+        </div>
+      </div>
     );
   }
 
@@ -174,6 +219,11 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
             }} className="px-4 py-1.5 bg-primary/40 text-primary-foreground rounded font-heading text-xs hover:opacity-80">RANDOM</button>
           </div>
           <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <label className="flex flex-col gap-1 text-left text-xs font-heading text-muted-foreground">LOCAL PLAYERS
+                  <select value={localPlayerCount} onChange={e => { setLocalPlayerCount(Number(e.target.value)); setSecondPlayerChar(null); }} className="min-h-10 rounded-lg bg-secondary px-3 text-foreground">
+                    {[1, 2].map(n => <option key={n} value={n}>{n} local player{n === 1 ? '' : 's'}</option>)}
+                  </select>
+                </label>
                 <label className="flex flex-col gap-1 text-left text-xs font-heading text-muted-foreground">TOURNAMENT SIZE
                   <select value={bracketSize} onChange={e => newTournament(Number(e.target.value))} className="min-h-10 rounded-lg bg-secondary px-3 text-foreground">
                     {[8, 16, 32].map(n => <option key={n} value={n}>{n} entrants</option>)}
@@ -190,7 +240,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
                   </select>
                 </label>
           </div>
-          <p className="mb-3 text-xs text-muted-foreground">{bracketSize} entrants · {Math.log2(bracketSize)} rounds · 1 human slot, remaining slots filled by CPU opponents</p>
+          <p className="mb-3 text-xs text-muted-foreground">{bracketSize} entrants · {Math.log2(bracketSize)} rounds · {localPlayerCount} local player{localPlayerCount === 1 ? '' : 's'}, remaining slots filled by CPU opponents</p>
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mb-4 max-w-2xl mx-auto">
             {slots.map((id, i) => {
               const c = ALL.find(x => x.id === id);
@@ -232,6 +282,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
 
         <div className="bg-card border-2 border-accent rounded-xl p-4 text-center">
           <p className="font-heading text-sm text-primary mb-2">{tournamentRoundName(currentRound, bracketSize)}</p>
+          {currentRound === 0 && localPlayerCount === 2 && secondPlayerChar && <p className="mb-3 text-xs text-muted-foreground">Two local entrants: {nameOf(playerChar)} and {nameOf(secondPlayerChar)} · Player 2 uses {secondPlayerController ? 'Controller 2' : 'WASD'}.</p>}
           <div className="flex justify-center items-center gap-4 mb-4">
             <div className="flex flex-col items-center">
               <div className="w-12 h-12 rounded-full" style={{ backgroundColor: ALL.find(c => c.id === playerChar)?.color }} />

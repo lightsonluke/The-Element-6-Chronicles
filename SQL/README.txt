@@ -1,5 +1,6 @@
-Apply Supabase-custom-room-policy-and-settings-fix.sql after the existing party and Custom Room SQL setup. It replaces the self-referencing element6_party_members RLS policies that cause the infinite-recursion error, and adds server-side validation for Custom Room settings.
+Run the SQL files in the included party/Custom Room/Table migration order. The newest additions are:
 
-Apply Supabase-table-match-settings.sql after the Table setup migrations. It adds the host-only Table match-settings RPC used by TheTableLobby.
+1. Supabase-custom-room-policy-and-settings-fix.sql — run last among party and Custom Room policies. Replaces recursive element6_party_members RLS and validates room settings.
+2. Supabase-table-match-settings.sql — run after Table setup; installs the host-only Table match-settings RPC.
 
-The SQL scripts expect the existing Element 6 party, online_custom_rooms, and Table tables. They are migrations for an existing installation, not standalone schema setup.
+Supabase-custom-room-policy-and-settings-fix.sql expects the existing public.element6_party_members and public.online_custom_rooms tables. Supabase-table-match-settings.sql expects public.element6_table_tournaments.

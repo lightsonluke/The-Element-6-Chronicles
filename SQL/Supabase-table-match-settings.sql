@@ -3,7 +3,12 @@ begin;
 
 alter table public.element6_table_tournaments
   add column if not exists match_settings jsonb not null
-  default '{"stocks":1,"matchTime":180,"startingDamage":0}'::jsonb;
+  default '{"stocks":1,"matchTime":180,"startingDamage":0,"maxPlayers":8}'::jsonb;
+alter table public.element6_table_players
+  add column if not exists last_seen_at timestamptz not null default now();
+update public.element6_table_tournaments
+  set match_settings=coalesce(match_settings,'{}'::jsonb) || '{"maxPlayers":8}'::jsonb
+  where not (coalesce(match_settings,'{}'::jsonb) ? 'maxPlayers');
 
 create or replace function public.element6_table_update_match_settings(
   p_tournament_id uuid,
@@ -18,6 +23,7 @@ declare
   v_tournament public.element6_table_tournaments%rowtype;
   v_settings jsonb;
   v_value text;
+  v_humans integer;
 begin
   if v_user is null then raise exception 'Sign in first'; end if;
   if jsonb_typeof(p_settings) is distinct from 'object' or octet_length(p_settings::text)>4000 then
@@ -38,8 +44,13 @@ begin
   v_value := v_settings->>'matchTime';
   if v_value is null or v_value not in ('60','120','180','240','300','480','600') then raise exception 'Match time must be 1 to 10 minutes'; end if;
   v_value := v_settings->>'startingDamage';
-  if v_value is null or v_value not in ('0','50','100','150','200','250') then raise exception 'Starting damage must use a supported 0–250% value'; end if;
-  if exists(select 1 from jsonb_object_keys(p_settings) as keys(key) where keys.key not in ('stocks','matchTime','startingDamage')) then
+  if v_value is null or v_value not in ('0','50','100','150','200','250') then raise exception 'Starting damage must use a supported value from 0 to 250 percent'; end if;
+  v_value := v_settings->>'maxPlayers';
+  if v_value is null or v_value !~ '^[2-8]$' then raise exception 'Active player count must be between 2 and 8'; end if;
+  select count(*)::integer into v_humans from public.element6_table_players
+    where tournament_id=p_tournament_id and last_seen_at>now()-interval '20 seconds';
+  if v_value::integer < coalesce(v_humans,0) then raise exception 'Active player count cannot be lower than the connected human roster'; end if;
+  if exists(select 1 from jsonb_object_keys(p_settings) as keys(key) where keys.key not in ('stocks','matchTime','startingDamage','maxPlayers')) then
     raise exception 'This match setting is not supported';
   end if;
 

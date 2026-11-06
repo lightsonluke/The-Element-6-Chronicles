@@ -63,7 +63,7 @@ begin
 
   v_value := v_settings->>'startingDamage';
   if v_value is not null and v_value not in ('0','50','100','150','200','250') then
-    raise exception 'Starting damage must use a supported 0–250% setting';
+    raise exception 'Starting damage must use a supported value from 0 to 250 percent';
   end if;
 
   v_value := v_settings->>'defaultCPUDifficulty';

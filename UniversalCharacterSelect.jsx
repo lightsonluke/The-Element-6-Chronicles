@@ -349,7 +349,7 @@ export default function UniversalCharacterSelect({
     handicapsEnabled: false,
     handicaps: Array.from({ length: playerCount }, () => ({ damageDealt: 100, damageTaken: 100, knockback: 100, movementSpeed: 100, jumpHeight: 100 })),
     localRules: { stocks: 3, matchTime: Number(settings?.matchTime ?? 240), gravity: 100, jumpHeight: 100, movementSpeed: 100, infiniteJumps: false, infiniteStocks: false, infiniteHP: false, infinitePower: false },
-    slots: Array.from({ length: playerCount }, (_, i) => ({ kind: i === 0 ? 'player' : 'cpu', control: i === 0 ? 'Keyboard · WASD' : 'Keyboard · Arrows' })),
+    slots: Array.from({ length: playerCount }, (_, i) => ({ kind: i === 0 ? 'player' : 'cpu', control: i === 0 ? 'Keyboard · Arrows' : 'Keyboard · WASD' })),
   }));
   const activePlayerCount = Math.max(1, Math.min(8, Number(matchConfig.slotCount) || playerCount));
   useEffect(() => {
