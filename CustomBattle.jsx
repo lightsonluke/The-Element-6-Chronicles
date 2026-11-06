@@ -19,7 +19,6 @@ import { sfx } from './sfx.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { getAccessory, isBehindAccessory, drawAccessory, resolveAccColor } from './cosmetics.js';
 import { drawShikigamiFollower } from './shikigami.js';
-import { useClipRecorder } from './useClipRecorder.js';
 import PauseMenu from './PauseMenu';
 import CharStats from './CharStats';
 import ElementSelect from './ElementSelect';
@@ -311,7 +310,11 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
   const [winTeam, setWinTeam] = useState(null);
   const [countdown, setCountdown] = useState(3);
   const [gameStarted, setGameStarted] = useState(false);
-  useClipRecorder(canvasRef);
+  useEffect(() => {
+    window.__el6GameplayActive = gameStarted && !winner;
+    window.__el6GameplayCaptureActive = gameStarted && !winner;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [gameStarted, winner]);
   const equippedShikigamiRef = useRef(equippedShikigami);
   equippedShikigamiRef.current = equippedShikigami;
 
@@ -696,7 +699,7 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80"> PAUSE (ESC)</button>
       </div>
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={W} height={H} className="border-2 border-border rounded-lg shadow-2xl w-full" style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />
+        <canvas ref={canvasRef} width={W} height={H} data-e6-game-canvas="true" className="el6-match-canvas border-2 border-border rounded-lg shadow-2xl w-full" style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />
       </GameCanvasPortal>
       {countdown > 0 && !settings?.hideCountdown && (<div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg"><span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span></div>)}
       {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={finishQuit} />}

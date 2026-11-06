@@ -25,6 +25,7 @@ import PartyPanel from './PartyPanel.jsx';
 import GameIcon from "./GameIcon.jsx";
 import { getClientRegion } from './hubRegion.js';
 import { readGamepadInput } from './controllerProfiles.js';
+import { getTitleById } from './profileTitles.js';
 
 const HUB_ROOM_NAME = 'Community Hub';
 const HUB_GROUND_Y = 340; // canvas is 420 tall — player stands fully visible, no jump needed
@@ -138,7 +139,12 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
       const cloudName = u.user_metadata?.username || u.user_metadata?.full_name || (u.email || 'Player').split('@')[0];
       setUserId(u.id);
       setUsername(cloudName);
-      setTitle(u.user_metadata?.profile_title || '');
+       let titleId = u.user_metadata?.profile_title || '';
+       try {
+         const { data: profile } = await supabase.from('player_profiles').select('profile_title').eq('user_id', u.id).maybeSingle();
+         if (profile?.profile_title !== undefined) titleId = profile.profile_title || '';
+       } catch {}
+       setTitle(getTitleById(titleId)?.name || '');
       try {
         const entries = await db.entities.LeaderboardEntry.filter({ user_id: u.id });
         if (entries[0]) {
@@ -217,7 +223,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
         const others = (all || []).filter(p => p.user_id !== userId);
         setPlayers(others.map(p => ({
           id: p.user_id, name: p.username || 'Player', color: p.color || '#88ff88', charId: p.character_id || 'yellow',
-          title: p.title || '', x: Number(p.x || 200), y: Number(p.y || HUB_GROUND_Y), skin: p.skin || null,
+           title: getTitleById(p.title)?.name || '', x: Number(p.x || 200), y: Number(p.y || HUB_GROUND_Y), skin: p.skin || null,
           acc: p.accessory || null, killfx: p.killfx || 'none', emote: p.emote || null, emoteT: p.emote_t || 0,
           level: Number(p.level || 1),
         })));
@@ -255,21 +261,38 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
   useEffect(() => {
     if (!userId) return;
     let seenIds = new Set();
+    let acceptedInitialized = false;
+    let seenAcceptedIds = new Set();
     const poll = async () => {
       try {
-        const invites = await db.entities.PartyInvite.filter({ to_user_id: userId, status: 'pending' });
+        const { data: invites, error: inviteError } = await supabase.rpc('element6_list_my_party_invites');
+        if (inviteError) throw inviteError;
         const fresh = (invites || []).find(i => !seenIds.has(i.id));
         if (fresh) {
           seenIds.add(fresh.id);
           setPartyInviteToast(fresh);
           sfx.notification();
         }
-        // Check accepted invites
-        const accepted = await db.entities.PartyInvite.filter({ from_user_id: userId, status: 'accepted' });
-        const freshAccepted = (accepted || []).find(i => !seenIds.has(`a_${i.id}`));
+        (invites || []).forEach(i => seenIds.add(i.id));
+
+        // Invitation state is read from the authoritative party table so the
+        // Hub and Party page cannot drift into separate memberships.
+        const { data: accepted, error: acceptedError } = await supabase.from('element6_party_invites')
+          .select('id,to_user_id,created_at')
+          .eq('from_user_id', userId)
+          .eq('status', 'accepted')
+          .order('created_at', { ascending: false })
+          .limit(10);
+        if (acceptedError) throw acceptedError;
+        if (!acceptedInitialized) {
+          (accepted || []).forEach(i => seenAcceptedIds.add(i.id));
+          acceptedInitialized = true;
+        }
+        const freshAccepted = (accepted || []).find(i => !seenAcceptedIds.has(i.id));
         if (freshAccepted) {
-          seenIds.add(`a_${freshAccepted.id}`);
-          setJoinToast({ name: freshAccepted.to_username || 'Player', text: 'joined your party!' });
+          seenAcceptedIds.add(freshAccepted.id);
+          const member = playersRef.current.find(p => p.id === freshAccepted.to_user_id);
+          setJoinToast({ name: member?.name || 'A friend', text: 'joined your party.' });
           sfx.notification();
           setTimeout(() => setJoinToast(null), 3500);
         }
@@ -562,7 +585,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
   // Draws aura + ground pool, then the character body, then a rounded nametag
   // showing char name + level ABOVE the username, then emote as a speech bubble.
   const drawHubChar = (ctx, x, y, color, facing, frame, walking, username, charName, charLevel, opts = {}) => {
-    const { statue = false, emote = null, emoteT = 0, emoteMaxT = 0, charData = null, rigMotion = null } = opts;
+    const { statue = false, emote = null, emoteT = 0, emoteMaxT = 0, charData = null, rigMotion = null, title = '' } = opts;
     const drawColor = statue ? '#b0b0b0' : color;
 
     // ── ground light pool + aura ──
@@ -596,13 +619,15 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
       ctx.font = 'bold 11px Orbitron';
       const userW = username ? ctx.measureText(username).width + 14 : 0;
       const tagW = Math.max(charW, userW);
-      const tagH = (username ? 30 : 15);
-      const tagY = y - 108;
-      const tagX = x - tagW / 2;
+      ctx.font = '600 8px Orbitron';
+      const titleW = title ? ctx.measureText(title).width + 14 : 0;
+      const tagH = title ? 45 : (username ? 30 : 15);
+      const tagY = y - (title ? 128 : 108);
+      const tagX = x - Math.max(tagW, titleW) / 2;
 
       // Background pill
       ctx.fillStyle = 'rgba(0,0,0,0.75)';
-      roundRect(ctx, tagX, tagY, tagW, tagH, 8); ctx.fill();
+      roundRect(ctx, tagX, tagY, Math.max(tagW, titleW), tagH, 8); ctx.fill();
 
       // Char name + level (top line, colored)
       ctx.fillStyle = color;
@@ -613,7 +638,12 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
       if (username) {
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 11px Orbitron';
-        ctx.fillText(username, x, tagY + 25);
+        ctx.fillText(username, x, tagY + (title ? 25 : 25));
+      }
+      if (title) {
+        ctx.fillStyle = '#f1c96b';
+        ctx.font = '600 8px Orbitron';
+        ctx.fillText(title, x, tagY + 39, Math.max(90, Math.max(tagW, titleW) - 12));
       }
     }
 
@@ -726,12 +756,12 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
         const pc = ALL.find(ch => ch.id === p.charId) || customCharsData[p.charId] || { color: p.color || '#88ff88', name: p.charId };
         const pLevel = p.level || 1;
         const pFacing = (targetX - prevRX) > 0 ? 1 : (targetX - prevRX) < -0.1 ? -1 : 1;
-        drawHubChar(ctx, x, HUB_GROUND_Y, pc.color || p.color, pFacing, s.frame, walking, p.name, pc.name || p.charId, pLevel, { charData: pc, emote: p.emote, emoteT: p.emoteT, emoteMaxT: 80, rigMemo: (p._rigMemo || (p._rigMemo = {})), rigMotion: { vx: dx * 0.4, vy: 0, grounded: true, memo: (p._rigMemo || (p._rigMemo = {})) } });
+        drawHubChar(ctx, x, HUB_GROUND_Y, pc.color || p.color, pFacing, s.frame, walking, p.name, pc.name || p.charId, pLevel, { title: p.title, charData: pc, emote: p.emote, emoteT: p.emoteT, emoteMaxT: 80, rigMemo: (p._rigMemo || (p._rigMemo = {})), rigMotion: { vx: dx * 0.4, vy: 0, grounded: true, memo: (p._rigMemo || (p._rigMemo = {})) } });
       });
       // self
       const selfChar = ALL.find(c => c.id === favId) || customCharsData[favId] || { color: charColor, name: favId };
       const selfLevel = getCharLevelData(progress, favId)?.level || 1;
-      drawHubChar(ctx, s.px - s.cam, s.py, charColor, s.facing, s.frame, (left || right), username, selfChar.name || favId, selfLevel, { emote: s.emote, emoteT: s.emoteT, emoteMaxT: s.emoteMaxT, charData: selfChar, rigMemo: (s.rigMemo || (s.rigMemo = {})), rigMotion: { vx: (right ? 2 : 0) - (left ? 2 : 0), vy: s.vy || 0, grounded: !!s.grounded, memo: (s.rigMemo || (s.rigMemo = {})) } });
+      drawHubChar(ctx, s.px - s.cam, s.py, charColor, s.facing, s.frame, (left || right), username, selfChar.name || favId, selfLevel, { title, emote: s.emote, emoteT: s.emoteT, emoteMaxT: s.emoteMaxT, charData: selfChar, rigMemo: (s.rigMemo || (s.rigMemo = {})), rigMotion: { vx: (right ? 2 : 0) - (left ? 2 : 0), vy: s.vy || 0, grounded: !!s.grounded, memo: (s.rigMemo || (s.rigMemo = {})) } });
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -801,7 +831,7 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
         <button onClick={() => setShowOnlineUsers(true)} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="users" size={14} /> ONLINE</button>
         <button onClick={refreshHub} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon icon="redo" size={14} /> REFRESH</button>
         <button onClick={() => setShowTradesGifts(true)} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon icon="package" size={14} /> TRADES</button>
-        <button onClick={() => setShowParty(true)} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon icon="users" size={14} /> PARTY{party ? ` (${(party.member_ids || []).length})` : ''}</button>
+        <button onClick={() => setShowParty(true)} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon icon="users" size={14} /> PARTY{party ? ` (${party.member_count || 0}/8)` : ''}</button>
         <button onClick={() => setShowChat(true)} className="px-2.5 py-1 bg-primary text-primary-foreground rounded font-heading text-xs"><GameIcon icon="comment" size={14} /> CHAT</button>
         <button onClick={() => onNavigate?.('friends')} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="users" size={14} /> FRIENDS</button>
         <button onClick={onBack} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded font-heading text-sm"><GameIcon icon="info" size={14} /> BACK</button>
@@ -910,21 +940,19 @@ export default function CommunityHub({ progress, userProfile, customCharsData = 
           <div className="flex gap-2">
             <button onClick={async () => {
               try {
-                await db.entities.PartyInvite.update(partyInviteToast.id, { status: 'accepted' });
-                const party = await db.entities.Party.get(partyInviteToast.party_id);
-                if (party) {
-                  const newIds = [...new Set([...(party.member_ids || []), userId])];
-                  const newNames = [...new Set([...(party.member_names || []), username])];
-                  await db.entities.Party.update(party.id, { member_ids: newIds, member_names: newNames });
-                }
+                const { error } = await supabase.rpc('element6_respond_party_invite', { p_invite_id: partyInviteToast.id, p_accept: true });
+                if (error) throw error;
                 setPartyInviteToast(null);
                 sfx.purchaseSuccess();
-              } catch { sfx.warning(); }
+              } catch (error) { setJoinToast({ name: 'Party invite', text: error?.message || 'could not be accepted.' }); sfx.warning(); }
             }} className="flex-1 px-3 py-1 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon icon="check" size={14} /> JOIN</button>
             <button onClick={async () => {
-              try { await db.entities.PartyInvite.update(partyInviteToast.id, { status: 'declined' }); } catch {}
-              setPartyInviteToast(null);
-              sfx.click();
+              try {
+                const { error } = await supabase.rpc('element6_respond_party_invite', { p_invite_id: partyInviteToast.id, p_accept: false });
+                if (error) throw error;
+                setPartyInviteToast(null);
+                sfx.click();
+              } catch (error) { setJoinToast({ name: 'Party invite', text: error?.message || 'could not be declined.' }); sfx.warning(); }
             }} className="flex-1 px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs"><GameIcon icon="close" size={14} /> DECLINE</button>
           </div>
         </div>

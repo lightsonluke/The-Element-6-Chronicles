@@ -149,7 +149,9 @@ body { min-height: 100dvh; overflow-x: hidden; overflow-y: auto; }
   min-height: 0 !important;
   aspect-ratio: 16 / 9 !important;
   flex: 0 0 auto !important;
-  object-fit: fill !important;
+  /* Fill the display without changing the world’s aspect ratio. This can crop
+     the outermost scene edge until a renderer expands its camera bounds. */
+  object-fit: cover !important;
   z-index: 1 !important;
   pointer-events: auto !important;
   margin: 0 !important;
@@ -217,16 +219,29 @@ input.el6-controller-focus { filter: brightness(1.12); }
 /* Character-select screens must remain independently scrollable so the bottom
    START MATCH button is reachable even while the global page is locked. */
 .el6-character-select-scroll {
-  height: calc(100dvh - 24px) !important;
-  max-height: calc(100dvh - 24px) !important;
+  height: calc(var(--e6-visual-viewport-height, 100dvh) - max(48px, env(safe-area-inset-top) + env(safe-area-inset-bottom) + 24px)) !important;
+  max-height: calc(var(--e6-visual-viewport-height, 100dvh) - max(48px, env(safe-area-inset-top) + env(safe-area-inset-bottom) + 24px)) !important;
   overflow-y: scroll !important;
   overflow-x: hidden !important;
   overscroll-behavior: contain !important;
   scrollbar-width: auto !important;
-  padding-bottom: 120px !important;
-  scroll-padding-bottom: 120px !important;
+  padding-bottom: max(8rem, calc(env(safe-area-inset-bottom) + 7rem)) !important;
+  scroll-padding-bottom: max(8rem, calc(env(safe-area-inset-bottom) + 7rem)) !important;
   box-sizing: border-box !important;
   min-height: 0 !important;
+}
+.el6-character-select-scroll > .e6-character-select-start {
+  position: sticky;
+  bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 20;
+  width: 100%;
+  flex: 0 0 auto;
+  padding: .65rem .5rem max(.65rem, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, hsl(var(--background) / 0), hsl(var(--background) / .98) 22%);
+}
+.el6-character-select-scroll > .e6-character-select-start button {
+  min-height: 48px;
+  scroll-margin-block: 1rem;
 }
 .el6-character-select-scroll::-webkit-scrollbar { width: 10px; }
 .el6-character-select-scroll::-webkit-scrollbar-thumb {
@@ -869,7 +884,7 @@ body.el6-gameplay-active {
   max-width: none !important;
   max-height: none !important;
   aspect-ratio: auto !important;
-  object-fit: fill !important;
+  object-fit: cover !important;
   object-position: center center !important;
   background: transparent !important;
   border: 0 !important;
@@ -925,7 +940,7 @@ body.el6-gameplay-active {
   max-width: none !important;
   max-height: none !important;
   aspect-ratio: auto !important;
-  object-fit: fill !important;
+  object-fit: cover !important;
   object-position: center center !important;
   border: 0 !important;
   border-radius: 0 !important;
@@ -958,7 +973,7 @@ body.el6-gameplay-active {
   max-width: none !important;
   max-height: none !important;
   aspect-ratio: auto !important;
-  object-fit: fill !important;
+  object-fit: cover !important;
   object-position: center center !important;
   border: 0 !important;
   border-radius: 0 !important;
@@ -1699,6 +1714,30 @@ html:not(.dark) .e6-unified-ui {
 .e6-unified-ui .e6-mode-tile { min-height: 8.4rem !important; padding: 1.05rem 1.15rem; }
 .e6-unified-ui .e6-mode-tile-mark { width: 3.25rem; height: 3.25rem; border-radius: 1.15rem; }
 .e6-unified-ui :is(.e6-mode-browser, .e6-settings-screen, .e6-storefront-screen, .e6-season-pass-screen, .e6-character-select-screen) :is(h1, h2) { text-shadow: none; }
+
+/* Keep the primary character-select action in the visible viewport even when
+   the selector content is taller than a phone, tablet, or embedded window. */
+.el6-character-select-scroll > .e6-character-select-start {
+  position: fixed !important;
+  left: max(0px, env(safe-area-inset-left)) !important;
+  right: max(0px, env(safe-area-inset-right)) !important;
+  bottom: 0 !important;
+  z-index: 40 !important;
+  width: min(100%, 90rem) !important;
+  margin-inline: auto !important;
+  box-sizing: border-box !important;
+  padding: .55rem .75rem max(.65rem, env(safe-area-inset-bottom)) !important;
+  background: linear-gradient(180deg, hsl(var(--background) / 0), hsl(var(--background) / .97) 28%) !important;
+  pointer-events: none;
+}
+.el6-character-select-scroll > .e6-character-select-start > * {
+  pointer-events: auto;
+}
+.el6-character-select-scroll > .e6-character-select-start button {
+  min-height: 3rem !important;
+  scroll-margin-block: 1rem;
+}
+
 .el6-global-pause-layer, .el6-global-pause-button-layer { --e6-radius-panel: 1.35rem; --e6-radius-control: 999px; color: hsl(var(--foreground)); }
 .el6-global-pause-layer :is(.bg-card, [class*='bg-card/'], .bg-popover),
 .el6-global-pause-layer :is(.rounded-lg.border, .rounded-xl.border, .rounded-2xl.border) { border-radius: var(--e6-radius-panel) !important; }
@@ -2022,3 +2061,61 @@ body { font-family: var(--font-body); background-color: hsl(var(--background)); 
 
 /* Keep the shared atmospheric wash aligned to the viewport at any content height. */
 .e6-unified-ui::before { position: fixed !important; inset: 0 !important; pointer-events: none !important; z-index: -1 !important; }
+
+.e6-home-brand small { color: rgba(255,255,255,.68); font-size: .72rem; letter-spacing: .24em; }
+.e6-character-select-start { isolation: isolate; }
+.e6-character-select-start button { box-shadow: 0 12px 35px hsl(var(--primary) / .28); }
+.e6-story-character-start { position: sticky; bottom: 0; z-index: 5; background: linear-gradient(180deg, rgba(12,8,24,.12), rgba(12,8,24,.96) 30%); padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+.e6-story-character-start button { min-height: 48px; flex: 0 0 auto; }
+.e6-story-character-select { max-height: calc(var(--e6-visual-viewport-height, 100dvh) - 1rem) !important; }
+
+.e6-controller-keyboard-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483600;
+  display: grid;
+  place-items: end center;
+  padding: max(.75rem, env(safe-area-inset-top)) max(.75rem, env(safe-area-inset-right)) max(.75rem, env(safe-area-inset-bottom)) max(.75rem, env(safe-area-inset-left));
+  background: rgba(5, 4, 15, .72);
+  backdrop-filter: blur(10px);
+}
+.e6-controller-keyboard {
+  width: min(100%, 58rem);
+  max-height: calc(100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  padding: clamp(.8rem, 2vw, 1.25rem);
+  border: 1px solid hsl(var(--primary) / .58);
+  border-radius: 1.6rem;
+  color: hsl(var(--foreground));
+  background: linear-gradient(145deg, hsl(var(--card) / .98), hsl(var(--background) / .98));
+  box-shadow: 0 28px 100px rgba(0,0,0,.62), 0 0 42px hsl(var(--primary) / .18);
+}
+.e6-controller-keyboard-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.e6-controller-keyboard-header > div { min-width: 0; display: grid; gap: .2rem; }
+.e6-controller-keyboard-header span { color: hsl(var(--primary)); font: 700 .58rem Orbitron, sans-serif; letter-spacing: .16em; }
+.e6-controller-keyboard-header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 1rem Rajdhani, sans-serif; }
+.e6-controller-keyboard-header button { min-width: 44px; min-height: 44px; border: 1px solid hsl(var(--border)); border-radius: 999px; background: hsl(var(--secondary)); }
+.e6-controller-keyboard-preview { min-height: 3.25rem; display: flex; align-items: center; margin: .8rem 0; padding: .6rem .9rem; overflow-wrap: anywhere; border: 1px solid hsl(var(--border)); border-radius: 1rem; background: hsl(var(--background) / .72); font: 600 1.15rem 'DM Sans', sans-serif; }
+.e6-controller-keyboard-preview span { color: hsl(var(--muted-foreground)); }
+.e6-controller-keyboard-keys { display: grid; gap: .45rem; }
+.e6-controller-keyboard-row { display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(.2rem, .7vw, .45rem); }
+.e6-controller-keyboard-row button { min-width: 0; min-height: clamp(40px, 6vh, 54px); flex: 1 1 0; border: 1px solid hsl(var(--border)); border-radius: .8rem; color: hsl(var(--foreground)); background: hsl(var(--secondary) / .9); font: 700 clamp(.78rem, 2vw, 1rem) 'DM Sans', sans-serif; touch-action: manipulation; }
+.e6-controller-keyboard-row button:hover, .e6-controller-keyboard-row button:focus-visible { border-color: hsl(var(--accent)); background: hsl(var(--primary) / .34); outline: 3px solid hsl(var(--accent)); outline-offset: 2px; }
+.e6-controller-keyboard-actions button { flex: 1 1 auto; padding-inline: .7rem; font: 700 .7rem Orbitron, sans-serif; }
+.e6-controller-keyboard-actions .is-done { color: hsl(var(--primary-foreground)); background: hsl(var(--primary)); }
+.e6-controller-keyboard-hint { margin: .7rem 0 0; color: hsl(var(--muted-foreground)); font: 500 .72rem 'DM Sans', sans-serif; text-align: center; }
+@media (max-width: 560px) {
+  .e6-controller-keyboard-row { gap: .2rem; }
+  .e6-controller-keyboard-row button { border-radius: .62rem; }
+  .e6-controller-keyboard-actions button { min-width: 52px; padding-inline: .4rem; font-size: .57rem; }
+  .e6-character-select-start > button { width: min(100%, 24rem); }
+  .e6-story-character-start { flex-wrap: wrap; }
+  .e6-story-character-start button { width: 100%; }
+}
+.e6-pass-track-tabs { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem;max-width:54rem;margin:0 auto;width:100%; }
+.e6-pass-track-tabs button { min-height:3.8rem;padding:.7rem 1rem;border:1px solid hsl(var(--border));border-radius:1rem;background:linear-gradient(145deg,hsl(var(--card)),hsl(var(--background)));color:hsl(var(--muted-foreground));font:700 .72rem/1.2 var(--font-heading,'Orbitron',sans-serif);letter-spacing:.08em;text-align:left;transition:border-color .18s ease,background .18s ease,color .18s ease,transform .18s ease; }
+.e6-pass-track-tabs button:hover { transform:translateY(-1px);border-color:var(--pass-accent);color:hsl(var(--foreground)); }
+.e6-pass-track-tabs button.is-active { border-color:var(--pass-accent);background:linear-gradient(145deg,color-mix(in srgb,var(--pass-accent) 18%,hsl(var(--card))),hsl(var(--card)));color:hsl(var(--foreground));box-shadow:0 0 1.4rem color-mix(in srgb,var(--pass-accent) 16%,transparent); }
+.e6-pass-track-tabs small { display:block;margin-top:.32rem;color:hsl(var(--muted-foreground));font:500 .64rem/1.35 var(--font-body,'Rajdhani',sans-serif);letter-spacing:.02em; }
+.e6-pass-claim-error { margin:.5rem 0;padding:.75rem 1rem;border:1px solid hsl(var(--destructive)/.5);border-radius:.8rem;background:hsl(var(--destructive)/.08);color:hsl(var(--destructive));font-size:.82rem; }
+.e6-pass-tier-claim:disabled { opacity:.55;cursor:wait; }

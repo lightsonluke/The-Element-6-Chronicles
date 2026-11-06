@@ -1,6 +1,6 @@
 {
-  "name": "The Element 6 — Heroes of Color",
-  "short_name": "Element 6",
+  "name": "The Chronicles",
+  "short_name": "The Chronicles",
   "description": "A 2D platform fighter where every character wields a unique elemental power. Battle, soccer, story, and online modes.",
   "start_url": "/",
   "scope": "/",
@@ -9,6 +9,6 @@
   "background_color": "#06040f",
   "theme_color": "#7744FF",
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }

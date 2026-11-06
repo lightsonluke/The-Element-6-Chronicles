@@ -19,7 +19,6 @@ import { music } from './music.js';
 import { applyElement } from './elements.js';
 import { sfx } from './sfx.js';
 import PauseMenu from './PauseMenu.jsx';
-import { useClipRecorder } from './useClipRecorder.js';
 import { SeqNum, SnapshotBuffer, ConnectionState, NetDiagnostics, serializeFighter, applyRemoteHit } from './netCore.js';
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
@@ -54,7 +53,6 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
   const [connected, setConnected] = useState(true);
   const [reconnecting, setReconnecting] = useState(false);
   const [showDiag, setShowDiag] = useState(false);
-  useClipRecorder(canvasRef);
 
   const isHost = role === 'host';
   const myCharData = getCharData(myChar);
@@ -418,8 +416,9 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
 
   useEffect(() => {
     window.__el6GameplayActive = !winner;
-    return () => { window.__el6GameplayActive = false; };
-  }, [winner]);
+    window.__el6GameplayCaptureActive = gameStarted && !winner;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [gameStarted, winner]);
 
   if (winner) {
     const won = winner === 'me' || winner === 'me_disconnect';
@@ -444,7 +443,7 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80"> PAUSE (ESC)</button>
       </div>
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={W} height={H}
+        <canvas ref={canvasRef} width={W} height={H} data-e6-game-canvas="true"
                 className="el6-match-canvas"
                 style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
               />

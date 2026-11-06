@@ -874,7 +874,7 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
     return (
       <div className="flex flex-col items-center gap-4 w-full max-w-2xl">
         {humanCount > 0 && (
-          <button onClick={simulateToNextHumanGroup} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-xs hover:opacity-80 shadow-md w-full"><GameIcon icon="warning" size={14} /> SIMULATE TO NEXT HUMAN MATCH</button>
+          <button onClick={simulateToNextHumanGroup} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-xs hover:opacity-80 shadow-md w-full"><GameIcon icon="game" size={14} /> SIMULATE TO NEXT HUMAN MATCH</button>
         )}
         <div className="w-full flex justify-between items-center">
           <button onClick={saveAndExit} className="px-3 py-1.5 bg-destructive/70 text-destructive-foreground rounded font-heading text-xs"><GameIcon icon="save" size={14} /> SAVE &amp; EXIT</button>
@@ -910,7 +910,7 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
               className="px-6 py-3 bg-primary/80 text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="eye" size={14} /> WATCH</button>
           )}
           <button onClick={handleSimulate}
-            className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="warning" size={14} /> SIMULATE</button>
+            className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="game" size={14} /> SIMULATE</button>
         </div>
         <div className="w-full max-w-3xl">
           <p className="text-[9px] text-muted-foreground text-center mb-1">ALL {participants.length} PARTICIPANTS</p>
@@ -1112,7 +1112,7 @@ export default function GroupTournament({ onBack, onEnd, onShop, unlockedIds, fa
               className="px-6 py-3 bg-primary/80 text-primary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="eye" size={14} /> WATCH</button>
           )}
           <button onClick={handleKnockoutSim}
-            className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="warning" size={14} /> SIMULATE</button>
+            className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-90"><GameIcon icon="game" size={14} /> SIMULATE</button>
         </div>
         <div className="w-full max-w-2xl">
           <p className="text-[9px] text-muted-foreground text-center mb-1">ALL {participants.length} PARTICIPANTS</p>

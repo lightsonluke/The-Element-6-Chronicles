@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getClipBlob, getClipPreviewBlob, deleteClipBlob, deleteAllReplays, listClipMetadata } from './clipStorage.js';
+import { retryReplayMP4, isReplayConversionActive } from './matchReplayRecorder.js';
 import GameIcon from './GameIcon.jsx';
 
 const DEFAULT_FPS = 60;
@@ -32,6 +33,7 @@ export default function ClipsScreen({
   const clips = Array.isArray(externalClips) ? externalClips : storedClips;
   const [sources, setSources] = useState({});
   const [failed, setFailed] = useState({});
+  const [retryingReplay, setRetryingReplay] = useState(null);
   const [activeViewer, setActiveViewer] = useState(null);
   const [section, setSection] = useState('clips');
   const [speed, setSpeed] = useState(1);
@@ -56,6 +58,9 @@ export default function ClipsScreen({
     refresh();
     const onRefresh = () => refresh();
     window.addEventListener('clipSaved', onRefresh);
+    window.addEventListener('replaySaved', onRefresh);
+    window.addEventListener('replaySaveFailed', onRefresh);
+    window.addEventListener('replayProcessing', onRefresh);
     window.addEventListener('focus', onRefresh);
     window.addEventListener('pageshow', onRefresh);
     document.addEventListener('visibilitychange', onRefresh);
@@ -63,6 +68,9 @@ export default function ClipsScreen({
     return () => {
       alive = false;
       window.removeEventListener('clipSaved', onRefresh);
+      window.removeEventListener('replaySaved', onRefresh);
+      window.removeEventListener('replaySaveFailed', onRefresh);
+      window.removeEventListener('replayProcessing', onRefresh);
       window.removeEventListener('focus', onRefresh);
       window.removeEventListener('pageshow', onRefresh);
       document.removeEventListener('visibilitychange', onRefresh);
@@ -77,6 +85,10 @@ export default function ClipsScreen({
       const next = {};
 
       for (const clip of metadata) {
+        // Keep failed/processing replay sources available to the library. The
+        // card uses status to suppress playback/download and offers retry; if
+        // these rows are skipped here, a retained WebM source can never be
+        // reached by the retry action after navigation or refresh.
         try {
           const blob = await getClipBlob(clip.id);
           const previewBlob = await getClipPreviewBlob(clip.id).catch(() => blob);
@@ -171,6 +183,7 @@ export default function ClipsScreen({
   };
 
   const download = clip => {
+    if (clip.replay && clip.status && clip.status !== 'ready') return;
     const source = sources[clip.id];
     if (!source?.blob) return;
 
@@ -184,6 +197,19 @@ export default function ClipsScreen({
     a.remove();
 
     setTimeout(() => URL.revokeObjectURL(url), 3000);
+  };
+
+  const retryReplay = async clip => {
+    if (!clip?.replay || retryingReplay) return;
+    setRetryingReplay(clip.id);
+    setFailed(prev => { const next = { ...prev }; delete next[clip.id]; return next; });
+    try {
+      await retryReplayMP4(clip.id);
+    } catch (error) {
+      setFailed(prev => ({ ...prev, [clip.id]: error?.message || 'MP4 conversion could not be retried.' }));
+    } finally {
+      setRetryingReplay(null);
+    }
   };
 
   const remove = async id => {
@@ -256,7 +282,7 @@ export default function ClipsScreen({
         </div>
 
         <p className="text-xs text-muted-foreground font-body mb-5">
-          Clips and automatic Match Replays are saved locally in your browser.
+          Clips and automatic Match Replays are saved locally in this browser. Enable Clips in Settings, then use Save Clip in a match pause menu or press F8 during gameplay.
         </p>
 
         {visibleClips.length === 0 ? (
@@ -267,7 +293,9 @@ export default function ClipsScreen({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {visibleClips.slice(0, section === 'replays' ? 50 : 30).map(clip => {
               const source = sources[clip.id];
-              const videoReady = !!source?.blob;
+              const replayProcessing = clip.replay && clip.status === 'processing' && isReplayConversionActive(clip.id);
+              const replayNeedsRetry = clip.replay && clip.status !== 'ready' && !replayProcessing;
+              const videoReady = !!source?.blob && !replayNeedsRetry;
 
               return (
                 <div
@@ -329,6 +357,26 @@ export default function ClipsScreen({
                         
                       </button>
                     </div>
+                  ) : replayProcessing ? (
+                    <div className="w-full rounded-lg bg-black/70 flex flex-col items-center justify-center gap-3 p-5 text-center" style={{ aspectRatio: '16 / 9' }} role="status">
+                      <div className="h-7 w-7 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />
+                      <p className="text-sm font-heading text-foreground">Finalizing match replay as MP4</p>
+                      <p className="text-xs text-muted-foreground">The captured source is saved while conversion finishes.</p>
+                    </div>
+                  ) : replayNeedsRetry ? (
+                    <div className="w-full rounded-lg bg-black/70 flex flex-col items-center justify-center gap-3 p-5 text-center" style={{ aspectRatio: '16 / 9' }}>
+                      <p className="text-sm font-heading text-foreground">MP4 conversion failed</p>
+                      <p className="max-w-md text-xs text-muted-foreground">The original match recording is retained. Retry conversion to create a playable MP4.</p>
+                      <button
+                        type="button"
+                        disabled={retryingReplay === clip.id}
+                        onClick={() => retryReplay(clip)}
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-xs disabled:opacity-50"
+                      >
+                        {retryingReplay === clip.id ? 'CONVERTING…' : 'RETRY MP4 CONVERSION'}
+                      </button>
+                      {failed[clip.id] && <p role="alert" className="text-xs text-destructive">{failed[clip.id]}</p>}
+                    </div>
                   ) : (
                     <div
                       className="w-full rounded-lg bg-black flex items-center justify-center text-xs text-muted-foreground"
@@ -338,7 +386,7 @@ export default function ClipsScreen({
                     </div>
                   )}
 
-                  {failed[clip.id] && (
+                  {failed[clip.id] && !replayNeedsRetry && (
                     <div className="mt-2 p-2 rounded bg-destructive/10 text-destructive text-[10px]">
                       This saved recording could not be decoded by the browser.
                     </div>

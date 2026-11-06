@@ -106,7 +106,7 @@ export default function CommunityCampaignBrowser({ onBack, onPlay }) {
                 <button onClick={() => play(c)} className="flex-1 px-2 py-1.5 bg-accent text-accent-foreground rounded font-heading text-xs"><GameIcon icon="play" size={14} /> PLAY</button>
                 <button onClick={() => like(c)} disabled={(c.liked_by || []).includes(userId)} className="px-2 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs disabled:opacity-40"><GameIcon icon="heart" size={14} /></button>
                 <button onClick={() => fav(c)} className="px-2 py-1.5 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="star" size={14} /></button>
-                <button onClick={() => report(c)} disabled={(c.reporters || []).includes(userId)} className="px-2 py-1.5 bg-destructive text-destructive-foreground rounded font-heading text-xs disabled:opacity-40"><GameIcon icon="warning" size={14} /></button>
+                <button onClick={() => report(c)} disabled={(c.reporters || []).includes(userId)} className="px-2 py-1.5 bg-destructive text-destructive-foreground rounded font-heading text-xs disabled:opacity-40"><GameIcon icon="flag" size={14} /></button>
               </div>
             </div>
           ))}

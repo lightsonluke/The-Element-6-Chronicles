@@ -25,6 +25,9 @@ let saveQueue = Promise.resolve();
 let chunks = [];
 let chunkBytes = 0;
 let recordingStartedAt = 0;
+let activeCaptureMs = 0;
+let activeSegmentStartedAt = null;
+let capturePaused = false;
 let lastDataAt = 0;
 let recorderMime = 'video/webm';
 let audioTrackAttached = false;
@@ -63,7 +66,37 @@ function rebuildBlob() {
   return blob.size >= MIN_CHUNK_BYTES ? blob : null;
 }
 
-function trimBuffer(referenceTime = performance.now()) {
+function captureClock(now = performance.now()) {
+  return activeCaptureMs + (!capturePaused && activeSegmentStartedAt !== null ? Math.max(0, now - activeSegmentStartedAt) : 0);
+}
+
+export function setClipRecorderPaused(paused) {
+  const nextPaused = Boolean(paused);
+  if (!recording || capturePaused === nextPaused) return;
+  const now = performance.now();
+  if (nextPaused) {
+    if (activeSegmentStartedAt !== null) activeCaptureMs += Math.max(0, now - activeSegmentStartedAt);
+    activeSegmentStartedAt = null;
+    capturePaused = true;
+    const current = recorder;
+    if (current?.state === 'recording') {
+      // Close the current segment before pausing so the last fraction of a
+      // second remains available to a clip requested during the pause.
+      requestRecorderData().finally(() => {
+        if (!capturePaused || recorder !== current || current.state !== 'recording') return;
+        try { current.pause(); } catch (error) { log('Could not pause clip capture', error); }
+      });
+    }
+    return;
+  }
+  capturePaused = false;
+  activeSegmentStartedAt = now;
+  if (recorder?.state === 'paused') {
+    try { recorder.resume(); } catch (error) { log('Could not resume clip capture', error); }
+  }
+}
+
+function trimBuffer(referenceTime = captureClock()) {
   // MediaRecorder's first chunk contains the WebM initialization/header data.
   // Keep that chunk forever and rotate only the media chunks after it. Removing
   // the first chunk makes the remaining WebM invalid, which caused saves to
@@ -124,7 +157,7 @@ function attachRecorderHandlers(instance, myGeneration) {
   instance.ondataavailable = event => {
     if (myGeneration !== generation) return;
     if (!event.data || event.data.size <= 0) return;
-    const now = performance.now();
+    const now = captureClock();
     chunks.push({ data: event.data, time: now, size: event.data.size });
     chunkBytes += event.data.size;
     lastDataAt = now;
@@ -148,6 +181,9 @@ function startRecorder() {
     recorder = instance;
     recorderMime = instance.mimeType || mime || 'video/webm';
     recordingStartedAt = performance.now();
+    activeCaptureMs = 0;
+    activeSegmentStartedAt = recordingStartedAt;
+    capturePaused = false;
     lastDataAt = 0;
     chunks = [];
     chunkBytes = 0;
@@ -184,12 +220,12 @@ async function makeSnapshot() {
   if (!recorder || recorder.state === 'inactive') return null;
   attachRecordingAudioTrack();
   await requestRecorderData();
-  const now = performance.now();
+  const now = captureClock();
   trimBuffer(now);
   const blob = rebuildBlob();
   if (!blob) return null;
-  const mediaStart = chunks[1]?.time ?? chunks[0]?.time ?? recordingStartedAt;
-  const duration = Math.min(CLIP_SECONDS, Math.max(0.25, (now - Math.max(recordingStartedAt, mediaStart)) / 1000));
+  const mediaStart = chunks[1]?.time ?? chunks[0]?.time ?? 0;
+  const duration = Math.min(CLIP_SECONDS, Math.max(0.25, (now - mediaStart) / 1000));
   return { blob, duration };
 }
 
@@ -263,30 +299,21 @@ export function saveClip() {
     const snapshot = await makeSnapshot();
     if (!snapshot) return null;
 
-    // Keep the native WebM as the reliable source/preview, then use Mediabunny
-    // to create a real H.264/AAC MP4. There is no filename-only renaming.
-    let outputBlob = snapshot.blob;
-    let outputMime = snapshot.blob.type || recorderMime || 'video/webm';
-    let outputExtension = 'webm';
-    try {
-      const mp4 = await convertToMP4(snapshot.blob);
-      if (mp4?.size >= 1000) {
-        outputBlob = mp4;
-        outputMime = 'video/mp4';
-        outputExtension = 'mp4';
-      }
-    } catch (error) {
-      // A valid WebM is still a successful clip. This prevents the old
-      // "CLIP SAVE FAILED" behavior when the browser cannot encode H.264/AAC.
-      log('Mediabunny MP4 conversion unavailable; keeping the valid WebM clip', error);
+    // Only publish a clip when the browser has produced a real MP4. On a
+    // conversion failure, keep the rolling source chunks in memory so the
+    // player can retry while the gameplay session remains active.
+    const outputBlob = await convertToMP4(snapshot.blob);
+    const header = new Uint8Array(await outputBlob.slice(0, 12).arrayBuffer());
+    if (header[4] !== 0x66 || header[5] !== 0x74 || header[6] !== 0x79 || header[7] !== 0x70) {
+      throw new Error('MP4 validation failed: the converted file has no MP4 container header.');
     }
 
     window.__e6ClipRecorderReady = true;
     return {
       blob: outputBlob,
       previewBlob: outputBlob,
-      mime: outputMime,
-      extension: outputExtension,
+      mime: 'video/mp4',
+      extension: 'mp4',
       duration: snapshot.duration,
       sequence: ++saveSequence
     };
@@ -298,7 +325,7 @@ export function saveClip() {
 }
 
 export function getClipRecordingInfo() {
-  const age = recordingStartedAt ? (performance.now() - recordingStartedAt) / 1000 : 0;
+  const age = captureClock() / 1000;
   return {
     active: Boolean(recording && recorder && recorder.state !== 'inactive'),
     ready: Boolean(recording && recorder && recorder.state !== 'inactive' && chunkBytes >= MIN_CHUNK_BYTES),
@@ -328,6 +355,9 @@ export function stopClipRecorder() {
   chunks = [];
   chunkBytes = 0;
   recordingStartedAt = 0;
+  activeCaptureMs = 0;
+  activeSegmentStartedAt = null;
+  capturePaused = false;
   lastDataAt = 0;
   audioTrackAttached = false;
   window.__e6ClipRecorderActive = false;

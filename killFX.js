@@ -3,6 +3,7 @@
 // Each kill FX renders a unique canvas animation at the defeated fighter's position.
 
 import { getEventKillFX, getEventById } from './events.js';
+import { BATTLE_PASSES_2027, HOLIDAY_EVENTS_2027 } from './season2027.js';
 
 export const KILL_FX = [
   { id: 'none', name: 'None', price: 0, desc: 'No kill effect.' },
@@ -36,6 +37,205 @@ export const KILL_FX = [
   { id: 'cherry_blossom', name: 'Cherry Blossom', price: 260, desc: 'Gentle cherry blossom petals drift over the KO.' },
 ];
 
+const SEASONAL_FX_COLORS = {
+  'frost-found-2027':'#91DFFF','yokai-rising-2027':'#B874FF','petal-metal-2027':'#FF78B6',
+  'six-oclock-2027':'#FFC451','out-of-this-element-2027':'#8E7AFF','sixth-eclipse-2027':'#F04F63',
+  'new-year-2027':'#E8C66E','new-year-2028':'#E8C66E','love-at-first-fight':'#F080A5',
+  'luck-of-the-sixth':'#54A66B','egg-stinction-event':'#F4C27E','elemental-prank':'#FF835A',
+  'planet-of-the-elements':'#76A65B','trick-or-beatdown':'#B47CF1','living-chronicles':'#E58A43',
+  'thanks-for-the-elements':'#D9A441','winter-wonderland':'#90DAFF',
+};
+const SEASONAL_FX_BASE = [
+  'ice_shatter','void_implosion','firework_burst','golden_blast','star_collapse','black_hole',
+  'confetti_burst','lightning_strike','soul_release','shatter','fire_storm','angel_ascend',
+];
+const HOLIDAY_FX_STYLES = Object.freeze({
+  'midnight-fireworks': 'fireworks',
+  'cupid-s-arrow': 'heart-arrow',
+  'pot-of-gold': 'gold-coins',
+  eggsplosion: 'egg-shells',
+  'cartoon-bonk': 'bonk',
+  'nature-bloom': 'bloom',
+  'ghostly-vanish': 'ghost',
+  'marigold-spirit': 'marigold',
+  'golden-harvest': 'harvest',
+  'frosty-burst': 'frost-burst',
+  blizzard: 'blizzard',
+});
+
+function drawHolidayKillFX(ctx, x, y, style, progress, color, frame) {
+  if (!style || progress >= 1) return false;
+  const t = Math.max(0, progress);
+  const fade = 1 - t;
+  const pulse = 1 + Math.sin(frame * 0.24) * 0.04;
+  ctx.save();
+  ctx.globalAlpha = fade;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 10 * fade;
+  const burst = (cx, cy, radius, rays, inner = 0.42) => {
+    ctx.beginPath();
+    for (let i = 0; i < rays; i++) {
+      const a = i * Math.PI * 2 / rays;
+      const r1 = radius * inner;
+      const r2 = radius * (i % 2 ? 0.84 : 1);
+      ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+      ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+    }
+    ctx.lineWidth = Math.max(1.5, radius * 0.035);
+    ctx.stroke();
+  };
+  const petalFlower = (cx, cy, radius, count, rotation = 0) => {
+    for (let i = 0; i < count; i++) {
+      const a = rotation + i * Math.PI * 2 / count;
+      const px = cx + Math.cos(a) * radius * 0.4;
+      const py = cy + Math.sin(a) * radius * 0.4;
+      ctx.beginPath();
+      ctx.ellipse(px, py, radius * 0.19, radius * 0.36, a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius * 0.12, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFE8A3';
+    ctx.fill();
+  };
+  const ring = (cx, cy, radius, width = 3) => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.lineWidth = width;
+    ctx.stroke();
+  };
+  const radius = (22 + t * 94) * pulse;
+
+  if (style === 'fireworks') {
+    for (let i = 0; i < 3; i++) {
+      const a = -Math.PI / 2 + i * Math.PI * 2 / 3;
+      const cx = x + Math.cos(a) * t * 46;
+      const cy = y + Math.sin(a) * t * 34;
+      ctx.strokeStyle = i === 1 ? '#FFD778' : color;
+      burst(cx, cy, radius * (0.68 + i * 0.08), 12, 0.16);
+      ring(cx, cy, radius * 0.52, 1.5);
+    }
+  } else if (style === 'heart-arrow') {
+    const rise = t * 42;
+    ctx.strokeStyle = '#FFE4EB';
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(x - 52 + t * 35, y + 20 - rise); ctx.lineTo(x + 42 + t * 35, y - 20 - rise); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + 8 + t * 35, y - 35 - rise);
+    ctx.bezierCurveTo(x - 18 + t * 35, y - 62 - rise, x - 42 + t * 35, y - 27 - rise, x + 8 + t * 35, y + 5 - rise);
+    ctx.bezierCurveTo(x + 58 + t * 35, y - 28 - rise, x + 35 + t * 35, y - 62 - rise, x + 8 + t * 35, y - 35 - rise);
+    ctx.fillStyle = color; ctx.fill();
+    burst(x + 42 + t * 35, y - 20 - rise, 13, 4, 0.2);
+  } else if (style === 'gold-coins') {
+    ctx.strokeStyle = '#FFD778';
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(x, y + 12, radius * (0.78 + i * 0.13), Math.PI * 1.08, Math.PI * 1.92);
+      ctx.lineWidth = 4 - i * 0.7;
+      ctx.stroke();
+    }
+    for (let i = 0; i < 8; i++) {
+      const a = Math.PI + i * Math.PI / 7;
+      const cx = x + Math.cos(a) * radius * 0.8;
+      const cy = y + 12 + Math.sin(a) * radius * 0.56 - t * 16;
+      ctx.beginPath(); ctx.arc(cx, cy, 4 + (i % 3), 0, Math.PI * 2); ctx.fillStyle = i % 2 ? '#FFF0A6' : '#F8BE38'; ctx.fill();
+    }
+  } else if (style === 'egg-shells') {
+    const pastel = ['#FFD5E4', '#FFF0A8', '#BCEFFF', '#C9F0C4'];
+    for (let i = 0; i < 10; i++) {
+      const a = i * Math.PI * 2 / 10 + frame * 0.018;
+      const distance = t * (48 + (i % 3) * 15);
+      const cx = x + Math.cos(a) * distance;
+      const cy = y + Math.sin(a) * distance - 10 * t;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(a + t);
+      ctx.fillStyle = pastel[i % pastel.length];
+      ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(7, -3); ctx.lineTo(3, 7); ctx.lineTo(-5, 4); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    burst(x, y, radius * 0.62, 8, 0.24);
+  } else if (style === 'bonk') {
+    burst(x, y, radius, 12, 0.32);
+    for (let i = 0; i < 5; i++) {
+      const a = i * Math.PI * 2 / 5 + frame * 0.015;
+      const cx = x + Math.cos(a) * radius * 0.62;
+      const cy = y + Math.sin(a) * radius * 0.62;
+      ctx.fillStyle = i % 2 ? '#FFF1A8' : '#FFFFFF';
+      ctx.beginPath(); ctx.arc(cx, cy, 3 + fade * 3, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (style === 'bloom' || style === 'marigold') {
+    const count = style === 'marigold' ? 12 : 8;
+    for (let i = 0; i < 3; i++) {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(frame * 0.012 + i * 0.4);
+      ctx.globalAlpha *= 1 - i * 0.22;
+      petalFlower(0, 0, radius * (0.58 + i * 0.19), count, i * 0.16);
+      ctx.restore();
+    }
+    if (style === 'bloom') {
+      ctx.strokeStyle = '#D8F2A8';
+      ctx.beginPath(); ctx.moveTo(x, y + 34 * fade); ctx.quadraticCurveTo(x - 20, y + 6, x + 10, y - 22); ctx.stroke();
+    }
+  } else if (style === 'ghost') {
+    ctx.strokeStyle = '#D8F7FF';
+    ring(x, y - t * 28, radius, 3);
+    ring(x, y - t * 28, radius * 0.62, 2);
+    for (let i = 0; i < 7; i++) {
+      const a = i * Math.PI * 2 / 7 + frame * 0.02;
+      ctx.beginPath(); ctx.arc(x + Math.cos(a) * radius * 0.75, y + Math.sin(a) * radius * 0.5, 3, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (style === 'harvest') {
+    for (let i = 0; i < 9; i++) {
+      const a = i * Math.PI * 2 / 9 + frame * 0.015;
+      const cx = x + Math.cos(a) * radius * 0.58;
+      const cy = y + Math.sin(a) * radius * 0.5;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(a);
+      ctx.beginPath(); ctx.ellipse(0, 0, 5, 10, 0, 0, Math.PI * 2); ctx.fillStyle = i % 2 ? '#FFD77A' : '#E6A744'; ctx.fill();
+      ctx.strokeStyle = '#FFF1BA'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(4, 0); ctx.stroke();
+      ctx.restore();
+    }
+    burst(x, y, radius * 0.52, 8, 0.3);
+  } else if (style === 'frost-burst') {
+    ctx.strokeStyle = '#E3FBFF';
+    burst(x, y, radius, 8, 0.12);
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3 + Math.PI / 6;
+      const cx = x + Math.cos(a) * radius * 0.54;
+      const cy = y + Math.sin(a) * radius * 0.54;
+      ctx.beginPath(); ctx.moveTo(cx - 5, cy); ctx.lineTo(cx + 5, cy); ctx.moveTo(cx, cy - 5); ctx.lineTo(cx, cy + 5); ctx.stroke();
+    }
+  } else if (style === 'blizzard') {
+    ctx.strokeStyle = '#E2FAFF';
+    for (let i = 0; i < 5; i++) {
+      const a = frame * 0.017 + i * Math.PI * 2 / 5;
+      const cx = x + Math.cos(a) * radius * 0.56;
+      const cy = y + Math.sin(a) * radius * 0.44;
+      ring(cx, cy, 4 + fade * 3, 1.5);
+    }
+    ring(x, y, radius * 0.82, 2);
+  } else return false;
+
+  ctx.restore();
+  return true;
+}
+
+const seasonalFxRewards = [...BATTLE_PASSES_2027, ...HOLIDAY_EVENTS_2027].flatMap(event => event.rewards
+  .filter(reward => reward.type === 'ko')
+  .map((reward, index) => ({ event, reward, index, holidayStyle: event.kind === 'holiday' ? HOLIDAY_FX_STYLES[reward.name.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')] : null })));
+KILL_FX.push(...seasonalFxRewards.filter(({ reward }) => !KILL_FX.some(fx => fx.id === reward.id)).map(({ event, reward, index }) => ({
+  id: reward.id,
+  name: reward.name,
+  desc: `${event.kind === 'holiday' ? 'Holiday event' : 'Battle Pass'} reward from ${event.name}.`,
+  price: 0,
+  baseFxId: SEASONAL_FX_BASE[index % SEASONAL_FX_BASE.length],
+  color: SEASONAL_FX_COLORS[event.id] || '#C69CFF',
+  seasonal: true,
+  eventId: event.id,
+  holidayStyle: event.kind === 'holiday' ? HOLIDAY_FX_STYLES[reward.name.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')] || null : null,
+})));
+
 // Price bump — all shop kill FX cost 50 more tokens
 KILL_FX.forEach(k => { if (k.price > 0) k.price += 50; });
 // Price overhaul — add a zero to every kill FX price
@@ -53,6 +253,12 @@ export function drawKillFX(ctx, x, y, fxId, progress, color, frame) {
   if (!fxId || fxId === 'none') return false;
   let isEventFx = false;
   let eventColor = color;
+  const seasonalFx = getKillFX(fxId);
+  if (seasonalFx?.seasonal) {
+    eventColor = seasonalFx.color;
+    if (seasonalFx.holidayStyle) return drawHolidayKillFX(ctx, x, y, seasonalFx.holidayStyle, progress, eventColor, frame || 0);
+    fxId = seasonalFx.baseFxId;
+  }
   if (fxId.startsWith('event_killfx_')) {
     const eventFx = getEventKillFX(fxId);
     if (eventFx) {
@@ -62,6 +268,7 @@ export function drawKillFX(ctx, x, y, fxId, progress, color, frame) {
       fxId = eventFx.baseFxId;
     }
   }
+  if (seasonalFx?.seasonal) color = eventColor;
   const t = progress;
   if (t >= 1) return false;
 

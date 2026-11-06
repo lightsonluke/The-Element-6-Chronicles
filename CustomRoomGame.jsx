@@ -17,10 +17,10 @@ import { applyElement } from './elements.js';
 import { getEmoteForKey } from './emoteSlots.js';
 import { SPLIT_CITY_HULL_COLLIDERS } from './stageMaterials.js';
 import { drawEmote } from './emotes.js';
+import { drawMovementTrail } from './movementTrails.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import PauseMenu from './PauseMenu.jsx';
-import { useClipRecorder } from './useClipRecorder.js';
 import { SeqNum, SnapshotBuffer, ConnectionState, NetDiagnostics, serializeFighter, reconcileFighter } from './netCore.js';
 import { openCustomRoomTransport } from './customRoomsOnline.js';
 import GameIcon from "./GameIcon.jsx";
@@ -54,7 +54,6 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
   const [winner, setWinner] = useState(null);
   const [connected, setConnected] = useState(true);
   const [showDiag, setShowDiag] = useState(false);
-  useClipRecorder(canvasRef);
   const finishedRef = useRef(false);
   const remoteInputRef = useRef(null);
 
@@ -90,6 +89,8 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
       const sx = pin ? pin.x : SPAWN_X[i % 8];
       const sy = pin ? pin.y : (platforms[0]?.y ?? 620);
       const f = createFighter(modifiedCd, sx, sy, SPAWN_FACE[i % 8]);
+      const configuredStocks = Number(room?.settings?.stocks);
+      if (Number.isInteger(configuredStocks) && configuredStocks > 0) f.stocks = configuredStocks;
       if (pin) f.respawnPoint = { x: pin.x, y: pin.y };
       f.grounded = true;
       f.isAI = p.is_bot;
@@ -109,6 +110,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
     let rateLimitedUntil = 0;
     const checkRateLimit = (e) => { if (String(e?.message || e).match(/rate/i)) rateLimitedUntil = Date.now() + 3000; };
     let guestRenderFighters = null;
+    const movementTrailHistory = {};
     let lastSentInput = null; // for change detection
     let lastLocalInput = null;
 
@@ -224,7 +226,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
     let lastTime = performance.now();
     let shakeMag = 0;
     let frameCount = 0;
-    let timer = 180;
+    let timer = Number.isFinite(Number(room?.settings?.matchTime)) ? Number(room.settings.matchTime) : 180;
     let camX = 0, camY = 0, camZoom = 0.75;
     let prevGpStart = false;
     const _gpEnabled = settings?.controllerEnabled !== false;
@@ -527,6 +529,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         const accColor = skinColor && acc?.type === 'soccer_kit' ? skinColor : acc?.color;
         skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive, f.emote));
         if (acc && isBehindAccessory(acc.type)) drawAccessory(ctx, f.x, f.y, acc.type, accColor, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive);
+        drawMovementTrail(ctx, f, loadout?.equippedMovementTrails?.[charData.id], movementTrailHistory, `room-${i}`);
         drawFighterGroundShadow(ctx, f, platforms, 'splitcity');
         drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame || 0, 1, charData.isSpirit, f.state || 'idle', charData, f.powerActive, false, null, f.emote, f.attackData);
         skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive, f.emote));
@@ -633,8 +636,9 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
   // the player can click Leave / Pause-menu buttons with the controller.
   useEffect(() => {
     window.__el6GameplayActive = !winner;
-    return () => { window.__el6GameplayActive = false; };
-  }, [winner]);
+    window.__el6GameplayCaptureActive = gameStarted && !winner;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [gameStarted, winner]);
 
   if (winner) {
     const won = winner === 'me_disconnect';
@@ -664,7 +668,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80"> PAUSE (ESC)</button>
       </div>
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={W} height={H}
+        <canvas ref={canvasRef} width={W} height={H} data-e6-game-canvas="true"
                 className="el6-match-canvas"
                 style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
               />

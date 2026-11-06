@@ -7,14 +7,14 @@
 // Utility stat: faster movement, higher jumps, longer mining range
 
 export const ELEMENTS = [
-  { id: 'basic', name: 'Basic', unlockLevel: 1, plus: null, minus: null, desc: 'No stat changes — keeps base stats', color: '#AAAAAA' },
-  { id: 'speed', name: 'Speed', unlockLevel: 3, plus: 'speed', minus: 'defense', desc: '+1 Speed, -1 Defense', color: '#FFD700' },
-  { id: 'power', name: 'Power', unlockLevel: 5, plus: 'power', minus: 'control', desc: '+1 Power, -1 Control', color: '#FF4444' },
-  { id: 'defense', name: 'Defense', unlockLevel: 8, plus: 'defense', minus: 'speed', desc: '+1 Defense, -1 Speed', color: '#4488FF' },
-  { id: 'control', name: 'Control', unlockLevel: 12, plus: 'control', minus: 'power', desc: '+1 Control, -1 Power', color: '#AA44FF' },
-  { id: 'utility', name: 'Utility', unlockLevel: 15, plus: 'utility', minus: 'defense', desc: '+1 Utility, -1 Defense', color: '#00FFAA' },
-  { id: 'reversal', name: 'Reversal', unlockLevel: 18, plus: null, minus: null, desc: 'Swap Speed↔Power, Control↔Utility', color: '#FF44FF', custom: 'reversal' },
-  { id: 'testing', name: 'Testing', unlockLevel: 20, plus: null, minus: null, desc: '-2 to all stats', color: '#666666', custom: 'testing' },
+  { id: 'basic', name: 'Basic', icon: 'basic', unlockLevel: 1, plus: null, minus: null, desc: 'No stat changes — keeps base stats', color: '#AAAAAA' },
+  { id: 'speed', name: 'Speed', icon: 'speed', unlockLevel: 3, plus: 'speed', minus: 'defense', desc: '+1 Speed, -1 Defense', color: '#FFD700' },
+  { id: 'power', name: 'Power', icon: 'power', unlockLevel: 5, plus: 'power', minus: 'control', desc: '+1 Power, -1 Control', color: '#FF4444' },
+  { id: 'defense', name: 'Defense', icon: 'defense', unlockLevel: 8, plus: 'defense', minus: 'speed', desc: '+1 Defense, -1 Speed', color: '#4488FF' },
+  { id: 'control', name: 'Control', icon: 'control', unlockLevel: 12, plus: 'control', minus: 'power', desc: '+1 Control, -1 Power', color: '#AA44FF' },
+  { id: 'utility', name: 'Utility', icon: 'utility', unlockLevel: 15, plus: 'utility', minus: 'defense', desc: '+1 Utility, -1 Defense', color: '#00FFAA' },
+  { id: 'reversal', name: 'Reversal', icon: 'reversal', unlockLevel: 18, plus: null, minus: null, desc: 'Swap Speed↔Power, Control↔Utility', color: '#FF44FF', custom: 'reversal' },
+  { id: 'testing', name: 'Testing', icon: 'testing', unlockLevel: 20, plus: null, minus: null, desc: '-2 to all stats', color: '#666666', custom: 'testing' },
 ];
 
 export const MAX_LEVEL = 20;

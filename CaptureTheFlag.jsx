@@ -106,6 +106,11 @@ export default function CaptureTheFlag({
   const [activeSlot, setActiveSlot] = useState('p1');
   const [matchSettings, setMatchSettings] = useState({ captureLimit: 3, matchTime: 300, friendlyFire: false, respawnTime: 3, cpuDifficulty: 'regular' });
   const [result, setResult] = useState(null);
+  useEffect(() => {
+    window.__el6GameplayActive = phase === 'play' && !result;
+    window.__el6GameplayCaptureActive = phase === 'play' && !result;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [phase, result]);
 
   const charPool = (unlockedIds.length ? unlockedIds : ALL_CHARS.map(c => c.id)).map(id => ({ id, char: resolveChar(id) }));
 
@@ -704,7 +709,7 @@ export default function CaptureTheFlag({
       </div>
       {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { setPaused(false); if (gameRef.current) gameRef.current.running = true; }} onQuit={onExit} /></div>}
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
+          <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H} data-e6-game-canvas="true" className="el6-match-canvas el6-sport-canvas rounded-lg shadow-2xl w-full"
                 style={{ width: '100%', maxWidth: VIEW_W + 'px', aspectRatio: '16 / 9', height: 'auto' }} />
       </GameCanvasPortal>
     </div>

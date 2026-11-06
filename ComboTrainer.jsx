@@ -155,7 +155,7 @@ export default function ComboTrainer({ onBack, customCharsData = {}, equippedSki
           <div className="flex gap-1.5 flex-wrap">
             {ELEMENTS.map(el => (
               <button key={el.id} onClick={() => { setSelectedElement(el.id); sfx.click(); }}
-                className={`px-3 py-1.5 rounded font-heading text-xs border-2 ${selectedElement === el.id ? 'border-accent bg-accent/15 text-accent' : 'border-border/50 text-foreground hover:border-border'}`}>
+                className={`px-3 py-1.5 rounded font-heading text-xs border-2 inline-flex items-center gap-1 ${selectedElement === el.id ? 'border-accent bg-accent/15 text-accent' : 'border-border/50 text-foreground hover:border-border'}`}>
                 {el.name}
               </button>
             ))}

@@ -24,7 +24,7 @@ import GameIcon from "./GameIcon.jsx";
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 const charById = (id) => ALL.find(c => c.id === id);
 
-export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equippedSkins = {}, equippedAccessories = {}, settings = {}, sfxVolume = 70, musicVolume = 50, equippedElements = {}, customCharsData = {}, customNumberMap = {}, onEquipElement, charLevels = {}, equippedShikigami = {}, ownedShikigami = [], ownedAccessories = [], onEquipAccessory, ownedCrossovers = [], equippedCrossovers = {}, onEquipCrossover }) {
+export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equippedSkins = {}, equippedAccessories = {}, equippedMovementTrails = {}, settings = {}, sfxVolume = 70, musicVolume = 50, equippedElements = {}, customCharsData = {}, customNumberMap = {}, onEquipElement, charLevels = {}, equippedShikigami = {}, ownedShikigami = [], ownedAccessories = [], onEquipAccessory, ownedCrossovers = [], equippedCrossovers = {}, onEquipCrossover }) {
   const [phase, setPhase] = useState('menu'); // menu | host_select | guest_enter | connecting | fighting
   const [myChar, setMyChar] = useState(favoriteId || unlockedIds?.[0] || 'yellow');
   const [myTeam, setMyTeam] = useState(null); // 3-char team for shapeshift
@@ -166,6 +166,7 @@ export default function LANLobby({ onBack, onEnd, unlockedIds, favoriteId, equip
         onEnd={handleFightEnd}
         musicVolume={musicVolume} sfxVolume={sfxVolume}
         equippedAccessories={equippedAccessories} equippedSkins={equippedSkins}
+        equippedMovementTrails={equippedMovementTrails}
         p1Element={p1Element} p2Element={p2Element}
         settings={settings}
         lanConnection={lan} lanRole={lan.isHost ? 'host' : 'guest'}

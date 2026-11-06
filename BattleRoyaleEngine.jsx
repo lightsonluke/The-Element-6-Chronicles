@@ -64,6 +64,11 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
   const [countdown, setCountdown] = useState(3);
   const [gameStarted, setGameStarted] = useState(false);
   const [winner, setWinner] = useState(null); // { name, charId, placement, eliminations, duration, realCount, botCount }
+  useEffect(() => {
+    window.__el6GameplayActive = !winner;
+    window.__el6GameplayCaptureActive = gameStarted && !winner;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [gameStarted, winner]);
   const [iAmEliminated, setIAmEliminated] = useState(false);
   const [myPlacement, setMyPlacement] = useState(null);
   const equippedShikigamiRef = useRef(equippedShikigami);
@@ -831,7 +836,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H}
+        <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H} data-e6-game-canvas="true"
                 className="el6-match-canvas" />
       </GameCanvasPortal>
       {countdown > 0 && !settings?.hideCountdown && (

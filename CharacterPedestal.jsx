@@ -6,6 +6,7 @@ import { getShikigami } from './shikigami.js';
 import { getCharLevelData, applyElement, getUnlockedElements, ELEMENTS } from './elements.js';
 import { STAT_KEYS, getStatTotal, getEraLabel, getEraAccent, getAlignment, getPowerName, getRealName, getNameColor } from './charSelectHelpers.js';
 import { ALL_CHARS_MAP } from './allCharacters.js';
+import GameIcon from './GameIcon.jsx';
 
 // A single pedestal displaying a selected character with stats and info.
 export default function CharacterPedestal({
@@ -156,9 +157,9 @@ export default function CharacterPedestal({
           <div className="flex gap-0.5 flex-wrap">
             {getUnlockedElements(level).map(el => (
               <button key={el.id} onClick={() => onEquipElement(el.id)}
-                className="px-1 py-0.5 rounded text-[7px] font-heading"
+                className="px-1 py-0.5 rounded text-[7px] font-heading inline-flex items-center gap-0.5"
                 style={{ backgroundColor: element === el.id ? (el.color || '#666') : 'rgba(128,128,128,0.3)', color: '#fff' }}>
-                {el.name}
+                <GameIcon icon={el.icon || "game"} size={8} />{el.name}
               </button>
             ))}
           </div>

@@ -12,6 +12,7 @@
 //
 // Facing is handled by mirroring: when facing left, left/right arms swap and negate.
 import { getCharacterPresentation } from './characterPresentation.js';
+import { BATTLE_PASSES_2027 } from './season2027.js';
 
 const PI = Math.PI;
 const HALF_PI = PI / 2;
@@ -708,3 +709,85 @@ const EMOTE_POSES = {
     };
   },
 };
+
+const SEASONAL_EMOTES = BATTLE_PASSES_2027.flatMap(event => event.rewards.filter(reward => reward.type === 'emote'));
+function seasonalPoseStyle(name) {
+  if (/drift|skater/.test(name)) return 'glide';
+  if (/snowball|toss|firework finale|summer fan/.test(name)) return 'throw';
+  if (/spin|dance|bon odori|parade|finale/.test(name)) return 'spin';
+  if (/freeze|meditation|stargazing|frame/.test(name)) return 'stillness';
+  if (/angel|petal|flower|blossom|springtime|thousand petals/.test(name)) return 'flutter';
+  if (/bow|offering|lantern lighting/.test(name)) return 'bow';
+  if (/stomp/.test(name)) return 'stomp';
+  if (/float|gravity|projection/.test(name)) return 'float';
+  if (/vanishing|shadow clone|vanish/.test(name)) return 'vanish';
+  if (/ghost lantern|summoning|ritual|orbit|planet/.test(name)) return 'summon';
+  if (/head tilt/.test(name)) return 'tilt';
+  if (/possession/.test(name)) return 'twitch';
+  if (/stretch/.test(name)) return 'stretch';
+  if (/stance/.test(name)) return 'stance';
+  if (/fan/.test(name)) return 'fan';
+  return 'celebrate';
+}
+
+function createSeasonalPose(emote, index) {
+  const style = seasonalPoseStyle(emote.name.toLowerCase());
+  const tempo = 1 + (index % 4) * 0.09;
+  const phase = (index % 7) * 0.31;
+  return t => {
+    const beat = Math.sin(t * PI * 2 * tempo + phase);
+    const beat2 = Math.sin(t * PI * 4 * tempo + phase);
+    const lift = Math.max(0, Math.sin(t * PI * 2 * tempo + phase));
+    const reach = easeOut(Math.min(1, t * 2.8));
+    const returnEase = t > 0.76 ? easeIO((1 - t) / 0.24) : 1;
+    switch (style) {
+      case 'glide':
+        return { bob: -2 - lift * 3, lean: .22 + beat * .045, armL: A_DOWN_BACK * .65, armR: A_DOWN_FWD * .8, legL: .24 + beat * .12, legR: -.19 - beat * .1 };
+      case 'throw': {
+        const release = Math.max(0, Math.min(1, (t - .27) / .24));
+        return { bob: -lift * 2, lean: -.1 - release * .16, armL: A_DOWN_BACK * .35, armR: A_UP * (.35 + reach * .48) + release * .3, legL: -.08, legR: .12 + release * .08 };
+      }
+      case 'spin':
+        return { bob: -2 - Math.abs(beat2) * 2, lean: beat * .25, armL: A_FWD * (1 + beat * .12), armR: A_DOWN_BACK * (1 + beat * .12), legL: beat2 * .18, legR: -beat2 * .18 };
+      case 'stillness': {
+        const settle = t < .32 ? easeOut(t / .32) : 1;
+        return { bob: -lift * 1.4, lean: .03 * beat * (1 - settle), armL: A_UP * (.36 + settle * .1), armR: A_UP * (.34 + settle * .12), legL: .03, legR: -.03 };
+      }
+      case 'flutter':
+        return { bob: -1 - lift * 4, lean: beat * .08, armL: A_UP * (.42 + lift * .22) + beat * .08, armR: A_UP * (.4 + Math.max(0, -beat) * .2) - beat * .08, legL: beat2 * .11, legR: -beat2 * .11 };
+      case 'bow': {
+        const dip = Math.sin(Math.min(1, t * 2.2) * PI) * (t < .7 ? 1 : returnEase);
+        return { bob: 2.5 * dip, lean: .3 * dip, armL: A_DOWN_BACK * .28 + .12 * dip, armR: A_DOWN_FWD * .32 - .12 * dip, legL: 0, legR: 0 };
+      }
+      case 'stomp': {
+        const hit = Math.pow(Math.max(0, Math.sin((t * 2.2 + phase) * PI)), 8);
+        return { bob: hit * 3 - lift, lean: -.08 + hit * .05, armL: A_UP * .42, armR: A_DOWN_BACK * .4, legL: .24 * hit, legR: -.05 };
+      }
+      case 'float':
+        return { bob: -4 - Math.sin(t * PI * 2 * tempo + phase) * 5, lean: beat * .05, armL: A_DOWN_BACK * .42, armR: A_DOWN_FWD * .42, legL: -.08 - lift * .08, legR: .08 + lift * .08 };
+      case 'vanish': {
+        const crouch = Math.sin(Math.min(1, t * 1.7) * PI) * (t < .72 ? 1 : returnEase);
+        return { bob: 2 + crouch * 2, lean: -.12 - crouch * .12, armL: A_DOWN_BACK * .6, armR: A_DOWN_FWD * .6, legL: .2 * crouch, legR: -.2 * crouch };
+      }
+      case 'summon':
+        return { bob: -lift * 2, lean: -.04 + beat * .035, armL: A_UP * (.4 + reach * .25), armR: A_UP * (.38 + reach * .25), legL: .02, legR: -.02 };
+      case 'tilt':
+        return { bob: -1, lean: .25 + beat * .08, armL: A_DOWN_BACK * .28, armR: A_DOWN_FWD * .28, legL: 0, legR: 0 };
+      case 'twitch':
+        return { bob: beat2 * 1.4, lean: beat2 * .09, armL: A_UP * .25 + beat2 * .18, armR: A_DOWN_BACK * .35 - beat2 * .22, legL: beat2 * .08, legR: -beat2 * .08 };
+      case 'stretch':
+        return { bob: -lift * 2, lean: -.08 * beat, armL: A_UP * (.48 + lift * .12), armR: A_UP * (.48 + Math.max(0, -beat) * .12), legL: -.04, legR: .04 };
+      case 'stance':
+        return { bob: 1, lean: -.1 + beat * .04, armL: A_UP * .36, armR: A_FWD * .55, legL: .18, legR: -.16 };
+      case 'fan':
+        return { bob: -lift * 1.5, lean: beat * .12, armL: A_FWD * (.45 + lift * .2), armR: A_UP * (.3 + Math.max(0, -beat) * .25), legL: beat * .05, legR: -beat * .05 };
+      default:
+        return { bob: -2 - lift * 6, lean: beat * .09, armL: A_UP * (.48 + lift * .17), armR: A_UP * (.46 + Math.max(0, -beat) * .15), legL: beat * .1, legR: -beat * .1 };
+    }
+  };
+}
+
+Object.assign(EMOTE_POSES, Object.fromEntries(SEASONAL_EMOTES.map((emote, index) => [
+  emote.id,
+  createSeasonalPose(emote, index),
+])));

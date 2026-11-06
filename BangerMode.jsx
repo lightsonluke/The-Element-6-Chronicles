@@ -72,7 +72,7 @@ export default function BangerMode({
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4">
         <div className="w-full max-w-md flex flex-col gap-4 p-6 bg-card border-2 border-accent rounded-2xl">
           <div className="text-center">
-            <h2 className="text-3xl font-heading text-accent tracking-wider"><GameIcon icon="exclamationCircle" size={14} /> BANGER</h2>
+            <h2 className="text-3xl font-heading text-accent tracking-wider"><GameIcon icon="volleyball" size={14} /> BANGER</h2>
             <p className="text-[10px] font-heading text-muted-foreground tracking-widest mt-1">ELEMENT 6 ORIGINAL</p>
             <p className="text-2xl font-heading mt-3" style={{ color: winColor }}>{winName} WINS!</p>
             <p className="text-xs text-muted-foreground font-body mt-1">{result.elims ? `Eliminations — Blue ${result.elims[1]} · Red ${result.elims[2]}` : ''}</p>

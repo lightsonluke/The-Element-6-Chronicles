@@ -51,7 +51,7 @@ export async function saveClipBlob(id, blob, meta = {}) {
     tx.objectStore(STORE).put({
       id,
       blob,
-      created,
+      created: Number(meta.created) || created,
       mime: meta.mime || blob.type || 'video/mp4',
       extension: meta.extension || (String(meta.mime || blob.type || '').includes('mp4') ? 'mp4' : 'webm'),
       size: blob.size,
@@ -59,6 +59,8 @@ export async function saveClipBlob(id, blob, meta = {}) {
       previewBlob: meta.previewBlob || blob,
       replay: Boolean(meta.replay),
       replayMeta: meta.replayMeta || null,
+      status: meta.status || 'ready',
+      sourceBlob: meta.sourceBlob || null,
     });
     tx.oncomplete = () => {
       db.close();
@@ -89,6 +91,7 @@ export async function listClipMetadata() {
           duration: row.duration || 30,
           replay: Boolean(row.replay),
           replayMeta: row.replayMeta || null,
+          status: row.status || 'ready',
         }))
         .sort((a, b) => (b.created || 0) - (a.created || 0)));
     };
@@ -99,14 +102,16 @@ export async function listClipMetadata() {
   });
 }
 
-export async function trimClips(max = MAX_CLIPS) {
+export async function trimClips(max = MAX_CLIPS, { replay = null } = {}) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
     const request = store.getAll();
     request.onsuccess = () => {
-      const rows = (request.result || []).sort((a, b) => (b.created || 0) - (a.created || 0));
+      const rows = (request.result || [])
+        .filter(row => replay === null || Boolean(row.replay) === replay)
+        .sort((a, b) => (b.created || 0) - (a.created || 0));
       rows.slice(Math.max(0, max)).forEach(row => store.delete(row.id));
     };
     request.onerror = () => reject(request.error);
@@ -182,6 +187,28 @@ export async function saveReplayBlob(id, blob, meta = {}) {
     replayMeta: meta.replayMeta || null,
     mime: meta.mime || blob?.type || 'video/mp4',
     extension: meta.extension || 'mp4',
+  });
+}
+
+export async function getReplaySource(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const request = tx.objectStore(STORE).get(id);
+    request.onsuccess = () => {
+      db.close();
+      const row = request.result;
+      resolve(row ? {
+        blob: row.sourceBlob || (row.status !== 'ready' ? row.blob : null),
+        created: row.created,
+        duration: row.duration,
+        replayMeta: row.replayMeta || null,
+      } : null);
+    };
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
   });
 }
 

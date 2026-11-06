@@ -154,7 +154,7 @@ export default function EditCharacters({ onBack, progress, onEquipAccessory, onE
                       disabled={!isUnlocked}
                       className={`w-full p-3 rounded border-2 text-left mb-3 ${isEquipped ? 'border-accent' : isUnlocked ? 'border-border' : 'border-border opacity-40 cursor-not-allowed'}`}>
                       <div className="flex items-center gap-3">
-                        <div className="w-5 h-5 rounded-full" style={{ backgroundColor: el.color }} />
+                        <GameIcon icon={el.icon || "game"} size={17} color={el.color} />
                         <span className="text-sm font-heading" style={{ color: isEquipped ? 'var(--accent)' : 'inherit' }}>{el.name}</span>
                         {isEquipped && <span className="text-xs text-accent ml-auto"><GameIcon icon="check" size={14} /></span>}
                         {!isUnlocked && <span className="text-xs text-muted-foreground ml-auto"><GameIcon icon="lock" size={14} /> Lv {el.unlockLevel}</span>}

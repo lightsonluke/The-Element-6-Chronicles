@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
@@ -6,7 +6,7 @@ import { getCharLevelData } from './elements.js';
 import { ACCESSORIES, accessoriesFor, getAccessory, isAccessoryCompatible } from './cosmetics.js';
 import { skinsForChar, getSkin } from './skins.js';
 import { KILL_FX as KILL_FX_LIST, getKillFX } from './killFX.js';
-import { PROFILE_TITLES } from './profileTitles.js';
+import { PROFILE_TITLES, ownsTitle } from './profileTitles.js';
 import { sfx } from './sfx.js';
 import GameIcon from "./GameIcon.jsx";
 
@@ -17,6 +17,8 @@ const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 // drives which skins/accessories are shown, updating instantly on click.
 export default function EquipOverlay({ progress, customCharsData = {}, onApply, onClose }) {
   const [selectedChar, setSelectedChar] = useState(progress?.favoriteId || 'yellow');
+  const [titleQuery, setTitleQuery] = useState('');
+  const [titleSort, setTitleSort] = useState('name');
   const charId = selectedChar;
   const char = ALL.find(c => c.id === charId) || customCharsData?.[charId] || HEROES[0];
   const lv = getCharLevelData(progress, charId)?.level || 1;
@@ -34,6 +36,12 @@ export default function EquipOverlay({ progress, customCharsData = {}, onApply, 
   const ownedFX = progress?.ownedKillFX || [];
   const equippedFX = progress?.equippedKillFX || 'none';
   const equippedTitle = progress?.equippedTitle || null;
+  const ownedTitles = useMemo(() => PROFILE_TITLES
+    .filter(title => ownsTitle(title.id, progress))
+    .filter(title => title.name.toLowerCase().includes(titleQuery.trim().toLowerCase()))
+    .sort((a, b) => titleSort === 'rarity'
+      ? (['common', 'rare', 'epic', 'legendary'].indexOf(b.rarity) - ['common', 'rare', 'epic', 'legendary'].indexOf(a.rarity)) || a.name.localeCompare(b.name)
+      : a.name.localeCompare(b.name)), [progress?.ownedTitles, progress?.ownedPacks, titleQuery, titleSort]);
 
   const selectChar = (id) => {
     setSelectedChar(id);
@@ -114,12 +122,19 @@ export default function EquipOverlay({ progress, customCharsData = {}, onApply, 
         </div>
 
         <div>
-          <p className="text-[10px] font-heading text-muted-foreground mb-1">TITLE</p>
+          <p className="text-[10px] font-heading text-muted-foreground mb-1">PROFILE TITLE</p>
+          <div className="mb-2 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+            <input value={titleQuery} onChange={event => setTitleQuery(event.target.value)} aria-label="Filter owned titles" placeholder="Filter owned titles" className="min-h-10 min-w-0 rounded-xl border border-border bg-background px-3 text-xs" />
+            <select value={titleSort} onChange={event => setTitleSort(event.target.value)} aria-label="Sort owned titles" className="min-h-10 rounded-xl border border-border bg-background px-2 text-xs">
+              <option value="name">A–Z</option><option value="rarity">Rarity</option>
+            </select>
+          </div>
           <div className="flex flex-wrap gap-1">
             <button onClick={() => apply({ type: 'title', id: null })} className={`px-2 py-0.5 rounded text-[10px] font-heading border ${!equippedTitle ? 'border-accent bg-accent/20 text-accent' : 'border-border bg-secondary text-secondary-foreground'}`}>None</button>
-            {PROFILE_TITLES.filter(t => (progress?.ownedTitles || []).includes(t.id)).map(t => (
+            {ownedTitles.map(t => (
               <button key={t.id} onClick={() => apply({ type: 'title', id: t.id })} className={`px-2 py-0.5 rounded text-[10px] font-heading border ${equippedTitle === t.id ? 'border-accent bg-accent/20 text-accent' : 'border-border bg-secondary text-secondary-foreground'}`}>{t.name}</button>
             ))}
+            {ownedTitles.length === 0 && <span className="text-[10px] text-muted-foreground">No owned titles match this filter.</span>}
           </div>
         </div>
 

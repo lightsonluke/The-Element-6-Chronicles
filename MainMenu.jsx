@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import HowToPlay from './HowToPlay.jsx';
 import GameIcon from './GameIcon.jsx';
 import { music } from './music.js';
@@ -79,6 +79,7 @@ export default function MainMenu({ onNavigate, coins = 0, favoriteName, favorite
   const [showHowTo, setShowHowTo] = useState(false);
   const [activeSection, setActiveSection] = useState('play');
   const [query, setQuery] = useState('');
+  const arenaTabRef = useRef(null);
   const selected = SECTIONS.find(section => section.id === activeSection) || SECTIONS[0];
   const visibleItems = selected.items.filter(item => `${item.label} ${item.detail}`.toLowerCase().includes(query.trim().toLowerCase()));
 
@@ -88,9 +89,17 @@ export default function MainMenu({ onNavigate, coins = 0, favoriteName, favorite
     return () => music.stop();
   }, [musicVolume]);
 
+  useEffect(() => {
+    if (activeSection === 'arena') arenaTabRef.current?.focus();
+  }, [activeSection]);
+
   const navigate = (key) => {
     sfx.click();
-    if (key === 'arena') { setActiveSection('arena'); setQuery(''); return; }
+    if (key === 'arena') {
+      setActiveSection('arena'); setQuery('');
+      requestAnimationFrame(() => arenaTabRef.current?.focus());
+      return;
+    }
     if (key === 'howto') {
       sfx.menuOpen();
       setShowHowTo(true);
@@ -103,9 +112,9 @@ export default function MainMenu({ onNavigate, coins = 0, favoriteName, favorite
     <main className="e6-home-menu" style={{ '--e6-home-image': `url("${import.meta.env.BASE_URL}assets/e6-home-menu-background.png")` }}>
       <div className="e6-home-backdrop" aria-hidden="true" />
       <header className="e6-home-topbar">
-        <div className="e6-home-brand" aria-label="The Chronicles">
+        <div className="e6-home-brand" aria-label="Element 6">
           <span className="e6-home-brand-mark"><img src={`${import.meta.env.BASE_URL}favicon.png`} alt="" /></span>
-          <span><strong>THE</strong><small>CHRONICLES</small></span>
+          <span><strong>ELEMENT</strong><small>6</small></span>
         </div>
         <div className="e6-home-player-strip">
           <div className="e6-home-player-name"><span className="e6-home-eyebrow">PLAYER</span><strong>{username || 'Guest Player'}</strong></div>
@@ -145,15 +154,15 @@ export default function MainMenu({ onNavigate, coins = 0, favoriteName, favorite
           </div>
           <div className="e6-home-tabs" role="tablist" aria-label="Destination categories">
             {SECTIONS.map(section => (
-              <button key={section.id} type="button" role="tab" aria-selected={activeSection === section.id}
-                className={activeSection === section.id ? 'is-active' : ''} onClick={() => { setActiveSection(section.id); setQuery(''); }}>
+              <button key={section.id} ref={section.id === 'arena' ? arenaTabRef : undefined} data-section={section.id} type="button" role="tab" aria-selected={activeSection === section.id}
+                aria-controls="e6-home-destinations" className={activeSection === section.id ? 'is-active' : ''} onClick={() => { setActiveSection(section.id); setQuery(''); }}>
                 <GameIcon icon={section.icon} size={16} /><span>{section.label}</span>
               </button>
             ))}
           </div>
           <div className="e6-home-section-intro"><span>{selected.summary}</span></div>
           <label className="e6-home-search"><GameIcon icon="search" size={16} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Find in ${selected.label.toLowerCase()}…`} aria-label={`Find in ${selected.label.toLowerCase()}`} /></label>
-          <div className="e6-home-destination-list">
+          <div className="e6-home-destination-list" id="e6-home-destinations" role="tabpanel" aria-label={`${selected.label} destinations`}>
             {visibleItems.map((item, index) => (
               <button key={item.key} type="button" className="e6-home-destination" onClick={() => navigate(item.key)}>
                 <span className="e6-home-destination-icon"><GameIcon icon={item.icon} size={17} /></span>

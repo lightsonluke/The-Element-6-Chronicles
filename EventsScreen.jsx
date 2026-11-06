@@ -3,16 +3,19 @@ import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { getActiveEvent, getNextEvent } from './events.js';
+import { BATTLE_PASSES_2027, HOLIDAY_EVENTS_2027, getActive2027BattlePass, getActive2027Holiday, SEASON_2027_TIER_COUNT, SEASON_2027_XP_PER_TIER } from './season2027.js';
 import { getAccessory, drawAccessory, isBehindAccessory } from './cosmetics.js';
 import { getSkin, RARITY_COLORS } from './skins.js';
 import { getKillFX, drawKillFX } from './killFX.js';
+import { getShikigami } from './shikigami.js';
 import { drawStickman } from './renderer.js';
+import { getMovementTrail, drawMovementTrail } from './movementTrails.js';
 import { music } from './music.js';
 import GameIcon from "./GameIcon.jsx";
 
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
-const MAX_TIERS = 50;
-const XP_PER_TIER = 100;
+const MAX_TIERS = SEASON_2027_TIER_COUNT;
+const XP_PER_TIER = SEASON_2027_XP_PER_TIER;
 const MULTI_PAL = ['#FF4444', '#FFDD44', '#44FF44', '#4488FF'];
 const SEASON_PASS_BANNERS = {
   'Frost & Found': 'frost-found.svg',
@@ -22,16 +25,66 @@ const SEASON_PASS_BANNERS = {
   'Out of This Element': 'out-of-element.svg',
   'The Sixth Eclipse': 'sixth-eclipse.svg',
 };
+const EVENT_ACCENTS_2027 = {
+  'frost-found-2027': '#78C9EA',
+  'yokai-rising-2027': '#D28ABF',
+  'petal-metal-2027': '#F08EAA',
+  'six-oclock-2027': '#F4B64B',
+  'out-of-this-element-2027': '#9D7BFA',
+  'sixth-eclipse-2027': '#E65768',
+  'new-year-2027': '#D8B45F',
+  'love-at-first-fight': '#E987A9',
+  'luck-of-the-sixth': '#59B879',
+  'egg-stinction-event': '#E6A774',
+  'elemental-prank': '#F2B738',
+  'planet-of-the-elements': '#6C9B61',
+  'trick-or-beatdown': '#CE713E',
+  'living-chronicles': '#E08A3B',
+  'thanks-for-the-elements': '#CB9B44',
+  'winter-wonderland': '#83C8E8',
+  'new-year-2028': '#D8B45F',
+};
 
 export default function EventsScreen({ onBack, progress, onClaimEventReward, onNavigateEquip }) {
   const [scrollTier, setScrollTier] = useState(0);
   const [now, setNow] = useState(Date.now());
+  const [selectedTrack, setSelectedTrack] = useState('pass');
+  const [claimingTiers, setClaimingTiers] = useState([]);
+  const [claimError, setClaimError] = useState('');
   const timelineRef = useRef(null);
 
-  const activeEvent = getActiveEvent();
-  const nextEventInfo = getNextEvent();
-  const seasonBanner = SEASON_PASS_BANNERS[activeEvent?.name]
-    ? `${import.meta.env.BASE_URL}assets/battle-passes/2027/${SEASON_PASS_BANNERS[activeEvent.name]}`
+  const date = new Date(now);
+  const battlePassPlus = progress?.battlePassPlus === true;
+  const pass2027 = getActive2027BattlePass(date);
+  const holiday2027 = getActive2027Holiday(date);
+  const legacyEvent = getActiveEvent();
+  const normalizeTrack = event => event ? ({
+    ...event,
+    color: event.color || EVENT_ACCENTS_2027[event.id] || '#A77AE8',
+    battlePass: event.rewards.map(reward => ({
+      ...reward,
+      item: { id: reward.id, name: reward.name, type: reward.type === 'accessory' ? getAccessory(reward.id)?.type : reward.type, baseFxId: reward.id },
+    })),
+    starCharIds: [],
+    is2027: true,
+  }) : null;
+  const uses2027Calendar = date.getUTCFullYear() === 2027 || (date.getUTCFullYear() === 2028 && date.getUTCMonth() === 0 && date.getUTCDate() <= 3);
+  const seasonTrack = normalizeTrack(pass2027) || (uses2027Calendar || holiday2027 ? null : legacyEvent);
+  const holidayTrack = normalizeTrack(holiday2027);
+  const activeEvent = selectedTrack === 'holiday' && holidayTrack ? holidayTrack : seasonTrack || holidayTrack;
+  const isHolidayTrack = activeEvent?.kind === 'holiday';
+  const passIsUnlocked = !activeEvent?.is2027 && !isHolidayTrack && battlePassPlus;
+  const xpPerTier = activeEvent?.is2027 ? XP_PER_TIER : 100;
+  const tierCount = activeEvent?.is2027 ? MAX_TIERS : (activeEvent?.battlePass?.length || MAX_TIERS);
+  const upcoming2027 = [...BATTLE_PASSES_2027, ...HOLIDAY_EVENTS_2027]
+    .filter(event => Date.parse(event.startAt) > now)
+    .sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt))[0];
+  const nextEventInfo = uses2027Calendar
+    ? { event: upcoming2027, startDate: upcoming2027 ? new Date(upcoming2027.startAt) : null }
+    : getNextEvent();
+  const bannerName = activeEvent?.banner?.split('/').pop() || SEASON_PASS_BANNERS[activeEvent?.name];
+  const seasonBanner = bannerName
+    ? `${import.meta.env.BASE_URL}assets/battle-passes/2027/${bannerName}`
     : null;
 
   useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
@@ -39,9 +92,14 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
 
   const claimedTiers = progress?.eventProgress?.[activeEvent?.id]?.claimedTiers || [];
   const eventXP = progress?.eventProgress?.[activeEvent?.id]?.xp || 0;
-  const battlePassPlus = progress?.battlePassPlus === true;
-  const currentTier = battlePassPlus ? MAX_TIERS : Math.min(MAX_TIERS, Math.floor(eventXP / XP_PER_TIER) + 1);
-  const xpInTier = eventXP % XP_PER_TIER;
+  const currentTier = passIsUnlocked ? tierCount : Math.min(
+    tierCount,
+    Math.floor(eventXP / xpPerTier) + (activeEvent?.is2027 ? 0 : 1),
+  );
+  const xpInTier = eventXP % xpPerTier;
+  const trackComplete = currentTier >= tierCount;
+  const displayTier = Math.max(1, currentTier);
+  const progressPercent = passIsUnlocked || trackComplete ? 100 : (xpInTier / xpPerTier) * 100;
 
   useEffect(() => {
     if (timelineRef.current && activeEvent) {
@@ -50,11 +108,18 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
     }
   }, [activeEvent, currentTier]);
 
-  const handleClaim = (tier) => {
+  const handleClaim = async (tier) => {
     if (claimedTiers.includes(tier) || tier > currentTier) return;
     const reward = activeEvent.battlePass.find(b => b.tier === tier);
     if (!reward) return;
-    onClaimEventReward?.(activeEvent.id, tier, reward);
+    if (claimingTiers.includes(tier)) return;
+    setClaimingTiers(current => [...current, tier]);
+    setClaimError('');
+    try {
+      if (typeof onClaimEventReward !== 'function') throw new Error('Reward claiming is unavailable right now. Your progress has not changed.');
+      await onClaimEventReward(activeEvent.id, tier);
+    } catch (error) { setClaimError(error?.message || 'The reward could not be claimed. Try again.'); }
+    finally { setClaimingTiers(current => current.filter(value => value !== tier)); }
   };
 
   const handleClaimAll = () => {
@@ -85,34 +150,43 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
       </header>
 
       {activeEvent ? <>
+        {seasonTrack && holidayTrack && <nav className="e6-pass-track-tabs" aria-label="Reward tracks">
+          <button type="button" aria-pressed={!isHolidayTrack} onClick={() => { setSelectedTrack('pass'); setClaimError(''); }} className={!isHolidayTrack ? 'is-active' : ''}>
+            2027 BATTLE PASS <small>{seasonTrack.name}</small>
+          </button>
+          <button type="button" aria-pressed={isHolidayTrack} onClick={() => { setSelectedTrack('holiday'); setClaimError(''); }} className={isHolidayTrack ? 'is-active' : ''}>
+            HOLIDAY EVENT <small>{holidayTrack.name}</small>
+          </button>
+        </nav>}
         <section className="e6-pass-hero" style={{ '--pass-accent': activeEvent.color || '#d9a441' }}>
           <div className="e6-pass-art"><EventShowcaseCanvas event={activeEvent} starChars={starChars} bannerImage={seasonBanner} />{!seasonBanner && <span className="e6-pass-art-tag">LIVE SEASON</span>}</div>
           <div className="e6-pass-hero-content">
-            <div className="e6-pass-eyebrow"><span className="e6-pass-live-dot" /> SEASON REWARDS <span className="e6-pass-divider">/</span> 50 TIERS</div>
+            <div className="e6-pass-eyebrow"><span className="e6-pass-live-dot" /> {isHolidayTrack ? 'LIMITED EVENT' : 'SEASON REWARDS'} <span className="e6-pass-divider">/</span> {tierCount} {isHolidayTrack ? 'REWARDS' : 'TIERS'}</div>
             <h1>{activeEvent.name}</h1>
-            <p className="e6-pass-summary">Earn Event XP in battle to unlock a new reward every {XP_PER_TIER} XP. Collect your free rewards as you progress.</p>
+            <p className="e6-pass-summary">{activeEvent.is2027 ? `Earn Event XP in battle to unlock a reward every ${xpPerTier.toLocaleString()} XP. ${isHolidayTrack ? 'This limited event runs alongside the Battle Pass.' : 'Progress continues while holiday events are active.'}` : `Earn Event XP in battle to unlock a new reward every ${xpPerTier} XP. Collect your rewards as you progress.`}</p>
             {starChars.length > 0 && <p className="e6-pass-featured"><span>FEATURED FIGHTERS</span>{starChars.map(c => c.name).join('  ·  ')}</p>}
             <div className="e6-pass-progress-block">
-              <div className="e6-pass-progress-title"><span>YOUR PROGRESS</span><strong>TIER {Math.min(currentTier, MAX_TIERS)} <i>/ {MAX_TIERS}</i></strong></div>
-              <div className="e6-pass-progress-track"><span style={{ width: `${battlePassPlus ? 100 : (xpInTier / XP_PER_TIER) * 100}%` }} /></div>
-              <div className="e6-pass-progress-foot"><span>{eventXP.toLocaleString()} TOTAL XP</span><span>{battlePassPlus ? 'ALL TIERS UNLOCKED' : `${xpInTier} / ${XP_PER_TIER} XP TO NEXT TIER`}</span></div>
+              <div className="e6-pass-progress-title"><span>YOUR PROGRESS</span><strong>TIER {displayTier} <i>/ {tierCount}</i></strong></div>
+              <div className="e6-pass-progress-track"><span style={{ width: `${progressPercent}%` }} /></div>
+              <div className="e6-pass-progress-foot"><span>{eventXP.toLocaleString()} TOTAL XP</span><span>{passIsUnlocked ? 'ALL TIERS UNLOCKED' : trackComplete ? 'TRACK COMPLETE' : `${xpInTier} / ${xpPerTier} XP TO NEXT TIER`}</span></div>
             </div>
-            <div className={`e6-pass-premium-status ${battlePassPlus ? 'is-active' : ''}`}>
+            {!isHolidayTrack && !activeEvent.is2027 && <div className={`e6-pass-premium-status ${battlePassPlus ? 'is-active' : ''}`}>
               <span className="e6-pass-premium-mark"></span>
               <div><strong>{battlePassPlus ? 'BATTLE PASS+ ACTIVE' : 'BATTLE PASS+'}</strong><small>{battlePassPlus ? 'Bonus rewards are included when you claim a tier.' : 'Premium rewards are shown on each tier.'}</small></div>
               <span className="e6-pass-premium-state">{battlePassPlus ? 'ACTIVE' : 'PREMIUM'}</span>
-            </div>
+            </div>}
           </div>
         </section>
 
         <section className="e6-pass-track-section">
+          {claimError && <p className="e6-pass-claim-error" role="alert">{claimError}</p>}
           <div className="e6-pass-section-head">
-            <div><span className="e6-pass-section-kicker">THE REWARD ROAD</span><h2>Season track</h2><p>Claim rewards you’ve earned. Milestone tiers bring featured seasonal drops.</p></div>
-            <div className="e6-pass-track-tools"><span className="e6-pass-claimed-count"><b>{claimedTiers.length}</b> / {MAX_TIERS} CLAIMED</span>
-              <button type="button" onClick={() => { const c = timelineRef.current; if (c) { const t = c.children[Math.max(0, currentTier - 1)]; if (t) t.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); } }} className="e6-pass-jump">JUMP TO TIER {Math.min(currentTier, MAX_TIERS)} <GameIcon icon="arrowRight" size={13} /></button>
+            <div><span className="e6-pass-section-kicker">{isHolidayTrack ? 'LIMITED-TIME TRACK' : 'THE REWARD ROAD'}</span><h2>{isHolidayTrack ? 'Holiday rewards' : 'Season track'}</h2><p>{isHolidayTrack ? 'Progress this event while your Battle Pass continues.' : 'Claim rewards you’ve earned. Milestone tiers bring featured seasonal drops.'}</p></div>
+            <div className="e6-pass-track-tools"><span className="e6-pass-claimed-count"><b>{claimedTiers.length}</b> / {tierCount} CLAIMED</span>
+              <button type="button" onClick={() => { const c = timelineRef.current; if (c) { const t = c.children[Math.max(0, displayTier - 1)]; if (t) t.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); } }} className="e6-pass-jump">JUMP TO {isHolidayTrack ? 'REWARD' : 'TIER'} {displayTier} <GameIcon icon="arrowRight" size={13} /></button>
             </div>
           </div>
-          <div className="e6-pass-lane-labels"><span>FREE TRACK <small>Available through play</small></span><span className="e6-pass-premium-lane">PREMIUM TRACK <small>{battlePassPlus ? 'Pass active' : 'Bonus tier rewards'}</small></span><span className="e6-pass-tier-guide">TIER</span></div>
+          <div className="e6-pass-lane-labels"><span>{isHolidayTrack ? 'EVENT REWARDS' : activeEvent.is2027 ? 'REWARD TRACK' : 'FREE TRACK'} <small>{isHolidayTrack ? 'Limited time' : 'Available through play'}</small></span>{!isHolidayTrack && !activeEvent.is2027 && <span className="e6-pass-premium-lane">PREMIUM TRACK <small>{battlePassPlus ? 'Pass active' : 'Bonus tier rewards'}</small></span>}<span className="e6-pass-tier-guide">TIER</span></div>
           <div className="e6-pass-timeline" ref={timelineRef}>
             {activeEvent.battlePass.map(bp => {
               const claimed = claimedTiers.includes(bp.tier);
@@ -138,15 +212,15 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
                   <div className="e6-pass-tier-index"><span>{String(bp.tier).padStart(2, '0')}</span>{isCurrent && <small>CURRENT</small>}</div>
                   <div className="e6-pass-reward-pair">
                     <div className="e6-pass-reward-cell e6-pass-free-cell">
-                      <span className="e6-pass-cell-label">FREE</span>
+                      <span className="e6-pass-cell-label">{isHolidayTrack ? 'EVENT' : activeEvent.is2027 ? 'REWARD' : 'FREE'}</span>
                       <RewardPreview bp={bp} event={activeEvent} />
                       <strong title={label}>{label}</strong>
                       <small>{(bp.type || 'reward').replace(/([A-Z])/g, ' $1').toUpperCase()}{(isMilestone || isStar) && ' · FEATURED'}</small>
                       {claimed ? <span className="e6-pass-reward-status is-done"><GameIcon icon="check" size={13} /> CLAIMED</span>
-                        : canClaim ? <button type="button" onClick={() => handleClaim(bp.tier)} className="e6-pass-tier-claim">CLAIM FREE</button>
+                        : canClaim ? <button type="button" onClick={() => handleClaim(bp.tier)} className="e6-pass-tier-claim" disabled={claimingTiers.includes(bp.tier)}>{claimingTiers.includes(bp.tier) ? 'CLAIMING…' : 'CLAIM'}</button>
                         : <span className="e6-pass-reward-status"><GameIcon icon="lock" size={12} /> TIER {bp.tier}</span>}
                     </div>
-                    <div className={`e6-pass-reward-cell e6-pass-bonus-cell ${battlePassPlus ? 'is-unlocked' : ''} ${!bp.premiumReward ? 'is-empty' : ''}`}>
+                    {!isHolidayTrack && !activeEvent.is2027 && <div className={`e6-pass-reward-cell e6-pass-bonus-cell ${battlePassPlus ? 'is-unlocked' : ''} ${!bp.premiumReward ? 'is-empty' : ''}`}>
                       <span className="e6-pass-cell-label"> PREMIUM</span>
                       {bp.premiumReward ? <>
                         <RewardPreview bp={bp.premiumReward} event={activeEvent} />
@@ -154,14 +228,14 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
                         <small>{(bp.premiumReward.type || 'bonus reward').toUpperCase()}</small>
                         <span className="e6-pass-reward-status">{battlePassPlus ? 'INCLUDED WITH CLAIM' : <><GameIcon icon="lock" size={12} /> BONUS TRACK</>}</span>
                       </> : <><span className="e6-pass-no-reward">—</span><strong>NO BONUS DROP</strong><small>FREE TIER</small><span className="e6-pass-reward-status">FREE REWARD TIER</span></>}
-                    </div>
+                    </div>}
                   </div>
                 </article>
               );
             })}
           </div>
         </section>
-        <footer className="e6-pass-footnote"><span></span><p><strong>How progression works</strong> Earn Event XP from battles. Every {XP_PER_TIER} XP advances your free track by one tier. Claiming a tier uses the existing reward system; Battle Pass+ adds its bonus reward when active.</p></footer>
+        <footer className="e6-pass-footnote"><span></span><p><strong>How progression works</strong> Earn Event XP from battles. Every {xpPerTier.toLocaleString()} XP advances this track by one reward. {isHolidayTrack ? 'Holiday rewards contain no emotes or movement trails.' : 'Battle Pass+ bonus rewards remain available only where defined.'}</p></footer>
       </> : <section className="e6-pass-empty"><span></span><p className="e6-pass-section-kicker">SEASONAL REWARDS</p><h1>No active season</h1><p>There isn’t an active reward track right now. Check back when the next event begins.</p>
         {nextEventInfo?.event && nextEventInfo?.startDate && (() => {
           const diff = Math.max(0, nextEventInfo.startDate.getTime() - now);
@@ -176,8 +250,10 @@ export default function EventsScreen({ onBack, progress, onClaimEventReward, onN
 // ── Event showcase canvas — draws a cool event-themed scene with star characters ──
 function EventShowcaseCanvas({ event, starChars, bannerImage }) {
   const ref = useRef(null);
+  const [bannerFailed, setBannerFailed] = useState(false);
+  useEffect(() => setBannerFailed(false), [bannerImage]);
   useEffect(() => {
-    if (bannerImage) return undefined;
+    if (bannerImage && !bannerFailed) return undefined;
     const c = ref.current; if (!c) return;
     const ctx = c.getContext('2d'); let f = 0; let r = true;
     const W = 800, H = 180;
@@ -270,9 +346,9 @@ function EventShowcaseCanvas({ event, starChars, bannerImage }) {
     };
     loop();
     return () => { r = false; };
-  }, [event, starChars, bannerImage]);
-  return bannerImage
-    ? <img src={bannerImage} alt={`LIVE SEASON · ${event.name}`} />
+  }, [event, starChars, bannerImage, bannerFailed]);
+  return bannerImage && !bannerFailed
+    ? <img src={bannerImage} alt={`LIVE SEASON · ${event.name}`} onError={() => setBannerFailed(true)} />
     : <canvas ref={ref} width={800} height={180} className="w-full" style={{ maxWidth: '800px' }} />;
 }
 
@@ -299,6 +375,53 @@ function RewardPreview({ bp, event }) {
         ctx.beginPath(); ctx.arc(24, 24, 12, 0, Math.PI * 2); ctx.fill();
         ctx.shadowBlur = 0; ctx.fillStyle = '#000'; ctx.font = 'bold 10px Orbitron'; ctx.textAlign = 'center';
         ctx.fillText('◆', 24, 28);
+      } else if (event?.is2027 && bp.type === 'accessory' && getAccessory(bp.id)) {
+        const accessory = getAccessory(bp.id);
+        drawAccessory(ctx, 24, 38, accessory.type, accessory.color, f, .48, '');
+      } else if (event?.is2027 && bp.type === 'ko') {
+        // The season catalog calls these rewards `ko`; run the real effect
+        // renderer so previews match the equipped in-match effect.
+        drawKillFX(ctx, 24, 35, bp.id, (f % 72) / 72, event.color, f);
+      } else if (event?.is2027 && bp.type === 'emote') {
+        // Season emotes have authored pose entries in emotePose.js. Preview
+        // the same rig pose used in a match instead of a generic letter tile.
+        const char = ALL.find(candidate => candidate.id === 'yellow') || ALL[0];
+        if (char) {
+          ctx.fillStyle = `${event.color || '#9C6DF1'}22`;
+          ctx.beginPath(); ctx.arc(24, 25, 20, 0, Math.PI * 2); ctx.fill();
+          drawStickman(ctx, 24, 43, char.color, 1, f, .48, char.isSpirit, 'idle', char,
+            null, false, null, { id: bp.id, progress: (f % 120) / 120 });
+        }
+      } else if (event?.is2027 && bp.type === 'trail') {
+        const trail = getMovementTrail(bp.id);
+        if (trail) {
+          const histories = {};
+          // Trace a short sample path through the real trail renderer so this
+          // preview uses the equipped trail's color and particle language.
+          for (let step = 0; step < 12; step++) {
+            const x = 7 + step * 3.1;
+            const y = 29 + Math.sin((step + f * .08) * .72) * 5;
+            drawMovementTrail(ctx, { x, y, frame: f * 12 + step, facing: 1 }, trail.id, histories, 'preview', .28);
+          }
+        }
+      } else if (event?.is2027 && bp.type === 'title') {
+        const accent = event.color || '#9C6DF1';
+        ctx.fillStyle = `${accent}33`; ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.roundRect(3, 12, 42, 24, 8); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#F5F2FF'; ctx.font = 'bold 7px Orbitron, sans-serif'; ctx.textAlign = 'center';
+        const title = (bp.name || 'TITLE').toUpperCase();
+        ctx.fillText(title.length > 11 ? `${title.slice(0, 10)}…` : title, 24, 27);
+      } else if (event?.is2027) {
+        const marks = { title: 'T', shikigami: 'S', ko: 'K', emote: 'E', trail: 'M', accessory: 'A' };
+        const accent = event.color || '#9C6DF1';
+        const spirit = bp.type === 'shikigami' ? getShikigami(bp.shikigamiId) : null;
+        if (spirit) spirit.draw(ctx, 24, 31, f, .72);
+        else {
+          ctx.fillStyle = `${accent}22`; ctx.beginPath(); ctx.arc(24, 24, 18, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(24, 24, 15, 0, Math.PI * 2); ctx.stroke();
+          ctx.fillStyle = '#F5F2FF'; ctx.font = 'bold 16px Orbitron, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(marks[bp.type] || 'R', 24, 24);
+        }
       } else if (bp.type === 'skin' && bp.item) {
         const skinColor = bp.item.color;
         // Draw mini character preview

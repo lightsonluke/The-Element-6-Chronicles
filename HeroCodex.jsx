@@ -479,7 +479,7 @@ export default function HeroCodex({ onBack, progress }) {
                   {selected.superMove && (
                     <div className="rounded-lg p-2 border col-span-2" style={{ borderColor: selected.color + '55', backgroundColor: selected.color + '11' }}>
                       <div className="flex items-center gap-1">
-                        <span className="text-[9px] font-heading text-accent"><GameIcon icon="warning" size={14} /> SUPER</span>
+                        <span className="text-[9px] font-heading text-accent"><GameIcon icon="fire" size={14} /> SUPER</span>
                         <span className="text-[10px] font-heading text-foreground ml-1">{selected.superMove.name}</span>
                       </div>
                       <p className="text-[9px] text-muted-foreground font-body">{selected.superMove.desc}</p>

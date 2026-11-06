@@ -134,7 +134,11 @@ export default function BangerGame({
     return () => { try { music.clearMatchSeed(); } catch {} music.stop(); };
   }, [musicVolume, sfxVolume]);
 
-  useEffect(() => { window.__el6GameplayActive = true; return () => { window.__el6GameplayActive = false; }; }, []);
+  useEffect(() => {
+    window.__el6GameplayActive = Boolean(started && !stRef.current?.done);
+    window.__el6GameplayCaptureActive = Boolean(started && !stRef.current?.done);
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [started]);
 
   const sigKeys = (side) => {
     if (side === 1) { const ks = [kb.p1.sig.toLowerCase()]; if (p2IsCPU) ks.push(kb.p2.sig.toLowerCase()); return ks; }
@@ -450,6 +454,8 @@ export default function BangerGame({
   }
 
   function finishMatch() {
+    window.__el6GameplayActive = false;
+  window.__el6GameplayCaptureActive = false;
     if (paid.current) return; paid.current = true;
     const s = stRef.current;
     setTimeout(() => onResult?.({
@@ -593,7 +599,7 @@ export default function BangerGame({
       </MatchPauseButtonPortal>
       {paused && <MatchPausePortal><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onQuit} /></MatchPausePortal>}
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={CANVAS_W} height={CANVAS_H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
+        <canvas ref={canvasRef} width={CANVAS_W} height={CANVAS_H} data-e6-game-canvas="true" className="el6-match-canvas el6-sport-canvas rounded-lg shadow-2xl w-full"
                 style={{ width: '100%', maxWidth: CANVAS_W + 'px', height: 'auto', aspectRatio: '16 / 9', background: '#080d1a' }} />
       </GameCanvasPortal>
     </div>

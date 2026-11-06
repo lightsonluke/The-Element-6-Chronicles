@@ -36,6 +36,7 @@ export default function CharacterSelect({ onStart, onBack, settings = {}, unlock
       rankedRandom={isRanked}
       defaultCPUDifficulty={defaultCPUDifficulty}
       settings={settings || {}}
+      enableMatchSettings
       banCustomChars={banCustom}
       charMastery={charMastery}
       onStart={(p1, p2, p2IsCPU, difficulty, p1Element, p2Element, ...extra) => { const shikigamiOverride = extra.length > 1 ? extra[extra.length - 2] : extra[0]; const matchConfig = extra.length > 1 ? extra[extra.length - 1] : null; onStart(p1, p2, p2IsCPU, difficulty, p1Element, p2Element, shikigamiOverride, matchConfig); }}

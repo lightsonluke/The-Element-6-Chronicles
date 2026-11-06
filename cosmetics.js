@@ -14,6 +14,7 @@ import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { EXTRA_JERSEYS } from './sportsJerseys.js';
 import { UNIVERSAL_ACCESSORIES } from './universalAccessories.js';
+import { BATTLE_PASSES_2027, HOLIDAY_EVENTS_2027 } from './season2027.js';
 
 export const ACCESSORIES = [
   // ── Generic auras ──
@@ -169,8 +170,74 @@ ACCESSORIES.push({
   color: '#FFFFFF',
 });
 
+const EVENT_COSMETIC_COLORS = {
+  'frost-found-2027':'#8ED8FF','yokai-rising-2027':'#B06BFF','petal-metal-2027':'#FF77AD',
+  'six-oclock-2027':'#FFC14F','out-of-this-element-2027':'#8C77FF','sixth-eclipse-2027':'#D83F60',
+  'new-year-2027':'#E8C66E','new-year-2028':'#E8C66E','love-at-first-fight':'#F080A5',
+  'luck-of-the-sixth':'#54A66B','egg-stinction-event':'#F4C27E','elemental-prank':'#FF835A',
+  'planet-of-the-elements':'#76A65B','trick-or-beatdown':'#B47CF1','living-chronicles':'#E58A43',
+  'thanks-for-the-elements':'#D9A441','winter-wonderland':'#90DAFF',
+};
+
+function seasonAccessoryType(name) {
+  const item = name.toLowerCase();
+  if (/golden clock head/.test(item)) return 'newyear_clock_head';
+  if (/heart-shaped hair clips/.test(item)) return 'heart_clips';
+  if (/four-leaf clover/.test(item)) return 'clover_crown';
+  if (/bunny ear/.test(item)) return 'bunny_ears';
+  if (/oversized clown nose/.test(item)) return 'clown_nose';
+  if (/leaf crown/.test(item)) return 'leaf_crown';
+  if (/pumpkin head/.test(item)) return 'pumpkin_head';
+  if (/marigold flower crown/.test(item)) return 'marigold_crown';
+  if (/harvest leaf headband/.test(item)) return 'harvest_headband';
+  if (/snowman head/.test(item)) return 'snowman_head';
+  if (/snowflake face paint/.test(item)) return 'snowflake_face';
+  if (/winter scarf/.test(item)) return 'winter_scarf';
+  if (/frozen star halo/.test(item)) return 'frozen_star_halo';
+  if (/heart halo/.test(item)) return 'heart_halo';
+  if (/floral skull face/.test(item)) return 'floral_skull_mask';
+  if (/living vine backpiece/.test(item)) return 'living_vine_back';
+  if (/spring basket backpiece/.test(item)) return 'spring_basket_back';
+  if (/haunted lantern backpiece/.test(item)) return 'haunted_lantern_back';
+  if (/autumn leaf backpiece/.test(item)) return 'autumn_leaf_back';
+  if (/snowflake backpiece/.test(item)) return 'snowflake_back';
+  if (/halo/.test(item)) return 'halo_ring';
+  if (/face paint|markings|cheek markings/.test(item)) return 'snow_dots';
+  if (/faceplate|face accessory|mask|nose/.test(item)) return 'oni_mask_hannya';
+  if (/backpiece|backpiece|back ornament|back mantle/.test(item)) return 'cape_long';
+  if (/shoulder/.test(item)) return 'pauldrons';
+  if (/scarf/.test(item)) return 'scarf_long';
+  if (/wrist|wristband|wrist wrap/.test(item)) return 'bracelet';
+  if (/necklace/.test(item)) return 'necklace';
+  if (/ear/.test(item)) return 'headband';
+  if (/clock/.test(item)) return 'clock';
+  if (/clover|flower|petal|leaf crown/.test(item)) return 'flower';
+  if (/crown|antler|horn/.test(item)) return 'snow_crown';
+  if (/snowflake/.test(item)) return 'crystals';
+  if (/hat|headband|head accessory|hair|headpiece|head ornament/.test(item)) return 'headband';
+  if (/ornament/.test(item)) return 'crown_jewel';
+  return 'sparkles';
+}
+
+const seasonalAccessoryRows = [...BATTLE_PASSES_2027, ...HOLIDAY_EVENTS_2027]
+  .flatMap(event => event.rewards.filter(reward => reward.type === 'accessory').map(reward => ({ event, reward })))
+  .filter(({ reward }, index, rows) => rows.findIndex(row => row.reward.id === reward.id) === index);
+
+ACCESSORIES.push(...seasonalAccessoryRows
+  .filter(({ reward }) => !ACCESSORIES.some(accessory => accessory.id === reward.id))
+  .map(({ event, reward }) => ({
+    id: reward.id,
+    name: reward.displayName || reward.name,
+    description: `Seasonal reward from ${event.name}.`,
+    price: 0,
+    type: seasonAccessoryType(reward.displayName || reward.name),
+    color: EVENT_COSMETIC_COLORS[event.id] || '#C69CFF',
+    seasonal: true,
+    eventId: event.id,
+  })));
+
   // Price bump — all shop items cost 50 more tokens
-  ACCESSORIES.forEach(a => { if (a.price > 0) a.price += 50; });
+  ACCESSORIES.forEach(a => { if (a.price > 0 && !a.seasonal) a.price += 50; });
 
   export function getAccessory(id) {
   const acc = ACCESSORIES.find(a => a.id === id);
@@ -415,6 +482,42 @@ function drawRedesignedAccessory(ctx, p) {
     } else {star(x,top+s*.06,s*.035,accent);}
     ctx.restore();
   };
+
+  // Seasonal rewards use distinct, readable silhouettes. These stay optional
+  // cosmetics and are drawn around the existing rig without replacing it.
+  if (['living_vine_back','spring_basket_back','haunted_lantern_back','autumn_leaf_back','snowflake_back'].includes(type)) {
+    ctx.save();
+    if (type === 'living_vine_back') {
+      ctx.strokeStyle=C;ctx.lineWidth=s*.045;ctx.shadowColor=C;ctx.shadowBlur=5;ctx.beginPath();ctx.moveTo(x-s*.34,torsoTopY+s*.08);ctx.bezierCurveTo(x-s*.58,torsoCY-s*.3,x+s*.38,torsoCY-s*.42,x+s*.32,hipY+s*.18);ctx.stroke();
+      for(let i=0;i<6;i++){const side=i%2?-1:1,yy=torsoTopY+s*(.12+i*.11),xx=x+side*s*(.18+((i*7)%3)*.055);poly([[xx,yy],[xx+side*s*.12,yy-s*.1],[xx+side*s*.17,yy+s*.015]],i%2?'#8CCB62':'#B3D977','rgba(255,255,255,.4)',s*.01);}
+    } else if (type === 'spring_basket_back') {
+      round(x-s*.3,torsoCY+s*.06,s*.6,s*.42,s*.08,'#A97042','#E9C993',s*.025);ctx.strokeStyle='#E6C28A';ctx.lineWidth=s*.025;for(let i=1;i<5;i++){line(x-s*.27,torsoCY+s*(.06+i*.07),x+s*.27,torsoCY+s*(.06+i*.07),'#E6C28A',s*.018);}ctx.beginPath();ctx.arc(x,torsoCY+s*.18,s*.31,Math.PI,Math.PI*2);ctx.stroke();for(let i=0;i<3;i++){const xx=x+s*(i-1)*.16,yy=torsoCY+s*.01;circle(xx,yy,s*.045,i%2?'#F5A5C3':'#F6D16D');circle(xx,yy,s*.018,'#FFF1B8');}
+    } else if (type === 'haunted_lantern_back') {
+      ctx.shadowColor='#FFB84D';ctx.shadowBlur=13;const lx=x+facing*s*.42,ly=torsoCY-s*.13;line(lx,torsoTopY,lx,ly-s*.13,'#8D6A49',s*.018);round(lx-s*.12,ly-s*.12,s*.24,s*.3,s*.045,'#3A2634','#D49A4D',s*.022);round(lx-s*.075,ly-s*.08,s*.15,s*.21,s*.025,'#FFC76A');line(lx-s*.11,ly-s*.13,lx+s*.11,ly-s*.13,'#F7D690',s*.018);ctx.shadowBlur=0;
+    } else if (type === 'autumn_leaf_back') {
+      for(let i=0;i<7;i++){const a=Math.PI*.9+i*Math.PI*.2,xx=x+Math.cos(a)*s*.35,yy=torsoCY+s*.04+Math.sin(a)*s*.32;ctx.save();ctx.translate(xx,yy);ctx.rotate(a-Math.PI/2);ellipse(0,0,s*.07,s*.15,['#C96B32','#E4A93D','#B84C30'][i%3],0,'rgba(255,224,164,.6)',s*.012);line(0,-s*.12,0,s*.12,'#F4D18A',s*.012);ctx.restore();}
+    } else {
+      ctx.strokeStyle=C;ctx.lineWidth=s*.035;ctx.shadowColor=C;ctx.shadowBlur=6;for(let i=0;i<3;i++){const a=i*Math.PI/3;line(x-Math.cos(a)*s*.36,torsoCY-Math.sin(a)*s*.36,x+Math.cos(a)*s*.36,torsoCY+Math.sin(a)*s*.36,'#DDF8FF',s*.025);for(const side of [-1,1]){const px=x+side*Math.cos(a)*s*.24,py=torsoCY+side*Math.sin(a)*s*.24;for(const branch of [-1,1])line(px,py,px+branch*Math.sin(a)*s*.07,py-branch*Math.cos(a)*s*.07,C,s*.018);}}circle(x,torsoCY,s*.045,'#F5FDFF');
+    }
+    ctx.restore();return true;
+  }
+  if (['newyear_clock_head','heart_clips','clover_crown','bunny_ears','clown_nose','leaf_crown','pumpkin_head','marigold_crown','harvest_headband','snowman_head','snowflake_face','winter_scarf','frozen_star_halo','heart_halo','floral_skull_mask'].includes(type)) {
+    ctx.save();
+    if(type==='newyear_clock_head'){const cx=x,cy=headTopY-s*.08,r=s*.16;glow(C,5);circle(cx,cy,r,'#7A501E','#FFE08A',s*.025);circle(cx,cy,r*.72,'#18213A','#FFE08A',s*.012);for(let i=0;i<8;i++){const a=i*Math.PI/4;circle(cx+Math.cos(a)*r*.57,cy+Math.sin(a)*r*.57,s*.012,'#FFE08A');}line(cx,cy,cx+s*.035,cy-s*.07,'#FFF4C2',s*.016);line(cx,cy,cx-s*.06,cy+s*.025,'#FFF4C2',s*.014);noGlow();}
+    else if(type==='heart_clips'){for(const side of [-1,1]){const cx=x+side*s*.31,cy=headY-s*.015,r=s*.075;ctx.beginPath();ctx.moveTo(cx,cy+r*.85);ctx.bezierCurveTo(cx-r*1.5,cy,cx-r,cy-r,cx,cy-r*.3);ctx.bezierCurveTo(cx+r,cy-r,cx+r*1.5,cy,cx,cy+r*.85);ctx.fillStyle=C;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.72)';ctx.lineWidth=s*.012;ctx.stroke();circle(cx,cy-r*.28,r*.16,'#FFF2C9');}}
+    else if(type==='clover_crown'){for(const side of [-1,0,1]){const cx=x+side*s*.2,cy=headTopY-s*.02;for(let i=0;i<4;i++){const a=i*Math.PI/2;circle(cx+Math.cos(a)*s*.055,cy+Math.sin(a)*s*.055,s*.055,C,'rgba(255,255,255,.55)',s*.01);}circle(cx,cy,s*.022,'#F9E59A');line(cx,cy+s*.09,cx+s*.025,cy+s*.17,'#A8D479',s*.012);}}
+    else if(type==='bunny_ears'){for(const side of [-1,1]){ctx.save();ctx.translate(x+side*s*.15,headTopY+s*.02);ctx.rotate(side*(.12+Math.sin(t)*.025));round(-s*.075,-s*.38,s*.15,s*.42,s*.075,'#F6E8E5','#FFFFFF',s*.016);round(-s*.035,-s*.32,s*.07,s*.3,s*.035,'#E89BAA');ctx.restore();}}
+    else if(type==='clown_nose'){const nx=x+facing*s*.22,ny=headY+s*.04;glow(C,5);circle(nx,ny,s*.085,'#E84152','#FFC4C9',s*.018);circle(nx-s*.025,ny-s*.03,s*.022,'#FFF0EF');noGlow();}
+    else if(type==='leaf_crown'||type==='harvest_headband'){round(x-s*.34,headTopY-s*.015,s*.68,s*.085,s*.04,type==='leaf_crown'?'#436D3C':'#7B5429','#E4C78B',s*.016);for(let i=0;i<7;i++){const xx=x-s*.28+i*s*.093,yy=headTopY-s*.06;poly([[xx,yy+s*.08],[xx+s*.035,yy-s*.055],[xx+s*.085,yy+s*.075]],i%2?'#9FCB65':'#719E4B','rgba(255,255,255,.45)',s*.01);line(xx+s*.035,yy+s*.015,xx+s*.075,yy+s*.045,'#D8E9A7',s*.008);}}
+    else if(type==='pumpkin_head'){const cx=x,cy=headTopY-s*.035;glow('#F18A32',4);ellipse(cx,cy,s*.22,s*.14,'#F18A32',0,'#542D35',s*.02);for(let i=-1;i<=1;i++)ellipse(cx+i*s*.075,cy,s*.055,s*.135,i===0?'#FFB14E':'#E56E27');round(cx-s*.035,cy-s*.18,s*.07,s*.055,s*.018,'#597C43');poly([[cx-s*.1,cy+s*.015],[cx-s*.055,cy+s*.04],[cx-s*.1,cy+s*.065]],'#2A1B25');poly([[cx+s*.1,cy+s*.015],[cx+s*.055,cy+s*.04],[cx+s*.1,cy+s*.065]],'#2A1B25');noGlow();}
+    else if(type==='marigold_crown'||type==='flower'){for(let i=0;i<8;i++){const a=Math.PI*2*i/8,cx=x+Math.cos(a)*s*.24,cy=headTopY+s*.015+Math.sin(a)*s*.075;circle(cx,cy,s*.062,type==='marigold_crown'?(i%2?'#F5A33C':'#E87925'):(i%2?C:accent),'rgba(255,255,255,.45)',s*.01);}circle(x,headTopY+s*.015,s*.04,'#F9DA75');}
+    else if(type==='snowman_head'){const cx=x+s*.3,cy=headTopY-s*.11;circle(cx,cy,s*.105,'#F7FCFF','#9BD7EC',s*.014);circle(cx,cy-s*.14,s*.075,'#FFFFFF','#9BD7EC',s*.014);round(cx-s*.09,cy-s*.24,s*.18,s*.035,s*.01,'#29324B');circle(cx-s*.025,cy-s*.16,s*.01,'#172033');circle(cx+s*.025,cy-s*.16,s*.01,'#172033');poly([[cx,cy-s*.14],[cx+s*.06,cy-s*.12],[cx,cy-s*.1]],'#F28D42');}
+    else if(type==='snowflake_face'){for(const side of [-1,1]){const cx=x+side*headR*.5,cy=headY+s*.09;for(let i=0;i<3;i++){const a=i*Math.PI/3;line(cx-Math.cos(a)*s*.055,cy-Math.sin(a)*s*.055,cx+Math.cos(a)*s*.055,cy+Math.sin(a)*s*.055,'#BDEFFF',s*.018);}circle(cx,cy,s*.018,'#FFFFFF');}}
+    else if(type==='winter_scarf'){round(x-s*.28,torsoTopY-s*.02,s*.56,s*.12,s*.045,C,'rgba(255,255,255,.65)',s*.016);const sway=Math.sin(t*1.6)*s*.035;poly([[x+s*.12,torsoTopY+s*.05],[x+s*.28,torsoTopY+s*.05],[x+s*.33+sway,torsoCY+s*.32],[x+s*.2+sway,torsoCY+s*.35]],C,'rgba(255,255,255,.6)',s*.012);for(let i=0;i<3;i++)line(x+s*.2,torsoTopY+s*(.1+i*.05),x+s*.29,torsoTopY+s*(.1+i*.05),'rgba(255,255,255,.5)',s*.012);}
+    else if(type==='frozen_star_halo'||type==='heart_halo'){ctx.strokeStyle=C;ctx.lineWidth=s*.028;ctx.shadowColor=C;ctx.shadowBlur=9;ctx.beginPath();ctx.ellipse(x,headTopY-s*.14,s*.38,s*.12,Math.sin(t)*.08,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;if(type==='frozen_star_halo'){for(let i=0;i<6;i++){const a=t*.25+i*Math.PI/3;star(x+Math.cos(a)*s*.38,headTopY-s*.14+Math.sin(a)*s*.12,s*.045,'#E9FBFF',a);}}else{for(const side of [-1,1]){const cx=x+side*s*.23,cy=headTopY-s*.14,r=s*.05;ctx.beginPath();ctx.moveTo(cx,cy+r*.8);ctx.bezierCurveTo(cx-r,cy,cx-r,cy-r,cx,cy-r*.25);ctx.bezierCurveTo(cx+r,cy-r,cx+r,cy,cx,cy+r*.8);ctx.fillStyle=C;ctx.fill();}}}
+    else if(type==='floral_skull_mask'){ellipse(x,headY+s*.08,headR*.72,headR*.43,'#F4E5CA',0,'rgba(79,49,51,.8)',s*.018);for(const side of [-1,1]){circle(x+side*headR*.33,headY+s*.04,headR*.12,'#3A2634');for(let i=0;i<5;i++){const a=i*Math.PI*2/5;circle(x+side*headR*.33+Math.cos(a)*s*.047,headY+s*.04+Math.sin(a)*s*.047,s*.022,C);}}line(x,headY+s*.22,x,headY+s*.34,'#9C5B4C',s*.022);}
+    ctx.restore();return true;
+  }
   const isApparel = ['hoodie','cardigan','jacket','tee','vest','pants','jeans','shorts','sweatpants','soccer_kit','jersey','volleyball_kit','baseball_kit','basketball_kit','tennis_kit','track_kit','kimono','yukata','haori','checkered_haori','hakama','samurai_armor','chrome_armor'].includes(type);
   if(isApparel){
     if(['pants','jeans','shorts','sweatpants','hakama'].includes(type)) drawPants(type);
@@ -1913,7 +2016,8 @@ export function drawAccessory(ctx, x, y, type, color, frame = 0, scale = 1, char
 
 const BEHIND_TYPES = new Set([
   'wings', 'lwings', 'wings_energy', 'energy_wings',
-  'cape', 'cape_long', 'shadow_cloak',
+  'cape', 'cape_long', 'shadow_cloak', 'living_vine_back', 'spring_basket_back',
+  'haunted_lantern_back', 'autumn_leaf_back', 'snowflake_back',
   'aura', 'mist', 'bubble', 'beam', 'grav', 'shadow',
   'crystals', 'ice_crystals',
   'sparkles', 'star', 'comet',

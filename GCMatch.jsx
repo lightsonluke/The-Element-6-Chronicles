@@ -69,6 +69,11 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
   const pausedRef = useRef(false);
   const [countdown, setCountdown] = useState(3);
   const [gameStarted, setGameStarted] = useState(false);
+  useEffect(() => {
+    window.__el6GameplayActive = true;
+    window.__el6GameplayCaptureActive = gameStarted;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [gameStarted]);
   // Generate bot cosmetics for non-human players (cached for entire match)
   const botCharIds = [];
   if (!p1IsHuman) botCharIds.push(p1Char);
@@ -311,8 +316,8 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
         </MatchPauseButtonPortal>
       </div>
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={W} height={H}
-                className="el6-fight-canvas border-2 border-border rounded-lg shadow-2xl w-full"
+        <canvas ref={canvasRef} width={W} height={H} data-e6-game-canvas="true"
+                className="el6-match-canvas el6-fight-canvas border-2 border-border rounded-lg shadow-2xl w-full"
                 style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }} />
       </GameCanvasPortal>
       {countdown > 0 && !settings?.hideCountdown && (

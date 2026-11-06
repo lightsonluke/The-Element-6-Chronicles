@@ -1248,9 +1248,15 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
 
       if (superImpactFlash > 0) {
         ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.fillStyle = `rgba(255,255,255,${superImpactFlash * 0.5})`;
-        ctx.fillRect(0, 0, W, H);
+        const impactFighter = [f1, f2].find(f => f.state === 'superAttack' || (f.attackData?.isSuper && f.attackData.progress > 0.72));
+        if (impactFighter) {
+          ctx.globalAlpha = Math.min(0.42, superImpactFlash * 0.42);
+          ctx.strokeStyle = impactFighter.char?.color || '#FFFFFF';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(impactFighter.x, impactFighter.y - 28, 24 + (1 - superImpactFlash) * 34, 0, Math.PI * 2);
+          ctx.stroke();
+        }
         ctx.restore();
         superImpactFlash = Math.max(0, superImpactFlash - dt * 4);
       }

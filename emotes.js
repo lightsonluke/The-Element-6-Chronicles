@@ -2,6 +2,8 @@
 // Uses character body animations for expressive in-game emotes.
 // Emotes are drawn by overriding the character's limb pose (see emotePose.js).
 
+import { BATTLE_PASSES_2027 } from './season2027.js';
+
 export const EMOTES = [
   // ── Core 4 ──
   { id: 'fistbump',  name: 'Fist Bump',       duration: 90,  price: 500, desc: 'Extend fist — syncs with nearby players doing the same', interaction: 'fistbump' },
@@ -44,6 +46,19 @@ export const EMOTES = [
   { id: 'salute',    name: 'Salute',             duration: 70,  price: 500, desc: 'Clean salute' },
   { id: 'goodbye',   name: 'Goodbye',            duration: 90,  price: 500, desc: 'Turn and wave goodbye' },
 ];
+
+const seasonalEmoteRewards = BATTLE_PASSES_2027.flatMap(event => event.rewards
+  .filter(reward => reward.type === 'emote')
+  .map(reward => ({
+    id: reward.id,
+    name: reward.name,
+    duration: 120,
+    price: 0,
+    desc: `Season reward from ${event.name}.`,
+    seasonal: true,
+    eventId: event.id,
+  })));
+EMOTES.push(...seasonalEmoteRewards.filter(reward => !EMOTES.some(emote => emote.id === reward.id)));
 
 // Build a quick lookup map
 const EMOTE_MAP = {};

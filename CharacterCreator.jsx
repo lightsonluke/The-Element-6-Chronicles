@@ -45,7 +45,7 @@ const ELEMENT_POWERS = [
   {
     id: 'electric',
     name: 'Electric',
-    icon: 'warning',
+    icon: 'bolt',
     desc: 'Shoots a lightning bolt forward — deals damage and knockback.',
     color: '#FFDD00',
     power_effect: { type: 'homing_projectile', name: 'Lightning Bolt', duration: 0, cooldown: 13, damage: 20, knockback: 1.3, color: '#FFDD00', projectileType: 'electric' },
@@ -403,7 +403,7 @@ export default function CharacterCreator({ onBack, onSave, onDelete, progress })
 
           {/* Element Power Picker */}
           <div className="bg-card border border-accent/40 rounded-xl p-4">
-            <h3 className="font-heading text-sm text-accent mb-2"><GameIcon icon="warning" size={14} /> CHOOSE YOUR POWER ELEMENT</h3>
+            <h3 className="font-heading text-sm text-accent mb-2"><GameIcon icon="bolt" size={14} /> CHOOSE YOUR POWER ELEMENT</h3>
             <div className="grid grid-cols-3 gap-2 mb-3">
               {ELEMENT_POWERS.map(el => (
                 <button key={el.id} onClick={() => { sfx.click(); setSelectedElement(el.id); }}

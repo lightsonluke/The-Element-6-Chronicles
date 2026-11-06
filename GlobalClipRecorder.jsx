@@ -3,10 +3,10 @@ import {
   initClipRecorder,
   saveClip,
   stopClipRecorder,
-  isClipRecorderActive
+  isClipRecorderActive,
+  setClipRecorderPaused
 } from './clipRecorder.js';
-import { saveClipBlob, trimClips } from './clipStorage.js';
-import { startMatchReplay, stopMatchReplay } from './matchReplayRecorder.js';
+import { saveClipBlob } from './clipStorage.js';
 
 function showToast(message) {
   const old = document.getElementById('clip-toast');
@@ -25,7 +25,7 @@ function showToast(message) {
 
 function findGameCanvas() {
   const candidates = [
-    ...document.querySelectorAll('canvas.el6-match-canvas, canvas[data-e6-game-canvas="true"]')
+    ...document.querySelectorAll('canvas[data-e6-game-canvas="true"]')
   ];
   const visible = candidates.filter(canvas => {
     const rect = canvas.getBoundingClientRect();
@@ -56,8 +56,6 @@ async function persistClip() {
     previewBlob: result.previewBlob || null
   });
 
-  await trimClips(30);
-
   window.dispatchEvent(
     new CustomEvent('clipSaved', {
       detail: {
@@ -78,20 +76,76 @@ async function persistClip() {
   return true;
 }
 
-export default function GlobalClipRecorder() {
+export default function GlobalClipRecorder({ enabled = false } = {}) {
   const canvasRef = useRef(null);
   const scanTimerRef = useRef(null);
   const savingRef = useRef(false);
-  const replayCanvasRef = useRef(null);
+
+  // Clip saving is an explicit action. Keep this handler mounted even when
+  // recording is disabled so the pause-menu button can explain how to enable it.
+  useEffect(() => {
+    const requestSave = async () => {
+      if (savingRef.current) return;
+      if (!enabled) {
+        showToast('TURN ON ENABLE CLIPS IN SETTINGS TO SAVE GAMEPLAY');
+        return;
+      }
+      if (!isClipRecorderActive()) {
+        showToast('NO RECENT GAMEPLAY IS AVAILABLE TO SAVE');
+        return;
+      }
+
+      savingRef.current = true;
+      try {
+        await persistClip();
+      } catch (error) {
+        console.error('[Element 6 Clips] Save failed:', error);
+        showToast(error?.name === 'QuotaExceededError'
+          ? 'CLIP NOT SAVED — LOCAL STORAGE IS FULL; EXISTING FILES WERE KEPT'
+          : 'CLIP NOT SAVED — SOURCE BUFFER RETAINED, TRY AGAIN');
+      } finally {
+        savingRef.current = false;
+      }
+    };
+    const onRequest = () => { void requestSave(); };
+    const onKeyDown = event => {
+      if (event.code !== 'F8' || !window.__el6GameplayCaptureActive) return;
+      const target = event.target;
+      if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) return;
+      event.preventDefault();
+      event.stopPropagation();
+      onRequest();
+    };
+
+    window.addEventListener('el6-save-clip', onRequest);
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => {
+      window.removeEventListener('el6-save-clip', onRequest);
+      window.removeEventListener('keydown', onKeyDown, true);
+    };
+  }, [enabled]);
 
   useEffect(() => {
+    if (!enabled) {
+      stopClipRecorder();
+      canvasRef.current = null;
+      return undefined;
+    }
     let cancelled = false;
 
     const start = () => {
       if (cancelled) return;
+      // Capture only after the renderer explicitly confirms live gameplay.
+      // A mounted canvas alone can also belong to setup, preview, or results UI.
+      if (window.__el6GameplayCaptureActive !== true) {
+        stopClipRecorder();
+        canvasRef.current = null;
+        return;
+      }
       const canvas = findGameCanvas();
       if (!canvas) {
-        if (replayCanvasRef.current) { stopMatchReplay().catch(() => {}); replayCanvasRef.current = null; }
+        stopClipRecorder();
+        canvasRef.current = null;
         return;
       }
       // Prematch animation canvases are deliberately not marked as match canvases.
@@ -100,51 +154,41 @@ export default function GlobalClipRecorder() {
       if (initClipRecorder(canvas)) {
         canvasRef.current = canvas;
         window.__e6ClipRecorderActive = true;
-        if (replayCanvasRef.current !== canvas) {
-          replayCanvasRef.current = canvas;
-          startMatchReplay(canvas, window.__e6MatchReplayMeta || {});
-        }
+        syncPauseState();
       }
     };
 
-    const save = async event => {
-      if (event.code !== 'Space' && event.key !== ' ') return;
-
-      const target = event.target;
-
-      if (
-        target?.tagName === 'INPUT' ||
-        target?.tagName === 'TEXTAREA' ||
-        target?.isContentEditable
-      ) {
-        return;
-      }
-
-      if (!isClipRecorderActive() || savingRef.current) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      savingRef.current = true;
-
-      try {
-        await persistClip();
-      } catch (error) {
-        console.error('[Element 6 Clips] Save failed:', error);
-        showToast('CLIP SAVE FAILED');
-      } finally {
-        savingRef.current = false;
-      }
+    const syncPauseState = () => {
+      const pauseLayer = document.querySelector('.el6-pause-overlay-layer, .el6-global-pause-layer');
+      const onlinePause = document.querySelector('.el6-pause-overlay-layer[data-match-continues="true"]');
+      const pauseOpen = Boolean(
+        (pauseLayer && !onlinePause) ||
+        document.querySelector('[data-game-paused="true"]')
+      );
+      setClipRecorderPaused(pauseOpen);
     };
 
-    window.addEventListener('keydown', save, true);
+    const pauseObserver = new MutationObserver(() => {
+      syncPauseState();
+      // Stop on a result/exit render immediately; the interval remains as a
+      // fallback for renderers whose lifecycle flag changes without DOM work.
+      if (window.__el6GameplayCaptureActive !== true) start();
+    });
+    pauseObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'data-state', 'data-game-paused']
+    });
 
     start();
-    scanTimerRef.current = setInterval(start, 750);
+    // The active-scene contract can change without a DOM mutation, so poll it
+    // promptly to keep transitions and result screens out of recordings.
+    scanTimerRef.current = setInterval(start, 100);
 
     return () => {
       cancelled = true;
-      window.removeEventListener('keydown', save, true);
+      pauseObserver.disconnect();
 
       if (scanTimerRef.current) {
         clearInterval(scanTimerRef.current);
@@ -152,12 +196,9 @@ export default function GlobalClipRecorder() {
 
       scanTimerRef.current = null;
       stopClipRecorder();
-      stopMatchReplay().catch(() => {});
       canvasRef.current = null;
-      replayCanvasRef.current = null;
-      savingRef.current = false;
     };
-  }, []);
+  }, [enabled]);
 
   return null;
 }

@@ -216,7 +216,7 @@ export default function MeetCharacters({ onBack, favoriteId, onSetFavorite, prog
                 {selected.superMove && (
                   <div className="rounded-lg p-2 border col-span-2" style={{ borderColor: selected.color + '55', backgroundColor: selected.color + '11' }}>
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-heading text-accent"><GameIcon icon="warning" size={14} /> SUPER MOVE</span>
+                      <span className="text-[9px] font-heading text-accent"><GameIcon icon="fire" size={14} /> SUPER MOVE</span>
                       <span className="text-[10px] font-heading text-foreground ml-1">{selected.superMove.name}</span>
                     </div>
                     <p className="text-[9px] text-muted-foreground font-body">{selected.superMove.desc}</p>
@@ -225,7 +225,7 @@ export default function MeetCharacters({ onBack, favoriteId, onSetFavorite, prog
                 {selected.heavyAttack && (
                   <div className="rounded-lg p-2 border col-span-2" style={{ borderColor: selected.color + '44', backgroundColor: selected.color + '0a' }}>
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-heading text-accent"><GameIcon icon="exclamationCircle" size={14} /> HEAVY</span>
+                      <span className="text-[9px] font-heading text-accent"><GameIcon icon="game" size={14} /> HEAVY</span>
                       <span className="text-[10px] font-heading text-foreground ml-1">{selected.heavyAttack.name}</span>
                     </div>
                     <p className="text-[9px] text-muted-foreground font-body">{selected.heavyAttack.desc}</p>

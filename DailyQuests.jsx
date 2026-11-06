@@ -175,7 +175,7 @@ export default function DailyQuests({ progress, onClaimChest, onCosmeticUnlock, 
                       <p className="text-xs font-heading text-accent">+{result.coins} <GameIcon icon="star" size={14} /></p>
                       {result.cosmetic && (
                         <p className="text-[10px] font-heading text-primary">
-                          {result.cosmetic.type === 'accessory' ? <GameIcon icon="tag" size={14} /> : result.cosmetic.type === 'skin' ? <GameIcon icon="palette" size={14} /> : <GameIcon icon="exclamationCircle" size={14} />} {result.cosmetic.name}!
+                          {result.cosmetic.type === 'accessory' ? <GameIcon icon="tag" size={14} /> : result.cosmetic.type === 'skin' ? <GameIcon icon="palette" size={14} /> : <GameIcon icon="package" size={14} />} {result.cosmetic.name}!
                         </p>
                       )}
                     </div>

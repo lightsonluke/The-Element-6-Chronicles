@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient.js';
 import { loadSharedLeaderboard } from './sharedLeaderboard.js';
 import HonoredBotTracking from './HonoredBotTracking.jsx';
 import GameIcon from './GameIcon.jsx';
+import { getTitleById } from './profileTitles.js';
 
 const FILTERS = [
   ['overall','OVERALL'], ['soccer','SOCCER'], ['combat','COMBAT'], ['ranked','RANKED'],
@@ -40,9 +41,16 @@ export default function Leaderboard({ onBack }) {
           .select('user_id,username,mode,score,score_meta,updated_at')
           .in('mode', ['parkour','rockclimb','zipline'])
           .limit(600);
+        const allRows = [...(shared || []), ...(worldRows || [])];
+        const ids = [...new Set(allRows.map(row => row.user_id).filter(Boolean))];
+        let titleByUser = {};
+        if (ids.length) {
+          const { data: profiles } = await supabase.from('player_profiles').select('user_id,profile_title').in('user_id', ids);
+          titleByUser = Object.fromEntries((profiles || []).map(profile => [profile.user_id, profile.profile_title]));
+        }
         if (alive) {
-          setEntries(shared || []);
-          setWorld(worldRows || []);
+          setEntries((shared || []).map(row => ({ ...row, profileTitle: titleByUser[row.user_id] || null })));
+          setWorld((worldRows || []).map(row => ({ ...row, profileTitle: titleByUser[row.user_id] || null })));
         }
       } catch {}
       if (alive) setLoading(false);
@@ -92,7 +100,7 @@ export default function Leaderboard({ onBack }) {
             const elo = Number(r.ranked_elo ?? r.ranked_rating ?? 1000);
             return <div key={`${r.user_id}-${r.mode || filter}`} className={`flex items-center gap-3 rounded-lg border p-3 ${r.user_id===myId?'border-primary bg-primary/10':'border-border bg-card/60'}`}>
               <span className="font-heading w-10 text-center text-accent">#{i+1}</span>
-              <span className="font-heading text-sm flex-1 truncate">{name}</span>
+              <span className="flex-1 min-w-0"><span className="block font-heading text-sm truncate">{name}</span>{getTitleById(r.profileTitle)?.name && <small className="block text-[9px] text-primary truncate">{getTitleById(r.profileTitle).name}</small>}</span>
               <span className="text-[10px] text-muted-foreground">{label}</span>
               <span className="font-heading text-sm text-primary">{filter==='rockclimb' ? `${(Number(r.value)/1000).toFixed(2)}s` : filter==='parkour'||filter==='zipline' ? `${Math.round(Number(r.value))}m` : Math.round(Number(r.value))}</span>
               {filter==='ranked' && <span className="text-[10px] text-accent">{rankName(elo)}</span>}

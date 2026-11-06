@@ -1,5 +1,6 @@
 import React from 'react';
 import { getCharLevelData, getUnlockedElements } from './elements.js';
+import GameIcon from './GameIcon.jsx';
 
 export default function ElementSelect({ charId, currentElement, onSelect, charLevels, label = 'ELEMENT' }) {
   if (!charId) return null;
@@ -12,9 +13,9 @@ export default function ElementSelect({ charId, currentElement, onSelect, charLe
       <div className="flex gap-1 flex-wrap">
         {unlocked.map(el => (
           <button key={el.id} onClick={() => onSelect(el.id)}
-            className="px-2 py-0.5 rounded text-[9px] font-heading text-white"
+            className="px-2 py-0.5 rounded text-[9px] font-heading text-white inline-flex items-center gap-1"
             style={{ backgroundColor: current === el.id ? (el.color || '#666') : 'rgba(128,128,128,0.3)' }}>
-            {el.name}
+            <GameIcon icon={el.icon || "game"} size={11} />{el.name}
           </button>
         ))}
       </div>

@@ -21,6 +21,7 @@ import EraTabBar from './EraTabBar.jsx';
 import { getNameColor } from './charSelectHelpers.js';
 import GameIcon from "./GameIcon.jsx";
 import { ELEMENTS, getUnlockedElements, getCharLevelData } from './elements.js';
+import { MOVEMENT_TRAILS, getMovementTrail } from './movementTrails.js';
 
 const OLD_GEN_NORMALIZED = OLD_GEN_CHARS.map(c => ({ ...c, power: c.power || c.powerTitle, isGuardian: false, isOldGen: true, era: c.era }));
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS, ...OLD_GEN_NORMALIZED];
@@ -32,11 +33,11 @@ function getRosterForEra(eraId) {
   return OLD_GEN_NORMALIZED.filter(c => c.era === eraId);
 }
 
-export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAccessory, onEquipKillFX, onEquipCrossover, onEquipShikigami, onEquipEmote, onEquipElement, ownedEmotes = [], equippedEmotes = {} }) {
+export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAccessory, onEquipKillFX, onEquipMovementTrail, onEquipCrossover, onEquipShikigami, onEquipEmote, onEquipElement, ownedEmotes = [], equippedEmotes = {} }) {
   const [selectedChar, setSelectedChar] = useState(progress?.favoriteId || HEROES[0].id);
   const [subTab, setSubTab] = useState('gear');
   const [eraTab, setEraTab] = useState('g5');
-  const showCharSelector = ['gear', 'mastery', 'crossovers', 'shikigami', 'elements'].includes(subTab);
+  const showCharSelector = ['gear', 'mastery', 'crossovers', 'shikigami', 'elements', 'trails'].includes(subTab);
 
   useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
 
@@ -47,6 +48,9 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
   const equippedSkins = progress?.equippedSkins || {};
   const equippedAccessories = progress?.equippedAccessories || {};
   const equippedKillFX = progress?.equippedKillFX || 'none';
+  const ownedTrails = progress?.ownedTrails || [];
+  const equippedMovementTrails = progress?.equippedMovementTrails || {};
+  const equippedTrailId = equippedMovementTrails[selectedChar] || null;
   const ownedCrossovers = progress?.ownedCrossovers || [];
   const equippedCrossovers = progress?.equippedCrossovers || {};
   const ownedShikigami = progress?.ownedShikigami || [];
@@ -95,6 +99,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
       <div className="e6-equip-tabs flex gap-1">
         <button onClick={() => setSubTab('gear')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'gear' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>GEAR / ACCESSORIES</button>
         <button onClick={() => setSubTab('killfx')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'killfx' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>KILL FX</button>
+        <button onClick={() => setSubTab('trails')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'trails' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>MOVEMENT TRAILS</button>
         <button onClick={() => setSubTab('crossovers')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'crossovers' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>CROSSOVERS</button>
         <button onClick={() => setSubTab('shikigami')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'shikigami' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}> SHIKIGAMI</button>
         <button onClick={() => setSubTab('elements')} className={`px-4 py-1.5 rounded font-heading text-xs ${subTab === 'elements' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>ELEMENTS</button>
@@ -119,6 +124,7 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
           {equippedSkins[selectedChar] && <p className="text-[9px] font-heading text-accent mt-1">Skin: {getSkin(equippedSkins[selectedChar])?.name}</p>}
           {equippedCrossover && <p className="text-[9px] font-heading text-accent mt-0.5">Crossover: {equippedCrossover.name}</p>}
           {equippedKillFX !== 'none' && <p className="text-[9px] font-heading text-accent">Kill FX: {getKillFX(equippedKillFX)?.name}</p>}
+          {equippedTrailId && <p className="text-[9px] font-heading text-accent">Movement Trail: {getMovementTrail(equippedTrailId)?.displayName || getMovementTrail(equippedTrailId)?.name}</p>}
           <p className="text-[9px] font-heading text-muted-foreground mt-1">EQUIPPED ACCESSORIES ({getEquippedAccessoryIds(equippedAccessories, selectedChar).length}/4)</p>
           <div className="flex gap-2 mt-1">
             {Array.from({ length: 4 }).map((_, i) => {
@@ -238,6 +244,32 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
         </div>
       )}
 
+      {subTab === 'trails' && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-96 overflow-y-auto p-1">
+          <div className={`rounded-xl p-3 border-2 flex flex-col items-center ${!equippedTrailId ? 'border-accent' : 'border-border'}`}>
+            <div className="w-full h-16 rounded-lg bg-[#0a0820] border border-border flex items-center justify-center">
+              <span className="text-xs text-muted-foreground">No trail</span>
+            </div>
+            <p className="text-[9px] font-heading mt-2">None</p>
+            <button onClick={() => onEquipMovementTrail?.(selectedChar, null)} className={`px-3 py-1 rounded-lg text-[9px] font-heading mt-2 w-full ${!equippedTrailId ? 'bg-secondary text-secondary-foreground' : 'bg-accent text-accent-foreground'}`}>
+              {!equippedTrailId ? 'EQUIPPED' : 'EQUIP'}
+            </button>
+          </div>
+          {MOVEMENT_TRAILS.filter(trail => ownedTrails.includes(trail.id)).map(trail => {
+            const active = equippedTrailId === trail.id;
+            return <div key={trail.id} className={`rounded-xl p-3 border-2 flex flex-col items-center ${active ? 'border-accent' : 'border-border'}`}>
+              <MovementTrailPreview trail={trail} />
+              <p className="text-[9px] font-heading mt-2 text-center">{trail.displayName || `${trail.name} Trail`}</p>
+              <p className="text-[8px] text-muted-foreground text-center">{trail.passName}</p>
+              <button onClick={() => onEquipMovementTrail?.(selectedChar, active ? null : trail.id)} className={`px-3 py-1 rounded-lg text-[9px] font-heading mt-2 w-full ${active ? 'bg-secondary text-secondary-foreground' : 'bg-accent text-accent-foreground'}`}>
+                {active ? 'EQUIPPED' : 'EQUIP'}
+              </button>
+            </div>;
+          })}
+          {ownedTrails.length === 0 && <p className="text-xs text-muted-foreground col-span-4 text-center py-8">No movement trails owned yet. Claim one from its Battle Pass tier.</p>}
+        </div>
+      )}
+
       {/* Crossovers */}
       {subTab === 'crossovers' && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-96 overflow-y-auto p-1">
@@ -335,6 +367,16 @@ export default function EquipScreen({ onBack, progress, onEquipSkin, onEquipAcce
       )}
     </div>
   );
+}
+
+function MovementTrailPreview({ trail }) {
+  return <div className="w-full h-16 rounded-lg bg-[#0a0820] border border-border overflow-hidden flex items-center justify-center" aria-label={`${trail.displayName || trail.name} preview`}>
+    <svg viewBox="0 0 180 48" className="w-full h-full" role="img" aria-hidden="true">
+      <defs><linearGradient id={`trail-${trail.id}`} x1="0" x2="1"><stop offset="0%" stopColor={trail.color} stopOpacity="0.08"/><stop offset="70%" stopColor={trail.color} stopOpacity="0.8"/><stop offset="100%" stopColor="#ffffff"/></linearGradient></defs>
+      <path d="M 12 34 C 42 9, 55 40, 83 20 S 126 14, 168 22" fill="none" stroke={`url(#trail-${trail.id})`} strokeWidth="8" strokeLinecap="round"/>
+      {[32, 58, 91, 124, 151].map((x, index) => <circle key={x} cx={x} cy={[25, 27, 20, 18, 22][index]} r={[2, 3, 2, 3, 2][index]} fill={trail.color} opacity={0.35 + index * 0.12}/>)}
+    </svg>
+  </div>;
 }
 
 function EquipPreviewCanvas({ char, skinColor, skinParts = [], accessories = [], crossoverColors, crossoverParts = [], shikigamiId }) {

@@ -154,6 +154,11 @@ export default function DodgeballGame({
   const onStateExportRef = useRef(null);
   useEffect(() => { remoteStateRef.current = remoteState; }, [remoteState]);
   useEffect(() => { onStateExportRef.current = onStateExport; }, [onStateExport]);
+  useEffect(() => {
+    window.__el6GameplayActive = started;
+    window.__el6GameplayCaptureActive = started && !stRef.current?.over;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [started]);
 
   if (!stRef.current) stRef.current = newMatch(charFor(p1Chars[0], p1Elements[0], customCharsData), charFor(p2Chars[0], p2Elements[0], customCharsData), matchSettings);
 
@@ -315,6 +320,8 @@ export default function DodgeballGame({
         try { lanConnection.sendMessage({ type: 'state', state: JSON.parse(JSON.stringify(s)) }); } catch (_) {}
       }
       if (s.over && !paidRef.current) {
+        window.__el6GameplayActive = false;
+  window.__el6GameplayCaptureActive = false;
         paidRef.current = true;
         const agg = {
           hits: s.stats[0].hits + s.stats[1].hits,
@@ -667,7 +674,7 @@ export default function DodgeballGame({
         </div>
       </div>
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={W} height={H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
+        <canvas ref={canvasRef} width={W} height={H} data-e6-game-canvas="true" className="el6-match-canvas el6-sport-canvas rounded-lg shadow-2xl w-full"
                 style={{ width: '100%', maxWidth: W + 'px', aspectRatio: `${W} / ${H}`, height: 'auto', background: '#15102a' }} />
       </GameCanvasPortal>
       <p className="el6-dodgeball-controls text-[10px] text-muted-foreground font-body text-center">

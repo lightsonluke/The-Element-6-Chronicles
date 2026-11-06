@@ -192,9 +192,9 @@ export default function LANShapeshiftSelect({
                     <div className="flex gap-1 flex-wrap">
                       {unlockedElems.map(el => (
                         <button key={el.id} onClick={() => onEquipElement?.(activeElementId, el.id)}
-                          className="px-1.5 py-0.5 rounded text-[8px] font-heading text-white"
+                          className="px-1.5 py-0.5 rounded text-[8px] font-heading text-white inline-flex items-center gap-0.5"
                           style={{ backgroundColor: currentElement === el.id ? (el.color || '#666') : 'rgba(128,128,128,0.3)' }}>
-                          {el.name}
+                          <GameIcon icon={el.icon || "game"} size={9} />{el.name}
                         </button>
                       ))}
                     </div>

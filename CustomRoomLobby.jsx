@@ -13,23 +13,24 @@ import { MAP_PLATFORMS } from './PlatformFighter.jsx';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import CustomRoomGame from './CustomRoomGame.jsx';
-import CustomRoomSport from './CustomRoomSport.jsx';
 import { useLANConnection } from './useLANConnection.js';
 import CharStats from './CharStats.jsx';
 import ElementSelect from './ElementSelect.jsx';
 import { STAGE_LIST } from './stages.js';
 import { getControlOptions } from './keybinds.js';
 import GameIcon from "./GameIcon.jsx";
+import { getTitleById } from './profileTitles.js';
 
 const ALL = ALL_CHARS; // all gens 1–5 available in custom rooms
 const DIFFICULTIES = ['newcomer', 'beginner', 'easy', 'amateur', 'regular', 'pro', 'hard', 'insane', 'honored'];
 const STAGE_OPTIONS = STAGE_LIST.map(s => ({ name: s.name, platforms: MAP_PLATFORMS[s.id] || [] }));
 
+// Custom Room networking currently synchronizes the fight renderer only.
+// Keep unsupported sports out of this room flow until their authoritative
+// network adapters are implemented; launching a local copy on every device
+// looked like a shared match while producing unrelated simulations.
 const MODE_CONFIG = {
-  fight:      { maxPlayers: 8, label: 'FIGHT',    stage: 'splitcity' },
-  soccer:     { maxPlayers: 8, label: 'SOCCER',   stage: 'soccer' },
-  volleyball: { maxPlayers: 6, label: 'VOLLEYBALL', stage: 'splitcity' },
-  banger:     { maxPlayers: 6, label: 'BANGER',    stage: 'splitcity' },
+  fight: { maxPlayers: 8, label: 'FIGHT', stage: 'splitcity' },
 };
 
 function genCode() {
@@ -38,7 +39,7 @@ function genCode() {
   return c;
 }
 
-export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId, equippedSkins = {}, equippedAccessories = {}, sfxVolume = 70, musicVolume = 50, settings = {}, customStages = [], charLevels = {}, equippedElements = {}, onEquipElement, mode = 'fight', customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
+export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRoomId = null, unlockedIds, favoriteId, equippedSkins = {}, equippedAccessories = {}, equippedMovementTrails = {}, sfxVolume = 70, musicVolume = 50, settings = {}, customStages = [], charLevels = {}, equippedElements = {}, onEquipElement, mode = 'fight', customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
   const [me, setMe] = useState(null);
   const [phase, setPhase] = useState('browse'); // browse | lobby | connecting | game
   const [room, setRoom] = useState(null);
@@ -52,19 +53,33 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
   const lan = useLANConnection();
   const roomRef = useRef(null);
   roomRef.current = room;
+  const skipAutoJoinRoomRef = useRef(null);
+  const startInProgressRef = useRef(false);
   const unsubRef = useRef(null);
   const pollRef = useRef(null);
   const unlockedSet = new Set(unlockedIds || ['yellow']);
-  const loadout = { equippedSkins, equippedAccessories };
+  const loadout = { equippedSkins, equippedAccessories, equippedMovementTrails };
 
   // Reset element to the equipped/basic one whenever the selected character changes
   useEffect(() => { setMyElement(equippedElements?.[myChar] || 'basic'); }, [myChar]);
 
   useEffect(() => {
     if (lan.status === 'connected' && phase === 'connecting') setPhase('game');
-    if (lan.status === 'closed' && phase === 'game') setPhase('browse');
+    if (lan.status === 'closed' && phase === 'game') { setError('The room connection closed. Reconnect to return to this match.'); setPhase('lobby'); }
     if (lan.status === 'error' && phase === 'connecting') setPhase('lobby');
   }, [lan.status, phase]);
+
+  useEffect(() => {
+    if (phase !== 'connecting' || lan.status !== 'joining') return undefined;
+    const roomId=roomRef.current?.id;
+    const timeout=setTimeout(()=>{
+      if(roomId)skipAutoJoinRoomRef.current=roomId;
+      setError('The room host did not complete the connection. You can retry from the lobby.');
+      lan.closeConnection();
+      setPhase('lobby');
+    },20000);
+    return()=>clearTimeout(timeout);
+  },[phase,lan.status,lan.closeConnection]);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,13 +128,17 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
       char: p.loadout?.character_id || 'yellow',
       is_bot: false,
       user_id: p.user_id,
-      name: profileMap[p.user_id] || 'Player',
+      name: profileMap[p.user_id] || p.username || 'Player',
+      title: getTitleById(p.title)?.name || p.title || null,
+      ready: p.ready === true,
+      connected: typeof p.connected === 'boolean' ? p.connected : (!p.last_seen_at || Date.now() - new Date(p.last_seen_at).getTime() < 25_000),
       loadout: p.loadout || {},
     }));
     const bots = Array.isArray(settingsRaw.bots) ? settingsRaw.bots : [];
     const players = [...humans, ...bots].sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
     return {
       id: raw.id,
+      party_id: raw.party_id || null,
       room_code: raw.room_code,
       status: raw.status === 'waiting' ? 'open' : raw.status,
       host_user_id: raw.host_id,
@@ -135,12 +154,10 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
   }, []);
 
   const fetchRoom = useCallback(async roomId => {
-    const { data: raw, error } = await supabase.from('online_custom_rooms').select('*').eq('id', roomId).maybeSingle();
-    if (error || !raw) return null;
-    const { data: playerRows } = await supabase.from('online_custom_room_players').select('room_id,user_id,player_slot,loadout').eq('room_id', roomId);
-    const ids = (playerRows || []).map(p => p.user_id).filter(Boolean);
-    const { data: profiles } = ids.length ? await supabase.from('player_profiles').select('user_id,username').in('user_id', ids) : { data: [] };
-    return toRoom(raw, playerRows || [], profiles || []);
+    const { data, error } = await supabase.rpc('element6_custom_room_snapshot', { p_room_id: roomId });
+    if (error) throw error;
+    if (!data?.room) return null;
+    return toRoom(data.room, data.players || [], []);
   }, [toRoom]);
 
   const refreshBrowse = useCallback(async () => {
@@ -149,20 +166,46 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
       if (error) throw error;
       const mc = MODE_CONFIG[mode] || MODE_CONFIG.fight;
       const region = getClientRegion();
-      const rooms = (rawRooms || []).filter(r => (r.settings?.mode || 'fight') === mode && (r.region || r.settings?.region || region) === region);
+      const rooms = (rawRooms || []).filter(r => !r.party_id && (r.settings?.mode || 'fight') === mode && (r.region || r.settings?.region || region) === region);
       const ids = rooms.map(r => r.id);
       if (!ids.length) { setBrowseRooms([]); return; }
-      const { data: prs } = await supabase.from('online_custom_room_players').select('room_id,user_id,player_slot,loadout').in('room_id', ids);
+      const { data: prs, error: playerError } = await supabase.from('online_custom_room_players').select('room_id,user_id,player_slot,loadout,ready,last_seen_at').in('room_id', ids);
+      if (playerError) throw playerError;
       const profileIds = [...new Set((prs || []).map(p => p.user_id))];
       const { data: profiles } = profileIds.length ? await supabase.from('player_profiles').select('user_id,username').in('user_id', profileIds) : { data: [] };
       const byRoom = {};
       (prs || []).forEach(p => { (byRoom[p.room_id] ||= []).push(p); });
-      const next = rooms.map(r => toRoom(r, byRoom[r.id] || [], profiles || [])).filter(r => (r.players?.length || 0) < r.max_players);
+      const next = rooms.map(r => toRoom(r, (byRoom[r.id] || []).filter(p => !p.last_seen_at || Date.now() - new Date(p.last_seen_at).getTime() < 25_000), profiles || [])).filter(r => (r.players?.length || 0) < r.max_players);
       setBrowseRooms(next);
     } catch (e) { setError(e?.message || 'Could not load rooms.'); }
   }, [mode, toRoom]);
 
   useEffect(() => { if (me?.id) refreshBrowse(); }, [me?.id, refreshBrowse]);
+
+  useEffect(() => {
+    if (!MODE_CONFIG[mode] || !me?.id || !partyId || !partyRoomId) return undefined;
+    let cancelled = false;
+    const enterPartyRoom = async () => {
+      try {
+        const { error } = await supabase.rpc('element6_join_party_custom_room', { p_party_id: partyId, p_room_id: partyRoomId });
+        if (error) throw error;
+        const { error: loadoutError } = await supabase.rpc('update_element6_custom_room_player', {
+          p_room_id: partyRoomId,
+          p_character_id: myChar,
+          p_loadout: { character_id: myChar, equippedSkins, equippedAccessories, equippedMovementTrails, equippedEmotes, element: myElement },
+        });
+        if (loadoutError) throw loadoutError;
+        const joined = await fetchRoom(partyRoomId);
+        if (!joined) throw new Error('The party room is no longer available.');
+        if (cancelled) return;
+        setError(null); setRoom(joined); setPhase('lobby');
+      } catch (e) {
+        if (!cancelled) setError(e?.message || 'Could not enter the party room.');
+      }
+    };
+    enterPartyRoom();
+    return () => { cancelled = true; };
+  }, [mode, me?.id, partyId, partyRoomId, myChar, myElement, equippedSkins, equippedAccessories, equippedMovementTrails, equippedEmotes, fetchRoom]);
 
   // Live lobby polling is intentionally backed by Supabase, not localStorage, so
   // a room made by a friend on another device is visible immediately.
@@ -174,17 +217,41 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
         const r = await fetchRoom(room.id);
         if (!alive || !r) return;
         setRoom(r);
-        if (r.status === 'playing' && phase !== 'game' && phase !== 'connecting') {
-          if (!lan.isHost && mode === 'fight') await lan.joinRoom(r.room_code, me?.id, me?.full_name || 'Guest', myChar, myElement);
-          setPhase(mode === 'fight' ? 'connecting' : 'game');
+        if (r.status === 'playing' && phase !== 'game' && phase !== 'connecting' && lan.status === 'idle' && skipAutoJoinRoomRef.current !== r.id) {
+          if (!lan.isHost && mode === 'fight') {
+            setPhase('connecting');
+            try { await lan.joinRoom(r.room_code, me?.id, me?.full_name || 'Guest', myChar, myElement); }
+            catch (joinError) { setError(joinError?.message || 'Could not connect to the room host.'); setPhase('lobby'); }
+          } else setPhase(mode === 'fight' ? 'connecting' : 'game');
         }
         if (r.status === 'cancelled' || r.status === 'finished') { setError('Room closed.'); setPhase('browse'); refreshBrowse(); }
-      } catch {}
+      } catch (e) {
+        if (alive && roomRef.current?.id === room.id) {
+          setError(e?.message || 'Room state is temporarily unavailable. Reconnecting…');
+        }
+      }
     };
     refresh();
     const t = setInterval(refresh, 1200);
     return () => { alive = false; clearInterval(t); };
   }, [room?.id, phase, fetchRoom, lan.isHost, mode, me?.id, myChar, myElement, refreshBrowse]);
+
+  useEffect(() => {
+    if (!room?.id || phase === 'browse') return undefined;
+    const roomId = room.id;
+    let alive = true;
+    const heartbeat = async () => {
+      try {
+        const { error } = await supabase.rpc('element6_heartbeat_custom_room', { p_room_id: roomId });
+        if (error) throw error;
+      } catch (e) {
+        if (alive && roomRef.current?.id === roomId) setError(e?.message || 'Could not refresh room membership.');
+      }
+    };
+    heartbeat();
+    const timer = setInterval(heartbeat, 5000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [room?.id, phase]);
 
   const createRoom = async () => {
     if (!me) { setError('Not signed in.'); return; }
@@ -220,7 +287,7 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
     try {
       const { data, error } = await supabase.rpc('join_element6_custom_room', {
         p_room_code: code,
-        p_loadout: { character_id: myChar, equippedSkins, equippedAccessories, element: myElement },
+        p_loadout: { character_id: myChar, equippedSkins, equippedAccessories, equippedMovementTrails, element: myElement },
       });
       if (error) throw error;
       const joined = await fetchRoom(data.room_id);
@@ -234,7 +301,7 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
     try {
       const { data, error } = await supabase.rpc('join_element6_custom_room', {
         p_room_code: r.room_code,
-        p_loadout: { character_id: myChar, equippedSkins, equippedAccessories, element: myElement },
+        p_loadout: { character_id: myChar, equippedSkins, equippedAccessories, equippedMovementTrails, element: myElement },
       });
       if (error) throw error;
       const joined = await fetchRoom(data.room_id);
@@ -247,9 +314,21 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
     if (!r || r.host_user_id !== me?.id) return;
     const next = { ...(r.settings || {}), ...patch };
     try {
-      const { error } = await supabase.from('online_custom_rooms').update({ settings: next, region: next.region || r.region, updated_at: new Date().toISOString() }).eq('id', r.id).eq('host_id', me.id);
+      const { error } = await supabase.rpc('update_element6_custom_room_settings_v1', { p_room_id: r.id, p_settings: next });
       if (error) throw error;
-      setRoom(prev => prev ? { ...prev, settings: next, ...('stageName' in patch ? { stage_name: next.stageName } : {}), ...('stagePlatforms' in patch ? { stage_platforms: next.stagePlatforms } : {}), ...('stageSpawnPoints' in patch ? { stage_spawn_points: next.stageSpawnPoints } : {}), ...('bots' in patch ? { players: [...(prev.players || []).filter(p => !p.is_bot), ...(next.bots || [])] } : {}) } : prev);
+      setRoom(prev => {
+        if (!prev) return prev;
+        const humans = (prev.players || []).filter(player => !player.is_bot).map(player => ({ ...player, ready: false }));
+        const players = 'bots' in patch ? [...humans, ...(next.bots || [])] : (prev.players || []).map(player => player.is_bot ? player : { ...player, ready: false });
+        return {
+          ...prev,
+          settings: next,
+          players,
+          ...('stageName' in patch ? { stage_name: next.stageName } : {}),
+          ...('stagePlatforms' in patch ? { stage_platforms: next.stagePlatforms } : {}),
+          ...('stageSpawnPoints' in patch ? { stage_spawn_points: next.stageSpawnPoints } : {}),
+        };
+      });
     } catch (e) { setError(e?.message || 'Could not update room.'); }
   };
 
@@ -264,7 +343,11 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
     const bots = Array.isArray(r.settings?.bots) ? [...r.settings.bots] : [];
     if ((r.players?.length || 0) >= (r.max_players || 8)) return;
     const pool = ALL; const botChar = pool[Math.floor(Math.random() * pool.length)].id;
-    bots.push({ slot: (r.players || []).length, char: botChar, is_bot: true, difficulty: settings?.defaultCPUDifficulty || 'regular', user_id: null, name: `Bot ${bots.length + 1}`, loadout: {} });
+    const usedSlots = new Set((r.players || []).map(player => Number(player.slot)));
+    const freeSlot = Array.from({ length: r.max_players || 8 }, (_, slot) => slot).find(slot => !usedSlots.has(slot));
+    if (freeSlot === undefined) return;
+    const defaultDifficulty = DIFFICULTIES.includes(settings?.defaultCPUDifficulty) ? settings.defaultCPUDifficulty : 'regular';
+    bots.push({ slot: freeSlot, char: botChar, is_bot: true, difficulty: defaultDifficulty, user_id: null, name: `Bot ${bots.length + 1}`, loadout: {} });
     await updateRoomSettings({ bots });
   };
 
@@ -278,7 +361,13 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
     const r = roomRef.current; if (!r || r.host_user_id !== me?.id) return;
     const bi = botIndexForPlayer(idx); if (bi < 0) return;
     const bots = [...(r.settings?.bots || [])]; bots.splice(bi, 1);
-    bots.forEach((b, i) => { b.slot = (r.players || []).filter(p => !p.is_bot).length + i; });
+    const occupied = new Set((r.players || []).filter(player => !player.is_bot).map(player => Number(player.slot)));
+    let nextSlot = 0;
+    bots.forEach(b => {
+      while (occupied.has(nextSlot)) nextSlot++;
+      b.slot = nextSlot;
+      occupied.add(nextSlot++);
+    });
     await updateRoomSettings({ bots });
   };
 
@@ -308,21 +397,98 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
   const updateMyChar = async charId => {
     setMyChar(charId); setMyElement(equippedElements?.[charId] || 'basic');
     const r = roomRef.current; if (!r || !me) return;
-    try { await supabase.rpc('update_element6_custom_room_player', { p_room_id: r.id, p_character_id: charId, p_loadout: { character_id: charId, equippedSkins, equippedAccessories, element: equippedElements?.[charId] || 'basic' } }); } catch (e) { setError(e?.message || 'Could not update fighter.'); }
+    try { await supabase.rpc('update_element6_custom_room_player', { p_room_id: r.id, p_character_id: charId, p_loadout: { character_id: charId, equippedSkins, equippedAccessories, equippedMovementTrails, element: equippedElements?.[charId] || 'basic' } }); } catch (e) { setError(e?.message || 'Could not update fighter.'); }
+  };
+
+  const setPlayerReady = async ready => {
+    const r = roomRef.current;
+    if (!r || !me || r.status !== 'open') return;
+    setError(null);
+    try {
+      const { error } = await supabase.rpc('set_element6_custom_room_ready', {
+        p_room_id: r.id,
+        p_ready: ready,
+      });
+      if (error) throw error;
+      const refreshed = await fetchRoom(r.id);
+      if (!refreshed) throw new Error('The room is no longer available.');
+      setRoom(refreshed);
+    } catch (e) {
+      setError(e?.message || 'Could not update ready status.');
+    }
   };
 
   const startGame = async () => {
-    const r = roomRef.current; if (!r || r.host_user_id !== me?.id) return;
+    const r = roomRef.current; if (!r || r.host_user_id !== me?.id || startInProgressRef.current) return;
     const players = Array.isArray(r.players) ? r.players : [];
-    if (players.length < 2) { setError('Need at least 2 players/bots.'); return; }
+    const humans = players.filter(p => !p.is_bot);
+    if (humans.length < 2) { setError('At least two human players are required.'); return; }
+    if (humans.some(p => !p.ready)) { setError('Every human player must be ready before the host can start.'); return; }
+    startInProgressRef.current=true;
+    setError(null);
     try {
+      // Create the signaling offer before marking the room active. If WebRTC
+      // setup fails, the room remains in its lobby instead of stranding every
+      // participant in a playing room with no host connection.
+      if (mode === 'fight') await lan.createRoom(me.id, me.full_name || 'Host', 'custom', myChar, myElement, r.room_code);
       const started = await supabase.rpc('start_element6_custom_room', { p_room_id: r.id, p_settings: r.settings || {} });
       if (started.error) throw started.error;
       if (mode !== 'fight') { setPhase('game'); return; }
-      await lan.createRoom(me.id, me.full_name || 'Host', 'custom', myChar, myElement, r.room_code);
       setPhase('connecting');
-    } catch (e) { setError(e?.message || 'Could not start game.'); }
+    } catch (e) {
+      const latest=await fetchRoom(r.id).catch(()=>null);
+      if (latest?.status==='open') {
+        try { await lan.closeConnection(); } catch {}
+        setRoom(latest);setError(e?.message||'Could not start game.');
+      } else if (latest?.status==='playing'&&mode==='fight') {
+        // The server may have committed Start while the response was lost.
+        // Reconcile with its state instead of asking players to start twice.
+        setRoom(latest);setError('');setPhase(lan.status==='connected'?'game':'connecting');
+      } else setError(e?.message||'Could not start game.');
+    } finally { startInProgressRef.current=false; }
   };
+
+  const finishMatch = async (roomId, result, host) => {
+    try {
+      if (host) {
+        const { error } = await supabase.rpc('finish_element6_custom_room', { p_room_id: roomId, p_winner: result?.winner || 'draw' });
+        if (error) throw error;
+      }
+      if (partyRoomId) {
+        let refreshed = null;
+        for (let attempt = 0; attempt < (host ? 1 : 20); attempt++) {
+          refreshed = await fetchRoom(roomId);
+          if (refreshed?.status === 'open') break;
+          if (attempt < 19) await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        if (!refreshed || refreshed.status !== 'open') {
+          setError('Waiting for the room host to save the result. Your party room is still active.');
+          return;
+        }
+        setRoom(refreshed); setPhase('lobby');
+        return;
+      }
+      onEnd?.(result);
+      setRoom(null); setPhase('browse'); refreshBrowse();
+    } catch (e) {
+      setError(e?.message || 'Could not save the match result.');
+    }
+  };
+
+  if (!MODE_CONFIG[mode]) {
+    return (
+      <section className="mx-auto flex w-full max-w-xl flex-col items-center gap-4 rounded-3xl border border-border bg-card/90 p-6 text-center shadow-xl" role="alert">
+        <GameIcon icon="game" size={36} />
+        <h2 className="font-heading text-xl text-accent">CUSTOM ROOM MODE UNAVAILABLE</h2>
+        <p className="max-w-md text-sm text-muted-foreground">
+          This mode does not yet have a shared Custom Room network renderer. No match was started.
+        </p>
+        <button type="button" onClick={onBack} className="min-h-11 rounded-full bg-primary px-6 font-heading text-primary-foreground">
+          BACK
+        </button>
+      </section>
+    );
+  }
 
   // ── Connecting phase ──
   if (phase === 'connecting') {
@@ -332,7 +498,7 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
         <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin" />
         <p className="text-sm text-muted-foreground">Establishing peer connection...</p>
         {lan.error && <p className="text-sm text-destructive">{lan.error}</p>}
-        <button onClick={() => { lan.closeConnection(); setPhase('lobby'); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="info" size={14} /> CANCEL</button>
+        <button onClick={() => { skipAutoJoinRoomRef.current = roomRef.current?.id || null; lan.closeConnection(); setPhase('lobby'); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded font-heading text-xs"><GameIcon icon="info" size={14} /> CANCEL</button>
       </div>
     );
   }
@@ -340,20 +506,6 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
   // ── Game phase ──
   if (phase === 'game' && room) {
     const isHost = room.host_user_id === me?.id;
-    if (mode !== 'fight') {
-      return (
-        <CustomRoomSport
-          mode={mode} room={room} me={me}
-          unlockedIds={unlockedIds} favoriteId={favoriteId}
-          equippedSkins={equippedSkins} equippedAccessories={equippedAccessories}
-          settings={settings} charLevels={charLevels} equippedElements={equippedElements} onEquipElement={onEquipElement}
-          sfxVolume={sfxVolume} musicVolume={musicVolume}
-          customCharsData={customCharsData} customNumberMap={customNumberMap}
-          equippedEmotes={equippedEmotes}
-          onEnd={async () => { if (isHost) { try { await supabase.rpc('finish_element6_custom_room', { p_room_id: room.id, p_winner: 'draw' }); } catch {} } onEnd?.(); setRoom(null); setPhase('browse'); refreshBrowse(); }}
-        />
-      );
-    }
     return (
       <CustomRoomGame
         room={room} isHost={isHost} myUserId={me?.id}
@@ -361,9 +513,8 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
         lanConnection={lan} lanRole={lan.isHost ? 'host' : 'guest'} localScheme={localScheme}
         equippedEmotes={equippedEmotes}
         onEnd={async (res) => {
-          if (isHost) { try { await supabase.rpc('finish_element6_custom_room', { p_room_id: room.id, p_winner: res?.winner || 'draw' }); } catch {} }
           lan.closeConnection();
-          onEnd?.(res); setRoom(null); setPhase('browse'); refreshBrowse();
+          await finishMatch(room.id, res, isHost);
         }}
       />
     );
@@ -373,12 +524,19 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
   if (phase === 'lobby' && room) {
     const isHost = room.host_user_id === me?.id;
     const players = Array.isArray(room.players) ? room.players : [];
+    const humanPlayers = players.filter(player => !player.is_bot);
+    const readyHumanCount = humanPlayers.filter(player => player.ready).length;
     return (
       <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
         <div className="flex justify-between items-center w-full">
-          <h2 className="text-2xl font-heading text-accent tracking-wider">ROOM {room.room_code}</h2>
+          <div><h2 className="text-2xl font-heading text-accent tracking-wider">ROOM {room.room_code}</h2>{room.party_id&&<p className="mt-1 text-[10px] font-heading text-primary">PARTY LINKED ROOM</p>}</div>
           <button onClick={leaveRoom} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> Leave</button>
         </div>
+        {room.status === 'playing' && !isHost && lan.status !== 'connected' && <div role="alert" className="w-full rounded-xl border border-primary/40 bg-primary/5 p-3 text-center text-xs">
+          <p className="text-muted-foreground">The match is active, but this device is not connected to the host.</p>
+          {error && <p className="mt-1 text-destructive">{error}</p>}
+          <button type="button" onClick={async()=>{skipAutoJoinRoomRef.current=null;setError(null);setPhase('connecting');try{await lan.closeConnection();await lan.joinRoom(room.room_code,me?.id,me?.full_name||'Guest',myChar,myElement);}catch(e){setError(e?.message||'Could not reconnect to the room host.');setPhase('lobby');}}} className="mt-2 min-h-10 rounded-full bg-primary px-4 font-heading text-primary-foreground">RECONNECT</button>
+        </div>}
 
         {/* Room code display */}
         <div className="bg-card border-2 border-accent rounded-xl px-8 py-3 text-center">
@@ -388,7 +546,7 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
 
         {/* Player slots */}
         <div className="w-full bg-card border border-border rounded-xl p-3">
-          <p className="text-xs font-heading text-muted-foreground mb-2">PLAYERS ({players.length}/{room.max_players || 8})</p>
+          <p className="text-xs font-heading text-muted-foreground mb-2">PLAYERS ({players.length}/{room.max_players || 8}) · {readyHumanCount}/{humanPlayers.length} HUMAN PLAYERS READY</p>
           <div className="grid grid-cols-2 gap-2">
             {players.map((p, i) => {
               const cd = ALL.find(c => c.id === p.char) || ALL[0];
@@ -398,6 +556,8 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
                   <div className="w-6 h-6 rounded-full" style={{ backgroundColor: cd.color, boxShadow: `0 0 6px ${cd.color}88` }} />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-heading truncate">{isMe ? 'You' : p.name}{p.is_bot ? ' [Bot]' : ''}</p>
+                    {!p.is_bot && p.title && <p className="max-w-full truncate text-[9px] text-primary" title={p.title}>{p.title}</p>}
+                    {!p.is_bot && <p className={`text-[9px] font-heading ${p.ready ? 'text-emerald-400' : 'text-muted-foreground'}`}>{p.connected ? (p.ready ? 'READY' : 'NOT READY') : 'RECONNECTING'}</p>}
                     {isMe && !p.is_bot && (
                       <select value={p.char} onChange={e => updateMyChar(e.target.value)} className="text-[9px] bg-secondary text-secondary-foreground rounded px-1 border border-border">
                         {ALL.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -476,8 +636,15 @@ export default function CustomRoomLobby({ onBack, onEnd, unlockedIds, favoriteId
 
         {error && <p className="text-xs text-destructive font-body">{error}</p>}
 
+        {players.some(p => p.user_id === me?.id) && (
+          <button type="button" aria-pressed={!!players.find(p => p.user_id === me?.id)?.ready} onClick={() => setPlayerReady(!players.find(p => p.user_id === me?.id)?.ready)}
+            className={`min-h-11 rounded-full px-6 font-heading ${players.find(p => p.user_id === me?.id)?.ready ? 'bg-secondary text-secondary-foreground' : 'bg-primary text-primary-foreground'}`}>
+            {players.find(p => p.user_id === me?.id)?.ready ? 'NOT READY' : 'READY'}
+          </button>
+        )}
+
         {isHost ? (
-          <button onClick={startGame} disabled={players.length < 2}
+          <button onClick={startGame} disabled={humanPlayers.length < 2 || readyHumanCount !== humanPlayers.length}
             className="px-10 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed">
             START GAME ({players.length} fighters)
           </button>

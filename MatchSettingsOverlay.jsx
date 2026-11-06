@@ -23,7 +23,7 @@ function normalizeSlots(slots, count) {
   return Array.from({ length: count }, (_, i) => slots?.[i] || { kind: i === 0 ? 'player' : 'cpu', control: i === 0 ? 'Keyboard · WASD' : 'Keyboard · Arrows' });
 }
 
-export default function MatchSettingsOverlay({ open, onClose, config, onChange }) {
+export default function MatchSettingsOverlay({ open, onClose, config, onChange, readOnly = false, modeLabel = '' }) {
   const [controllers, setControllers] = useState([]);
   useEffect(() => {
     const update = () => setControllers(Array.from(navigator.getGamepads?.() || []).filter(Boolean).map(g => `Controller ${g.index + 1} · ${g.id.slice(0, 34)}`));
@@ -41,6 +41,16 @@ export default function MatchSettingsOverlay({ open, onClose, config, onChange }
   const localOnly = config.mode === 'Fight' && !locked;
   const updateHandicap = (index, key, value) => { const next = Array.from({ length: count }, (_, i) => ({ damageDealt: 100, damageTaken: 100, knockback: 100, movementSpeed: 100, jumpHeight: 100, ...(config.handicaps?.[i] || {}) })); next[index] = { ...next[index], [key]: Number(value) }; update({ handicaps: next }); };
   if (!open) return null;
+  if (readOnly) return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-3" role="dialog" aria-modal="true" aria-label="Match settings">
+    <section className="w-full max-w-xl rounded-2xl border border-primary/60 bg-card p-5 shadow-2xl">
+      <header className="flex items-center justify-between gap-3"><div><p className="font-heading text-lg text-foreground">MATCH SETTINGS</p><p className="text-xs text-muted-foreground">{modeLabel || config.mode} selection</p></div><button onClick={onClose} className="min-h-11 rounded-full bg-secondary px-4 text-secondary-foreground font-heading">CLOSE</button></header>
+      <div className="mt-4 rounded-xl border border-border bg-secondary/30 p-4">
+        <p className="font-heading text-sm text-primary">{config.mode || modeLabel || 'Current mode'}</p>
+        <p className="mt-2 text-sm text-foreground">This selection uses its own match setup. Mode, stage, participant, and rule settings are managed by the active lobby or game mode.</p>
+        <p className="mt-2 text-xs text-muted-foreground">Character selection: {count} slot{count === 1 ? '' : 's'} · {config.characterNames?.filter(Boolean).join(', ') || 'fighters not assigned'}</p>
+      </div>
+    </section>
+  </div>;
   return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-3" role="dialog" aria-modal="true" aria-label="Match settings">
     <section className="w-full max-w-4xl max-h-[90dvh] overflow-y-auto rounded-xl border-2 border-primary bg-card p-4 shadow-2xl">
       <header className="flex items-center justify-between gap-3 mb-3"><div><p className="font-heading text-lg text-foreground">MATCH SETTINGS</p><p className="text-xs text-muted-foreground">Configure local matches here. Ranked and online queues keep their server rules locked.</p></div><button onClick={onClose} className="px-3 py-1 rounded bg-secondary text-secondary-foreground font-heading">CLOSE</button></header>
