@@ -162,7 +162,9 @@ const DEFAULT_PROGRESS = {
 
 function loadProgress() {
   try {
-    const saved = localStorage.getItem('element6_progress_guest') || localStorage.getItem('element6_progress');
+    // Guest progress is device-local only. Never fall back to the legacy
+    // unscoped key, which may contain data from an account used on this device.
+    const saved = localStorage.getItem('element6_progress_guest');
     if (saved) {
       const p = { ...DEFAULT_PROGRESS, ...JSON.parse(saved) };
       // Auto-delete duplicate items everywhere
@@ -195,7 +197,9 @@ let _lastProgress = null;
 let _lastCloudOwner = null;
 
 async function _doCloudSave(prog, ownerId) {
-  if (!ownerId) return;
+  // A debounce can fire after sign-out or an account switch. Only sync while
+  // the same authenticated account still owns the active, hydrated session.
+  if (!ownerId || getCloudSaveOwner() !== ownerId || !isCloudSaveOwnerReady(ownerId)) return;
   try { await saveCloudProgress(prog, ownerId); }
   catch (error) {
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('element6-cloud-save-error', { detail: { message: error?.message || 'Account progress could not be saved.' } }));
@@ -218,6 +222,12 @@ function saveProgress(prog) {
       localStorage.setItem(`element6_story_slot_${ownerId || 'guest'}_${_activeStorySlot}`, JSON.stringify(storyData));
     }
   } catch {}
+  // Guests keep a local profile, but account progress is never queued for
+  // cloud synchronization without an authenticated owner.
+  if (!ownerId) {
+    if (_cloudSaveTimer) { clearTimeout(_cloudSaveTimer); _cloudSaveTimer = null; }
+    return;
+  }
   // Cloud-save (debounced, 1 second delay for faster persistence)
   if (_cloudSaveTimer) clearTimeout(_cloudSaveTimer);
   const cloudOwnerId = _lastCloudOwner;
@@ -464,6 +474,7 @@ export default function Game() {
   const [pendingMatchRequest, setPendingMatchRequest] = useState(null); // accepted request ready to launch
   const [tradeGiftToast, setTradeGiftToast] = useState(null); // incoming gift or trade request notification
   const [customRoomMode, setCustomRoomMode] = useState('fight'); // fight | soccer | volleyball
+  const [customBattleLaunchConfig, setCustomBattleLaunchConfig] = useState(null);
   const [partyLaunch, setPartyLaunch] = useState(null);
   const [onlineSport, setOnlineSport] = useState(null);        // sportId for online sports lobby
   const [onlineSportsLobby, setOnlineSportsLobby] = useState(null);
@@ -1872,7 +1883,34 @@ export default function Game() {
       : { enabled: false, players: [] };
     const ruleValues = matchConfig?.localRules || {};
     const hasPhysicsMods = ['gravity','jumpHeight','movementSpeed'].some(k => Number(ruleValues[k] ?? 100) !== 100) || ['infiniteJumps','infiniteStocks','infiniteHP','infinitePower'].some(k => !!ruleValues[k]);
-    const localRules = isLocalFight ? { stocks: Number(ruleValues.stocks ?? 3), matchTime: Number(ruleValues.matchTime ?? 240), mods: hasPhysicsMods ? { gravity: Number(ruleValues.gravity ?? 100) / 100, jumpHeight: Number(ruleValues.jumpHeight ?? 100) / 100, movementSpeed: Number(ruleValues.movementSpeed ?? 100) / 100, infiniteJumps: !!ruleValues.infiniteJumps, infiniteStocks: !!ruleValues.infiniteStocks, infiniteHP: !!ruleValues.infiniteHP, infinitePower: !!ruleValues.infinitePower } : null } : null;
+    const localRules = isLocalFight ? { stocks: Number(ruleValues.stocks ?? 3), matchTime: Number(ruleValues.matchTime ?? 240), startingDamage: Number(ruleValues.startingDamage ?? 0), teamBattle: Boolean(matchConfig?.teamBattle), teamDamage: matchConfig?.teamDamage !== false, mods: hasPhysicsMods ? { gravity: Number(ruleValues.gravity ?? 100) / 100, jumpHeight: Number(ruleValues.jumpHeight ?? 100) / 100, movementSpeed: Number(ruleValues.movementSpeed ?? 100) / 100, infiniteJumps: !!ruleValues.infiniteJumps, infiniteStocks: !!ruleValues.infiniteStocks, infiniteHP: !!ruleValues.infiniteHP, infinitePower: !!ruleValues.infinitePower } : null } : null;
+    // Regular Battle's multi-fighter rules use the existing eight-fighter
+    // custom-battle simulation. PlatformFighter remains the two-player path.
+    if (matchConfig?.mode === 'Fight' && matchConfig.fightVariant === 'Regular' && Number(matchConfig.slotCount) > 2) {
+      const selectedCharacters = [p1, p2, ...extraCharacterPicks];
+      const slots = matchConfig.slots || [];
+      const count = Math.max(2, Math.min(8, Number(matchConfig.slotCount) || 2));
+      const players = Array.from({ length: count }, (_, index) => ({
+        char: selectedCharacters[index] || (index === 0 ? p1 : p2),
+        type: slots[index]?.kind === 'player' && index < 2 ? 'human' : 'cpu',
+        difficulty: resolvedDifficulty,
+      }));
+      const launchConfig = {
+        players,
+        numHumans: Math.max(1, Math.min(2, players.filter(player => player.type === 'human').length)),
+        mapId: 'splitcity',
+        matchTime: Number(ruleValues.matchTime ?? 240),
+        stocks: Number(ruleValues.stocks ?? 3),
+        startingDamage: Number(ruleValues.startingDamage ?? 0),
+        teamBattle: Boolean(matchConfig?.teamBattle),
+        teamDamage: matchConfig?.teamDamage !== false,
+        teamAssignments: Array.from({ length: count }, (_, index) => index % 2),
+        defaultCPUDifficulty: resolvedDifficulty,
+      };
+      setPending(prev => ({ ...prev, mode: 'regular', multiFighterSetup: launchConfig, playerControls, localRules }));
+      setScreen('mapSelect');
+      return;
+    }
     if (selectedMode === 'shapeshift') {
       setPending(prev => ({ ...prev, mode: 'shapeshift', p1, p2, p1Element, p2Element, matchHandicaps, localRules }));
       setScreen('shapeshiftSelect');
@@ -1930,6 +1968,16 @@ export default function Game() {
       customObjects = Array.isArray(stage?.objects) ? stage.objects.map(o => ({ ...o, x: finite(o?.x), y: finite(o?.y), w: Math.max(1, finite(o?.w, 24)), h: Math.max(1, finite(o?.h, 24)) })).filter(o => o.type) : null;
       customStageConfig = stage || null;
       resolvedMap = 'custom';
+    }
+    if (pending?.multiFighterSetup) {
+      const customStageIdx = typeof map === 'string' && map.startsWith('custom_') ? Number.parseInt(map.slice(7), 10) : null;
+      setCustomBattleLaunchConfig({
+        ...pending.multiFighterSetup,
+        mapId: resolvedMap === 'custom' ? 'splitcity' : resolvedMap,
+        customStageIdx: Number.isInteger(customStageIdx) ? customStageIdx : null,
+      });
+      setScreen('custombattle');
+      return;
     }
     // Ranked: generate random accessories + skin for P2
     let rankedAccessories = null, rankedSkins = null;
@@ -2314,7 +2362,7 @@ export default function Game() {
           </div>
         )}
         {screen === 'menu' && (
-          <MainMenu onNavigate={handleNavigate} coins={progress.coins}
+          <MainMenu onNavigate={handleNavigate} backdropUrl={DEFAULT_SPLIT_CITY_BACKDROP} coins={progress.coins}
             favoriteName={ALL.find(c => c.id === progress.favoriteId)?.name}
             favoriteLevel={getCharLevelData(progress, progress.favoriteId)?.level || 1}
             rankedRating={progress.rankedRating} onlineRankedRating={progress.onlineRankedRating} musicVolume={progress.settings?.musicVolume ?? 50}
@@ -2849,7 +2897,12 @@ export default function Game() {
 
         {screen === 'custombattle' && (
           <CustomBattle
-            onBack={goBack}
+            onBack={() => {
+              if (customBattleLaunchConfig) {
+                setCustomBattleLaunchConfig(null);
+                setScreen('charSelect');
+              } else goBack();
+            }}
             unlockedIds={progress.unlockedIds}
             favoriteId={progress.favoriteId}
             equippedAccessories={progress.equippedAccessories || {}}
@@ -2865,6 +2918,7 @@ export default function Game() {
             customCharsData={customCharData} customNumberMap={customNumberMap}
             equippedShikigami={progress.equippedShikigami || {}}
             equippedEmotes={progress.equippedEmotes || {}}
+            sandboxConfig={customBattleLaunchConfig}
           />
         )}
 

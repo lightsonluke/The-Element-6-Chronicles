@@ -85,9 +85,9 @@ export default function CustomBattle({ onBack, unlockedIds, favoriteId, equipped
     return Array.from({ length: MAX_PLAYERS }, (_, i) => i === 0 ? (equippedElements?.[favoriteId || 'yellow'] || 'basic') : 'basic');
   });
   const [rematchNonce, setRematchNonce] = useState(0);
-  const [teamBattle, setTeamBattle] = useState(false);
-  const [teamAssignments, setTeamAssignments] = useState(() => Array.from({ length: MAX_PLAYERS }, (_, i) => i % 2));
-  const [teamDamage, setTeamDamage] = useState(true);
+  const [teamBattle, setTeamBattle] = useState(Boolean(sandboxConfig?.teamBattle));
+  const [teamAssignments, setTeamAssignments] = useState(() => sandboxConfig?.teamAssignments || Array.from({ length: MAX_PLAYERS }, (_, i) => i % 2));
+  const [teamDamage, setTeamDamage] = useState(sandboxConfig?.teamDamage !== false);
   const [matchTime, setMatchTime] = useState(sandboxConfig?.matchTime ?? settings.matchTime ?? 240);
   const unlockedSet = new Set(unlockedIds || ['yellow']);
   const defaultDiff = settings.defaultCPUDifficulty || 'regular';
@@ -289,7 +289,8 @@ export default function CustomBattle({ onBack, unlockedIds, favoriteId, equipped
       fighters={activeFighters} mapId={resolvedMapId} customPlatforms={customPlatforms}
       customSpawnPoints={customSpawnPoints} customHazards={customHazards} customObjects={customObjects}
       customFreehandStrokes={customFreehandStrokes} customStageConfig={customStageConfig}
-      matchTime={matchTime} onEnd={() => { onBack(); }} onRematch={() => setRematchNonce(n => n + 1)}
+      matchTime={matchTime} stocks={sandboxConfig?.stocks ?? 3} startingDamage={sandboxConfig?.startingDamage ?? 0}
+      onEnd={() => { onBack(); }} onRematch={() => setRematchNonce(n => n + 1)}
       musicVolume={musicVolume} sfxVolume={sfxVolume}
       equippedAccessories={equippedAccessories} equippedSkins={equippedSkins} equippedShikigami={equippedShikigami}
       teamBattle={teamBattle} teamAssignments={teamAssignments} teamDamage={teamDamage}
@@ -300,7 +301,7 @@ export default function CustomBattle({ onBack, unlockedIds, favoriteId, equipped
   );
 }
 
-function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = null, customHazards = null, customObjects = null, customFreehandStrokes = null, customStageConfig = null, matchTime = 240, onEnd, onRematch, musicVolume, sfxVolume = 70, equippedAccessories, equippedSkins, equippedShikigami = {}, settings = {}, teamBattle = false, teamAssignments = [], teamDamage = true, elements = [], customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
+function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = null, customHazards = null, customObjects = null, customFreehandStrokes = null, customStageConfig = null, matchTime = 240, stocks = 3, startingDamage = 0, onEnd, onRematch, musicVolume, sfxVolume = 70, equippedAccessories, equippedSkins, equippedShikigami = {}, settings = {}, teamBattle = false, teamAssignments = [], teamDamage = true, elements = [], customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
   const canvasRef = useRef(null);
   const gameRef = useRef(null);
   const keysRef = useRef({});
@@ -391,6 +392,8 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
       const sx = pin ? pin.x : (fallbackSpawnXs[i] || (200 + i * 120));
       const sy = pin ? pin.y : defaultSpawnY;
       const fighter = createFighter(modifiedChar, sx, sy, i % 2 === 0 ? 1 : -1);
+      fighter.stocks = Math.max(1, Math.min(9, Number(stocks) || 3));
+      fighter.damage = Math.max(0, Math.min(250, Number(startingDamage) || 0));
       if (pin) fighter.respawnPoint = { x: pin.x, y: pin.y };
       fighter.grounded = true;
       fighter.isAI = !f.isHuman;

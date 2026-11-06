@@ -66,9 +66,7 @@ full requested redesign or multiplayer/networking scope as complete.
 - Parties only launch modes with implemented shared sessions. Grand Circuit,
   online sports party flows, and several other requested group activities are
   not implemented. Active-match host migration is also incomplete.
-- Custom Rooms currently support shared networked fights only. Shared network
-  renderers for sports modes, spectators, the expanded settings catalog, and
-  complete multiplayer regression coverage remain unfinished.
+- Custom Rooms currently support shared networked fights only. This update adds host-controlled room capacity, stock count, timer, starting damage, bot difficulty, and stage selection, with server validation. Shared network renderers for sports modes, spectators, the full expanded settings catalog, and complete multiplayer regression coverage remain unfinished.
 - Table and Custom Room matches use the current host-authoritative transport;
   this is not deterministic frame-perfect rollback and has not been validated
   for parity across every mode.
@@ -82,3 +80,68 @@ checker. JSX files were manually reviewed because the project parser/build
 dependencies are not installed in this source checkout. These items need
 implementation and verification before a release package can be described as
 complete.
+
+
+## November 6 package additions
+
+- Fixed the reported `infinite recursion detected in policy for relation "element6_party_members"` error. The migration replaces self-referencing membership policies with a security-definer membership check that bypasses RLS only inside the helper.
+- Added Custom Room setting validation and host-only Table match settings.
+- Added supported-range settings for local fight, offline Tournament, Custom Room, and The Table. Grand Circuit, party, LAN, and offline sports retain the participant formats currently implemented by their game engines; arbitrary counts are not enabled where the engine or transport cannot play them.
+- The background and authenticated-only cloud-read changes are included in the overlay.
+
+
+## November 6 continuation
+
+- The home menu explicitly receives the requested Split City cherry-blossom
+  backdrop asset (`public/assets/e6-home-menu-background.png`).
+- Signed-out progress is saved only to the local guest key. Guest saves do not
+  enqueue cloud synchronization, and the legacy unscoped progress key is not
+  loaded into a guest session.
+- Regular Battle's multi-fighter launch carries the selected 2–8 fighter count,
+  human/CPU slots, stocks, starting damage, team settings, and selected stage
+  into the existing 8-fighter renderer. The renderer accepts two local keyboard
+  players; remaining selected slots are CPUs.
+- Tournament setup now supports one or two local entrants. Player 2 selects a
+  fighter and can use the arrow-key layout or a second connected controller.
+  The opening match is head-to-head; its winner advances under that fighter's
+  identity.
+- The Table host can set the active fighter total from 2 to 8. Its start RPC
+  validates that the setting can hold the connected human roster and fills the
+  remaining selected slots with Honored Bots. The SQL order was updated so the
+  settings column exists before the launch RPC is installed.
+- Monthly clan tournament rewards now use a pool of 7,000 Tokens per current
+  member and divide it using the claimant's recorded XP share. A one-member
+  clan therefore cannot claim the former fixed 100,000-token pool. The final
+  SQL file reapplies this function after earlier clan reward migrations.
+
+No production build was run. This source checkout has neither Node.js nor
+installed project dependencies, so the final JSX edits were manually reviewed.
+
+
+## November 6 continuation
+
+- The home menu explicitly receives the requested Split City cherry-blossom
+  backdrop asset (`public/assets/e6-home-menu-background.png`).
+- Signed-out progress is saved only to the local guest key. Guest saves do not
+  enqueue cloud synchronization, delayed writes are discarded after sign-out or
+  account switching, and the legacy unscoped progress key is not loaded into a
+  guest session.
+- Regular Battle's multi-fighter launch carries the selected 2–8 fighter count,
+  human/CPU slots, stocks, starting damage, team settings, and selected stage
+  into the existing 8-fighter renderer. The renderer accepts two local keyboard
+  players; remaining selected slots are CPUs.
+- Tournament setup supports one or two local entrants. Player 2 selects a
+  fighter and can use the arrow-key layout or a second connected controller.
+  The two local entrants play head-to-head in the opening round; the winner
+  advances under that fighter's identity.
+- The Table host can set the active fighter total from 2 to 8. Its start RPC
+  validates that the setting can hold the connected human roster and fills the
+  remaining selected slots with Honored Bots. The SQL order installs the settings
+  column before the launch RPC.
+- Monthly clan tournament rewards use a pool of 7,000 Tokens per current member
+  and divide it using the claimant's recorded XP share. A one-member clan
+  therefore cannot claim the former fixed 100,000-token pool. The final SQL file
+  reapplies this function after earlier clan reward migrations.
+
+No production build was run. This source checkout has neither Node.js nor
+installed project dependencies, so the final JSX edits were manually reviewed.
