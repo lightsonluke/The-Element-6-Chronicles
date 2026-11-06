@@ -5,7 +5,7 @@ const CPU_ONLY_MODES = ['ranked', 'challenge', 'botbattle'];
 
 // CharacterSelect now delegates to the universal character select screen
 // used across ALL game modes. Preserves the same external prop interface.
-export default function CharacterSelect({ onStart, onBack, settings = {}, unlockedIds, favoriteId, onSetFavorite, equippedAccessories, equippedSkins, gameMode, charLevels, equippedElements, onEquipElement, defaultCPUDifficulty = 'regular', customCharsData, customNumberMap, ownedCrossovers = [], equippedCrossovers: equippedCxs = {}, onEquipCrossover, charMastery = {}, ownedShikigami = [], equippedShikigami = {}, ownedAccessories = [], onEquipAccessory }) {
+export default function CharacterSelect({ onStart, onBack, settings = {}, unlockedIds, favoriteId, onSetFavorite, equippedAccessories, equippedSkins, gameMode = 'regular', charLevels, equippedElements, onEquipElement, defaultCPUDifficulty = 'regular', customCharsData, customNumberMap, ownedCrossovers = [], equippedCrossovers: equippedCxs = {}, onEquipCrossover, charMastery = {}, ownedShikigami = [], equippedShikigami = {}, ownedAccessories = [], onEquipAccessory }) {
   const isRanked = gameMode === 'ranked';
   const cpuOnly = CPU_ONLY_MODES.includes(gameMode);
   const banCustom = ['ranked', 'unranked', 'tournament'].includes(gameMode);
@@ -13,7 +13,7 @@ export default function CharacterSelect({ onStart, onBack, settings = {}, unlock
   return (
     <UniversalCharacterSelect
       title="SELECT FIGHTERS"
-      modeLabel={`MODE: ${gameMode.toUpperCase()}`}
+      modeLabel={`MODE: ${String(gameMode || 'regular').toUpperCase()}`}
       startLabel="NEXT: SELECT MAP"
       unlockedIds={unlockedIds}
       favoriteId={favoriteId}

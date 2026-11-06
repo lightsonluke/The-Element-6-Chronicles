@@ -2,13 +2,14 @@ import React, { useRef, useEffect, useState } from 'react';
 import { drawSportChar } from './sportDraw.jsx';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
+import { ALL_CHARS } from './allCharacters.js';
 
 // Energetic pre-match intro animation: the participating characters burst in
 // from the sides with motion trails, speed lines and sparkles over a dark
 // stadium crowd — styled after the attached "action poster" reference.
 // `participants` = [{ char, side (1|2), teamColor }]
 // Plays once, then calls onDone.
-const W = 900, H = 506;
+const BASE_W = 900, BASE_H = 506;
 
 export default function PrematchAnimation({ participants, sport = 'volleyball', title, onDone, sfxVolume = 70, musicVolume = 50 }) {
   const canvasRef = useRef(null);
@@ -18,12 +19,41 @@ export default function PrematchAnimation({ participants, sport = 'volleyball', 
     sfx.setVolume(sfxVolume); music.setVolume(musicVolume);
     const canvas = canvasRef.current; if (!canvas) return;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    let W = BASE_W, H = BASE_H;
+    const resizeCanvas = () => {
+      const rect = canvas.getBoundingClientRect();
+      const cssWidth = Math.max(1, rect.width || window.innerWidth);
+      const cssHeight = Math.max(1, rect.height || window.innerHeight);
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const unitScale = Math.max(0.1, Math.min(cssWidth / BASE_W, cssHeight / BASE_H));
+      W = cssWidth / unitScale;
+      H = cssHeight / unitScale;
+      canvas.width = Math.round(cssWidth * dpr);
+      canvas.height = Math.round(cssHeight * dpr);
+      ctx.setTransform(unitScale * dpr, 0, 0, unitScale * dpr, 0, 0);
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    window.visualViewport?.addEventListener('resize', resizeCanvas);
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resizeCanvas) : null;
+    resizeObserver?.observe(canvas);
     let raf; const start = performance.now();
     const DURATION = 3200;
 
-    // Layout: split participants by side; arrange along bottom with stagger.
-    const left = participants.filter(p => p.side === 1);
-    const right = participants.filter(p => p.side === 2);
+    // Normalize every mode's roster before the canvas loop starts. A stale
+    // participant payload must not leave the intro on a background-only frame.
+    const fallbackA = ALL_CHARS.find(c => c.id === 'yellow') || ALL_CHARS[0] || { id: 'fallback-yellow', name: 'Fighter', color: '#FFD84D', stats: {} };
+    const fallbackB = ALL_CHARS.find(c => c.id === 'blue') || ALL_CHARS.find(c => c.id !== fallbackA.id) || fallbackA;
+    const incoming = Array.isArray(participants)
+      ? participants.filter(Boolean).map((participant, index) => ({ ...participant, side: participant.side === 2 ? 2 : (participant.side === 1 ? 1 : (index % 2) + 1) }))
+      : [];
+    const roster = incoming.length ? incoming : [
+      { char: fallbackA, side: 1, teamColor: '#4488FF' },
+      { char: fallbackB, side: 2, teamColor: '#AA44FF' },
+    ];
+    const left = roster.filter(p => p.side === 1);
+    const right = roster.filter(p => p.side === 2);
     const place = (arr, side) => arr.map((p, i) => {
       const n = arr.length;
       const spacing = n <= 2 ? 130 : 100;
@@ -112,7 +142,8 @@ export default function PrematchAnimation({ participants, sport = 'volleyball', 
         const x = c.fromX + (c.tx - c.fromX) * ease;
         const y = c.ty;
         const bob = slideP >= 1 ? Math.sin(t * 6 + i) * 2 : 0;
-        drawSportChar(ctx, x, y + bob, c.char, {
+        const character = c.char && typeof c.char === 'object' ? c.char : ALL_CHARS.find(entry => entry.id === c.char) || fallbackA;
+        drawSportChar(ctx, x, y + bob, character, {
           facing: c.facing, frame: Math.floor(t * 24), scale: 1.15,
           state: slideP < 1 ? 'moving' : 'attacking', jersey: true, sport, teamColor: c.teamColor,
         });
@@ -151,14 +182,19 @@ export default function PrematchAnimation({ participants, sport = 'volleyball', 
       else { setFade(0); setTimeout(() => onDone?.(), 120); }
     };
     raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resizeCanvas);
+      window.visualViewport?.removeEventListener('resize', resizeCanvas);
+      resizeObserver?.disconnect();
+    };
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black" style={{ opacity: fade, transition: 'opacity 0.12s' }}>
-      <canvas ref={canvasRef} width={W} height={H}
-        className="rounded-lg shadow-2xl"
-        style={{ width: '100%', maxWidth: W, aspectRatio: `${W} / ${H}`, height: 'auto' }} />
+    <div className="fixed inset-0 z-[60] overflow-hidden bg-[#06070f]" style={{ opacity: fade, transition: 'opacity 0.12s' }}>
+      <canvas ref={canvasRef} width={BASE_W} height={BASE_H}
+        className="absolute inset-0 block h-full w-full"
+        style={{ width: '100vw', height: '100dvh', maxWidth: 'none' }} />
     </div>
   );
 }

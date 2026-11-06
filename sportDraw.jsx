@@ -27,8 +27,8 @@ import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor } from 
 // `teamColor` lets the jersey substrate use a per-side color so teams are
 // visually distinct (P1 blue vs P2 red); character limbs/head still use the
 // character's own color, so identity is preserved.
-export function drawSportChar(ctx, x, y, char, opts = {}) {
-  const { facing = 1, frame = 0, scale = 1, state = 'idle', powerActive = null, jersey = true, sport = 'soccer', teamColor, equippedSkins = {}, equippedAccessories = {},   noWeapon = sport === 'volleyball' || sport === 'baseball', motion = null, attackData = null, emote = null } = opts;
+function drawSportCharUnsafe(ctx, x, y, char, opts = {}) {
+  let { facing = 1, frame = 0, scale = 1, state = 'idle', powerActive = null, jersey = true, sport = 'soccer', teamColor, equippedSkins = {}, equippedAccessories = {},   noWeapon = sport === 'volleyball' || sport === 'baseball', motion = null, attackData = null, emote = null } = opts;
   state = normalizeSportState(state);
   const baseColor = char?.color || '#888';
   motion = normalizeSportMotion(char, facing, state, { ...opts, motion });
@@ -51,6 +51,53 @@ export function drawSportChar(ctx, x, y, char, opts = {}) {
     if (acc && !isBehindAccessory(acc.type)) drawAccessory(ctx, x, y, acc.type, resolveAccColor(acc, char), frame, scale, char?.id, state, facing, powerActive, emote);
   }
   if (jersey) drawSportJersey(ctx, x, y, color, char?.id, sport, frame, scale, state, facing, teamColor, motion, emote, char);
+}
+
+// Keep the shared sports render loop alive when a cosmetic, custom character,
+// or pose contains malformed data. A single fighter must never blank an
+// entire prematch/gameplay canvas. Cache failures so a bad character does not
+// repeatedly execute the same throwing renderer every frame.
+const failedSportRenders = new Set();
+function drawSportFallback(ctx, x, y, char, opts = {}) {
+  const scale = Number.isFinite(Number(opts.scale)) ? Math.max(0.25, Math.min(3, Number(opts.scale))) : 1;
+  const facing = opts.facing < 0 ? -1 : 1;
+  const color = /^#[0-9a-f]{3,8}$/i.test(char?.color || '') ? char.color : '#E8E8FF';
+  const teamColor = /^#[0-9a-f]{3,8}$/i.test(opts.teamColor || '') ? opts.teamColor : color;
+  ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.ellipse(0, 3, 28, 8, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = color; ctx.lineWidth = 6; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(0, -45, 10, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(0, -12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -29); ctx.lineTo(facing * 12, -20); ctx.moveTo(0, -29); ctx.lineTo(-facing * 10, -19); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(-8, 0); ctx.moveTo(0, -12); ctx.lineTo(8, 0); ctx.stroke();
+  if (opts.jersey !== false) {
+    ctx.fillStyle = teamColor; ctx.globalAlpha = 0.88;
+    ctx.fillRect(-7, -32, 14, 19);
+  }
+  ctx.restore();
+}
+
+export function drawSportChar(ctx, x, y, char, opts = {}) {
+  if (!ctx || !Number.isFinite(Number(x)) || !Number.isFinite(Number(y))) return;
+  const safeChar = char && typeof char === 'object' ? char : { id: 'fallback', name: 'Fighter', color: '#E8E8FF', stats: {} };
+  const key = `${safeChar.id || 'unknown'}:${opts.sport || 'generic'}`;
+  if (failedSportRenders.has(key)) {
+    drawSportFallback(ctx, Number(x), Number(y), safeChar, opts);
+    return;
+  }
+  try {
+    drawSportCharUnsafe(ctx, Number(x), Number(y), safeChar, opts);
+  } catch (error) {
+    failedSportRenders.add(key);
+    console.error(`[Element 6] Sport character renderer recovered (${key}).`, error);
+    drawSportFallback(ctx, Number(x), Number(y), safeChar, opts);
+  }
 }
 
 const SPORT_ACCENTS = {

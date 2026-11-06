@@ -288,7 +288,11 @@ export default function UniversalCharacterSelect({
   onMatchSettingsChange,
   settings = {},
 }) {
-  const unlockedSet = new Set(unlockedIds);
+  // Account saves from older clients can contain a missing or malformed
+  // unlock list. Normalize it so mode-specific character selection still
+  // mounts and safely falls back to its default roster.
+  const unlockList = Array.isArray(unlockedIds) && unlockedIds.length ? unlockedIds : ['yellow'];
+  const unlockedSet = new Set(unlockList);
 
   const [customChars, setCustomChars] = useState([]);
   const [era, setEra] = useState('all');

@@ -57,6 +57,7 @@ import LANLobby from './LANLobby.jsx';
 import CustomRoomLobby from './CustomRoomLobby.jsx';
 import Leaderboard from './Leaderboard.jsx';
 import MatchReview from './MatchReview.jsx';
+import GameScreenErrorBoundary from './GameScreenErrorBoundary.jsx';
 
 import LeaderboardHall from './LeaderboardHall.jsx';
 import FlyerBoard from './FlyerBoard.jsx';
@@ -2318,6 +2319,7 @@ export default function Game() {
         ))}
       </div>}
 
+      <GameScreenErrorBoundary key={screen} screen={screen} onBack={goBack}>
       <div
         className={`relative z-10 w-full flex flex-col items-center my-auto${useUnifiedUi ? ' e6-unified-ui' : ''}`}
         data-e6-screen={screen}
@@ -3241,6 +3243,7 @@ export default function Game() {
           <LoreLibrary onBack={goBack} />
         )}
       </div>
+      </GameScreenErrorBoundary>
 
       {(progress?.settings?.mobileMode === true || autoMobileDevice) && TOUCH_SCREENS.includes(screen) && (
         <TouchControls keybinds={getKeybinds(progress.settings).p1} settings={progress.settings || {}} />
