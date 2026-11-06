@@ -4,7 +4,7 @@
 // No text, no character/person silhouettes anywhere in the scenery.
 
 // Supplied Split City backdrop, served from `public/` in both Vite dev and production.
-const SPLIT_CITY_ART_PATH = '/art/stages/split-city/city-backdrop.png';
+const SPLIT_CITY_ART_PATH = `${import.meta.env.BASE_URL}art/stages/split-city/city-backdrop.png`;
 const splitCityArt = typeof Image === 'undefined' ? null : new Image();
 if (splitCityArt) splitCityArt.src = SPLIT_CITY_ART_PATH;
 

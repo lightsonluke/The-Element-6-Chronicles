@@ -16,6 +16,7 @@ const ROCKCLIMB_TRACK = A('parkour.mp3');
 // Built-in fight/sports track library. New tracks are selectable presets
 // in Settings → Fight & Sports Music (and join the auto-rotation).
 export const FIGHT_TRACK_LIBRARY = [
+  { id: 'blossomed-city', name: 'Blossomed City', url: A('blossomed-city.mp3') },
   { id: 'element-6-track', name: 'Element 6 Track', url: A('element-6-track.mp3') },
   { id: 'the-shattering', name: 'The Shattering', url: A('the-shattering.mp3') },
   { id: 'pixel-launch', name: 'Pixel Launch', url: A('pixel-launch.mp3') },
@@ -54,6 +55,7 @@ export const FIGHT_TRACK_LIBRARY = [
   { id: 'showdown', name: 'Showdown', url: A('showdown.mp3') },
 ];
 const FIGHT_TRACKS = FIGHT_TRACK_LIBRARY.map(t => t.url);
+const SPLIT_CITY_TRACK = A('blossomed-city.mp3');
 const FIGHT_SCENES = new Set(['fight','story','battleroyale','soccer','volleyball','banger','dodgeball','ctf','team','custombattle','tournament','grandcircuit']);
 
 // Grand Circuit track pool — only these tracks play during Grand Circuit matches.
@@ -272,17 +274,21 @@ class MusicManager {
     this.audioEl.play().then(() => { this._pendingPlayback = false; }).catch(() => { this._pendingPlayback = true; });
   }
 
-  play(sceneName) {
+  play(sceneName, context = {}) {
     this.init();
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    const forceSplitCityTrack = context?.stageId === 'splitcity' || sceneName === 'splitcity';
 
     // Overlap guard: if this exact scene is already playing with a live audio
     // element, don't start a second one. This prevents the homescreen (and any
     // other scene) from ever playing two tracks simultaneously.
-    if (sceneName === this.currentScene && this.audioEl && !this.audioEl.paused) return;
+    if (sceneName === this.currentScene && this.audioEl && !this.audioEl.paused
+      && (!forceSplitCityTrack || this.currentUrl === SPLIT_CITY_TRACK)) return;
 
     let url;
-    if (this.customTracks[sceneName]) {
+    if (forceSplitCityTrack) {
+      url = SPLIT_CITY_TRACK;
+    } else if (this.customTracks[sceneName]) {
       url = this.customTracks[sceneName];
     } else if (sceneName === 'menu') {
       url = MENU_TRACKS[Math.floor(Date.now() / HOME_ROTATION_MS) % MENU_TRACKS.length];

@@ -23,7 +23,7 @@ import { getTitleById } from './profileTitles.js';
 
 const ALL = ALL_CHARS; // all gens 1–5 available in custom rooms
 const DIFFICULTIES = ['newcomer', 'beginner', 'easy', 'amateur', 'regular', 'pro', 'hard', 'insane', 'honored'];
-const STAGE_OPTIONS = STAGE_LIST.map(s => ({ name: s.name, platforms: MAP_PLATFORMS[s.id] || [] }));
+const STAGE_OPTIONS = STAGE_LIST.map(s => ({ id: s.id, name: s.name, platforms: MAP_PLATFORMS[s.id] || [] }));
 
 // Custom Room networking currently synchronizes the fight renderer only.
 // Keep unsupported sports out of this room flow until their authoritative
@@ -265,6 +265,7 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
           region: getClientRegion(),
           characterId: myChar,
           stageName: STAGE_OPTIONS[0].name,
+          stageId: STAGE_OPTIONS[0].id,
           stagePlatforms: STAGE_OPTIONS[0].platforms,
           stageSpawnPoints: [],
           stocks: 3,
@@ -392,13 +393,13 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
     const r = roomRef.current; if (!r || r.host_user_id !== me?.id) return;
     setSelectedStageIdx(idx);
     const stage = STAGE_OPTIONS[idx];
-    await updateRoomSettings({ stageName: stage.name, stagePlatforms: stage.platforms, stageSpawnPoints: [] });
+    await updateRoomSettings({ stageName: stage.name, stageId: stage.id, stagePlatforms: stage.platforms, stageSpawnPoints: [] });
   };
 
   const setCustomStage = async stageIdx => {
     const r = roomRef.current; if (!r || r.host_user_id !== me?.id) return;
     const stage = customStages[stageIdx]; if (!stage) return;
-    await updateRoomSettings({ stageName: stage.name || 'Custom', stagePlatforms: stage.platforms || stage, stageSpawnPoints: stage.spawnPoints || [] });
+    await updateRoomSettings({ stageName: stage.name || 'Custom', stageId: 'custom', stagePlatforms: stage.platforms || stage, stageSpawnPoints: stage.spawnPoints || [] });
   };
 
   const updateMyChar = async charId => {

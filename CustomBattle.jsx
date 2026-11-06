@@ -368,9 +368,9 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
 
   useEffect(() => {
     music.setVolume(musicVolume); sfx.setVolume(sfxVolume);
-    music.play('fight');
+    music.play('fight', { stageId: mapId });
     return () => music.stop();
-  }, [musicVolume, sfxVolume]);
+  }, [musicVolume, sfxVolume, mapId]);
 
   useEffect(() => {
     if (!gameStarted) return;

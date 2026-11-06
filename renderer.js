@@ -19,9 +19,9 @@ export { FIGHTER_HURTBOX };
 const splitCityStage = typeof Image === 'undefined' ? null : new Image();
 const splitCityMovingStage = typeof Image === 'undefined' ? null : new Image();
 const splitCityBackdrop = typeof Image === 'undefined' ? null : new Image();
-if (splitCityStage) splitCityStage.src = '/art/stages/split-city/split-city-main-platform.png';
-if (splitCityMovingStage) splitCityMovingStage.src = '/art/stages/split-city/split-city-moving-platform.png';
-if (splitCityBackdrop) splitCityBackdrop.src = '/art/stages/split-city/split-city-backdrop.png';
+if (splitCityStage) splitCityStage.src = `${import.meta.env.BASE_URL}art/stages/split-city/split-city-main-platform.png`;
+if (splitCityMovingStage) splitCityMovingStage.src = `${import.meta.env.BASE_URL}art/stages/split-city/split-city-dropthrough-platform.png`;
+if (splitCityBackdrop) splitCityBackdrop.src = `${import.meta.env.BASE_URL}art/stages/split-city/city-backdrop.png`;
 
 function imageReady(image) {
   return Boolean(image && image.complete && image.naturalWidth && image.naturalHeight);
@@ -29,16 +29,15 @@ function imageReady(image) {
 
 function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
   if (!imageReady(splitCityStage)) return false;
-  // Draw the complete full-height main-platform PNG at a uniform scale. Align the
-  // collision surface to the previously approved front-strip standing line.
-  // Using the full image prevents cropping or non-uniformly stretching it.
+  // Draw the complete main-platform PNG without distortion. The top face in
+  // the supplied collision reference spans y=205..214 of its 736px image.
   const visualX = platform._visualX ?? platform.x;
   const visualW = platform._visualW ?? platform.w;
   const visualY = platform._visualY ?? platform.y;
   const scale = visualW / splitCityStage.naturalWidth;
   const drawH = splitCityStage.naturalHeight * scale;
-  const stripCenterY = 584 * scale;
-  const visual = { x: visualX, y: visualY - stripCenterY, w: visualW, h: drawH };
+  const surfaceOffsetY = 205 * scale;
+  const visual = { x: visualX, y: visualY - surfaceOffsetY, w: visualW, h: drawH };
   ctx.save();
   ctx.imageSmoothingEnabled = true;
   if (foreground) {
@@ -54,16 +53,17 @@ function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
   return true;
 }
 
-function drawSplitCityMovingPlatform(ctx, platform) {
+function drawSplitCityDropthroughPlatform(ctx, platform) {
   // Claim the platform's render slot even while its image is loading, so the
   // generic grey collision rectangle is never shown as a substitute texture.
   if (!imageReady(splitCityMovingStage)) return true;
-  // Use the supplied thin platform texture only. Preserve its aspect ratio and
-  // compensate for its 7px transparent top padding so visible artwork meets y.
-  const scale = platform.w / splitCityMovingStage.naturalWidth;
-  const drawH = splitCityMovingStage.naturalHeight * scale;
-  const alphaTop = 7 * scale;
-  ctx.drawImage(splitCityMovingStage, platform.x, platform.y - alphaTop, platform.w, drawH);
+  // The supplied top-face reference is the black band at y=280..289.
+  const visualX = platform._visualX ?? platform.x;
+  const visualW = platform._visualW ?? platform.w;
+  const visualY = platform._visualY ?? platform.y;
+  const visualScale = visualW / splitCityMovingStage.naturalWidth;
+  const visualH = splitCityMovingStage.naturalHeight * visualScale;
+  ctx.drawImage(splitCityMovingStage, visualX, visualY - 280 * visualScale, visualW, visualH);
   return true;
 }
 
@@ -1936,8 +1936,8 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
     // rendered once by the stage/match renderer.
     if (p?._freehandSegment || p?._artCollisionOnly) return;
     if (mapId === 'splitcity' && (p?._splitCityMain || p.material === 'split_city_joined') && drawJoinedSplitCityPlatform(ctx, p)) return;
-    if (p?._splitCityMoving || (mapId === 'splitcity' && p.material === 'split_city_moving')) {
-      if (drawSplitCityMovingPlatform(ctx, p)) return;
+    if (p?._splitCityDropthrough || (mapId === 'splitcity' && p.material === 'split_city_dropthrough')) {
+      if (drawSplitCityDropthroughPlatform(ctx, p)) return;
     }
     const isMain = p.h >= 18;
     ctx.fillStyle = 'rgba(0,0,0,0.3)';

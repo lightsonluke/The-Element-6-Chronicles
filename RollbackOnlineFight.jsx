@@ -110,9 +110,9 @@ export default function RollbackOnlineFight({
   useEffect(() => {
     music.setVolume(musicVolume);
     sfx.setVolume(sfxVolume);
-    music.play('fight');
+    music.play('fight', { stageId });
     return () => music.stop();
-  }, [musicVolume, sfxVolume]);
+  }, [musicVolume, sfxVolume, stageId]);
 
   useEffect(() => {
     if (!gameStarted || !playerId || (mode !== 'ranked' && mode !== 'unranked')) return;

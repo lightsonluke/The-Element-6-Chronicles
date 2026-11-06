@@ -8,14 +8,10 @@ import {
 import { applyElement } from '../elements.js';
 import { MAP_PLATFORMS } from '../PlatformFighter.jsx';
 import { decodeInput } from './inputBits.js';
-import { SPLIT_CITY_HULL_COLLIDERS } from '../stageMaterials.js';
 
 export const ONLINE_STAGE_WIDTH = 1280;
 export const ONLINE_STAGE_HEIGHT = 720;
-export const ONLINE_PLATFORMS = Object.freeze([
-  Object.freeze({ x: 177, y: 570, w: 925, h: 20, material: 'split_city_joined', _forceSolid: true }),
-  ...SPLIT_CITY_HULL_COLLIDERS.map((platform) => Object.freeze(platform)),
-]);
+export const ONLINE_PLATFORMS = Object.freeze((MAP_PLATFORMS.splitcity || []).map(platform => Object.freeze({ ...platform })));
 
 // Normal built-in layouts only. Custom player stages are intentionally never
 // accepted by online matchmaking, so collision layout stays identical on both

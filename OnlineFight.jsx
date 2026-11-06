@@ -14,7 +14,7 @@ import { getCharRenderColor, getSkinParts } from './skins.js';
 import { getAccessory, isBehindAccessory, drawAccessory, resolveAccColor, getEquippedAccessories } from './cosmetics.js';
 import { drawShikigamiFollower } from './shikigami.js';
 import { getEmoteForKey } from './emoteSlots.js';
-import { SPLIT_CITY_HULL_COLLIDERS } from './stageMaterials.js';
+import { MAP_PLATFORMS } from './PlatformFighter.jsx';
 import { music } from './music.js';
 import { applyElement } from './elements.js';
 import { sfx } from './sfx.js';
@@ -30,10 +30,7 @@ const mergeGp = (kb, gp) => gp ? {
 } : kb;
 
 const W = 1280, H = 720;
-const PLATFORMS = [
-  { x: 177, y: 570, w: 925, h: 20, material: 'split_city_joined', _forceSolid: true },
-  ...SPLIT_CITY_HULL_COLLIDERS,
-];
+const PLATFORMS = MAP_PLATFORMS.splitcity;
 const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 const getCharData = (id) => ALL.find(c => c.id === id);
@@ -66,7 +63,7 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
   }, [countdown]);
 
   useEffect(() => {
-    music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.play('fight');
+    music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.play('fight', { stageId: 'splitcity' });
     return () => music.stop();
   }, [musicVolume, sfxVolume]);
 

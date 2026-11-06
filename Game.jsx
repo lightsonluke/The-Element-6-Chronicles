@@ -2270,10 +2270,8 @@ export default function Game() {
   return (
     <div
       className="e6-app-shell min-h-screen flex flex-col items-center justify-start p-4 relative overflow-y-auto"
-      style={{ background: progress?.settings?.displayMode === 'light'
-        ? `radial-gradient(ellipse at top, ${disableEventBg ? '#aaa8bb' : effectiveEventColor}22 0%, #e8e4f0 50%, #ddd8e8 100%)`
-        : `radial-gradient(ellipse at top, ${disableEventBg ? '#5544aa' : effectiveEventColor}22 0%, #0a0820 50%, #06040f 100%)` }}
     >
+      <div className="e6-universal-backdrop" style={{ '--e6-shared-backdrop': `url("${DEFAULT_SPLIT_CITY_BACKDROP}")` }} aria-hidden="true" />
       {screenTransition && <div key={`${screenTransition.id}-${screenTransition.phase}`} aria-hidden="true" className={`e6-screen-transition e6-screen-transition--${screenTransition.kind} e6-screen-transition--${screenTransition.phase}`} />}
       <ControllerTextEntry />
       <UsernamePrompt onSet={(name) => setUserProfile(prev => ({ ...prev, username: name }))} />

@@ -15,7 +15,7 @@ import { getCharRenderColor, getSkinParts } from './skins.js';
 import { getAccessory, isBehindAccessory, drawAccessory } from './cosmetics.js';
 import { applyElement } from './elements.js';
 import { getEmoteForKey } from './emoteSlots.js';
-import { SPLIT_CITY_HULL_COLLIDERS } from './stageMaterials.js';
+import { MAP_PLATFORMS } from './PlatformFighter.jsx';
 import { drawEmote } from './emotes.js';
 import { drawMovementTrail } from './movementTrails.js';
 import { music } from './music.js';
@@ -35,10 +35,7 @@ const mergeGp = (kb, gp) => gp ? {
 } : kb;
 
 const W = 1280, H = 720;
-const DEFAULT_PLATFORMS = [
-  { x: 177, y: 570, w: 925, h: 20, material: 'split_city_joined', _forceSolid: true },
-  ...SPLIT_CITY_HULL_COLLIDERS,
-];
+const DEFAULT_PLATFORMS = MAP_PLATFORMS.splitcity;
 const NO_INPUT = { left: false, right: false, jump: false, up: false, down: false, sig: false, power: false, superMove: false, heavy: false };
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 const getCharData = (id) => ALL.find(c => c.id === id);
@@ -58,15 +55,16 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
   const remoteInputRef = useRef(null);
 
   const players = room?.players ? (Array.isArray(room.players) ? room.players : Object.values(room.players)) : [];
+  const stageId = room?.settings?.stageId || 'splitcity';
   const platforms = (room?.stage_platforms && Array.isArray(room.stage_platforms) && room.stage_platforms.length)
-    ? room.stage_platforms : DEFAULT_PLATFORMS;
+    ? room.stage_platforms : (MAP_PLATFORMS[stageId] || DEFAULT_PLATFORMS);
   const spawnPoints = (room?.stage_spawn_points && Array.isArray(room.stage_spawn_points) && room.stage_spawn_points.length)
     ? room.stage_spawn_points : null;
 
   useEffect(() => {
-    music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.play('fight');
+    music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.play('fight', { stageId });
     return () => music.stop();
-  }, [musicVolume, sfxVolume]);
+  }, [musicVolume, sfxVolume, stageId]);
 
   useEffect(() => {
     if (countdown > 0) { const t = setTimeout(() => setCountdown(c => c - 1), 1000); return () => clearTimeout(t); }
@@ -506,13 +504,13 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
       if (shakeMag > 0.3) { shakeX = (Math.random() - 0.5) * shakeMag; shakeY = (Math.random() - 0.5) * shakeMag; shakeMag *= 0.72; }
 
       ctx.clearRect(0, 0, W, H);
-      drawBackground(ctx, W, H, frameCount, 'splitcity');
+      drawBackground(ctx, W, H, frameCount, stageId);
       ctx.save();
       ctx.translate(W / 2, H / 2);
       ctx.scale(camZoom, camZoom);
       ctx.translate(-W / 2 + camX + shakeX, -H / 2 + camY + shakeY);
 
-      drawPlatforms(ctx, platforms, frameCount, 'splitcity');
+      drawPlatforms(ctx, platforms, frameCount, stageId);
 
       // Draw fighters
       renderFighters.forEach((f, i) => {
@@ -532,7 +530,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive, f.emote));
         if (acc && isBehindAccessory(acc.type)) drawAccessory(ctx, f.x, f.y, acc.type, accColor, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive);
         drawMovementTrail(ctx, f, loadout?.equippedMovementTrails?.[charData.id], movementTrailHistory, `room-${i}`);
-        drawFighterGroundShadow(ctx, f, platforms, 'splitcity');
+        drawFighterGroundShadow(ctx, f, platforms, stageId);
         drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame || 0, 1, charData.isSpirit, f.state || 'idle', charData, f.powerActive, false, null, f.emote, f.attackData);
         skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive, f.emote));
         if (acc && !isBehindAccessory(acc.type)) drawAccessory(ctx, f.x, f.y, acc.type, accColor, f.frame || 0, 1, charData.id, f.state || 'idle', f.facing, f.powerActive);
@@ -548,7 +546,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         ctx.restore();
       });
 
-      drawSplitCityPlatformForeground(ctx, platforms, 'splitcity');
+      drawSplitCityPlatformForeground(ctx, platforms, stageId);
 
       ctx.restore();
 
@@ -624,7 +622,7 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
     };
-  }, [gameStarted, room.id, isHost, myUserId, lanConnection]);
+  }, [gameStarted, room.id, isHost, myUserId, lanConnection, stageId]);
 
   const handleQuit = () => {
     if (finishedRef.current) return;

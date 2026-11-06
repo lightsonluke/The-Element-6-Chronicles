@@ -40,10 +40,10 @@ const H = 720;
 
 const MAP_PLATFORMS = {
   splitcity: [
-    { x: 40,   y: 620, w: 1200, h: 48 },
-    { x: 120,  y: 440, w: 360,  h: 20 },
-    { x: 800,  y: 440, w: 360,  h: 20 },
-    { x: 460,  y: 270, w: 360,  h: 20 },
+    // Collision lines follow only the black top-face strokes in the supplied
+    // reference PNGs. The art is drawn at its natural aspect ratio.
+    { x: 49, y: 570, w: 1182, h: 10, material: 'split_city_joined', _splitCityMain: true, _visualX: 0, _visualW: 1280, _visualY: 570 },
+    { x: 431, y: 420, w: 419, h: 10, material: 'split_city_dropthrough', _splitCityDropthrough: true, _visualX: 400, _visualW: 480, _visualY: 420 },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
   basic: [
@@ -636,9 +636,9 @@ export default function PlatformFighter({
   useEffect(() => {
     music.setVolume(musicVolume);
     sfx.setVolume(sfxVolume);
-    music.play(gameMode === 'soccer' || gameMode === 'soccertournament' ? 'soccer' : 'fight');
+    music.play(gameMode === 'soccer' || gameMode === 'soccertournament' ? 'soccer' : 'fight', { stageId: mapId });
     return () => music.stop();
-  }, [musicVolume, sfxVolume, gameMode]);
+  }, [musicVolume, sfxVolume, gameMode, mapId]);
 
   // LAN: receive remote player's parsed input (their per-device scheme already applied on sender)
   useEffect(() => {
