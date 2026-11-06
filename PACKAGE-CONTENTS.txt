@@ -1,4 +1,5 @@
 Changed or newly added source files: 211
+SQL files collected under SQL/: 13
 
 AboutTheGame.jsx
 App.jsx
@@ -211,8 +212,3 @@ useGamepadMenuNav.js
 useLANConnection.js
 world-stages.sql
 worldMode.js
-
-Included package documentation:
-IMPLEMENTATION_STATUS.md (if present)
-PARTY_MIGRATION_ORDER.txt (if present)
-PACKAGE-README.md

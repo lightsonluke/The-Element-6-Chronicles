@@ -564,7 +564,7 @@ export default function PlatformFighter({
   gameMode = 'regular', dummy = false, dummyAutoRecover = false, customPlatforms = null, customSpawnPoints = null, musicVolume = 50, sfxVolume = 70,
   equippedAccessories = {}, equippedSkins = {}, killFXId = 'none',
   p1Element = 'basic', p2Element = 'basic', infiniteSuper = false, lanConnection = null, lanRole = null,
-  matchTime = 240, settings = {}, localScheme = null,
+  matchTime = 240, settings = {}, localScheme = null, localP2Controller = true,
   customCharsData = {},
   equippedCrossovers = {},
   equippedShikigami = {},
@@ -816,7 +816,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       // Gamepad input (Bluetooth + wired) — merged with keyboard so both work
       const _gpEnabled = settings?.controllerEnabled !== false;
       const gp1 = _gpEnabled ? readGamepadInput(0) : null;
-      const gp2 = _gpEnabled ? readGamepadInput(1) : null;
+      const gp2 = _gpEnabled && localP2Controller ? readGamepadInput(1) : null;
       // Controller cannot pause — use mouse/trackpad or keyboard Esc/P to pause.
       prevGpStart = !!gp1?.start;
       const mergeGp = (kb, gp) => gp ? {

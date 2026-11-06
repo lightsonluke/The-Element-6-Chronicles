@@ -75,7 +75,7 @@ const SECTIONS = [
   },
 ];
 
-export default function MainMenu({ onNavigate, coins = 0, favoriteName, favoriteLevel = 1, onlineRankedRating, musicVolume, username, chatNotifCount = 0 }) {
+export default function MainMenu({ onNavigate, coins = 0, favoriteName, favoriteLevel = 1, onlineRankedRating, musicVolume, username, chatNotifCount = 0, backdropUrl = `${import.meta.env.BASE_URL}assets/e6-home-menu-background.png` }) {
   const [showHowTo, setShowHowTo] = useState(false);
   const [activeSection, setActiveSection] = useState('play');
   const [query, setQuery] = useState('');
@@ -109,7 +109,7 @@ export default function MainMenu({ onNavigate, coins = 0, favoriteName, favorite
   };
 
   return (
-    <main className="e6-home-menu" style={{ '--e6-home-image': `url("${import.meta.env.BASE_URL}assets/e6-home-menu-background.png")` }}>
+    <main className="e6-home-menu" style={{ '--e6-home-image': `url("${backdropUrl}")` }}>
       <header className="e6-home-topbar">
         <div className="e6-home-brand" aria-label="Element 6">
           <span className="e6-home-brand-mark"><img src={`${import.meta.env.BASE_URL}favicon.png`} alt="" /></span>

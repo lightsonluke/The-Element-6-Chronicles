@@ -1,0 +1,8 @@
+November 6 update additions
+
+- Restored the supplied full-screen home artwork and matching existing game logo.
+- Prevented cloud progress reads until a signed-in account is authenticated.
+- Added match settings within the participant and rule ranges supported by the current engines: local fight controls, offline Tournament entrants/rules, Custom Room capacity/rules, and Table rules.
+- Fixed the recursive element6_party_members RLS policy and added server-side Custom Room settings validation.
+
+The SQL folder contains ordered migration files. Read SQL/README.txt and PARTY_MIGRATION_ORDER.txt before applying them. LAN remains a two-device peer session; unsupported player counts and sports room renderers were not fabricated. No production build was run for this package.
