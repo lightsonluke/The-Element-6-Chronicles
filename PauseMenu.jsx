@@ -36,7 +36,7 @@ export default function PauseMenu({ onResume, onQuit, tournamentMode = false, on
     return () => { window.__el6PauseMenuOpen = false; };
   }, []);
   return (
-    <div className="el6-pause-overlay-layer flex flex-col items-center justify-center bg-black/80 rounded-lg backdrop-blur-sm">
+    <div data-match-continues={online ? 'true' : 'false'} className="el6-pause-overlay-layer flex flex-col items-center justify-center bg-black/80 rounded-lg backdrop-blur-sm">
       <div className="bg-card border border-border rounded-2xl p-8 w-[520px] shadow-2xl">
         <h2 className="text-3xl font-heading text-center text-foreground mb-1 tracking-widest">PAUSED</h2>
         {online && <p className="text-center text-[10px] font-body text-accent mb-3">ONLINE MATCH CONTINUES — ONLY YOUR INPUT IS PAUSED</p>}
@@ -63,6 +63,15 @@ export default function PauseMenu({ onResume, onQuit, tournamentMode = false, on
         </div>
 
         <div className="flex gap-3 justify-center flex-wrap">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('el6-save-clip'))}
+            className="px-6 py-3 flex items-center justify-center gap-2 bg-accent/15 border border-accent/50 text-accent font-heading text-sm rounded-lg hover:bg-accent/25 transition tracking-wider"
+            aria-label="Save the last 30 seconds of gameplay"
+            title="Save the last 30 seconds of gameplay (F8)"
+          >
+            <GameIcon icon="video" size={15} /> SAVE CLIP
+          </button>
           <button
             ref={resumeRef}
             onClick={onResume}

@@ -587,9 +587,10 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
   // Suppress controller menu-nav while an online match is actively running;
   // re-enable when paused or finished so the player can click with the controller.
   useEffect(() => {
-    window.__el6GameplayActive = !winner;
-    return () => { window.__el6GameplayActive = false; };
-  }, [winner]);
+    window.__el6GameplayActive = gameStarted && !winner;
+    window.__el6GameplayCaptureActive = gameStarted && !winner;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [gameStarted, winner]);
 
   if (winner) {
     const won = winner === 'me' || winner === 'me_disconnect';
@@ -613,8 +614,8 @@ export default function OnlineSoccerFight({ matchId, role, myChar, oppChar, myLo
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80">PAUSE (ESC)</button>
       </div>
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={W} height={H}
-                className="border-2 border-border rounded-lg shadow-2xl w-full"
+        <canvas ref={canvasRef} width={W} height={H} data-e6-game-canvas="true"
+                className="el6-match-canvas el6-sport-canvas border-2 border-border rounded-lg shadow-2xl w-full"
                 style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
               />
       </GameCanvasPortal>

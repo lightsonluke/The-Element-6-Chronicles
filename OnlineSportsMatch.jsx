@@ -309,8 +309,9 @@ export default function OnlineSportsMatch({ matchId, role, sport, GameComponent,
 
   useEffect(() => {
     window.__el6GameplayActive = !winner;
-    return () => { window.__el6GameplayActive = false; };
-  }, [winner]);
+    window.__el6GameplayCaptureActive = gameStarted && !winner;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [gameStarted, winner]);
 
   if (winner) {
     const won = winner === 'me' || winner === 'me_disconnect';
@@ -360,7 +361,7 @@ export default function OnlineSportsMatch({ matchId, role, sport, GameComponent,
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && !winner && <MatchPausePortal><div className="el6-pause-overlay-layer"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} /></div></MatchPausePortal>}
+      {paused && !winner && <MatchPausePortal><div className="el6-pause-overlay-layer"><PauseMenu online onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} /></div></MatchPausePortal>}
       {reconnecting && !winner && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <span className="text-3xl font-heading text-accent animate-pulse">RECONNECTING…</span>

@@ -1,130 +1,130 @@
-import db from './localBackend';
-
-import React, { useState, useEffect } from 'react';
-
+import React, { useCallback, useEffect, useState } from 'react';
+import { supabase } from './supabaseClient.js';
 import { sfx } from './sfx.js';
-import GameIcon from "./GameIcon.jsx";
+import GameIcon from './GameIcon.jsx';
+import { getTitleById } from './profileTitles.js';
 
-// Party panel — shows party members and lets host invite more players from the hub.
-export default function PartyPanel({ userId, username, serverCode, hubPlayers, onClose }) {
+// The Community Hub uses the same server-owned party state as the Party page.
+// Never mutate a browser-side Party entity: membership and capacity are decided
+// atomically by the party RPCs.
+export default function PartyPanel({ userId, username, hubPlayers = [], onClose }) {
   const [party, setParty] = useState(null);
+  const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try {
-      const list = await db.entities.Party.filter({ member_ids: userId });
-      // Filter manually since member_ids is an array
-      const mine = (list || []).filter(p => (p.member_ids || []).includes(userId));
-      setParty(mine[0] || null);
-    } catch {}
-    setLoading(false);
-  };
+      const { data, error: rpcError } = await supabase.rpc('element6_get_party_presence');
+      if (rpcError) throw rpcError;
+      const nextParty = data?.party || null;
+      setParty(nextParty);
+      setMembers(data?.members || nextParty?.members || []);
+      setError('');
+    } catch (e) {
+      setError(e?.message || 'Could not load the current party.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     refresh();
-    const t = setInterval(refresh, 5000);
-    return () => clearInterval(t);
-  }, [userId]);
+    const timer = setInterval(refresh, 3500);
+    return () => clearInterval(timer);
+  }, [refresh]);
 
-  // Subscribe to party updates
-  useEffect(() => {
-    const unsub = db.entities.Party.subscribe(() => { refresh(); });
-    return () => unsub?.();
-  }, []);
-
-  const createParty = async () => {
+  const run = async (operation, successMessage) => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
     try {
-      const created = await db.entities.Party.create({
-        host_user_id: userId,
-        host_username: username,
-        name: `${username}'s Party`,
-        member_ids: [userId],
-        member_names: [username],
-        hub_server: serverCode || '',
-      });
-      setParty(created);
-      sfx.purchaseSuccess();
-    } catch { sfx.warning(); }
+      const result = await operation();
+      if (result?.error) throw result.error;
+      if (successMessage) sfx.purchaseSuccess();
+      await refresh();
+    } catch (e) {
+      setError(e?.message || 'The party action could not be completed.');
+      sfx.warning();
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const leaveParty = async () => {
-    if (!party) return;
-    try {
-      const newIds = (party.member_ids || []).filter(id => id !== userId);
-      const newNames = (party.member_names || []).filter(n => n !== username);
-      if (newIds.length === 0) {
-        await db.entities.Party.delete(party.id);
-      } else {
-        await db.entities.Party.update(party.id, { member_ids: newIds, member_names: newNames });
-      }
-      setParty(null);
-      sfx.click();
-    } catch {}
+  const createParty = () => run(() => supabase.rpc('element6_create_party', {
+    p_public: false,
+    p_name: `${username || 'Player'}'s Party`,
+  }), true);
+
+  const leaveParty = () => {
+    if (!party?.id) return;
+    return run(() => supabase.rpc('element6_leave_party', { p_party_id: party.id }), true);
   };
 
-  const invitePlayer = async (player) => {
-    if (!party) return;
-    try {
-      await db.entities.PartyInvite.create({
-        from_user_id: userId,
-        to_user_id: player.id,
-        from_username: username,
-        to_username: player.name || player.username || 'Player',
-        party_id: party.id,
-        party_name: party.name,
-        status: 'pending',
-      });
-      sfx.purchaseSuccess();
-    } catch { sfx.warning(); }
+  const invitePlayer = player => {
+    if (!party?.id || !player?.id || player.id === userId) return;
+    return run(() => supabase.rpc('element6_send_party_invite', {
+      p_party_id: party.id,
+      p_to_user: player.id,
+    }), true);
   };
 
-  const otherPlayers = (hubPlayers || []).filter(p => p.id !== userId && !(party?.member_ids || []).includes(p.id));
+  const copyCode = async () => {
+    if (!party?.party_code) return;
+    try {
+      await navigator.clipboard.writeText(party.party_code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setError('Could not copy the party code. Select and copy it manually.');
+    }
+  };
+
+  const otherPlayers = hubPlayers.filter(p => p.id && p.id !== userId && !(party?.members || []).some(m => m.user_id === p.id));
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center" onClick={onClose}>
-      <div className="bg-card border-2 border-primary rounded-xl p-5 w-[460px] max-w-[94%] max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="font-heading text-base text-accent"><GameIcon icon="users" size={14} /> PARTY</h3>
-          <button onClick={onClose} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button>
-        </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3" onClick={onClose}>
+      <section role="dialog" aria-modal="true" aria-label="Party" className="w-[min(36rem,96vw)] max-h-[88dvh] overflow-y-auto rounded-3xl border border-primary/60 bg-card p-5 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <header className="mb-4 flex items-center justify-between gap-3">
+          <div><p className="font-heading text-base text-accent"><GameIcon icon="users" size={16} /> PARTY</p><p className="mt-1 text-xs text-muted-foreground">Your group is shared with the Party screen and online lobbies.</p></div>
+          <button type="button" onClick={onClose} aria-label="Close party" className="grid h-11 w-11 place-items-center rounded-full bg-secondary"><GameIcon icon="close" size={16} /></button>
+        </header>
 
-        {loading ? (
-          <p className="text-[10px] text-muted-foreground">Loading…</p>
-        ) : !party ? (
-          <div className="text-center py-6">
-            <p className="text-xs text-muted-foreground mb-4">You're not in a party. Create one to invite friends!</p>
-            <button onClick={createParty} className="px-5 py-2 bg-accent text-accent-foreground rounded font-heading text-sm">+ CREATE PARTY</button>
+        {error && <p role="alert" className="mb-3 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">{error}</p>}
+        {loading ? <p className="py-8 text-center text-sm text-muted-foreground">Loading party…</p> : !party ? (
+          <div className="rounded-2xl border border-border bg-background/50 p-5 text-center">
+            <p className="text-sm text-muted-foreground">You are not in a party.</p>
+            <button type="button" disabled={busy} onClick={createParty} className="mt-4 min-h-12 rounded-full bg-primary px-6 font-heading text-sm text-primary-foreground disabled:opacity-50">CREATE PARTY</button>
           </div>
         ) : (
           <>
-            <p className="font-heading text-sm text-foreground mb-1">{party.name}</p>
-            <p className="text-[10px] text-muted-foreground mb-3">{(party.member_ids || []).length} member(s)</p>
-            <div className="space-y-1.5 mb-4">
-              {(party.member_names || []).map((name, i) => (
-                <div key={i} className="flex items-center gap-2 bg-muted/30 border border-border rounded-lg px-2.5 py-1.5">
-                  <span className="w-2 h-2 rounded-full bg-green-500" />
-                  <span className="font-heading text-xs text-foreground flex-1">{name}</span>
-                  {party.member_ids?.[i] === party.host_user_id && <span className="text-[8px] text-accent font-heading">HOST</span>}
-                </div>
-              ))}
+            <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div><h3 className="font-heading text-lg text-foreground">{party.name}</h3><p className="mt-1 text-xs text-muted-foreground">{party.member_count || members.length} / 8 members · {party.is_public ? 'Public' : 'Invite only'}</p></div>
+                <div className="flex items-center gap-2"><code className="rounded-lg bg-background/80 px-3 py-2 font-heading tracking-[.2em] text-primary">{party.party_code}</code><button type="button" onClick={copyCode} className="min-h-11 rounded-full bg-secondary px-3 text-xs"><GameIcon icon="copy" size={14} /> {copied ? 'COPIED' : 'COPY'}</button></div>
+              </div>
             </div>
-            {otherPlayers.length > 0 && (
-              <>
-                <p className="text-[10px] font-heading text-primary mb-1">INVITE FROM SERVER:</p>
-                <div className="space-y-1 max-h-40 overflow-y-auto mb-3">
-                  {otherPlayers.map(p => (
-                    <div key={p.id} className="flex items-center gap-2 bg-muted/20 border border-border rounded-lg px-2.5 py-1.5">
-                      <span className="font-heading text-xs text-foreground flex-1">{p.name || p.username || 'Player'}</span>
-                      <button onClick={() => invitePlayer(p)} className="px-2 py-1 bg-accent text-accent-foreground rounded font-heading text-[9px]">+ INVITE</button>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-            <button onClick={leaveParty} className="w-full px-3 py-1.5 bg-destructive text-destructive-foreground rounded font-heading text-xs">LEAVE PARTY</button>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {members.map(member => <div key={member.user_id} className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-background/55 px-3 py-2">
+                <span aria-hidden="true" className={`h-3 w-3 shrink-0 rounded-full ${member.app_status === 'offline' ? 'bg-muted-foreground/50' : 'bg-emerald-400'}`} />
+                <span className="min-w-0 flex-1"><strong className="block truncate text-sm">{member.username || 'Player'}{member.user_id === userId && <small className="ml-2 text-muted-foreground">YOU</small>}</strong>{member.title && <small className="block truncate text-[10px] text-primary" title={getTitleById(member.title)?.name || member.title}>{getTitleById(member.title)?.name || member.title}</small>}<small className="text-xs text-muted-foreground">{member.current_mode ? `Playing ${member.current_mode}` : member.app_status || 'In party'}</small></span>
+                {member.user_id === party.host_user_id && <span className="rounded-full border border-primary/50 px-2 py-1 font-heading text-[9px] text-primary">HOST</span>}
+              </div>)}
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-border p-3">
+              <div className="mb-2 flex items-center justify-between"><h4 className="font-heading text-xs text-primary">INVITE FROM THIS HUB</h4><span className="text-[10px] text-muted-foreground">{Math.max(0, 8 - (party.member_count || members.length))} open slots</span></div>
+              <div className="max-h-36 space-y-1 overflow-y-auto">
+                {otherPlayers.length ? otherPlayers.map(player => <div key={player.id} className="flex items-center gap-2 rounded-xl bg-secondary/40 p-2"><span className="min-w-0 flex-1 truncate text-xs">{player.name || player.username || 'Player'}</span><button type="button" disabled={busy || (party.member_count || members.length) >= 8} onClick={() => invitePlayer(player)} className="min-h-10 rounded-full bg-primary/20 px-3 text-[10px] font-heading text-primary disabled:opacity-40">INVITE</button></div>) : <p className="py-3 text-center text-xs text-muted-foreground">No other players are visible in this Hub server.</p>}
+              </div>
+            </div>
+            <button type="button" disabled={busy} onClick={leaveParty} className="mt-4 min-h-11 rounded-full border border-destructive/40 px-4 text-xs font-heading text-destructive disabled:opacity-50">LEAVE PARTY</button>
           </>
         )}
-      </div>
+      </section>
     </div>
   );
 }

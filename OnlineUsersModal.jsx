@@ -3,6 +3,8 @@ import db from './localBackend';
 import React, { useState, useEffect } from 'react';
 
 import GameIcon from "./GameIcon.jsx";
+import { supabase } from './supabaseClient.js';
+import { getTitleById } from './profileTitles.js';
 
 // Shows all currently-online users across the game.
 // Uses the Presence entity (user_id, username, last_active) and also
@@ -45,7 +47,17 @@ export default function OnlineUsersModal({ onClose }) {
         return { id, name: p?.username || 'Player', last_active };
       });
 
-      setUsers({ hub: hubPlayers, presence: presenceUsers });
+      const visibleUsers = [...hubPlayers, ...presenceUsers];
+      const ids = [...new Set(visibleUsers.map(player => player.id).filter(Boolean))];
+      let titles = {};
+      if (ids.length) {
+        const { data: profiles } = await supabase.from('player_profiles').select('user_id,profile_title').in('user_id', ids);
+        titles = Object.fromEntries((profiles || []).map(profile => [profile.user_id, getTitleById(profile.profile_title)?.name || '']));
+      }
+      setUsers({
+        hub: hubPlayers.map(player => ({ ...player, title: titles[player.id] || player.title || '' })),
+        presence: presenceUsers.map(player => ({ ...player, title: titles[player.id] || '' })),
+      });
     } catch {}
     setLoading(false);
   };
@@ -79,9 +91,9 @@ export default function OnlineUsersModal({ onClose }) {
             {list.map((u, i) => (
               <div key={i} className="flex items-center gap-2 bg-muted/30 border border-border rounded-lg px-2 py-1.5">
                 <div className="w-3 h-3 rounded-full" style={{ background: u.color || '#66dd66' }} />
-                <span className="font-heading text-xs text-foreground flex-1">{u.name || u.username || 'Player'}</span>
+                <span className="flex-1 min-w-0"><span className="block font-heading text-xs text-foreground truncate">{u.name || u.username || 'Player'}</span>{u.title && <small className="block text-[9px] text-primary truncate">{u.title}</small>}</span>
                 {u.room && <span className="text-[9px] text-muted-foreground font-heading"><GameIcon icon="home" size={14} /> {u.room}</span>}
-                {u.last_active && <span className="text-[9px] text-muted-foreground"><GameIcon icon="warning" size={14} /> active</span>}
+                {u.last_active && <span className="text-[9px] text-muted-foreground"><GameIcon icon="clock" size={14} /> active</span>}
               </div>
             ))}
           </div>

@@ -8,6 +8,25 @@ social/online schema:
 1. Supabase-party-table-race-replays.sql
 2. Supabase-2026-09-28-party-table-community-replay-fix.sql
 3. Supabase-party-presence-completion.sql
+4. Supabase-party-reliability-repair.sql
+5. Supabase-table-join-concurrency-repair.sql
+6. Supabase-table-honored-bot-launch.sql
+7. Supabase-party-linked-custom-rooms.sql
+8. Supabase-party-table-integration.sql
+9. Supabase-custom-room-ready-controls.sql
+10. Supabase-Element6-Season-2027-Claims.sql
+
+The Custom Room controls migration adds authoritative ready, presence, settings,
+join, start, and snapshot RPCs. It serializes room creation and membership so one
+account cannot race into multiple active rooms. It also snapshots account-owned
+profile titles onto chat messages and room/party rosters; the title is read from
+user progress, not accepted from the message sender. Party launches require each
+member to have a recent app-presence heartbeat, avoiding room/Table slots being
+created for disconnected party members. The Table roster also snapshots each
+participant's equipped title from server-owned account progress. Sports are
+rejected by the Custom Room launch RPC until a shared network renderer is
+available; they must not start as separate local matches on each participant's
+device.
 
 Do not rerun migrations if your deployment process manages them separately.
 The party UI cannot create backend tables/functions from frontend code alone.
