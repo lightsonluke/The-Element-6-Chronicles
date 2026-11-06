@@ -13,6 +13,7 @@ import { MAP_PLATFORMS } from './PlatformFighter.jsx';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import CustomRoomGame from './CustomRoomGame.jsx';
+import CustomRoomSportsMatch from './CustomRoomSportsMatch.jsx';
 import { useLANConnection } from './useLANConnection.js';
 import CharStats from './CharStats.jsx';
 import ElementSelect from './ElementSelect.jsx';
@@ -25,12 +26,12 @@ const ALL = ALL_CHARS; // all gens 1–5 available in custom rooms
 const DIFFICULTIES = ['newcomer', 'beginner', 'easy', 'amateur', 'regular', 'pro', 'hard', 'insane', 'honored'];
 const STAGE_OPTIONS = STAGE_LIST.map(s => ({ id: s.id, name: s.name, platforms: MAP_PLATFORMS[s.id] || [] }));
 
-// Custom Room networking currently synchronizes the fight renderer only.
-// Keep unsupported sports out of this room flow until their authoritative
-// network adapters are implemented; launching a local copy on every device
-// looked like a shared match while producing unrelated simulations.
 const MODE_CONFIG = {
-  fight: { maxPlayers: 8, label: 'FIGHT', stage: 'splitcity' },
+  fight: { maxPlayers: 8, defaultPlayers: 2, label: 'FIGHT', stage: 'splitcity', bots: true },
+  soccer: { maxPlayers: 2, defaultPlayers: 2, label: 'SOCCER', stage: 'court', bots: false },
+  volleyball: { maxPlayers: 2, defaultPlayers: 2, label: 'VOLLEYBALL', stage: 'court', bots: false },
+  dodgeball: { maxPlayers: 2, defaultPlayers: 2, label: 'DODGEBALL', stage: 'court', bots: false },
+  banger: { maxPlayers: 6, defaultPlayers: 6, label: 'BANGER', stage: 'court', bots: false },
 };
 
 function genCode() {
@@ -39,10 +40,11 @@ function genCode() {
   return c;
 }
 
-export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRoomId = null, unlockedIds, favoriteId, equippedSkins = {}, equippedAccessories = {}, equippedMovementTrails = {}, sfxVolume = 70, musicVolume = 50, settings = {}, customStages = [], charLevels = {}, equippedElements = {}, onEquipElement, mode = 'fight', customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
+export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRoomId = null, unlockedIds, favoriteId, equippedSkins = {}, equippedAccessories = {}, equippedMovementTrails = {}, sfxVolume = 70, musicVolume = 50, settings = {}, customStages = [], charLevels = {}, equippedElements = {}, onEquipElement, mode: initialMode = 'fight', customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
   const [me, setMe] = useState(null);
   const [phase, setPhase] = useState('browse'); // browse | lobby | connecting | game
   const [room, setRoom] = useState(null);
+  const [mode, setMode] = useState(MODE_CONFIG[initialMode] ? initialMode : 'fight');
   const [browseRooms, setBrowseRooms] = useState([]);
   const [joinCode, setJoinCode] = useState('');
   const [error, setError] = useState(null);
@@ -59,6 +61,11 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
   const pollRef = useRef(null);
   const unlockedSet = new Set(unlockedIds || ['yellow']);
   const loadout = { equippedSkins, equippedAccessories, equippedMovementTrails };
+  const requiredPlayers = room?.settings?.mode === 'banger' ? 6 : 2;
+
+  useEffect(() => {
+    if (MODE_CONFIG[room?.settings?.mode]) setMode(room.settings.mode);
+  }, [room?.settings?.mode]);
 
   // Reset element to the equipped/basic one whenever the selected character changes
   useEffect(() => { setMyElement(equippedElements?.[myChar] || 'basic'); }, [myChar]);
@@ -142,12 +149,14 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
       room_code: raw.room_code,
       status: raw.status === 'waiting' ? 'open' : raw.status,
       host_user_id: raw.host_id,
+      host_epoch: Number(raw.host_epoch || 0),
       max_players: Number(settingsRaw.maxPlayers || 8),
       players,
       stage_name: settingsRaw.stageName || 'Split City',
       stage_platforms: settingsRaw.stagePlatforms || [],
       stage_spawn_points: settingsRaw.stageSpawnPoints || [],
       settings: settingsRaw,
+      authoritative_state: raw.authoritative_state || {},
       winner: raw.authoritative_state?.winner || 'none',
       region: raw.region || settingsRaw.region || getClientRegion(),
     };
@@ -183,7 +192,7 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
   useEffect(() => { if (me?.id) refreshBrowse(); }, [me?.id, refreshBrowse]);
 
   useEffect(() => {
-    if (!MODE_CONFIG[mode] || !me?.id || !partyId || !partyRoomId) return undefined;
+    if (!me?.id || !partyId || !partyRoomId) return undefined;
     let cancelled = false;
     const enterPartyRoom = async () => {
       try {
@@ -205,24 +214,25 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
     };
     enterPartyRoom();
     return () => { cancelled = true; };
-  }, [mode, me?.id, partyId, partyRoomId, myChar, myElement, equippedSkins, equippedAccessories, equippedMovementTrails, equippedEmotes, fetchRoom]);
+  }, [me?.id, partyId, partyRoomId, myChar, myElement, equippedSkins, equippedAccessories, equippedMovementTrails, equippedEmotes, fetchRoom]);
 
   // Live lobby polling is intentionally backed by Supabase, not localStorage, so
   // a room made by a friend on another device is visible immediately.
   useEffect(() => {
-    if (!room?.id || phase === 'game') return;
+    if (!room?.id) return;
     let alive = true;
     const refresh = async () => {
       try {
         const r = await fetchRoom(room.id);
         if (!alive || !r) return;
         setRoom(r);
+        const activeMode = r.settings?.mode || mode;
         if (r.status === 'playing' && phase !== 'game' && phase !== 'connecting' && lan.status === 'idle' && skipAutoJoinRoomRef.current !== r.id) {
-          if (!lan.isHost && mode === 'fight') {
+          if (!lan.isHost && activeMode === 'fight') {
             setPhase('connecting');
             try { await lan.joinRoom(r.room_code, me?.id, me?.full_name || 'Guest', myChar, myElement); }
             catch (joinError) { setError(joinError?.message || 'Could not connect to the room host.'); setPhase('lobby'); }
-          } else setPhase(mode === 'fight' ? 'connecting' : 'game');
+          } else setPhase(activeMode === 'fight' ? 'connecting' : 'game');
         }
         if (r.status === 'cancelled' || r.status === 'finished') { setError('Room closed.'); setPhase('browse'); refreshBrowse(); }
       } catch (e) {
@@ -261,7 +271,7 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
       const { data, error } = await supabase.rpc('create_element6_custom_room', {
         p_settings: {
           mode,
-          maxPlayers: mc.maxPlayers,
+          maxPlayers: mc.defaultPlayers,
           region: getClientRegion(),
           characterId: myChar,
           stageName: STAGE_OPTIONS[0].name,
@@ -280,7 +290,7 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
       });
       if (error) throw error;
       const created = await fetchRoom(data.room_id);
-      setRoom(created); setPhase('lobby');
+      setRoom(created); setMode(created?.settings?.mode || mode); setPhase('lobby');
     } catch (e) { setError(e?.message || 'Could not create room.'); }
   };
 
@@ -297,7 +307,7 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
       if (error) throw error;
       const joined = await fetchRoom(data.room_id);
       if (!joined) throw new Error('Room is no longer available.');
-      setRoom(joined); setPhase('lobby');
+      setRoom(joined); setMode(joined?.settings?.mode || mode); setPhase('lobby');
     } catch (e) { setError(e?.message || 'No open room with that code.'); }
   };
 
@@ -310,7 +320,7 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
       });
       if (error) throw error;
       const joined = await fetchRoom(data.room_id);
-      setRoom(joined); setPhase('lobby');
+      setRoom(joined); setMode(joined?.settings?.mode || mode); setPhase('lobby');
     } catch (e) { setError(e?.message || 'Could not join room.'); }
   };
 
@@ -430,7 +440,10 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
     const r = roomRef.current; if (!r || r.host_user_id !== me?.id || startInProgressRef.current) return;
     const players = Array.isArray(r.players) ? r.players : [];
     const humans = players.filter(p => !p.is_bot);
-    if (humans.length < 2) { setError('At least two human players are required.'); return; }
+    const selectedMode = r.settings?.mode || mode;
+    const required = selectedMode === 'banger' ? 6 : 2;
+    if (humans.length !== required) { setError(`${MODE_CONFIG[selectedMode]?.label || 'This mode'} requires exactly ${required} human players.`); return; }
+    if (selectedMode !== 'fight' && players.some(p => p.is_bot)) { setError('Sports room matches require a human in every slot.'); return; }
     if (humans.some(p => !p.ready)) { setError('Every human player must be ready before the host can start.'); return; }
     startInProgressRef.current=true;
     setError(null);
@@ -438,17 +451,17 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
       // Create the signaling offer before marking the room active. If WebRTC
       // setup fails, the room remains in its lobby instead of stranding every
       // participant in a playing room with no host connection.
-      if (mode === 'fight') await lan.createRoom(me.id, me.full_name || 'Host', 'custom', myChar, myElement, r.room_code);
+      if (selectedMode === 'fight') await lan.createRoom(me.id, me.full_name || 'Host', 'custom', myChar, myElement, r.room_code);
       const started = await supabase.rpc('start_element6_custom_room', { p_room_id: r.id, p_settings: r.settings || {} });
       if (started.error) throw started.error;
-      if (mode !== 'fight') { setPhase('game'); return; }
+      if (selectedMode !== 'fight') { setPhase('game'); return; }
       setPhase('connecting');
     } catch (e) {
       const latest=await fetchRoom(r.id).catch(()=>null);
       if (latest?.status==='open') {
         try { await lan.closeConnection(); } catch {}
         setRoom(latest);setError(e?.message||'Could not start game.');
-      } else if (latest?.status==='playing'&&mode==='fight') {
+      } else if (latest?.status==='playing'&&selectedMode==='fight') {
         // The server may have committed Start while the response was lost.
         // Reconcile with its state instead of asking players to start twice.
         setRoom(latest);setError('');setPhase(lan.status==='connected'?'game':'connecting');
@@ -514,6 +527,12 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
   // ── Game phase ──
   if (phase === 'game' && room) {
     const isHost = room.host_user_id === me?.id;
+    const roomMode = room.settings?.mode || mode;
+    if (roomMode !== 'fight') return <CustomRoomSportsMatch
+      room={room} me={me} mode={roomMode} settings={settings} sfxVolume={sfxVolume} musicVolume={musicVolume}
+      equippedSkins={equippedSkins} equippedAccessories={equippedAccessories} equippedElements={equippedElements} customCharsData={customCharsData}
+      onEnd={res => finishMatch(room.id,res,isHost)}
+    />;
     return (
       <CustomRoomGame
         room={room} isHost={isHost} myUserId={me?.id}
@@ -588,7 +607,7 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
               );
             })}
           </div>
-          {isHost && players.length < (room.max_players || 8) && (
+          {isHost && (room.settings?.mode || mode) === 'fight' && players.length < (room.max_players || 8) && (
             <button onClick={addBot} className="mt-2 w-full py-2 bg-primary/30 border border-dashed border-primary rounded-lg font-heading text-xs text-primary hover:opacity-80">+ ADD BOT</button>
           )}
         </div>
@@ -599,11 +618,20 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
           <div className="mb-3 flex items-center justify-between gap-2">
             <div>
               <p className="text-xs font-heading text-primary">MATCH SETTINGS</p>
-              <p className="text-[10px] text-muted-foreground">Fight rules, capacity and stage apply to every room member.</p>
+              <p className="text-[10px] text-muted-foreground">The host selects a supported game mode and its valid settings.</p>
             </div>
             {!isHost && <span className="text-[9px] font-heading text-muted-foreground">HOST CONTROLLED</span>}
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <label className="flex flex-col gap-1 text-[10px] font-heading text-muted-foreground">GAME MODE
+              <select disabled={!isHost} value={room.settings?.mode || 'fight'} onChange={e=>{
+                const nextMode=e.target.value, config=MODE_CONFIG[nextMode]; if(!config)return;
+                updateRoomSettings({mode:nextMode,maxPlayers:config.defaultPlayers,bots:[],stageName:nextMode==='fight'?'Split City':(room.settings?.stageName||'Split City'),stageId:room.settings?.stageId||'splitcity',stagePlatforms:room.settings?.stagePlatforms||MAP_PLATFORMS.splitcity||[],stageSpawnPoints:room.settings?.stageSpawnPoints||[]});
+              }} className="min-h-10 rounded-lg border border-border bg-secondary px-2 text-foreground disabled:opacity-70">
+                {Object.entries(MODE_CONFIG).map(([id,config])=><option key={id} value={id}>{config.label}</option>)}
+              </select>
+            </label>
+            {(room.settings?.mode || 'fight') === 'fight' && <>
             <label className="flex flex-col gap-1 text-[10px] font-heading text-muted-foreground">
               PLAYER CAPACITY · {players.length}/{room.max_players || 8}
               <select disabled={!isHost} value={room.max_players || 8} onChange={e => updateRoomSettings({ maxPlayers: Number(e.target.value) })} className="min-h-10 rounded-lg border border-border bg-secondary px-2 text-foreground disabled:opacity-70">
@@ -634,11 +662,13 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
                 {DIFFICULTIES.map(d => <option key={d} value={d}>{d.toUpperCase()}</option>)}
               </select>
             </label>
+            </>}
           </div>
+          {(room.settings?.mode || 'fight') !== 'fight' && <p className="mt-2 text-[10px] text-muted-foreground">{MODE_CONFIG[room.settings?.mode]?.label} uses its existing sports rules and requires {requiredPlayers} human players. Fight-only settings are hidden.</p>}
         </div>
 
         {/* Stage selection (host only) */}
-        {isHost && (
+        {isHost && (room.settings?.mode || 'fight') === 'fight' && (
           <div className="w-full bg-card border border-border rounded-xl p-3">
             <p className="text-xs font-heading text-muted-foreground mb-2">STAGE</p>
             <div className="flex gap-2 flex-wrap">
@@ -696,9 +726,9 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
         )}
 
         {isHost ? (
-          <button onClick={startGame} disabled={humanPlayers.length < 2 || readyHumanCount !== humanPlayers.length}
+          <button onClick={startGame} disabled={humanPlayers.length !== ((room.settings?.mode||'fight')==='banger'?6:2) || readyHumanCount !== humanPlayers.length || ((room.settings?.mode||'fight')!=='fight' && players.some(p=>p.is_bot))}
             className="px-10 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed">
-            START GAME ({players.length} fighters)
+            START GAME ({players.length} / {room.settings?.mode==='banger'?6:2})
           </button>
         ) : (
           <div className="flex flex-col items-center gap-2">
@@ -718,8 +748,14 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
         <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
+      <label className="flex w-full max-w-md flex-col gap-1 text-xs font-heading text-muted-foreground">ROOM MODE
+        <select value={mode} onChange={e=>setMode(e.target.value)} className="min-h-11 rounded-lg border border-border bg-secondary px-3 text-foreground">
+          {Object.entries(MODE_CONFIG).map(([id,config])=><option key={id} value={id}>{config.label}</option>)}
+        </select>
+      </label>
+
       <div className="bg-card border border-border rounded-xl p-3 w-full max-w-md text-center">
-        <p className="text-xs text-muted-foreground font-body">Create a room or join with a code. Add bots, use custom stages, up to 8 fighters!</p>
+        <p className="text-xs text-muted-foreground font-body">Create or join a shared room. Fight rooms allow up to eight participants; sport rooms use their real player counts.</p>
       </div>
 
       {/* Create + Join */}
