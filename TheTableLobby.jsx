@@ -11,7 +11,7 @@ import { getTitleById } from './profileTitles.js';
 const STAGES = Object.keys(MAP_PLATFORMS || {}).filter(id => id !== 'custom');
 const stageLabel = id => String(id || '').replace(/[-_]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
 
-export default function TheTableLobby({ onBack, unlockedIds=[], favoriteId='yellow', equippedElements={}, equippedSkins={}, equippedAccessories={}, equippedShikigami={}, equippedMovementTrails={}, settings={}, sfxVolume=70, musicVolume=50 }) {
+export default function TheTableLobby({ onBack, partyTournamentId=null, unlockedIds=[], favoriteId='yellow', equippedElements={}, equippedSkins={}, equippedAccessories={}, equippedShikigami={}, equippedMovementTrails={}, settings={}, sfxVolume=70, musicVolume=50 }) {
   const [user,setUser]=useState(null),[tournament,setTournament]=useState(null),[players,setPlayers]=useState([]);
   const [phase,setPhase]=useState('pick'),[char,setChar]=useState(favoriteId||'yellow'),[error,setError]=useState('');
   const [selectedStage,setSelectedStage]=useState('splitcity');
@@ -68,6 +68,13 @@ export default function TheTableLobby({ onBack, unlockedIds=[], favoriteId='yell
       if(cancelled)return;
       setUser(u||null);
       if(!u)return;
+      // Party launch supplies the server-created Table ID directly. Do not
+      // depend on the separate public Table lookup to rediscover membership.
+      if(partyTournamentId){
+        setPhase('joining');
+        setTournamentId(partyTournamentId);
+        return;
+      }
       const {data,error}=await supabase.rpc('element6_get_my_table');
       if(cancelled)return;
       if(error){ setError(error.message); return; }
@@ -80,7 +87,7 @@ export default function TheTableLobby({ onBack, unlockedIds=[], favoriteId='yell
       }
     })().catch(e=>{if(!cancelled)setError(e?.message||'Could not load The Table.');});
     return()=>{cancelled=true;mounted.current=false;refreshToken.current++;clearTimeout(revealTimer.current);revealTimer.current=null;revealingRef.current=false;previousStatus.current=null;};
-  },[]);
+  },[partyTournamentId]);
   useEffect(()=>{
     if(!tournamentId)return;
     refresh(tournamentId);
@@ -115,12 +122,18 @@ export default function TheTableLobby({ onBack, unlockedIds=[], favoriteId='yell
     }
   },[tournament?.status,tournament?.active_match_id,tournament?.id]);
 
+  // Keep every hook above the render branches. Returning from inside the hook
+  // list changes hook order during party launches (pick -> joining) and React
+  // aborts the Table before its lobby can load.
+  if(phase==='joining')return <div className="w-full max-w-2xl rounded-2xl border border-primary/40 bg-card p-8 text-center" role="status" aria-live="polite"><h2 className="font-heading text-2xl text-accent">JOINING THE TABLE</h2><p className="mt-2 text-sm text-muted-foreground">Loading the shared roster and preparing match settings.</p>{error&&<p role="alert" className="mt-3 text-xs text-destructive">{error}</p>}</div>;
+
   const join=async(selectedChar=char)=>{
     if(!user){setError('Sign in to enter The Table.');return;}
+    setPhase('joining');
     setError('JOINING THE TABLE…');
     const {data,error:e}=await supabase.rpc('element6_join_the_table',{p_char_id:selectedChar,p_loadout:{element:equippedElements?.[selectedChar]||'basic',equippedSkins,equippedAccessories,equippedShikigami,equippedMovementTrails}});
-    if(e){setError(e.message);return;}
-    if(!data?.tournament_id){setError('The Table did not return a tournament.');return;}
+    if(e){setError(e.message);setPhase('pick');return;}
+    if(!data?.tournament_id){setError('The Table did not return a tournament.');setPhase('pick');return;}
     setError('');setTournamentId(data.tournament_id);sfx.matchFound();
   };
   const startMatch=async()=>{

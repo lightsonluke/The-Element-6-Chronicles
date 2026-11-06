@@ -669,7 +669,7 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
   // ── Character select ──
   if (phase === 'select') {
     return (
-      <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
+      <div className="el6-character-select-scroll flex flex-col items-center gap-4 w-full max-w-3xl">
         <div className="flex justify-between items-center w-full">
           <div>
             <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="running" size={14} /> ROCK CLIMBING</h2>
@@ -709,7 +709,7 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
         {charId && (
           <ElementSelect charId={charId} currentElement={selElement} onSelect={(el) => { setSelElement(el); sfx.click(); }} charLevels={charLevels} label="ELEMENT (affects climb stats)" />
         )}
-        <button onClick={() => startRun(charId)} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon icon="play" size={14} /> START CLIMB</button>
+        <div className="e6-character-select-start flex flex-col items-center"><button onClick={() => startRun(charId)} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon icon="play" size={14} /> START CLIMB</button></div>
         <div className="text-[10px] text-muted-foreground font-body text-center max-w-xl mt-1">
           <p className="font-heading text-foreground/80 mb-1">CONTROLS</p>
           <p><span className="text-accent font-bold"><GameIcon icon="arrowUp" size={14} /> / W / SPACE</span> Launch in the direction the arrow points (time it!)</p>

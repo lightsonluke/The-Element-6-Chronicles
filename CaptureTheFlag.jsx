@@ -548,7 +548,7 @@ export default function CaptureTheFlag({
     };
 
     return (
-      <div className="flex flex-col items-center gap-3 w-full max-w-4xl">
+      <div className="el6-character-select-scroll flex flex-col items-center gap-3 w-full max-w-4xl">
         <div className="flex justify-between items-center w-full">
           <div>
             <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="flag" size={14} /> CAPTURE THE FLAG</h2>
@@ -673,7 +673,9 @@ export default function CaptureTheFlag({
           </label>
         </div>
 
-        <button onClick={startMatch} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon icon="play" size={14} /> START MATCH</button>
+        <div className="e6-character-select-start flex flex-col items-center">
+          <button onClick={startMatch} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon icon="play" size={14} /> START MATCH</button>
+        </div>
       </div>
     );
   }

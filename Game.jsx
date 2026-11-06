@@ -2821,6 +2821,7 @@ export default function Game() {
         {screen === 'thetable' && (
           <TheTableLobby
             onBack={goBack}
+            partyTournamentId={partyLaunch?.active_table_id || null}
             unlockedIds={progress.unlockedIds}
             favoriteId={progress.favoriteId}
             equippedElements={progress.equippedElements || {}}
@@ -2842,13 +2843,14 @@ export default function Game() {
         )}
         {screen === 'party' && (
         <PartyScreen onBack={goBack} onQueueMode={async (mode, partyState) => {
-            if (mode === 'thetable') setScreen('thetable');
-            else if (mode === 'battleroyale') setScreen('battleroyale');
+            if (mode === 'thetable') { setPartyLaunch(partyState || null); setScreen('thetable'); }
+            else if (mode === 'battleroyale') { setPartyLaunch(partyState || null); setScreen('battleroyale'); }
             else if (mode === 'sports') setScreen('onlinesports');
             else if (mode === 'customrooms') { setPartyLaunch(partyState || null); setCustomRoomMode('fight'); setScreen('customrooms'); }
             else if (mode === 'lan') setScreen('lan');
-            else if (mode === 'grandcircuit-online') setScreen('grandcircuit');
-            else if (mode === 'ctf-online') { setScreen('sports'); }
+            else if (mode === 'grandcircuit-online' || mode === 'ctf-online') {
+              setChatToast({ name: 'PARTY MODE', text: 'This mode does not have a shared online session yet. Your party stays together.' });
+            }
             else if (mode === 'sports-match') {
               const matchId = partyState?.active_sport_match_id;
               if (!matchId) { setChatToast({ name: 'PARTY MATCH', text: 'The party sport match is missing. Return to the party and try again.' }); return; }
@@ -3037,8 +3039,13 @@ export default function Game() {
 
         {screen === 'battleroyale' && (
           <BattleRoyaleLobby
-            onBack={goBack}
-            onEnd={(res) => {
+            partyId={partyLaunch?.queued_mode === 'battleroyale' ? partyLaunch.id : null}
+            partyMemberCount={Number(partyLaunch?.member_count || partyLaunch?.members?.length || 0)}
+            onBack={() => {
+              if (partyLaunch?.queued_mode === 'battleroyale') { setPartyLaunch(null); setScreen('party'); }
+              else goBack();
+            }}
+            onEnd={async (res) => {
               // Battle Royale has no per-match token reward.
               // Mastery: award win for BR victory
               if (res && res.placement === 1 && res.charId) {
@@ -3047,7 +3054,17 @@ export default function Game() {
                   saveProgress(next); return next;
                 });
               }
-              setScreen('menu');
+              const partyId = partyLaunch?.queued_mode === 'battleroyale' ? partyLaunch.id : null;
+              if (partyId) {
+                const { error } = await supabase.rpc('element6_finish_party_battle_royale', { p_party_id: partyId, p_match_id: res?.matchId });
+                if (error) {
+                  console.error('Could not close party Battle Royale session', error);
+                  setChatToast({ name: 'PARTY MATCH', text: 'The shared match is still closing. Select Continue again in a moment.' });
+                  return;
+                }
+                setPartyLaunch(null);
+                setScreen('party');
+              } else setScreen('menu');
             }}
             unlockedIds={progress.unlockedIds}
             favoriteId={progress.favoriteId}

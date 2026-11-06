@@ -504,7 +504,7 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
   // ── Character select ──
   if (phase === 'select') {
     return (
-      <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
+      <div className="el6-character-select-scroll flex flex-col items-center gap-4 w-full max-w-3xl">
         <div className="flex justify-between items-center w-full">
           <div>
             <h2 className="text-2xl font-heading text-accent tracking-wider"><GameIcon icon="running" size={14} /> SPLIT CITY PARKOUR</h2>
@@ -532,7 +532,7 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
         {charId && (
           <ElementSelect charId={charId} currentElement={selElement} onSelect={(el) => { setSelElement(el); sfx.click(); }} charLevels={charLevels} label="ELEMENT (affects run stats)" />
         )}
-        <button onClick={() => startRun(charId)} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon icon="play" size={14} /> START RUN</button>
+        <div className="e6-character-select-start flex flex-col items-center"><button onClick={() => startRun(charId)} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-90 animate-pulse"><GameIcon icon="play" size={14} /> START RUN</button></div>
         <div className="text-[10px] text-muted-foreground font-body text-center max-w-xl mt-1">
           <p className="font-heading text-foreground/80 mb-1">CONTROLS</p>
           <p><span className="text-accent font-bold">D / <GameIcon icon="arrowRight" size={14} /></span> Run forward · <span className="text-accent font-bold">A / <GameIcon icon="info" size={14} /></span> Run back</p>

@@ -6,7 +6,7 @@ import { sfx } from './sfx.js';
 
 const MODES = [
   ['customrooms','Custom Rooms',true],['banger-online','Banger Online 3v3 · 6 players',true],['volleyball-online','Volleyball Online 2v2 · 4 players',true],
-  ['thetable','The Table',true],['battleroyale','Battle Royale',false],['grandcircuit-online','Grand Circuit',false],
+  ['thetable','The Table',true],['battleroyale','Battle Royale · party queue',true],['grandcircuit-online','Grand Circuit',false],
   ['lan','LAN Play',false],['soccer-online','Soccer Online 1v1 · 2 players',true],['dodgeball-online','Dodgeball Online 1v1 · 2 players',true],['ctf-online','Capture the Flag',false],
 ];
 const PARTY_SPORT_MODES = {
@@ -104,12 +104,12 @@ export default function PartyScreen({ onBack, onQueueMode }) {
   // the host from being launched twice by its own optimistic state update.
   useEffect(()=>{
     if(!party?.id || party.status!=='queued' || !party.queued_mode)return;
-    const sessionId=party.queued_mode==='customrooms'?party.active_room_id:party.queued_mode==='thetable'?party.active_table_id:party.queued_mode==='sports-match'?party.active_sport_match_id:null;
+    const sessionId=party.queued_mode==='customrooms'?party.active_room_id:party.queued_mode==='thetable'?party.active_table_id:party.queued_mode==='sports-match'?party.active_sport_match_id:party.queued_mode==='battleroyale'?party.active_battle_royale_match_id:null;
     const key=`${party.id}:${party.queued_mode}:${sessionId||''}`;
     if(launchedQueueRef.current===key)return;
     launchedQueueRef.current=key;
     onQueueMode?.(party.queued_mode,party);
-  },[party?.id,party?.status,party?.queued_mode,party?.active_room_id,party?.active_table_id,party?.active_sport_match_id,onQueueMode]);
+  },[party?.id,party?.status,party?.queued_mode,party?.active_room_id,party?.active_table_id,party?.active_sport_match_id,party?.active_battle_royale_match_id,onQueueMode]);
 
   const create=async()=>{
     if(!user || busy)return;
@@ -215,13 +215,13 @@ export default function PartyScreen({ onBack, onQueueMode }) {
     setBusy(true);setError('');
     try {
       const sportMode=PARTY_SPORT_MODES[mode];
-      const rpcName=sportMode?'element6_party_queue_online_sport':mode==='customrooms'?'element6_party_create_custom_room':mode==='thetable'?'element6_party_join_the_table':null;
+      const rpcName=sportMode?'element6_party_queue_online_sport':mode==='customrooms'?'element6_party_create_custom_room':mode==='thetable'?'element6_party_join_the_table':mode==='battleroyale'?'element6_party_prepare_battle_royale':null;
       if(!rpcName) throw new Error('This activity does not have a shared party session yet.');
       const args=sportMode?{p_party_id:party.id,p_mode:sportMode}:{p_party_id:party.id};
       const {data,error:e}=await supabase.rpc(rpcName,args);
       if(e)throw e;
-      const activeSessionId=sportMode?data?.active_sport_match_id:mode==='customrooms'?data?.active_room_id:data?.active_table_id;
-      if(!activeSessionId)throw new Error(sportMode?'The server did not create a shared sport match.':mode==='customrooms'?'The server did not create a party room.':'The server did not create a shared Table session.');
+      const activeSessionId=sportMode?data?.active_sport_match_id:mode==='customrooms'?data?.active_room_id:mode==='thetable'?data?.active_table_id:data?.active_battle_royale_match_id;
+      if(mode!=='battleroyale'&&!activeSessionId)throw new Error(sportMode?'The server did not create a shared sport match.':mode==='customrooms'?'The server did not create a party room.':'The server did not create a shared Table session.');
       const activityMode=sportMode?'sports-match':mode;
       launchedQueueRef.current=`${party.id}:${activityMode}:${activeSessionId}`;
       setParty(data);

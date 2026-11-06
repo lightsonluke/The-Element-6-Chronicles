@@ -88,15 +88,17 @@ function applyTeamHandicap(attacker, defender, damageBefore, hpBefore, vxBefore,
 }
 
 export default function TeamMode({ onBack, onEnd, matchHandicaps = null, initialTeamCharacters = [], initialTeamFormat = 'pc_cc', initialTeamDamage = true, initialStocks = 3, initialStartingDamage = 0, unlockedIds, favoriteId, musicVolume, sfxVolume = 70, matchTime = 240, settings = {}, equippedAccessories = {}, equippedSkins = {}, equippedShikigami = {}, charLevels = {}, equippedElements = {}, onEquipElement, customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
+  const ALL = withCustomChars(ALL_CHARS, customCharsData, customNumberMap);
+  const resolveInitialChar = (id, fallback) => ALL.some(char => char.id === id) ? id : fallback;
   const [phase, setPhase] = useState('select');
-  const [p1, setP1] = useState(initialTeamCharacters?.[0] || favoriteId || 'yellow');
-  const [p1b, setP1b] = useState(initialTeamCharacters?.[1] || 'blue');
-  const [p2, setP2] = useState(initialTeamCharacters?.[2] || 'red');
-  const [p2b, setP2b] = useState(initialTeamCharacters?.[3] || 'green');
+  const [p1, setP1] = useState(() => resolveInitialChar(initialTeamCharacters?.[0], resolveInitialChar(favoriteId, 'yellow')));
+  const [p1b, setP1b] = useState(() => resolveInitialChar(initialTeamCharacters?.[1], 'blue'));
+  const [p2, setP2] = useState(() => resolveInitialChar(initialTeamCharacters?.[2], 'red'));
+  const [p2b, setP2b] = useState(() => resolveInitialChar(initialTeamCharacters?.[3], 'green'));
   const [cpuDifficulty, setCpuDifficulty] = useState(settings?.defaultCPUDifficulty || 'regular');
   const [teamDamage, setTeamDamage] = useState(initialTeamDamage);
   const [showTriangles, setShowTriangles] = useState(true);
-  const [teamFormat, setTeamFormat] = useState(initialTeamFormat || 'pc_cc');
+  const [teamFormat, setTeamFormat] = useState(FORMATS.some(format => format.id === initialTeamFormat) ? initialTeamFormat : 'pc_cc');
   const [p1Element, setP1Element] = useState(equippedElements?.[favoriteId || 'yellow'] || 'basic');
   const [p1bElement, setP1bElement] = useState('basic');
   const [p2Element, setP2Element] = useState('basic');
@@ -107,8 +109,6 @@ export default function TeamMode({ onBack, onEnd, matchHandicaps = null, initial
   useEffect(() => { setP2Element(equippedElements?.[p2] || 'basic'); }, [p2]);
 
   const unlockedSet = new Set(unlockedIds || ['yellow']);
-  const ALL = withCustomChars(ALL_CHARS, customCharsData, customNumberMap);
-
   const getLabel = (team, fighter) => {
     if (team === 1 && fighter === 1) return 'P1';
     if (team === 1 && fighter === 2) return teamFormat === 'pp_cc' ? 'P2' : 'CPU';
@@ -130,7 +130,7 @@ export default function TeamMode({ onBack, onEnd, matchHandicaps = null, initial
 
   if (phase === 'select') {
     return (
-      <div className="flex flex-col items-center gap-4 w-full max-w-4xl">
+      <div className="el6-character-select-scroll flex flex-col items-center gap-4 w-full max-w-4xl">
         <div className="flex justify-between items-center w-full">
           <h2 className="text-2xl font-heading text-accent tracking-wider">2v2 TEAM BATTLE</h2>
           <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
@@ -243,10 +243,12 @@ export default function TeamMode({ onBack, onEnd, matchHandicaps = null, initial
           </select>
         </div>
 
-        <button onClick={() => setPhase('fight')}
-          className="px-10 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90 shadow-lg">
-          START 2v2 BATTLE
-        </button>
+        <div className="e6-character-select-start flex flex-col items-center">
+          <button onClick={() => setPhase('fight')}
+            className="px-10 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90 shadow-lg">
+            START 2v2 BATTLE
+          </button>
+        </div>
       </div>
     );
   }
@@ -283,7 +285,7 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
   const [gameStarted, setGameStarted] = useState(false);
 
   const ALL = withCustomChars(ALL_CHARS, customCharsData, customNumberMap);
-  const getCharData = (id) => ALL.find(c => c.id === id);
+  const getCharData = (id) => ALL.find(c => c.id === id) || ALL[0];
 
   // Determine which fighters are bots based on team format
   const botCharIds = [p1b, p2, p2b].filter((id, i) => {

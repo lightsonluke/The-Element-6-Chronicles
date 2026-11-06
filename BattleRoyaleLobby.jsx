@@ -36,7 +36,7 @@ function buildBattleRoyaleRoster(realPlayers, matchRow, maxCount = 50) {
   return roster;
 }
 
-export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favoriteId, equippedElements = {}, equippedAccessories = {}, equippedSkins = {}, charLevels = {}, settings = {}, sfxVolume = 70, musicVolume = 50, onEquipElement, equippedShikigami = {}, equippedEmotes = {} }) {
+export default function BattleRoyaleLobby({ onBack, onEnd, partyId=null, partyMemberCount=0, unlockedIds, favoriteId, equippedElements = {}, equippedAccessories = {}, equippedSkins = {}, charLevels = {}, settings = {}, sfxVolume = 70, musicVolume = 50, onEquipElement, equippedShikigami = {}, equippedEmotes = {} }) {
   const [me, setMe] = useState(null);
   const [myChar, setMyChar] = useState(favoriteId || 'yellow');
   const [myElement, setMyElement] = useState(equippedElements?.[favoriteId || 'yellow'] || 'basic');
@@ -93,8 +93,14 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
         const roster = buildBattleRoyaleRoster(mapped, m, Number(m.max_players || maxPlayers));
         setMatch(m); setPlayers(roster);
         if (m.status === 'playing' && !startedRef.current) startEngine({ ...m, players: roster });
-        if (m.status === 'finished' && phase !== 'fight') { setError('Match ended.'); setPhase('pick'); }
-      } catch {}
+        if (m.status === 'finished' && !startedRef.current) { setError('Match ended before gameplay began.'); setPhase('pick'); }
+        if (m.status === 'cancelled' && !startedRef.current) {
+          setError(partyId ? 'The party queue was canceled. Return to your party to try again.' : 'This Battle Royale queue was canceled. Start a new search.');
+          setMatchId(null); setMatch(null); setPlayers([]); setPhase('pick');
+        }
+      } catch (refreshError) {
+        if (active) setError(refreshError?.message || 'Connection interrupted while loading Battle Royale. Retrying…');
+      }
     };
     refresh();
     const channel = supabase.channel(`br-match:${matchId}`)
@@ -134,8 +140,9 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
     const t = setInterval(() => {
       const left = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
       setCountdown(left);
-      const realPlayers = Math.max(1, playersRef.current.filter(p => !p.is_bot).length);
-      if (!finished && (left <= 0 || realPlayers >= maxPlayers)) {
+      const realPlayers = playersRef.current.filter(p => !p.is_bot).length;
+      const readyToStart = partyId ? realPlayers >= Math.max(2, partyMemberCount) : (left <= 0 || realPlayers >= maxPlayers);
+      if (!finished && readyToStart) {
         finished = true;
         clearInterval(t);
         beginMatch();
@@ -146,7 +153,7 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
       clearInterval(t);
     };
     // eslint-disable-next-line
-  }, [phase, role, matchId, maxPlayers]);
+  }, [phase, role, matchId, maxPlayers, partyId, partyMemberCount]);
 
   const findMatch = async (charId) => {
     if (!me) { setError('Not signed in.'); return; }
@@ -159,7 +166,9 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
         accessories: getEquippedAccessories(equippedAccessories, char),
         username: me.full_name || (me.email || 'Player').split('@')[0],
       };
-      const { data, error: rpcError } = await supabase.rpc('find_or_create_element6_battle_royale', { p_loadout: loadout });
+      const { data, error: rpcError } = partyId
+        ? await supabase.rpc('element6_party_join_battle_royale', { p_party_id: partyId, p_loadout: loadout })
+        : await supabase.rpc('find_or_create_element6_battle_royale', { p_loadout: loadout });
       if (rpcError) throw rpcError;
       if (!data?.match_id) throw new Error('Invalid Battle Royale matchmaking response.');
       setMatchId(data.match_id); setSlot(Number(data.slot || 1)); setRole(data.role || 'guest');
@@ -173,7 +182,9 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
   const beginMatch = async () => {
     if (!matchId || role !== 'host' || startedRef.current) return;
     try {
-      const { error } = await supabase.rpc('start_element6_battle_royale', { p_match_id: matchId, p_max_players: maxPlayers, p_bot_difficulty: botDifficulty });
+      const { error } = partyId
+        ? await supabase.rpc('element6_party_start_battle_royale', { p_party_id: partyId, p_match_id: matchId, p_max_players: maxPlayers, p_bot_difficulty: botDifficulty })
+        : await supabase.rpc('start_element6_battle_royale', { p_match_id: matchId, p_max_players: maxPlayers, p_bot_difficulty: botDifficulty });
       if (error) throw error;
       const { data: m } = await supabase.from('online_battle_royale_matches').select('*').eq('id', matchId).maybeSingle();
       setMatch(m);
@@ -182,8 +193,17 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
   };
 
   const cancelSearch = async () => {
-    if (matchId) { try { await leaveBattleRoyaleMatch(matchId); } catch {} }
+    if (partyId) {
+      try {
+        const { error: cancelError } = await supabase.rpc('element6_cancel_party_battle_royale', { p_party_id: partyId, p_match_id: matchId });
+        if (cancelError) throw cancelError;
+      } catch (cancelError) {
+        setError(cancelError?.message || 'Could not cancel the party queue.');
+        return false;
+      }
+    } else if (matchId) { try { await leaveBattleRoyaleMatch(matchId); } catch {} }
     setMatchId(null); setMatch(null); setPlayers([]); setPhase('pick');
+    return true;
   };
 
   if (phase === 'prematch' && matchId) {
@@ -204,23 +224,24 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
         equippedSkins={equippedSkins}
         equippedShikigami={equippedShikigami}
         equippedEmotes={equippedEmotes}
-        onEnd={(res) => { onEnd?.(res); }}
+        onEnd={(res) => { onEnd?.({ ...res, matchId }); }}
       />
     );
   }
 
-  const realCount = Math.max(1, players.filter(p => !p.is_bot).length);
+  const realCount = players.filter(p => !p.is_bot).length;
   const botCount = players.filter(p => p.is_bot).length;
 
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-3xl">
       <div className="flex justify-between items-center w-full">
         <h2 className="text-2xl font-heading text-accent tracking-wider">BATTLE ROYALE</h2>
-        <button onClick={() => { cancelSearch(); onBack(); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
+        <button onClick={async () => { const cancelled = await cancelSearch(); if (cancelled) onBack?.(); }} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
       </div>
 
       <div className="bg-card border border-border rounded-xl p-3 w-full max-w-md text-center">
         <p className="text-xs text-muted-foreground font-body">Last fighter standing wins. 50 fighters · honored bots · zone crushes automatically.</p>
+        {partyId && <p className="text-xs text-primary font-heading">PARTY MATCH · {partyMemberCount} MEMBERS STAY TOGETHER</p>}
       </div>
 
       {phase === 'pick' && (
@@ -261,10 +282,11 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
             <p className="text-xs text-muted-foreground font-body">real players joined</p>
             <p className="text-[10px] text-muted-foreground font-body mt-2">Match starts in <span className="text-accent font-heading">{countdown}s</span> — bots fill the rest</p>
           </div>
-          {role === 'host' && realCount >= 1 && (
+          {role === 'host' && realCount >= (partyId ? Math.max(2, partyMemberCount) : 1) && (
             <button onClick={beginMatch} className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-heading text-sm hover:opacity-80">START NOW</button>
           )}
-          <button onClick={cancelSearch} className="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">CANCEL</button>
+          {partyId && realCount < Math.max(2, partyMemberCount) && <p role="status" className="text-center text-xs text-muted-foreground">Waiting for every party member to choose a fighter. ({realCount}/{partyMemberCount})</p>}
+          <button onClick={async () => { const cancelled = await cancelSearch(); if (partyId && cancelled) onBack?.(); }} className="px-6 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80">{partyId ? 'CANCEL PARTY QUEUE' : 'CANCEL'}</button>
         </div>
       )}
     </div>

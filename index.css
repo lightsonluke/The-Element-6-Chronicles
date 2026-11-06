@@ -616,6 +616,31 @@ button:focus-visible, [role='button']:focus-visible, input:focus-visible, select
 .e6-shop-preview-row > .w-56 { flex: 0 0 14rem; }
 .e6-equip-tabs { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
 
+/* Purpose palettes make the routed surfaces read as distinct destinations while
+   retaining each screen's existing layout and functionality. Scoped to routed
+   UI only; the home menu, character selection and gameplay are untouched. */
+.e6-unified-ui { --e6-screen-tint: color-mix(in srgb, var(--e6-screen-accent, #a990ff) 18%, transparent); }
+.e6-unified-ui::before {
+  background:
+    radial-gradient(ellipse 46rem 27rem at 7% 0%, var(--e6-screen-tint), transparent 74%),
+    radial-gradient(ellipse 34rem 23rem at 100% 92%, color-mix(in srgb, var(--e6-screen-accent, #a990ff) 10%, transparent), transparent 76%),
+    linear-gradient(135deg, hsl(var(--background) / .12), transparent 56%);
+}
+.e6-unified-ui :is(h1, h2) { text-decoration-color: color-mix(in srgb, var(--e6-screen-accent, #a990ff) 55%, transparent); }
+.e6-unified-ui :is(.bg-card, [class*='bg-card/'], .bg-popover) {
+  border-color: color-mix(in srgb, var(--e6-screen-accent, #a990ff) 24%, var(--e6-ui-line));
+}
+.e6-unified-ui[data-e6-screen-family='store'] :is(.bg-card, [class*='bg-card/']) { border-radius: 1.35rem; }
+.e6-unified-ui[data-e6-screen-family='seasonal'] :is(.bg-card, [class*='bg-card/']) { border-radius: 1.25rem; }
+.e6-unified-ui[data-e6-screen-family='social'] :is(textarea, input:not([type='checkbox']):not([type='radio'])) { border-radius: 999px; }
+.e6-unified-ui[data-e6-screen-family='story'] :is(.bg-card, [class*='bg-card/']) { border-radius: 1.1rem 1.1rem 1.65rem 1.1rem; }
+.e6-unified-ui[data-e6-screen-family='competition'] table { border-collapse: separate; border-spacing: 0 .35rem; }
+.e6-unified-ui[data-e6-screen-family='competition'] tbody tr { background: hsl(var(--card) / .55); }
+.e6-unified-ui[data-e6-screen-family='atelier'] :is(.bg-card, [class*='bg-card/']) { border-radius: 1.5rem; }
+.e6-unified-ui[data-e6-screen-family='creator'] :is(input, select, textarea) { border-radius: .45rem; }
+.e6-unified-ui[data-e6-screen-family='results'] :is(h1, h2) { text-shadow: 0 0 32px color-mix(in srgb, var(--e6-screen-accent) 38%, transparent); }
+.e6-unified-ui[data-e6-screen-family='media'] video { border: 1px solid color-mix(in srgb, var(--e6-screen-accent) 55%, transparent); border-radius: 1rem; }
+
 /* Shared screen hierarchy and interaction rules for the routed UI shell. */
 .e6-unified-ui {
   --e6-ui-glow: hsl(var(--primary) / .27);

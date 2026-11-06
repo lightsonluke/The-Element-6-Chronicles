@@ -28,6 +28,7 @@ import { sfx } from './sfx.js';
 import { SeqNum, ConnectionState } from './netCore.js';
 import { BR_W, BR_H, BR_PLATFORMS, BR_SPAWNS, BR_ZONE, buildInitialLoot, applyLootToFighter, BR_LOOT_TYPES } from './battleRoyaleMap.js';
 import { openBattleRoyaleTransport } from './battleRoyaleOnline.js';
+import { supabase } from './supabaseClient.js';
 import { serializeDestructible, applyDestructibleSync } from './brDestructible.js';
 import { buildMovementItems, updateMovementItems, serializeItems } from './brItems.js';
 import { buildHazards, updateHazards, serializeHazards } from './brHazards.js';
@@ -220,6 +221,23 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
         }
       } catch {}
     }, 1000);
+    const acceptSharedResult = row => {
+      if (!row || row.status !== 'finished' || finished) return;
+      finished = true;
+      setWinner(row.authoritative_state?.result || { name: '—' });
+    };
+    let statusRowActive = true;
+    const statusChannel = supabase.channel(`br-status:${matchId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'online_battle_royale_matches', filter: `id=eq.${matchId}` }, ({ new: row }) => {
+        if (statusRowActive) acceptSharedResult(row);
+      }).subscribe();
+    const statusPoll = setInterval(async () => {
+      try {
+        const { data, error } = await supabase.from('online_battle_royale_matches')
+          .select('status,authoritative_state').eq('id', matchId).maybeSingle();
+        if (statusRowActive && !error) acceptSharedResult(data);
+      } catch {}
+    }, 1500);
 
     // ── Input ──
     const keys = {};
@@ -254,6 +272,15 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
       })).sort((a, b) => a.placement - b.placement || b.kills - a.kills || a.username.localeCompare(b.username));
       const finalResult = { ...result, standings };
       setWinner(finalResult);
+      // The browser-local adapter is only a checkpoint/fallback store. The
+      // shared Supabase match row is the lifecycle source read by the lobby;
+      // finalize it through the participant-checked RPC so a completed match
+      // cannot remain permanently marked as active.
+      if (isHost) {
+        supabase.rpc('element6_finish_battle_royale', { p_match_id: matchId, p_result: finalResult })
+          .then(({ error }) => { if (error) console.error('Could not finalize Battle Royale match', error); })
+          .catch(error => console.error('Could not finalize Battle Royale match', error));
+      }
       // Both clients can finalize the match — host is a figurehead
       try { db.entities.BattleRoyaleMatch.update(matchId, { status: 'finished', winner: finalResult.name, match_state: { ...(latestMatch?.match_state || {}), result: finalResult } }).catch(() => {}); } catch {}
     };
@@ -792,8 +819,11 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
     requestAnimationFrame(loop);
 
     return () => {
+      statusRowActive = false;
       unsub && unsub();
       clearInterval(poll);
+      clearInterval(statusPoll);
+      supabase.removeChannel(statusChannel);
       brTransport?.close();
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
@@ -803,6 +833,11 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
   iAmEliminatedRef.current = iAmEliminated;
 
   const handleQuit = () => {
+    if (isHost) {
+      supabase.rpc('element6_finish_battle_royale', { p_match_id: matchId, p_result: { disconnected: true } })
+        .then(({ error }) => { if (error) console.error('Could not close Battle Royale match', error); })
+        .catch(error => console.error('Could not close Battle Royale match', error));
+    }
     try { db.entities.BattleRoyaleMatch.update(matchId, { status: 'finished', winner: '—' }).catch(() => {}); } catch {}
     onEnd?.({ won: false, disconnected: true });
   };
