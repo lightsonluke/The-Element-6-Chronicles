@@ -6,14 +6,15 @@ import { sfx } from './sfx.js';
 
 const MODES = [
   ['customrooms','Custom Rooms',true],['banger-online','Banger Online 3v3 · 6 players',true],['volleyball-online','Volleyball Online 2v2 · 4 players',true],
-  ['thetable','The Table',true],['battleroyale','Battle Royale · party queue',true],['grandcircuit-online','Grand Circuit',false],
-  ['lan','LAN Play',false],['soccer-online','Soccer Online 1v1 · 2 players',true],['dodgeball-online','Dodgeball Online 1v1 · 2 players',true],['ctf-online','Capture the Flag',false],
+  ['thetable','The Table',true],['battleroyale','Battle Royale · party queue',true],['grandcircuit-online','Grand Circuit · party tournament',true],
+  ['lan','LAN Play',false],['soccer-online','Soccer Online 1v1 · 2 players',true],['dodgeball-online','Dodgeball Online 1v1 · 2 players',true],['ctf-online','Capture the Flag · 2v2',true],
 ];
 const PARTY_SPORT_MODES = {
   'soccer-online':'soccer_online',
   'volleyball-online':'volleyball_2v2_online',
   'dodgeball-online':'dodgeball_online',
   'banger-online':'banger_online',
+  'ctf-online':'ctf_party',
 };
 const nameOf = u => u?.user_metadata?.username || u?.user_metadata?.full_name || u?.email?.split('@')[0] || 'Player';
 
@@ -104,7 +105,7 @@ export default function PartyScreen({ onBack, onQueueMode }) {
   // the host from being launched twice by its own optimistic state update.
   useEffect(()=>{
     if(!party?.id || party.status!=='queued' || !party.queued_mode)return;
-    const sessionId=party.queued_mode==='customrooms'?party.active_room_id:party.queued_mode==='thetable'?party.active_table_id:party.queued_mode==='sports-match'?party.active_sport_match_id:party.queued_mode==='battleroyale'?party.active_battle_royale_match_id:null;
+    const sessionId=party.queued_mode==='customrooms'?party.active_room_id:(party.queued_mode==='thetable'||party.queued_mode==='grandcircuit-online')?party.active_table_id:party.queued_mode==='sports-match'?party.active_sport_match_id:party.queued_mode==='battleroyale'?party.active_battle_royale_match_id:null;
     const key=`${party.id}:${party.queued_mode}:${sessionId||''}`;
     if(launchedQueueRef.current===key)return;
     launchedQueueRef.current=key;
@@ -215,13 +216,13 @@ export default function PartyScreen({ onBack, onQueueMode }) {
     setBusy(true);setError('');
     try {
       const sportMode=PARTY_SPORT_MODES[mode];
-      const rpcName=sportMode?'element6_party_queue_online_sport':mode==='customrooms'?'element6_party_create_custom_room':mode==='thetable'?'element6_party_join_the_table':mode==='battleroyale'?'element6_party_prepare_battle_royale':null;
+      const rpcName=sportMode?(mode==='ctf-online'?'element6_party_queue_ctf':'element6_party_queue_online_sport'):mode==='customrooms'?'element6_party_create_custom_room':mode==='thetable'?'element6_party_join_the_table':mode==='battleroyale'?'element6_party_prepare_battle_royale':mode==='grandcircuit-online'?'element6_party_prepare_grand_circuit':null;
       if(!rpcName) throw new Error('This activity does not have a shared party session yet.');
       const args=sportMode?{p_party_id:party.id,p_mode:sportMode}:{p_party_id:party.id};
       const {data,error:e}=await supabase.rpc(rpcName,args);
       if(e)throw e;
-      const activeSessionId=sportMode?data?.active_sport_match_id:mode==='customrooms'?data?.active_room_id:mode==='thetable'?data?.active_table_id:data?.active_battle_royale_match_id;
-      if(mode!=='battleroyale'&&!activeSessionId)throw new Error(sportMode?'The server did not create a shared sport match.':mode==='customrooms'?'The server did not create a party room.':'The server did not create a shared Table session.');
+      const activeSessionId=sportMode?data?.active_sport_match_id:(mode==='thetable'||mode==='grandcircuit-online')?data?.active_table_id:mode==='customrooms'?data?.active_room_id:data?.active_battle_royale_match_id;
+      if(mode!=='battleroyale'&&!activeSessionId)throw new Error(sportMode?'The server did not create a shared sport match.':mode==='customrooms'?'The server did not create a party room.':'The server did not create the party tournament session.');
       const activityMode=sportMode?'sports-match':mode;
       launchedQueueRef.current=`${party.id}:${activityMode}:${activeSessionId}`;
       setParty(data);
@@ -234,7 +235,7 @@ export default function PartyScreen({ onBack, onQueueMode }) {
 
   if(loading)return <div className="py-20 text-center">Loading party…</div>;
   const isPartyHost=party?.host_user_id===user?.id;
-  const requiredPartyPlayers=mode==='banger-online'?6:mode==='volleyball-online'?4:PARTY_SPORT_MODES[mode]?2:null;
+  const requiredPartyPlayers=mode==='banger-online'?6:mode==='volleyball-online'||mode==='ctf-online'?4:PARTY_SPORT_MODES[mode]?2:null;
   const partyPlayerCount=(party?.members||[]).filter(member=>!member.spectator).length;
   return <div className="w-full max-w-4xl flex flex-col gap-4">
     <div className="flex items-center justify-between"><button onClick={onBack} className="px-4 py-2 bg-secondary rounded-lg"><GameIcon icon="info" size={14}/> BACK</button><h2 className="text-2xl font-heading text-accent">PARTY</h2><div className="w-20"/></div>
@@ -257,7 +258,8 @@ export default function PartyScreen({ onBack, onQueueMode }) {
       </div>
       <div className="bg-card border rounded-xl p-5"><h3 className="font-heading text-primary">QUEUE AS A PARTY</h3><p className="text-xs text-muted-foreground">All party members are kept together.</p>
         <div className="grid grid-cols-2 gap-2 mt-4">{MODES.map(([id,label,supported])=><button key={id} type="button" disabled={!supported} aria-disabled={!supported} title={supported?'':'Party launch is not connected to a shared match session yet.'} onClick={()=>supported&&setMode(id)} className={'min-h-12 p-2 rounded-xl border text-xs disabled:cursor-not-allowed disabled:opacity-45 '+(mode===id?'border-accent bg-accent/10':'border-border bg-secondary/30')}>{label}{!supported&&<span className="mt-1 block text-[9px] text-muted-foreground">UNAVAILABLE FOR PARTIES</span>}</button>)}</div>
-        {PARTY_SPORT_MODES[mode]&&<p className="mt-2 text-[10px] text-muted-foreground">The whole party enters one private sport match. The server requires exactly {mode==='banger-online'?6:mode==='volleyball-online'?4:2} connected, ready members.</p>}
+        {PARTY_SPORT_MODES[mode]&&<p className="mt-2 text-[10px] text-muted-foreground">The whole party enters one private sport match. The server requires exactly {mode==='banger-online'?6:mode==='volleyball-online'||mode==='ctf-online'?4:2} connected, ready members.</p>}
+        {mode==='grandcircuit-online'&&<p className="mt-2 text-[10px] text-muted-foreground">Party-only elimination tournament for 2–8 ready members. It uses the existing online fight match for each round; eliminated members wait for the final result.</p>}
         {requiredPartyPlayers&&partyPlayerCount!==requiredPartyPlayers&&<p role="status" className="mt-2 text-[10px] text-amber-300">{mode.replace('-online','')} needs exactly {requiredPartyPlayers} human party members; currently {partyPlayerCount}.</p>}
         <p className="mt-3 text-[10px] text-muted-foreground">{(party.members||[]).filter(m=>m.is_ready).length} / {party.member_count||0} members ready</p>
         {!isPartyHost&&<p className="mt-3 text-[10px] text-muted-foreground">Only the host can start a shared activity.</p>}

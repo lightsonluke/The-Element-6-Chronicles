@@ -92,7 +92,7 @@ import TouchControls from './TouchControls.jsx';
 import MobileControlsTest from './MobileControlsTest.jsx';
 import { useGamepadMenuNav } from './useGamepadMenuNav.js';
 import ControllerTextEntry from './ControllerTextEntry.jsx';
-import { loadCloudProgress, saveCloudProgress, getCloudSaveOwner, setCloudSaveOwner, markCloudSaveOwnerReady, isCloudSaveOwnerReady, invalidateCloudSaveOwner, acceptCloudProgressRevision } from './cloudSaves.js';
+import { loadCloudProgress, saveCloudProgress, getCloudSaveOwner, setCloudSaveOwner, markCloudSaveOwnerReady, isCloudSaveOwnerReady, invalidateCloudSaveOwner, acceptCloudProgressRevision, isAccountCloudUser } from './cloudSaves.js';
 import { getActive2027BattlePass, getActive2027Holiday, get2027EventById } from './season2027.js';
 import { supabase } from './supabaseClient.js';
 import { syncSharedLeaderboard } from './sharedLeaderboard.js';
@@ -390,6 +390,12 @@ export default function Game() {
     let authEventSeen = false;
     let loadGeneration = 0;
     let currentUserId = null;
+    let sessionFallbackTimer = window.setTimeout(() => {
+      // A guest can play from device-local progress without waiting on account
+      // synchronization. If auth initialization stalls, open the local profile;
+      // a later authenticated session event still switches to that account.
+      if (!cancelled && !authEventSeen) loadSignedInProgress(null);
+    }, 1800);
     const resetPendingSave = () => {
       if (_cloudSaveTimer) { window.clearTimeout(_cloudSaveTimer); _cloudSaveTimer = null; }
       _lastProgress = null;
@@ -454,23 +460,28 @@ export default function Game() {
     // profile path below; no account-progress query/save is started without a
     // session user ID.
     supabase.auth.getSession().then(({ data }) => {
-      if (!authEventSeen) loadSignedInProgress(data?.session?.user?.id || null);
+      window.clearTimeout(sessionFallbackTimer);
+      const sessionUser = data?.session?.user;
+      if (!authEventSeen) loadSignedInProgress(isAccountCloudUser(sessionUser) ? sessionUser.id : null);
     }).catch(() => {
+      window.clearTimeout(sessionFallbackTimer);
       if (!authEventSeen) {
-        setAccountLoadError('Your account session could not be checked. Retry or sign in again.');
-        setAccountLoadStatus('error');
+        // No verified signed-in session means this tab remains device-local.
+        // Do not leave a guest blocked behind an account-progress spinner.
+        loadSignedInProgress(null);
       }
     });
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       authEventSeen = true;
-      const nextUserId = session?.user?.id || null;
+      window.clearTimeout(sessionFallbackTimer);
+      const nextUserId = isAccountCloudUser(session?.user) ? session.user.id : null;
       window.setTimeout(() => {
         if (cancelled) return;
         if (nextUserId) loadSignedInProgress(nextUserId);
-        else if (event === 'SIGNED_OUT') loadSignedInProgress(null);
+        else loadSignedInProgress(null);
       }, 0);
     });
-    return () => { cancelled = true; loadGeneration += 1; listener.subscription.unsubscribe(); };
+    return () => { cancelled = true; loadGeneration += 1; window.clearTimeout(sessionFallbackTimer); listener.subscription.unsubscribe(); };
   }, [accountLoadRetry]);
   const [tokenFlash, setTokenFlash] = useState(null);
   const [storyRewardToast, setStoryRewardToast] = useState(null);
@@ -1529,11 +1540,11 @@ export default function Game() {
 
   // Match replay metadata is consumed by the automatic replay recorder.
   useEffect(() => {
-    const active = ['fighting','soccer','sports','training','tutorial','team','sportslobby','onlinesports','onlinesportsmatch','battleroyale','onlinelobby','grandcircuit','thetable','customrooms','lan','race','racegame','volleyball','dodgeball','banger','parkour','rockclimbing','rock-climbing','rockclimb','ziplining','zipline','capturetheflag','capture-the-flag'].includes(screen);
+    const active = ['fighting','soccer','sports','training','tutorial','team','sportslobby','onlinesports','onlinesportsmatch','battleroyale','onlinelobby','grandcircuit','partygrandcircuit','thetable','customrooms','lan','race','racegame','volleyball','dodgeball','banger','parkour','rockclimbing','rock-climbing','rockclimb','ziplining','zipline','capturetheflag','capture-the-flag'].includes(screen);
     const modeLabels = {
       fighting: 'Regular Fight', soccer: 'Soccer', sports: 'Sports', training: 'Training', tutorial: 'Tutorial Match', team: 'Team Battle',
       sportslobby: 'Online Sports', onlinesportsmatch: 'Online Sports Match', battleroyale: 'Battle Royale',
-      onlinesports: 'Online Sports', onlinelobby: onlineMode === 'ranked' ? 'Ranked Fight' : 'Unranked Fight', grandcircuit: 'Grand Circuit',
+      onlinesports: 'Online Sports', onlinelobby: onlineMode === 'ranked' ? 'Ranked Fight' : 'Unranked Fight', grandcircuit: 'Grand Circuit', partygrandcircuit: 'Party Grand Circuit',
       thetable: 'The Table', customrooms: 'Custom Room', lan: 'LAN Play', race: 'Race', racegame: 'Race',
       volleyball: 'Volleyball', dodgeball: 'Dodgeball', banger: 'Banger', parkour: 'Parkour',
       rockclimbing: 'Rock Climbing', 'rock-climbing': 'Rock Climbing', rockclimb: 'Rock Climbing',
@@ -1542,7 +1553,7 @@ export default function Game() {
     window.__e6MatchReplayMeta = active ? {
       mode: screen,
       modeLabel: modeLabels[screen] || screen,
-      online: ['onlinelobby','sportslobby','onlinesports','onlinesportsmatch','battleroyale','thetable','customrooms','race','racegame'].includes(screen),
+      online: ['onlinelobby','sportslobby','onlinesports','onlinesportsmatch','battleroyale','partygrandcircuit','thetable','customrooms','race','racegame'].includes(screen),
       startedAt: Date.now(),
     } : null;
     return () => { if (window.__e6MatchReplayMeta?.mode === screen) window.__e6MatchReplayMeta = null; };
@@ -1559,7 +1570,7 @@ export default function Game() {
     const replayScreens = new Set([
        'fighting','soccer','sports','training','tutorial','team','sportslobby','onlinesports','volleyball','dodgeball','banger',
        'parkour','rockclimbing','rock-climbing','rockclimb','ziplining','zipline','capturetheflag','capture-the-flag','race','racegame',
-       'onlinesportsmatch','battleroyale','onlinelobby','grandcircuit',
+       'onlinesportsmatch','battleroyale','onlinelobby','grandcircuit','partygrandcircuit',
       'customrooms','lan','story','custombattle','tournament','thetable'
     ]);
     let cancelled = false;
@@ -2841,16 +2852,31 @@ export default function Game() {
             onClaim={(reward) => addCoins(reward)}
           />
         )}
+        {screen === 'partygrandcircuit' && (
+          <TheTableLobby
+            onBack={() => { setPartyLaunch(null); setScreen('party'); }}
+            partyTournamentId={partyLaunch?.active_table_id || null}
+            partyGrandCircuit
+            unlockedIds={progress.unlockedIds}
+            favoriteId={progress.favoriteId}
+            equippedElements={progress.equippedElements || {}}
+            equippedSkins={progress.equippedSkins || {}}
+            equippedAccessories={progress.equippedAccessories || {}}
+            equippedShikigami={progress.equippedShikigami || {}}
+            equippedMovementTrails={progress.equippedMovementTrails || {}}
+            settings={progress.settings || {}}
+            sfxVolume={progress.settings?.sfxVolume ?? 70}
+            musicVolume={progress.settings?.musicVolume ?? 50}
+          />
+        )}
         {screen === 'party' && (
         <PartyScreen onBack={goBack} onQueueMode={async (mode, partyState) => {
             if (mode === 'thetable') { setPartyLaunch(partyState || null); setScreen('thetable'); }
             else if (mode === 'battleroyale') { setPartyLaunch(partyState || null); setScreen('battleroyale'); }
+            else if (mode === 'grandcircuit-online') { setPartyLaunch(partyState || null); setScreen('partygrandcircuit'); }
             else if (mode === 'sports') setScreen('onlinesports');
             else if (mode === 'customrooms') { setPartyLaunch(partyState || null); setCustomRoomMode('fight'); setScreen('customrooms'); }
             else if (mode === 'lan') setScreen('lan');
-            else if (mode === 'grandcircuit-online' || mode === 'ctf-online') {
-              setChatToast({ name: 'PARTY MODE', text: 'This mode does not have a shared online session yet. Your party stays together.' });
-            }
             else if (mode === 'sports-match') {
               const matchId = partyState?.active_sport_match_id;
               if (!matchId) { setChatToast({ name: 'PARTY MATCH', text: 'The party sport match is missing. Return to the party and try again.' }); return; }
@@ -2873,7 +2899,7 @@ export default function Game() {
               setOnlineSportsLobby({ match, players });
               setScreen('onlinesportsmatch');
             }
-            else if (mode === 'soccer-online' || mode === 'volleyball-online' || mode === 'dodgeball-online' || mode === 'banger-online') { setOnlineSport(mode.replace('-online','')); setScreen('onlinesports'); }
+            else if (mode === 'soccer-online' || mode === 'volleyball-online' || mode === 'dodgeball-online' || mode === 'banger-online' || mode === 'ctf-online') { setOnlineSport(mode.replace('-online','')); setScreen('onlinesports'); }
           }} />
         )}
 
@@ -3231,8 +3257,8 @@ export default function Game() {
         <div className="fixed inset-0 z-[200] grid place-items-center bg-[#080617]/90 px-6 text-center" role="status" aria-live="polite">
           <div className="max-w-md rounded-3xl border border-violet-300/40 bg-[#17122d] px-8 py-7 shadow-2xl">
             <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-violet-300/25 border-t-violet-200" />
-            <p className="font-heading text-lg text-white">{accountLoadStatus === 'resetting' ? 'Resetting account progress' : 'Loading account progress'}</p>
-            <p className="mt-2 text-sm text-slate-300">{accountLoadStatus === 'resetting' ? 'Waiting for the server to confirm the reset.' : 'Your saved game data is being synchronized.'}</p>
+            <p className="font-heading text-lg text-white">{accountLoadStatus === 'resetting' ? 'Resetting account progress' : accountLoadStatus === 'checking' ? 'Checking sign-in' : 'Loading account progress'}</p>
+            <p className="mt-2 text-sm text-slate-300">{accountLoadStatus === 'resetting' ? 'Waiting for the server to confirm the reset.' : accountLoadStatus === 'checking' ? 'Guest progress stays on this device.' : 'Your saved game data is being synchronized.'}</p>
           </div>
         </div>
       )}

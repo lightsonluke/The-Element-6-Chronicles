@@ -93,12 +93,20 @@ function safeChar(c) {
 export default function CaptureTheFlag({
   onExit, onAward, unlockedIds = [], equippedAccessories = {}, equippedSkins = {},
   customCharsData = {}, sfxVolume = 70, musicVolume = 50, settings = {},
-  charLevels = {}, equippedEmotes = {},
+  charLevels = {}, equippedEmotes = {}, onlineSession = null,
 }) {
   const canvasRef = useRef(null);
   const gameRef = useRef(null);
   const keysRef = useRef({});
-  const [phase, setPhase] = useState('setup');
+  const onlineRef = useRef(onlineSession);
+  onlineRef.current = onlineSession;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+  const remoteStateRef = useRef(null);
+  const remoteInputsRef = useRef([{}, {}, {}, {}]);
+  const remoteInputAtRef = useRef([0, 0, 0, 0]);
+  const lastInputSendRef = useRef(0);
+  const [phase, setPhase] = useState(onlineSession?.enabled ? 'play' : 'setup');
   const [paused, setPaused] = useState(false);
   const [combo, setCombo] = useState('pp_cc');
   const [slots, setSlots] = useState({ p1: unlockedIds[0] || 'yellow', p2: 'red', p3: 'blue', p4: 'green' });
@@ -106,6 +114,22 @@ export default function CaptureTheFlag({
   const [activeSlot, setActiveSlot] = useState('p1');
   const [matchSettings, setMatchSettings] = useState({ captureLimit: 3, matchTime: 300, friendlyFire: false, respawnTime: 3, cpuDifficulty: 'regular' });
   const [result, setResult] = useState(null);
+  useEffect(() => {
+    remoteStateRef.current = onlineSession?.remoteState || null;
+    if (onlineSession?.enabled && onlineSession.remoteState) {
+      gameRef.current = hydrateOnlineCtfState(onlineSession.remoteState);
+    }
+  }, [onlineSession?.remoteState, onlineSession?.enabled, onlineSession?.role]);
+  useEffect(() => {
+    if (!onlineSession?.enabled || onlineSession.role !== 'host' || !onlineSession.lanConnection) return undefined;
+    return onlineSession.lanConnection.onMessage(message => {
+      if (message?.type !== 'ctf-input') return;
+      const slot = Number(message.playerSlot);
+      if (!Number.isInteger(slot) || slot < 0 || slot > 3 || slot === Number(onlineRef.current?.localSlot)) return;
+      remoteInputsRef.current[slot] = normalizeCtfInput(message.input);
+      remoteInputAtRef.current[slot] = performance.now();
+    });
+  }, [onlineSession?.enabled, onlineSession?.role, onlineSession?.lanConnection, onlineSession?.localSlot]);
   useEffect(() => {
     window.__el6GameplayActive = phase === 'play' && !result;
     window.__el6GameplayCaptureActive = phase === 'play' && !result;
@@ -115,6 +139,7 @@ export default function CaptureTheFlag({
   const charPool = (unlockedIds.length ? unlockedIds : ALL_CHARS.map(c => c.id)).map(id => ({ id, char: resolveChar(id) }));
 
   const isCPU = (slot) => {
+    if (onlineRef.current?.enabled) return false;
     if (combo === 'pp_cc') return slot === 'p3' || slot === 'p4';
     if (combo === 'pc_pc') return slot === 'p2' || slot === 'p4';
     if (combo === 'pc_cc') return slot === 'p2' || slot === 'p3' || slot === 'p4';
@@ -145,9 +170,11 @@ export default function CaptureTheFlag({
       })),
     ];
     const mkFighter = (slot, team, charId, elementId, spawnX, spawnY) => {
-      const base = resolveChar(charId);
+      const online = onlineRef.current;
+      const onlinePlayer = online?.enabled ? online.characters?.[slot] : null;
+      const base = resolveChar(onlinePlayer?.character_id || charId);
       const sc = safeChar(base);
-      const stats = applyElement(sc.stats || {}, elementId);
+      const stats = applyElement(sc.stats || {}, onlinePlayer?.loadout?.element || elementId);
       // Keep original character color — uniform overlay shows team
       const char = { ...sc, stats };
       const f = createFighter(char, spawnX, spawnY, team === 'A' ? 1 : -1);
@@ -158,23 +185,24 @@ export default function CaptureTheFlag({
       return f;
     };
 
-    const fighters = [
+    let fighters = [
       mkFighter('p1', 'A', slots.p1, elements.p1, TEAM_A_BASE.x, TEAM_A_BASE.y - 40),
       mkFighter('p2', 'A', slots.p2, elements.p2, TEAM_A_BASE.x + 60, TEAM_A_BASE.y - 40),
       mkFighter('p3', 'B', slots.p3, elements.p3, TEAM_B_BASE.x, TEAM_B_BASE.y - 40),
       mkFighter('p4', 'B', slots.p4, elements.p4, TEAM_B_BASE.x - 60, TEAM_B_BASE.y - 40),
     ];
 
-    const flags = {
+    let flags = {
       A: { x: TEAM_A_BASE.x, y: TEAM_A_BASE.y - 20, baseX: TEAM_A_BASE.x, baseY: TEAM_A_BASE.y - 20, state: 'base', carrier: null, returnTimer: 0, team: 'A' },
       B: { x: TEAM_B_BASE.x, y: TEAM_B_BASE.y - 20, baseX: TEAM_B_BASE.x, baseY: TEAM_B_BASE.y - 20, state: 'base', carrier: null, returnTimer: 0, team: 'B' },
     };
 
-    const score = { A: 0, B: 0 };
+    let score = { A: 0, B: 0 };
     let timer = matchSettings.matchTime;
     let lastTime = performance.now();
     let frame = 0;
     let over = false;
+    let overtime = false;
     let camX = 0, camY = 0, camX2 = 0, camY2 = 0;
 
     const resonancePlatforms = platforms.filter(p => !p.flagBase && Math.abs((p.x + (p.w || p.width) / 2) - (WORLD_W / 2)) < WORLD_W * 0.34).map(p => ({ ...p, width: p.w || p.width }));
@@ -350,7 +378,7 @@ export default function CaptureTheFlag({
       if (ef.state === 'carried' && ef.carrier === f && mf.state === 'base' && Math.abs(f.x - myBase.x) < 55 && Math.abs(f.y - myBase.y) < 70) {
         score[f.team]++;
         ef.state = 'base'; ef.x = ef.baseX; ef.y = ef.baseY; ef.carrier = null; sfx.summit();
-        if (score[f.team] >= matchSettings.captureLimit) { over = true; gameRef.current.winner = f.team; }
+        if (overtime || score[f.team] >= matchSettings.captureLimit) { over = true; gameRef.current.winner = f.team; }
       }
     };
 
@@ -373,12 +401,56 @@ export default function CaptureTheFlag({
     window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
 
     const loop = (now) => {
+      const online = onlineRef.current;
+      if (online?.enabled && online.role === 'guest') {
+        simulationRole = 'guest';
+        const current = gameRef.current;
+        const currentTime = performance.now();
+        if (current && currentTime - lastInputSendRef.current >= 33) {
+          lastInputSendRef.current = currentTime;
+          const currentKeys = keysRef.current;
+          const currentBinds = getKeybinds(settings);
+          const input = pausedRef.current ? NO_CTF_INPUT : normalizeCtfInput(readPlayerInput(currentKeys, currentBinds.p1));
+          online.lanConnection?.sendMessage({ type: 'ctf-input', input });
+        }
+        if (current) {
+          const all = current.fighters || [];
+          const target = all.length ? all.reduce((sum, f) => ({ x: sum.x + f.x / all.length, y: sum.y + f.y / all.length }), { x: 0, y: 0 }) : { x: 0, y: 0 };
+          camX = Math.max(0, Math.min(WORLD_W - VIEW_W, target.x - VIEW_W / 2));
+          camY = Math.max(0, Math.min(WORLD_H - VIEW_H, target.y - VIEW_H / 2));
+          drawScene(ctx, current, Number(current.frame || 0), camX, camY, { x: 0, y: 0, w: VIEW_W, h: VIEW_H });
+        }
+        requestAnimationFrame(loop);
+        return;
+      }
+      if (online?.enabled && online.role === 'host' && simulationRole === 'guest') {
+        const restoreSource = remoteStateRef.current || gameRef.current;
+        const restored = restoreSource?.fighters?.some(fighter => !fighter.char)
+          ? hydrateOnlineCtfState(restoreSource)
+          : restoreSource;
+        if (restored?.fighters?.length === 4 && restored?.flags && restored?.score) {
+          gameRef.current = restored;
+          fighters = restored.fighters;
+          flags = restored.flags;
+          score = restored.score;
+          timer = Number(restored.timer ?? timer);
+          frame = Number(restored.frame ?? frame);
+          over = false;
+          overtime = false;
+          restored.running = true;
+        }
+        lastTime = now;
+        simulationRole = 'host';
+      }
       if (!gameRef.current?.running) { requestAnimationFrame(loop); return; }
       if (over) { finish(); return; }
       const dt = Math.min((now - lastTime) / 1000, 0.05); lastTime = now;
       frame++;
       timer -= dt;
-      if (timer <= 0) { over = true; gameRef.current.winner = score.A > score.B ? 'A' : score.B > score.A ? 'B' : null; finish(); return; }
+      if (timer <= 0) {
+        if (score.A === score.B) { overtime = true; timer = 60; }
+        else { over = true; gameRef.current.winner = score.A > score.B ? 'A' : 'B'; finish(); return; }
+      }
 
       // Input — same attack buttons as normal fight mode (standard per-player keybinds)
       updateResonanceMatch(gameRef.current.resonanceMatch, fighters, [], resonancePlatforms, WORLD_W, WORLD_H, dt);
@@ -394,7 +466,21 @@ export default function CaptureTheFlag({
         if (f.invincible > 0) f.invincible--;
         let input;
         try {
-          if (f.isAI) { input = ctfAI(f); }
+          if (online?.enabled) {
+            const onlineSlot = CTF_ONLINE_SLOT[f.slot];
+            if (onlineSlot === Number(online.localSlot)) {
+              const localInput = pausedRef.current ? NO_CTF_INPUT : mergeGp(readPlayerInput(k, _kb.p1), gp1);
+              input = normalizeCtfInput(localInput);
+              if (performance.now() - lastInputSendRef.current >= 33) {
+                lastInputSendRef.current = performance.now();
+                online.lanConnection?.sendMessage({ type: 'ctf-input', input });
+              }
+            } else {
+              const freshInput = performance.now() - remoteInputAtRef.current[onlineSlot] < 350;
+              input = normalizeCtfInput(freshInput ? remoteInputsRef.current[onlineSlot] : NO_CTF_INPUT);
+            }
+          }
+          else if (f.isAI) { input = ctfAI(f); }
           else {
             if (combo === 'pp_cc') {
             if (f.slot === 'p1') input = stripPowers(mergeGp(readPlayerInput(k, _kb.p1), gp1));
@@ -493,7 +579,7 @@ export default function CaptureTheFlag({
 
       // ── Camera + Render — split screen for 2 human players ──
       const humans = fighters.filter(f => !f.isAI);
-      if (humans.length >= 2) {
+      if (!online?.enabled && humans.length >= 2) {
         const t1 = humans[0], t2 = humans[1];
         const halfW = VIEW_W / 2;
         camX += ((t1.x - halfW / 2) - camX) * 0.1;
@@ -511,14 +597,24 @@ export default function CaptureTheFlag({
       } else {
         const camTarget = humans[0] || fighters[0];
         if (camTarget) {
-          let tx = camTarget.x - VIEW_W / 2;
-          let ty = camTarget.y - VIEW_H / 2;
+          const center = online?.enabled
+            ? fighters.reduce((sum, f) => ({ x: sum.x + f.x / fighters.length, y: sum.y + f.y / fighters.length }), { x: 0, y: 0 })
+            : camTarget;
+          let tx = center.x - VIEW_W / 2;
+          let ty = center.y - VIEW_H / 2;
           camX += (tx - camX) * 0.1;
           camY += (ty - camY) * 0.1;
           camX = Math.max(0, Math.min(WORLD_W - VIEW_W, camX));
           camY = Math.max(0, Math.min(WORLD_H - VIEW_H, camY));
         }
         drawScene(ctx, gameRef.current, frame, camX, camY, { x: 0, y: 0, w: VIEW_W, h: VIEW_H });
+      }
+      gameRef.current.frame = frame;
+      gameRef.current.timer = timer;
+      gameRef.current.score = score;
+      gameRef.current.flags = flags;
+      if (online?.enabled && online.role === 'host') {
+        online.onStateExport?.(serializeOnlineCtfState(gameRef.current, frame, timer, score, flags, matchSettings.captureLimit));
       }
       requestAnimationFrame(loop);
     };
@@ -529,9 +625,12 @@ export default function CaptureTheFlag({
       setResult({ winner, score: { ...score }, time: matchSettings.matchTime - timer });
       setPhase('over');
       music.stop();
-      onAward?.({ sport: 'ctf', p1Won: winner === 'A', stats: {}, tournamentWon: false });
+      if (onlineRef.current?.enabled) {
+        if (onlineRef.current.role === 'host') onlineRef.current.onResult?.({ winnerTeam: winner === 'A' ? 1 : winner === 'B' ? 2 : null, score: { ...score } });
+      } else onAward?.({ sport: 'ctf', p1Won: winner === 'A', stats: {}, tournamentWon: false });
     }
 
+    let simulationRole = onlineRef.current?.role || 'offline';
     requestAnimationFrame(loop);
     return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); if (gameRef.current) gameRef.current.running = false; music.stop(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -716,6 +815,31 @@ export default function CaptureTheFlag({
       </GameCanvasPortal>
     </div>
   );
+}
+
+const CTF_ONLINE_SLOT = { p1: 0, p2: 2, p3: 1, p4: 3 };
+const NO_CTF_INPUT = Object.freeze({ left:false,right:false,jump:false,up:false,down:false,sig:false,power:false,superMove:false,heavy:false });
+function normalizeCtfInput(input) {
+  return Object.fromEntries(Object.keys(NO_CTF_INPUT).map(key => [key, Boolean(input?.[key])]));
+}
+function serializeOnlineCtfState(game, frame, timer, score, flags, captureLimit) {
+  const fighters = game.fighters.map(fighter => {
+    const clean = { ...fighter, charId: fighter.char?.id || 'yellow' };
+    delete clean.char;
+    delete clean._rigMemo;
+    return JSON.parse(JSON.stringify(clean));
+  });
+  const flagState = Object.fromEntries(Object.entries(flags).map(([team, flag]) => {
+    const clean = { ...flag, carrierSlot: flag.carrier?.slot || null };
+    delete clean.carrier;
+    return [team, clean];
+  }));
+  return JSON.parse(JSON.stringify({ frame, timer, score, captureLimit, platforms:game.platforms, fighters, flags:flagState, resonanceMatch:game.resonanceMatch }));
+}
+function hydrateOnlineCtfState(state) {
+  const fighters = (state?.fighters || []).map(fighter => ({ ...fighter, char:safeChar(resolveChar(fighter.charId || 'yellow')), _rigMemo:{} }));
+  const flags = Object.fromEntries(Object.entries(state?.flags || {}).map(([team, flag]) => [team, { ...flag, carrier:fighters.find(fighter => fighter.slot === flag.carrierSlot) || null }]));
+  return { ...state, fighters, flags, score:state?.score || { A:0, B:0 }, running:true };
 }
 
 // ── Rendering (viewport-aware for split screen) ──

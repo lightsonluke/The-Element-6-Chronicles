@@ -30,6 +30,25 @@ export function getCloudSaveOwner() {
   return activeCloudOwnerId;
 }
 
+export function isAccountCloudUser(user) {
+  if (!user?.id) return false;
+  const userMeta = user.user_metadata || {};
+  const appMeta = user.app_metadata || {};
+  const guestFlag = value => value === true || value === 'true' || value === 'guest' || value === 'anonymous';
+  if (guestFlag(user.is_anonymous) || guestFlag(userMeta.is_anonymous) || guestFlag(userMeta.isGuest) || guestFlag(userMeta.guest)) return false;
+  const identityProviders = Array.isArray(user.identities)
+    ? user.identities.map(identity => String(identity?.provider || '').toLowerCase()).filter(Boolean)
+    : [];
+  const providers = Array.isArray(appMeta.providers)
+    ? appMeta.providers.map(provider => String(provider || '').toLowerCase()).filter(Boolean)
+    : [];
+  const knownProviders = identityProviders.length ? identityProviders : providers;
+  if (knownProviders.length && knownProviders.every(provider => provider === 'anonymous')) return false;
+  if (String(appMeta.provider || '').toLowerCase() === 'anonymous' && !knownProviders.some(provider => provider !== 'anonymous')) return false;
+  if (String(userMeta.provider || '').toLowerCase() === 'anonymous') return false;
+  return true;
+}
+
 // Server-side RPCs that mutate the account snapshot return the new revision.
 // Keep the optimistic-save queue on that revision so the next ordinary save
 // does not overwrite or conflict with the authoritative transaction.
@@ -46,11 +65,11 @@ export async function getCloudUser() {
   const { data, error: sessionError } = await supabase.auth.getSession();
   if (sessionError) throw sessionError;
   const sessionUser = data?.session?.user;
-  if (!sessionUser?.id) return null;
+  if (!isAccountCloudUser(sessionUser)) return null;
   const { data: verified, error } = await supabase.auth.getUser();
   if (error) throw error;
   const user = verified?.user;
-  return user?.id === sessionUser.id ? user : null;
+  return user?.id === sessionUser.id && isAccountCloudUser(user) ? user : null;
 }
 
 // Read the tab's locally stored Supabase session before touching account data.

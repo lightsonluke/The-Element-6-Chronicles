@@ -4,6 +4,7 @@ import SoccerFighter from './SoccerFighter.jsx';
 import VolleyballGame from './VolleyballGame.jsx';
 import DodgeballGame from './DodgeballGame.jsx';
 import BangerGame from './BangerGame.jsx';
+import CaptureTheFlag from './CaptureTheFlag.jsx';
 import { reportOnlineSportResult } from './sportsOnline.js';
 import { music } from './music.js';
 
@@ -16,6 +17,7 @@ function getSport(mode = '') {
   if (mode.startsWith('volleyball_')) return 'volleyball';
   if (mode.startsWith('dodgeball_')) return 'dodgeball';
   if (mode === 'banger_online') return 'banger';
+  if (mode === 'ctf_party') return 'ctf';
   return null;
 }
 
@@ -80,7 +82,7 @@ export default function ActualSportsOnlineMatch({
     setRemoteState(null);
     lastRemoteFrame.current = -1;
     lastRemoteAt.current = Date.now();
-  }, [match?.id, match?.host_user_id, match?.host_epoch]);
+  }, [match?.id]);
 
   const orderedPlayers = useMemo(
     () => [...(players || [])].sort((a, b) => Number(a.slot) - Number(b.slot)),
@@ -95,6 +97,7 @@ export default function ActualSportsOnlineMatch({
   const p1 = p1Team[0];
   const p2 = p2Team[0];
   const mePlayer = orderedPlayers.find(player => String(player.user_id) === String(me?.id));
+  const ctfBySlot = useMemo(() => Object.fromEntries(orderedPlayers.map(player => [Number(player.slot), player])), [orderedPlayers]);
 
   useEffect(() => {
     if (!match?.id || !me?.id || !sport) return undefined;
@@ -254,7 +257,7 @@ export default function ActualSportsOnlineMatch({
   }, [result, me?.id, match?.id]);
 
   if (!me) return <p className="font-heading text-accent text-center">SIGN IN TO PLAY ONLINE</p>;
-  const requiredPlayers = sport === 'banger' ? 6 : isVolleyball2v2 ? 4 : 2;
+  const requiredPlayers = sport === 'banger' ? 6 : isVolleyball2v2 || sport === 'ctf' ? 4 : 2;
   if (!sport || orderedPlayers.length !== requiredPlayers || !p1 || !p2) {
     return <p className="text-center text-muted-foreground">Waiting until every required player has joined this online match.</p>;
   }
@@ -317,6 +320,30 @@ export default function ActualSportsOnlineMatch({
       localPlayerSlot={Number(mePlayer?.slot ?? 0)}
       onResult={matchResult => { if (isHost) finish(matchResult?.p1Won ? 1 : 2); }}
       onQuit={onEnd}
+    />}
+    {sport === 'ctf' && <CaptureTheFlag
+      onExit={onEnd}
+      settings={settings}
+      sfxVolume={sfxVolume}
+      musicVolume={musicVolume}
+      equippedSkins={equippedSkins}
+      equippedAccessories={equippedAccessories}
+      customCharsData={customCharsData}
+      onlineSession={{
+        enabled: true,
+        role: isHost ? 'host' : 'guest',
+        localSlot: Number(mePlayer?.slot ?? 0),
+        lanConnection,
+        remoteState,
+        characters: {
+          p1: ctfBySlot[0],
+          p2: ctfBySlot[2],
+          p3: ctfBySlot[1],
+          p4: ctfBySlot[3],
+        },
+        onStateExport: isHost ? onStateExport : undefined,
+        onResult: result => { if (isHost) finish(result?.winnerTeam); },
+      }}
     />}
     {syncing && <div className="absolute inset-0 z-20 grid place-items-center bg-black/70 font-heading text-accent text-xl">RESYNCING…</div>}
   </div>;

@@ -44,7 +44,7 @@ const MAP_PLATFORMS = {
     // reference PNGs. The art is drawn at its natural aspect ratio.
     // The invisible collider follows the complete visible depth of the main
     // platform art: from its top surface (image y=205) to the image bottom.
-    { x: 49, y: 570, w: 1182, h: 253, material: 'split_city_joined', _splitCityMain: true, _visualX: 0, _visualW: 1280, _visualY: 570 },
+    { x: 49, y: 570, w: 1182, h: 318, material: 'split_city_joined', _splitCityMain: true, _visualX: 0, _visualW: 1280, _visualY: 570 },
     { x: 431, y: 420, w: 419, h: 10, material: 'split_city_dropthrough', _splitCityDropthrough: true, _visualX: 400, _visualW: 480, _visualY: 420 },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
@@ -780,10 +780,34 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
     requestWakeLock();
     document.addEventListener('visibilitychange', onWakeVis);
 
-    const loop = (now) => {
+    let loop;
+    let framePending = false;
+    let renderFailureLogged = false;
+    const scheduleNextFrame = () => {
+      if (framePending || !gameRef.current?.running) return;
+      framePending = true;
+      requestAnimationFrame((now) => {
+        framePending = false;
+        try {
+          loop(now);
+          renderFailureLogged = false;
+        } catch (error) {
+          // A visual effect must never permanently stop the gameplay RAF. The
+          // next frame clears and redraws the canvas; log only the first error
+          // in a consecutive failure streak to avoid flooding the console.
+          if (!renderFailureLogged) {
+            console.error('[PlatformFighter] Frame rendering recovered after an error.', error);
+            renderFailureLogged = true;
+          }
+        } finally {
+          if (gameRef.current?.running && !framePending) scheduleNextFrame();
+        }
+      });
+    };
+    loop = (now) => {
       if (!gameRef.current?.running) return;
       // Soft pause: in LAN/online play the game continues while you stand still behind the overlay
-      if (pausedRef.current && !lanConnection) { requestAnimationFrame(loop); return; }
+      if (pausedRef.current && !lanConnection) { scheduleNextFrame(); return; }
 
       const dt = Math.min((now - lastTime) / 1000, 0.05) * (M?.slowMotion || 1);
       lastTime = now;
@@ -1567,9 +1591,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       });
 
       lastTime = now;
-      requestAnimationFrame(loop);
+      scheduleNextFrame();
     };
-    requestAnimationFrame(loop);
+    scheduleNextFrame();
 
     return () => {
       if (gameRef.current) gameRef.current.running = false;

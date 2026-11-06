@@ -749,28 +749,30 @@ export function drawDoubleJumpParticles(ctx, particles, cameraOffX = 0, cameraOf
 
 // ─── Super Move Name Flash ───────────────────────────────────────────────────
 export function drawSuperFlash(ctx, canvasW, canvasH, name, color, progress) {
+  if (!ctx || !Number.isFinite(canvasW) || !Number.isFinite(canvasH) || canvasW <= 0 || canvasH <= 0 || !Number.isFinite(progress)) return;
   if (progress > 0.45) return; // only show during first half
-  const t = progress / 0.45;
+  const t = Math.max(0, progress) / 0.45;
   const alpha = t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85;
   ctx.save();
-  ctx.globalAlpha = alpha * 0.9;
-  // Keep the callout compact and transparent so the stage remains visible.
-  ctx.textAlign = 'center';
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 12;
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = `bold 18px Orbitron, sans-serif`;
-  ctx.fillText(name?.toUpperCase() || 'SUPER', canvasW / 2, canvasH * 0.22, Math.min(canvasW - 32, 360));
-  ctx.globalAlpha *= 0.75;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(canvasW / 2 - 54, canvasH * 0.22 + 8);
-  ctx.lineTo(canvasW / 2 + 54, canvasH * 0.22 + 8);
-  ctx.stroke();
-
-  ctx.shadowBlur = 0;
-  ctx.restore();
+  try {
+    // Keep the callout compact and transparent so the stage remains visible.
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.9));
+    ctx.textAlign = 'center';
+    ctx.shadowColor = color || '#FFFFFF';
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = `bold 18px Orbitron, sans-serif`;
+    ctx.fillText(name?.toUpperCase() || 'SUPER', canvasW / 2, canvasH * 0.22, Math.max(1, Math.min(canvasW - 32, 360)));
+    ctx.globalAlpha *= 0.75;
+    ctx.strokeStyle = color || '#FFFFFF';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(canvasW / 2 - 54, canvasH * 0.22 + 8);
+    ctx.lineTo(canvasW / 2 + 54, canvasH * 0.22 + 8);
+    ctx.stroke();
+  } finally {
+    ctx.restore();
+  }
 }
 
 // ─── Sig glow ring (makes sigs more visible) ─────────────────────────────────
@@ -1218,7 +1220,9 @@ function drawNormalAttack(ctx, x, y, attack, progress, facing, color) {
 }
 
 export function drawSuperEffect(ctx, x, y, color, progress, charName = '', charId = '', facing = 1) {
+  if (!ctx || !Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(progress)) return;
   if (mvHasRoster(charId)) return;                        // roster supers are painted by the move engine inside drawStickman
+  const p = Math.max(0, Math.min(1, progress));
   ctx.save();
   const isG1 = String(charId || '').startsWith('g1_');
   const isG2 = String(charId || '').startsWith('g2_');
@@ -1228,12 +1232,12 @@ export function drawSuperEffect(ctx, x, y, color, progress, charName = '', charI
     // polygons. Keep every super visual inside a local arena radius so a hit
     // cannot paint over the entire gameplay view or replace its backdrop.
     ctx.beginPath();
-    ctx.arc(x, y - 18, 270, 0, Math.PI * 2);
+    ctx.arc(x, y - 18, 230, 0, Math.PI * 2);
     ctx.clip();
     // Small local activation flash only. There is deliberately NO universal
     // circular hitbox visual: the hitbox is defined by the actual super shape.
-    if (progress < 0.1) {
-      ctx.globalAlpha = (0.1 - progress) / 0.1 * 0.28;
+    if (p < 0.1) {
+      ctx.globalAlpha = (0.1 - p) / 0.1 * 0.22;
       ctx.fillStyle = color;
       ctx.beginPath(); ctx.arc(x, y - 18, 70, 0, Math.PI * 2); ctx.fill();
     }
@@ -1241,24 +1245,20 @@ export function drawSuperEffect(ctx, x, y, color, progress, charName = '', charI
     if (isG1 || isG2 || isG3) {
       // Keep the authored scale for the legacy generations while clipping
       // unusually large sweeps to the local arena region above.
-      drawCharSuper(ctx, x, y, color, progress, charId, facing || 1);
+      drawCharSuper(ctx, x, y, color || '#FFFFFF', p, charId, facing || 1);
     } else {
       ctx.translate(x, y - 18);
       ctx.scale(0.35, 0.35);
       ctx.translate(-x, -(y - 18));
-      drawCharSuper(ctx, x, y, color, progress, charId, facing || 1);
+      drawCharSuper(ctx, x, y, color || '#FFFFFF', p, charId, facing || 1);
     }
   } catch (err) {
-    // A malformed optional character super must never crash the match renderer.
+    // A malformed optional effect is skipped; never replace the stage with a
+    // giant fallback flash and never let an effect error escape the renderer.
+    return;
+  } finally {
     ctx.restore();
-    ctx.save();
-    ctx.globalAlpha = Math.max(0, 1 - progress) * 0.55;
-    ctx.fillStyle = color || '#FFFFFF';
-    ctx.beginPath(); ctx.arc(x, y - 36, 24 + progress * 30, 0, Math.PI * 2); ctx.fill();
   }
-  ctx.shadowBlur = 0;
-  ctx.globalAlpha = 1;
-  ctx.restore();
 }
 // Yellow — Sonic Overdrive: speed rings erupting outward, horizontal lightning streaks
 function drawSuper_Yellow(ctx, x, y, color, p) {
