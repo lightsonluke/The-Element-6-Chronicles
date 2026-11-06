@@ -246,6 +246,20 @@ const TOUCH_SCREENS = ['fighting', 'soccer', 'sports', 'training', 'tutorial', '
 // The Home Menu keeps its authored presentation; every other routed screen
 // uses the shared redesign system.
 const UI_REDESIGN_EXEMPT_SCREENS = new Set(['menu']);
+const SCREEN_DESIGN_FAMILY = Object.freeze({
+  settings:'studio', onlinesettings:'studio', controller:'studio', mobilecontrols:'studio',
+  shop:'store', battlepass:'seasonal', events:'seasonal', daily:'seasonal', dailyreward:'seasonal', rewards:'seasonal',
+  friends:'social', chat:'social', party:'social', hub:'social', hubserverselect:'social', onlineusers:'social',
+  lore:'story', story:'story', storySaves:'story', codex:'story', meet:'story', about:'story',
+  modeSelect:'arena', charSelect:'arena', mapSelect:'arena', onlinelobby:'arena', onlinesports:'arena', sportslobby:'arena',
+  tournament:'competition', grandcircuit:'competition', elo:'competition', leaderboard:'competition', leaderboardhall:'competition',
+  equip:'atelier', editchars:'atelier', elements:'atelier', custombattle:'creator', creatormode:'creator', stageeditor:'creator',
+  matchreview:'results', winscreen:'results', clips:'media', replay:'media', savecodes:'creator',
+});
+const SCREEN_DESIGN_COLORS = Object.freeze({
+  studio:'#63d9df', store:'#f4c76c', seasonal:'#f08ddd', social:'#70c7ff', story:'#f2ad76',
+  arena:'#a990ff', competition:'#80aaff', atelier:'#8be2b1', creator:'#a8db83', results:'#ffd36e', media:'#c09dff',
+});
 
 function detectMobileOrTablet() {
   if (typeof navigator === 'undefined') return false;
@@ -1905,7 +1919,7 @@ export default function Game() {
     }
     if (selectedMode === 'team') {
       const teamFormat = matchConfig?.slots?.[1]?.kind === 'player' ? 'pp_cc' : matchConfig?.slots?.[2]?.kind === 'player' ? 'pc_pc' : 'pc_cc';
-      setPending(prev => ({ ...prev, mode: 'team', p1, p2, teamPicks: [p1, p2, ...extraCharacterPicks].slice(0, 4), teamFormat, isCPU, difficulty: resolvedDifficulty, p1Element, p2Element, matchHandicaps }));
+      setPending(prev => ({ ...prev, mode: 'team', p1, p2, teamPicks: [p1, p2, ...extraCharacterPicks].slice(0, 4), teamFormat, teamDamage: matchConfig?.teamDamage !== false, isCPU, difficulty: resolvedDifficulty, p1Element, p2Element, matchHandicaps, localRules }));
       setScreen('team');
       return;
     }
@@ -2267,6 +2281,8 @@ export default function Game() {
 
   const customStagesList = (progress.customStages || []).map(s => s.platforms || s);
   const useUnifiedUi = !UI_REDESIGN_EXEMPT_SCREENS.has(screen);
+  const screenDesignFamily = SCREEN_DESIGN_FAMILY[screen] || 'arena';
+  const screenDesignStyle = { '--e6-screen-accent': SCREEN_DESIGN_COLORS[screenDesignFamily] || SCREEN_DESIGN_COLORS.arena };
 
   return (
     <div
@@ -2291,6 +2307,8 @@ export default function Game() {
       <div
         className={`relative z-10 w-full flex flex-col items-center my-auto${useUnifiedUi ? ' e6-unified-ui' : ''}`}
         data-e6-screen={screen}
+        data-e6-screen-family={screenDesignFamily}
+        style={screenDesignStyle}
         inert={accountLoadStatus === 'checking' || accountLoadStatus === 'loading' || accountLoadStatus === 'resetting' || accountLoadStatus === 'error'}
       >
         {tokenFlash && (
@@ -2729,12 +2747,12 @@ export default function Game() {
             )}
 
         {screen === 'team' && (
-          <TeamMode onBack={goBack} initialTeamCharacters={pending?.teamPicks || [pending?.p1, pending?.p2]} initialTeamFormat={pending?.teamFormat || 'pc_cc'} matchHandicaps={pending?.matchHandicaps || null} onEnd={(result) => {
+          <TeamMode onBack={goBack} initialTeamCharacters={pending?.teamPicks || [pending?.p1, pending?.p2]} initialTeamFormat={pending?.teamFormat || 'pc_cc'} initialTeamDamage={pending?.teamDamage ?? true} initialStocks={pending?.localRules?.stocks ?? 3} initialStartingDamage={pending?.localRules?.startingDamage ?? 0} matchHandicaps={pending?.matchHandicaps || null} onEnd={(result) => {
             if (result.p1Won) {
               setProgress(prev => { const next = { ...prev, charMastery: recordMasteryWin(prev.charMastery || {}, result.p1CharId || prev.favoriteId || 'yellow') }; saveProgress(next); return next; });
             }
             setScreen('menu');
-          }} unlockedIds={progress.unlockedIds} favoriteId={progress.favoriteId} musicVolume={progress.settings?.musicVolume ?? 50} sfxVolume={progress.settings?.sfxVolume ?? 70} matchTime={progress.settings?.matchTime ?? 240} settings={progress.settings || {}} equippedAccessories={progress.equippedAccessories || {}} equippedSkins={progress.equippedSkins || {}} equippedShikigami={progress.equippedShikigami || {}} charLevels={progress.charLevels || {}} equippedElements={progress.equippedElements || {}} onEquipElement={equipElement} customCharsData={customCharData} customNumberMap={customNumberMap} equippedEmotes={progress.equippedEmotes || {}} />
+          }} unlockedIds={progress.unlockedIds} favoriteId={progress.favoriteId} musicVolume={progress.settings?.musicVolume ?? 50} sfxVolume={progress.settings?.sfxVolume ?? 70} matchTime={pending?.localRules?.matchTime ?? progress.settings?.matchTime ?? 240} settings={progress.settings || {}} equippedAccessories={progress.equippedAccessories || {}} equippedSkins={progress.equippedSkins || {}} equippedShikigami={progress.equippedShikigami || {}} charLevels={progress.charLevels || {}} equippedElements={progress.equippedElements || {}} onEquipElement={equipElement} customCharsData={customCharData} customNumberMap={customNumberMap} equippedEmotes={progress.equippedEmotes || {}} />
         )}
 
         {screen === 'onlinesports' && (

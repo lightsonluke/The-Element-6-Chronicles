@@ -29,7 +29,10 @@ export default function SportsHub({ initialSport = null, onBack, onPlaySoccer, o
     if (sport === 'soccer') onPlaySoccer?.();
   }, [sport, onPlaySoccer]);
 
-  if (sport === 'soccer') return null;
+  // Keep a real transition surface mounted until Game.jsx switches from the
+  // Sports hub to the Soccer renderer; returning null here caused a blank
+  // frame on the hub-to-match route.
+  if (sport === 'soccer') return <div role="status" className="fixed inset-0 z-40 flex items-center justify-center bg-background text-foreground font-heading">OPENING SOCCER</div>;
 
   if (sport === 'parkour') {
     return (

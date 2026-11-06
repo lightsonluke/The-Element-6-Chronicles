@@ -249,6 +249,12 @@ export function serializeFighter(f, charId) {
     frame: f.frame,
     state: f.state,
     grounded: f.grounded,
+    // Visual movement state lets the remote fighter keep the shared gradual
+    // jump, dash-fade, and air-dive poses while snapshots are interpolated.
+    dashTimer: Math.max(0, Number(f.dashTimer) || 0),
+    dashDirection: f.dashDirection && typeof f.dashDirection === 'object'
+      ? { x: Number(f.dashDirection.x) || 0, y: Number(f.dashDirection.y) || 0 }
+      : { x: 0, y: 0 },
     damage: Math.round(f.damage * 10) / 10,
     stocks: f.stocks,
     superMeter: Math.round(f.superMeter),

@@ -305,6 +305,9 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
           remote.y += (targetY - remote.y) * 0.4;
         }
         remote.facing = interpState.facing; remote.frame = interpState.frame; remote.state = interpState.state;
+        remote.vx = interpState.vx || 0; remote.vy = interpState.vy || 0;
+        remote.dashTimer = interpState.dashTimer || 0;
+        remote.dashDirection = interpState.dashDirection || { x: 0, y: 0 };
         remote.grounded = interpState.grounded; remote.damage = interpState.damage; remote.stocks = interpState.stocks;
         remote.superMeter = interpState.superMeter; remote.powerActive = interpState.powerActive;
         remote.powerCooldown = interpState.powerCooldown; remote._maxPowerCooldown = interpState._maxPowerCooldown;
@@ -339,7 +342,7 @@ export default function OnlineFight({ matchId, role, mode, myChar, oppChar, myLo
         const skinColor = getCharRenderColor(charData.id, loadout?.equippedSkins);
         skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, 1, charData.id, f.state, f.facing, f.powerActive, f.emote));
         accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, charData), f.frame, 1, charData.id, f.state, f.facing, f.powerActive, f.emote));
-        drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, 1, charData.isSpirit, f.state, charData, f.powerActive, false, null, f.emote, f.attackData);
+        drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, 1, charData.isSpirit, f.state, charData, f.powerActive, false, null, f.emote, f.attackData, { vx: f.vx || 0, vy: f.vy || 0, grounded: !!f.grounded, dashTimer: f.dashTimer || 0, dashDir: f.dashDirection || { x: 0, y: 0 }, memo: (f._rigMemo = f._rigMemo || {}) });
         skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, 1, charData.id, f.state, f.facing, f.powerActive, f.emote));
         accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, charData), f.frame, 1, charData.id, f.state, f.facing, f.powerActive, f.emote));
         drawShikigamiFollower(ctx, f, loadout?.equippedShikigami?.[charData.id], f.frame, 1);

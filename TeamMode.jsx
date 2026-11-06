@@ -87,14 +87,14 @@ function applyTeamHandicap(attacker, defender, damageBefore, hpBefore, vxBefore,
   if (Number.isFinite(defender.vy)) defender.vy = vyBefore + (defender.vy - vyBefore) * kb;
 }
 
-export default function TeamMode({ onBack, onEnd, matchHandicaps = null, initialTeamCharacters = [], initialTeamFormat = 'pc_cc', unlockedIds, favoriteId, musicVolume, sfxVolume = 70, matchTime = 240, settings = {}, equippedAccessories = {}, equippedSkins = {}, equippedShikigami = {}, charLevels = {}, equippedElements = {}, onEquipElement, customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
+export default function TeamMode({ onBack, onEnd, matchHandicaps = null, initialTeamCharacters = [], initialTeamFormat = 'pc_cc', initialTeamDamage = true, initialStocks = 3, initialStartingDamage = 0, unlockedIds, favoriteId, musicVolume, sfxVolume = 70, matchTime = 240, settings = {}, equippedAccessories = {}, equippedSkins = {}, equippedShikigami = {}, charLevels = {}, equippedElements = {}, onEquipElement, customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
   const [phase, setPhase] = useState('select');
   const [p1, setP1] = useState(initialTeamCharacters?.[0] || favoriteId || 'yellow');
   const [p1b, setP1b] = useState(initialTeamCharacters?.[1] || 'blue');
   const [p2, setP2] = useState(initialTeamCharacters?.[2] || 'red');
   const [p2b, setP2b] = useState(initialTeamCharacters?.[3] || 'green');
   const [cpuDifficulty, setCpuDifficulty] = useState(settings?.defaultCPUDifficulty || 'regular');
-  const [teamDamage, setTeamDamage] = useState(true);
+  const [teamDamage, setTeamDamage] = useState(initialTeamDamage);
   const [showTriangles, setShowTriangles] = useState(true);
   const [teamFormat, setTeamFormat] = useState(initialTeamFormat || 'pc_cc');
   const [p1Element, setP1Element] = useState(equippedElements?.[favoriteId || 'yellow'] || 'basic');
@@ -257,6 +257,8 @@ export default function TeamMode({ onBack, onEnd, matchHandicaps = null, initial
       p1={p1} p1b={p1b} p2={p2} p2b={p2b}
       cpuDifficulty={cpuDifficulty} teamDamage={teamDamage} showTriangles={showTriangles}
       teamFormat={teamFormat}
+      initialStocks={initialStocks}
+      initialStartingDamage={initialStartingDamage}
       onEnd={onEnd} onRematch={() => setRematchNonce(n => n + 1)} musicVolume={musicVolume} sfxVolume={sfxVolume}
       matchTime={matchTime} settings={settings}
       equippedAccessories={equippedAccessories} equippedSkins={equippedSkins} equippedShikigami={equippedShikigami}
@@ -269,7 +271,7 @@ export default function TeamMode({ onBack, onEnd, matchHandicaps = null, initial
   );
 }
 
-function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles, teamFormat, onEnd, onRematch, musicVolume, sfxVolume = 70, matchTime = 240, settings = {}, equippedAccessories = {}, equippedSkins = {}, equippedShikigami = {}, p1Element = 'basic', p1bElement = 'basic', p2Element = 'basic', customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
+function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles, teamFormat, onEnd, onRematch, musicVolume, sfxVolume = 70, matchTime = 240, initialStocks = 3, initialStartingDamage = 0, settings = {}, equippedAccessories = {}, equippedSkins = {}, equippedShikigami = {}, p1Element = 'basic', p1bElement = 'basic', p2Element = 'basic', customCharsData = {}, customNumberMap = {}, equippedEmotes = {} }) {
   const canvasRef = useRef(null);
   const gameRef = useRef(null);
   const keysRef = useRef({});
@@ -322,6 +324,9 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
     const f2 = createFighter({ ...c2, stats: applyElement(c2.stats || {}, teamFormat === 'pp_cc' ? p1bElement : 'basic') }, 350, spawnY, 1);
     const f3 = createFighter({ ...c3, stats: applyElement(c3.stats || {}, teamFormat === 'pc_pc' ? p2Element : 'basic') }, 1030, spawnY, -1);
     const f4 = createFighter(c4, 930, spawnY, -1);
+    const configuredStocks = Math.max(1, Math.min(9, Number(initialStocks) || 3));
+    const configuredDamage = Math.max(0, Math.min(250, Number(initialStartingDamage) || 0));
+    [f1, f2, f3, f4].forEach(f => { f.stocks = configuredStocks; f.damage = configuredDamage; });
     if (matchHandicaps?.enabled) {
       [f1, f2, f3, f4].forEach((f, i) => { f.matchHandicap = normalizeTeamHandicap(matchHandicaps.players?.[i]); });
     }

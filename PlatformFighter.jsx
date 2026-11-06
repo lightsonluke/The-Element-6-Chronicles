@@ -1344,7 +1344,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         drawMovementTrail(ctx, f, equippedMovementTrails?.[effId] || equippedMovementTrails?.[f.char.id], movementTrailHistoryRef.current, `slot-${slot}`, fScale);
         // Shikigami — purely cosmetic floating companion (behind + above the fighter)
         drawShikigamiFollower(ctx, f, botShikigamiRef.current?.[effId], f.frame, fScale);
-        if (!flashing) drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote, f.attackData);
+        if (!flashing) drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote, f.attackData, { vx: f.vx || 0, vy: f.vy || 0, grounded: !!f.grounded, dashTimer: f.dashTimer || 0, dashDir: f.dashDirection || { x: 0, y: 0 }, wallSlide: !!f.wallSlide, wallSide: f.wallSide || 0, hitSide: f._hitSide || 0, memo: (f._rigMemo = f._rigMemo || {}) });
         if (!flashing) {
           const skinParts = getSkinParts(effId, equippedSkins);
           const accs = getEquippedAccessories(botAccessoriesRef.current, effId);

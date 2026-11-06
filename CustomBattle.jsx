@@ -642,7 +642,7 @@ function CustomFight({ fighters, mapId, customPlatforms, customSpawnPoints = nul
         skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, 1, f.char.id, f.state, f.facing, f.powerActive, f.emote));
         if (acc && isBehindAccessory(acc.type)) drawAccessory(ctx, f.x, f.y, acc.type, accColor, f.frame, 1, f.char.id, f.state, f.facing, f.powerActive);
         drawShikigamiFollower(ctx, f, equippedShikigamiRef.current?.[f.char.id], f.frame, 1);
-        drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, 1, f.char.isSpirit, f.state, f.char, f.powerActive, false, null, f.emote, f.attackData);
+        drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, 1, f.char.isSpirit, f.state, f.char, f.powerActive, false, null, f.emote, f.attackData, { vx: f.vx || 0, vy: f.vy || 0, grounded: !!f.grounded, dashTimer: f.dashTimer || 0, dashDir: f.dashDirection || { x: 0, y: 0 }, wallSlide: !!f.wallSlide, wallSide: f.wallSide || 0, hitSide: f._hitSide || 0, memo: (f._rigMemo = f._rigMemo || {}) });
         skinParts.filter(p => !isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, 1, f.char.id, f.state, f.facing, f.powerActive, f.emote));
         if (acc && !isBehindAccessory(acc.type)) drawAccessory(ctx, f.x, f.y, acc.type, accColor, f.frame, 1, f.char.id, f.state, f.facing, f.powerActive);
         if (f.attackData && f.state === 'attacking') drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.progress, f.facing, f.attackData.color || f.char.color, f.attackData.isNormal, f.char.id, f.char.power, f.powerActive);

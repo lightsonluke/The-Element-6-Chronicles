@@ -1224,6 +1224,12 @@ export function drawSuperEffect(ctx, x, y, color, progress, charName = '', charI
   const isG2 = String(charId || '').startsWith('g2_');
   const isG3 = String(charId || '').startsWith('g3_');
   try {
+    // Some legacy signature art contains screen-sized sweeps and filled
+    // polygons. Keep every super visual inside a local arena radius so a hit
+    // cannot paint over the entire gameplay view or replace its backdrop.
+    ctx.beginPath();
+    ctx.arc(x, y - 18, 270, 0, Math.PI * 2);
+    ctx.clip();
     // Small local activation flash only. There is deliberately NO universal
     // circular hitbox visual: the hitbox is defined by the actual super shape.
     if (progress < 0.1) {
@@ -1233,13 +1239,10 @@ export function drawSuperEffect(ctx, x, y, color, progress, charName = '', charI
     }
 
     if (isG1 || isG2 || isG3) {
-      // Gen I supers are authored at their final world scale so the visual and
-      // exact collision geometry occupy the same pixels.
+      // Keep the authored scale for the legacy generations while clipping
+      // unusually large sweeps to the local arena region above.
       drawCharSuper(ctx, x, y, color, progress, charId, facing || 1);
     } else {
-      ctx.beginPath();
-      ctx.arc(x, y - 18, 220, 0, Math.PI * 2);
-      ctx.clip();
       ctx.translate(x, y - 18);
       ctx.scale(0.35, 0.35);
       ctx.translate(-x, -(y - 18));

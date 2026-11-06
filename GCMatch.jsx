@@ -278,7 +278,7 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
         }
         drawDoubleJumpParticles(ctx, f.doubleJumpParticles || []);
         if (!flashing) accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive, f.emote));
-        if (!flashing) drawStickman(ctx, f.x, f.y, col, f.facing, f.frame || 0, 1, (f.resonanceActive ? f.char : charData)?.isSpirit, f.state, f.resonanceActive ? f.char : charData, f.powerActive, false, null, f.emote, f.attackData);
+        if (!flashing) drawStickman(ctx, f.x, f.y, col, f.facing, f.frame || 0, 1, (f.resonanceActive ? f.char : charData)?.isSpirit, f.state, f.resonanceActive ? f.char : charData, f.powerActive, false, null, f.emote, f.attackData, { vx: f.vx || 0, vy: f.vy || 0, grounded: !!f.grounded, dashTimer: f.dashTimer || 0, dashDir: f.dashDirection || { x: 0, y: 0 }, wallSlide: !!f.wallSlide, wallSide: f.wallSide || 0, hitSide: f._hitSide || 0, memo: (f._rigMemo = f._rigMemo || {}) });
         if (!flashing && f.resonanceActive) { try { drawConstructWeapon(ctx,f,1); } catch (error) { console.error('[Grand Circuit Resonance] Weapon render failed safely:',error); } }
         // Attack hitboxes remain invisible during normal play; no red guide/outline is drawn.
         if (!flashing) accs.filter(a => !isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, resolveAccColor(a, charData), f.frame || 0, 1, charData?.id, f.state, f.facing, f.powerActive, f.emote));

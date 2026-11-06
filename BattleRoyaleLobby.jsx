@@ -107,13 +107,19 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
   }, [matchId]);
 
   const startEngine = useCallback((m) => {
+    if (startedRef.current) return;
     startedRef.current = true;
-    const sourcePlayers = Array.isArray(m?.players) && m.players.length ? m.players : players;
+    // Realtime refresh callbacks are intentionally long-lived. Read the latest
+    // roster when a server status update omits its embedded player list, rather
+    // than launching from the empty roster captured by the first render.
+    const sourcePlayers = Array.isArray(m?.players) && m.players.length
+      ? m.players
+      : playersRef.current;
     const roster = buildBattleRoyaleRoster(sourcePlayers, m, Number(m?.max_players || maxPlayers));
     setPlayers(roster);
     setPhase('prematch');
     sfx.matchFound();
-  }, [players, maxPlayers]);
+  }, [maxPlayers]);
 
   // Matchmaking countdown (host only): when it hits 0, fill bots + start.
   // Do NOT restart this timer whenever the participant list refreshes. The lobby
@@ -222,7 +228,7 @@ export default function BattleRoyaleLobby({ onBack, onEnd, unlockedIds, favorite
           {error && <p className="text-xs text-destructive font-body">{error}</p>}
           <UniversalCharacterSelect
             title="PICK YOUR FIGHTER"
-            startLabel=" NEXT"
+            startLabel="NEXT"
             unlockedIds={unlockedIds || ['yellow']}
             favoriteId={favoriteId}
             playerCount={1}

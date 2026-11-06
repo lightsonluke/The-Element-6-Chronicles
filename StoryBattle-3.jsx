@@ -326,7 +326,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
           accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, 1.05, f.char.id, f.state, f.facing, f.powerActive, f.emote));
         }
         drawShikigamiFollower(ctx, f, equippedShikigamiRef.current?.[f.char.id], f.frame, 1.05);
-        if (!flashing) drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, 1.05, f.char.isSpirit, f.state, f.char, f.powerActive, false, null, f.emote, f.attackData);
+        if (!flashing) drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, 1.05, f.char.isSpirit, f.state, f.char, f.powerActive, false, null, f.emote, f.attackData, { vx: f.vx || 0, vy: f.vy || 0, grounded: !!f.grounded, dashTimer: f.dashTimer || 0, dashDir: f.dashDirection || { x: 0, y: 0 }, wallSlide: !!f.wallSlide, wallSide: f.wallSide || 0, hitSide: f._hitSide || 0, memo: (f._rigMemo = f._rigMemo || {}) });
         if (!flashing) {
           const skinParts = getSkinParts(f.char.id, equippedSkins);
           const accs = getEquippedAccessories(botAccessoriesRef.current, f.char.id);
