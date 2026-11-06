@@ -1254,8 +1254,9 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
   // pause or leave — only the mouse/trackpad (or keyboard Esc) can.
   useEffect(() => {
     window.__el6GameplayActive = true;
-    return () => { window.__el6GameplayActive = false; };
-  }, []);
+    window.__el6GameplayCaptureActive = started;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [started]);
 
   return (
     <div className="el6-match-viewport relative flex flex-col items-center w-full">

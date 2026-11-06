@@ -4,6 +4,7 @@ import GameCanvasPortal from './GameCanvasPortal.jsx';
 import GameIcon from './GameIcon.jsx';
 import { ALL_CHARS_MAP } from './allCharacters.js';
 import { drawSportChar } from './sportDraw.jsx';
+import { readGamepadInput } from './controllerProfiles.js';
 
 const W=1280,H=720,PLAYER_R=16,MAX=30;
 const randSeed=s=>{let x=0;for(const c of String(s)){x=(x*31+c.charCodeAt(0))>>>0}return()=>{x^=x<<13;x^=x>>>17;x^=x<<5;return(x>>>0)/4294967296}};
@@ -11,7 +12,9 @@ function makePlatforms(seed){const r=randSeed(seed),out=[];for(let i=0;i<260;i++
 function botState(i,r){return{x:180+i*22,y:120+(i%5)*30,vx:2.6+r()*0.8,vy:0,alive:true,attack:0,jump:Math.floor(r()*90)}}
 export default function RaceGame({matchId,me,players,seed,settings={},sfxVolume=70,musicVolume=50,onEnd}){
  const canvasRef=useRef(null),keys=useRef({}),frame=useRef(0),state=useRef(null),channel=useRef(null),winnerSent=useRef(false);
- const [finished,setFinished]=useState(null); const [alive,setAlive]=useState(true);
+  const settingsRef=useRef(settings); settingsRef.current=settings;
+  const [finished,setFinished]=useState(null); const [alive,setAlive]=useState(true);
+  useEffect(()=>{const active=!finished;window.__el6GameplayActive=active;window.__el6GameplayCaptureActive=active;return()=>{window.__el6GameplayActive=false;window.__el6GameplayCaptureActive=false}},[finished]);
  useEffect(()=>{
   const roster=[...(players||[])];const r=randSeed(seed);
   while(roster.length<MAX)roster.push({user_id:`bot:${roster.length+1}`,loadout:{username:`BOT ${String(roster.length+1).padStart(2,'0')}`,character_id:'yellow'},player_slot:roster.length+1,is_bot:true});
@@ -26,8 +29,8 @@ export default function RaceGame({matchId,me,players,seed,settings={},sfxVolume=
   let raf=0,last=performance.now();
   const loop=now=>{const dt=Math.min(32,now-last)/16.67;last=now;const st=state.current;if(!st||st.finished)return;
    frame.current++;st.wall+=0.65*dt;Object.values(st.players).forEach(p=>{p.frame=(p.frame||0)+dt});
-   const mep=st.players[localId]; if(mep&&mep.alive){mep.vx=3.4; if(keys.current.arrowleft)mep.vx=2.2;if(keys.current.arrowright)mep.vx=4.2;if((keys.current[' ']||keys.current.arrowup)&&mep.ground&&frame.current%12===0){mep.vy=-10;mep.ground=false}mep.vy+=0.48*dt;mep.x+=mep.vx*dt;mep.y+=mep.vy*dt;mep.ground=false;
-    if(keys.current['x']&&mep.attack<=0){mep.attack=18;const near=Object.values(st.players).filter(p=>p.id!==localId&&p.alive&&Math.abs(p.x-mep.x)<85&&Math.abs(p.y-mep.y)<55);near.forEach(p=>{p.x-=4;p.vx=Math.max(1,p.vx-0.8)})}mep.attack=Math.max(0,mep.attack-1);
+    const mep=st.players[localId]; const pad=settingsRef.current.controllerEnabled===false?null:readGamepadInput(0); if(mep&&mep.alive){mep.vx=3.4; if(keys.current.arrowleft||pad?.left)mep.vx=2.2;if(keys.current.arrowright||pad?.right)mep.vx=4.2;if((keys.current[' ']||keys.current.arrowup||pad?.jump)&&mep.ground&&frame.current%12===0){mep.vy=-10;mep.ground=false}mep.vy+=0.48*dt;mep.x+=mep.vx*dt;mep.y+=mep.vy*dt;mep.ground=false;
+     if((keys.current['x']||pad?.heavy||pad?.sig)&&mep.attack<=0){mep.attack=18;const near=Object.values(st.players).filter(p=>p.id!==localId&&p.alive&&Math.abs(p.x-mep.x)<85&&Math.abs(p.y-mep.y)<55);near.forEach(p=>{p.x-=4;p.vx=Math.max(1,p.vx-0.8)})}mep.attack=Math.max(0,mep.attack-1);
     if(mep.y>H+100||mep.x<st.wall+35){mep.alive=false;setAlive(false)}
    }
    Object.values(st.players).forEach((p,i)=>{if(p.id===localId||!p.alive)return;if(p.isBot){if(frame.current%60===0&&p.y>H-120)p.vy=-10;p.vy+=0.48*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.jump=(p.jump+1)%90;if(p.x<st.wall+35||p.y>H+100)p.alive=false}});
@@ -39,7 +42,7 @@ export default function RaceGame({matchId,me,players,seed,settings={},sfxVolume=
    draw(canvasRef.current?.getContext('2d'),st,localId);raf=requestAnimationFrame(loop)
   };raf=requestAnimationFrame(loop);
   return()=>{cancelAnimationFrame(raf);window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku);if(channel.current)supabase.removeChannel(channel.current)}
- },[matchId]);
+  },[matchId]);
  useEffect(()=>{if(finished&&finished===me?.id){setTimeout(()=>onEnd?.({winner:finished}),1800)}},[finished,me?.id]);
  const draw=(ctx,st,localId)=>{if(!ctx)return;ctx.clearRect(0,0,W,H);ctx.fillStyle='#07111f';ctx.fillRect(0,0,W,H);
    const camX=Math.max(0,(st.players[localId]?.x||0)-300);ctx.save();ctx.translate(-camX,0);

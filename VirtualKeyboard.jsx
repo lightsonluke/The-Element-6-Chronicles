@@ -15,19 +15,36 @@ const ROWS = [
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
   ['SPACE', 'BACK', 'DONE'],
 ];
+const NUMBER_ROWS = [
+  ['1', '2', '3'],
+  ['4', '5', '6'],
+  ['7', '8', '9'],
+  ['-', '0', '.'],
+  ['BACK', 'DONE'],
+];
 
 const NON_TEXT_TYPES = new Set([
   'range', 'checkbox', 'radio', 'file', 'submit', 'button', 'image', 'reset',
-  'color', 'date', 'datetime-local', 'month', 'time', 'week', 'number',
+  'color', 'date', 'datetime-local', 'month', 'time', 'week',
 ]);
 
-function clampCursor(r, c) {
-  if (r < 0) r = ROWS.length - 1;
-  if (r >= ROWS.length) r = 0;
-  const len = ROWS[r].length;
+function clampCursor(r, c, rows = ROWS) {
+  if (r < 0) r = rows.length - 1;
+  if (r >= rows.length) r = 0;
+  const len = rows[r].length;
   if (c < 0) c = len - 1;
   if (c >= len) c = 0;
   return { r, c };
+}
+
+function readActiveMenuPad() {
+  const pads = typeof navigator !== 'undefined' && navigator.getGamepads
+    ? Array.from(navigator.getGamepads()).filter(Boolean).map((pad, slot) => ({ pad, slot })).filter(entry => entry.pad.connected)
+    : [];
+  const inputs = pads.map(entry => readGamepadInput(entry.slot)).filter(Boolean);
+  if (!inputs.length) return null;
+  const active = inputs.find(input => input.up || input.down || input.left || input.right || input.confirm || input.back || input.start);
+  return active || inputs[0];
 }
 
 export default function VirtualKeyboard() {
@@ -36,6 +53,7 @@ export default function VirtualKeyboard() {
   const [preview, setPreview] = useState('');
   const targetRef = useRef(null);
   const cursorRef = useRef({ r: 0, c: 0 });
+  const rowsRef = useRef(ROWS);
 
   const close = () => {
     sfx.click();
@@ -49,8 +67,9 @@ export default function VirtualKeyboard() {
     if (!el) { close(); return; }
     if (key === 'DONE') { close(); return; }
     sfx.click();
-    const start = el.selectionStart ?? el.value.length;
-    const end = el.selectionEnd ?? el.value.length;
+    let start = el.value.length;
+    let end = start;
+    try { if (el.type !== 'number') { start = el.selectionStart ?? start; end = el.selectionEnd ?? end; } } catch {}
     let val = el.value;
     let pos = start;
     if (key === 'BACK') {
@@ -78,7 +97,7 @@ export default function VirtualKeyboard() {
       let { r, c } = prev;
       if (d === 'up') r--; else if (d === 'down') r++;
       else if (d === 'left') c--; else if (d === 'right') c++;
-      const next = clampCursor(r, c);
+      const next = clampCursor(r, c, rowsRef.current);
       cursorRef.current = next;
       sfx.click();
       return next;
@@ -94,9 +113,10 @@ export default function VirtualKeyboard() {
       if (el.tagName === 'INPUT' && NON_TEXT_TYPES.has(el.type)) return;
       if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return;
       if (el.readOnly || el.disabled) return;
-      const gps = typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+      const gps = typeof navigator !== 'undefined' && navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(pad => pad?.connected) : [];
       if (gps.length === 0) return;
       targetRef.current = el;
+      rowsRef.current = el.type === 'number' ? NUMBER_ROWS : ROWS;
       cursorRef.current = { r: 0, c: 0 };
       setCursor({ r: 0, c: 0 });
       setPreview(el.value || '');
@@ -133,7 +153,7 @@ export default function VirtualKeyboard() {
     const last = { up: false, down: false, left: false, right: false, confirm: false, back: false };
     let repeat = 0;
     const tick = () => {
-      const gp = readGamepadInput(0);
+      const gp = readActiveMenuPad();
       if (gp) {
         const dir = { up: gp.up, down: gp.down, left: gp.left, right: gp.right };
         repeat++;
@@ -145,7 +165,7 @@ export default function VirtualKeyboard() {
         const confirm = !!(gp.confirm ?? gp.jump);
         const back = !!(gp.back ?? gp.power);
         if (confirm && !last.confirm) {
-          typeKey(ROWS[cursorRef.current.r]?.[cursorRef.current.c]);
+          typeKey(rowsRef.current[cursorRef.current.r]?.[cursorRef.current.c]);
         }
         if (back && !last.back) close();
         last.confirm = confirm;
@@ -160,7 +180,7 @@ export default function VirtualKeyboard() {
   if (!active) return null;
 
   return (
-    <div data-el6-virtual-keyboard="true" className="fixed bottom-0 left-0 right-0 z-[200] flex flex-col items-center gap-2 p-3 bg-background/95 backdrop-blur border-t-2 border-accent shadow-2xl">
+    <div role="dialog" aria-modal="true" aria-label="Controller keyboard" data-el6-virtual-keyboard="true" className="e6-controller-keyboard fixed bottom-0 left-0 right-0 z-[200] flex flex-col items-center gap-2 p-3 bg-background/95 backdrop-blur border-t-2 border-accent shadow-2xl">
       <div className="flex items-center gap-3 w-full max-w-2xl justify-center">
         <p className="text-[10px] font-heading text-muted-foreground whitespace-nowrap"><GameIcon icon="controller" size={14} /> D-Pad: move · A: type · B: close</p>
         <div className="flex-1 min-w-0 px-3 py-1 bg-muted/50 rounded font-body text-sm text-foreground truncate text-center">
@@ -169,7 +189,7 @@ export default function VirtualKeyboard() {
         </div>
       </div>
       <div className="flex flex-col gap-1.5 w-full max-w-2xl">
-        {ROWS.map((row, r) => (
+        {rowsRef.current.map((row, r) => (
           <div key={r} className="flex gap-1.5 justify-center flex-wrap">
             {row.map((key, c) => {
               const sel = cursor.r === r && cursor.c === c;

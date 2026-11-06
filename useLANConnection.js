@@ -30,6 +30,8 @@ export function useLANConnection() {
   const roomIdRef = useRef(null);
   const lastRecvRef = useRef(Date.now());
   const streamRef = useRef(null);
+  const streamBusyRef = useRef(false);
+  const streamGenerationRef = useRef(0);
   const tickRef = useRef(0);
   const lastMsgTickRef = useRef(-1);
   const isHostRef = useRef(false);
@@ -132,28 +134,67 @@ export function useLANConnection() {
 
   const waitForIce = (pc) => new Promise((resolve) => {
     if (pc.iceGatheringState === 'complete') return resolve();
+    let settled = false;
+    let timeout;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearInterval(check);
+      clearTimeout(timeout);
+      resolve();
+    };
     const check = setInterval(() => {
-      if (pc.iceGatheringState === 'complete') { clearInterval(check); resolve(); }
+      if (pc.iceGatheringState === 'complete') finish();
     }, 100);
-    setTimeout(() => { clearInterval(check); resolve(); }, 3000);
+    timeout = setTimeout(finish, 3000);
   });
 
   const startStream = useCallback((canvas, fps = 8) => {
     if (streamRef.current) clearInterval(streamRef.current);
+    streamBusyRef.current = false;
+    const generation = ++streamGenerationRef.current;
     const iv = setInterval(() => {
+      const dc = dcRef.current;
+      if (!dc || dc.readyState !== 'open' || !canvas || streamBusyRef.current || dc.bufferedAmount > 1_000_000) return;
+      streamBusyRef.current = true;
       try {
-        const dc = dcRef.current;
-        if (!dc || dc.readyState !== 'open' || !canvas) return;
-        const d = canvas.toDataURL('image/jpeg', 0.32);
-        dc.send(JSON.stringify({ type: '__frame', d }));
-      } catch (_) { /* ignore */ }
+        canvas.toBlob(blob => {
+          if (generation !== streamGenerationRef.current) return;
+          if (!blob) { streamBusyRef.current = false; return; }
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (generation !== streamGenerationRef.current) return;
+            const currentChannel = dcRef.current;
+            if (currentChannel === dc && dc.readyState === 'open' && typeof reader.result === 'string') {
+              try { dc.send(JSON.stringify({ type: '__frame', d: reader.result })); } catch (_) { /* connection closed */ }
+            }
+            streamBusyRef.current = false;
+          };
+          reader.onerror = () => { if (generation === streamGenerationRef.current) streamBusyRef.current = false; };
+          reader.readAsDataURL(blob);
+        }, 'image/jpeg', 0.32);
+      } catch (_) { streamBusyRef.current = false; }
     }, Math.max(80, Math.round(1000 / fps)));
     streamRef.current = iv;
   }, []);
 
   const stopStream = useCallback(() => {
     if (streamRef.current) { clearInterval(streamRef.current); streamRef.current = null; }
+    streamGenerationRef.current++;
+    streamBusyRef.current = false;
   }, []);
+
+  const resetPeer = useCallback(() => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    stopStream();
+    try { dcRef.current?.close(); } catch (_) {}
+    try { pcRef.current?.close(); } catch (_) {}
+    dcRef.current = null;
+    pcRef.current = null;
+    roomIdRef.current = null;
+    messageQueueRef.current = [];
+    lastStateMessageRef.current = null;
+  }, [stopStream]);
 
   const createRoom = useCallback(async (hostUserId, hostName, gameMode, hostChar, hostElement, customCode) => {
     setIsHost(true);
@@ -162,7 +203,9 @@ export function useLANConnection() {
     setError(null);
 
     const code = customCode || Math.random().toString(36).slice(2, 8).toUpperCase();
-    const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    let pc;
+    try { pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }); }
+    catch (createError) { setError(createError?.message || 'WebRTC is unavailable in this browser.'); setStatus('error'); throw createError; }
     pcRef.current = pc;
 
     const dc = pc.createDataChannel('game', { ordered: true });
@@ -173,43 +216,51 @@ export function useLANConnection() {
       if (e.candidate) iceCandidates.push(JSON.stringify(e.candidate));
     };
 
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    await waitForIce(pc);
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await waitForIce(pc);
 
-    const { data: room, error: roomError } = await supabase.rpc('create_element6_lan_room', {
-      p_room_code: code, p_game_mode: gameMode, p_host_char: hostChar,
-      p_host_element: hostElement || 'basic', p_host_sdp: JSON.stringify(pc.localDescription), p_host_ice: iceCandidates,
-    });
-    if (roomError) throw roomError;
-    const createdRoom = Array.isArray(room) ? room[0] : room;
-    if (!createdRoom?.id) throw new Error('LAN room was not created.');
+      const { data: room, error: roomError } = await supabase.rpc('create_element6_lan_room', {
+        p_room_code: code, p_game_mode: gameMode, p_host_char: hostChar,
+        p_host_element: hostElement || 'basic', p_host_sdp: JSON.stringify(pc.localDescription), p_host_ice: iceCandidates,
+      });
+      if (roomError) throw roomError;
+      const createdRoom = Array.isArray(room) ? room[0] : room;
+      if (!createdRoom?.id) throw new Error('LAN room was not created.');
 
-    roomIdRef.current = createdRoom.id;
-    setRoomCode(code);
+      roomIdRef.current = createdRoom.id;
+      setRoomCode(code);
 
-    pollRef.current = setInterval(async () => {
-      try {
-        const { data: updated } = await supabase.from('element6_lan_rooms').select('*').eq('id', createdRoom.id).maybeSingle();
-        if (!updated) return;
-        if (updated.guest_sdp && pc.currentRemoteDescription === null) {
-          await pc.setRemoteDescription(JSON.parse(updated.guest_sdp));
-          setOpponentChar(updated.guest_char);
-          setOpponentElement(updated.guest_element || 'basic');
-          setOpponentName(updated.guest_name);
-        }
-        if (updated.guest_ice && updated.guest_ice.length > 0) {
-          for (const iceStr of updated.guest_ice) {
-            try { await pc.addIceCandidate(JSON.parse(iceStr)); } catch (_) { /* ignore */ }
+      pollRef.current = setInterval(async () => {
+        try {
+          const { data: updated } = await supabase.from('element6_lan_rooms').select('*').eq('id', createdRoom.id).maybeSingle();
+          if (!updated) return;
+          if (updated.guest_sdp && pc.currentRemoteDescription === null) {
+            await pc.setRemoteDescription(JSON.parse(updated.guest_sdp));
+            setOpponentChar(updated.guest_char);
+            setOpponentElement(updated.guest_element || 'basic');
+            setOpponentName(updated.guest_name);
           }
-        }
-        if (updated.status === 'closed') {
-          setStatus('closed');
-          clearInterval(pollRef.current);
-        }
-      } catch (_) { /* ignore poll errors */ }
-    }, 1000);
-  }, [setupDataChannel]);
+          if (updated.guest_ice && updated.guest_ice.length > 0) {
+            for (const iceStr of updated.guest_ice) {
+              try { await pc.addIceCandidate(JSON.parse(iceStr)); } catch (_) { /* ignore */ }
+            }
+          }
+          if (updated.status === 'closed') {
+            setStatus('closed');
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+        } catch (_) { /* ignore transient poll errors */ }
+      }, 1000);
+    } catch (createError) {
+      resetPeer();
+      setError(createError?.message || 'Could not create the peer connection.');
+      setStatus('error');
+      throw createError;
+    }
+  }, [setupDataChannel, resetPeer]);
 
   const joinRoom = useCallback(async (code, guestUserId, guestName, guestChar, guestElement) => {
     setIsHost(false);
@@ -217,11 +268,14 @@ export function useLANConnection() {
     setStatus('joining');
     setError(null);
 
-    const { data: rooms, error: findError } = await supabase.from('element6_lan_rooms').select('*').eq('room_code', code).eq('status', 'open').limit(1);
+    let rooms, findError;
+    try { ({ data: rooms, error: findError } = await supabase.from('element6_lan_rooms').select('*').eq('room_code', code).eq('status', 'open').limit(1)); }
+    catch (lookupError) { setError(lookupError?.message || 'Could not look up the room.'); setStatus('error'); throw lookupError; }
     if (findError || !rooms?.length) {
-      setError('Room not found or already closed');
+      const lookupError=findError||new Error('Room not found or already closed');
+      setError(lookupError.message);
       setStatus('error');
-      return;
+      throw lookupError;
     }
 
     const room = rooms[0];
@@ -231,7 +285,9 @@ export function useLANConnection() {
     setOpponentElement(room.host_element || 'basic');
     setOpponentName(room.host_name);
 
-    const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    let pc;
+    try { pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }); }
+    catch (createError) { setError(createError?.message || 'WebRTC is unavailable in this browser.'); setStatus('error'); throw createError; }
     pcRef.current = pc;
 
     pc.ondatachannel = (e) => setupDataChannel(e.channel);
@@ -241,57 +297,60 @@ export function useLANConnection() {
       if (e.candidate) iceCandidates.push(JSON.stringify(e.candidate));
     };
 
-    await pc.setRemoteDescription(JSON.parse(room.host_sdp));
-    if (room.host_ice) {
-      for (const iceStr of room.host_ice) {
-        try { await pc.addIceCandidate(JSON.parse(iceStr)); } catch (_) { /* ignore */ }
+    try {
+      await pc.setRemoteDescription(JSON.parse(room.host_sdp));
+      if (room.host_ice) {
+        for (const iceStr of room.host_ice) {
+          try { await pc.addIceCandidate(JSON.parse(iceStr)); } catch (_) { /* ignore */ }
+        }
       }
+
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await waitForIce(pc);
+
+      const { error: joinError } = await supabase.rpc('join_element6_lan_room', {
+        p_room_code: code, p_guest_char: guestChar, p_guest_element: guestElement || 'basic',
+        p_guest_sdp: JSON.stringify(pc.localDescription), p_guest_ice: iceCandidates,
+      });
+      if (joinError) throw joinError;
+
+      pollRef.current = setInterval(async () => {
+        try {
+          if (pc.connectionState === 'closed') {
+            setStatus('closed');
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+            return;
+          }
+          const { data: updated } = await supabase.from('element6_lan_rooms').select('*').eq('id', room.id).maybeSingle();
+          if (updated?.status === 'closed') {
+            setStatus('closed');
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+        } catch (_) { /* ignore transient poll errors */ }
+      }, 2000);
+    } catch (joinError) {
+      resetPeer();
+      setError(joinError?.message || 'Could not join the peer connection.');
+      setStatus('error');
+      throw joinError;
     }
-
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    await waitForIce(pc);
-
-    const { error: joinError } = await supabase.rpc('join_element6_lan_room', {
-      p_room_code: code, p_guest_char: guestChar, p_guest_element: guestElement || 'basic',
-      p_guest_sdp: JSON.stringify(pc.localDescription), p_guest_ice: iceCandidates,
-    });
-    if (joinError) throw joinError;
-
-    pollRef.current = setInterval(async () => {
-      try {
-        // Only treat a fully-closed peer connection as a disconnect.
-        // Transient 'disconnected'/'failed' states (common during ICE
-        // renegotiation on LAN) are tolerated — the data channel's onclose
-        // is the reliable signal that the peer actually left.
-        if (pc.connectionState === 'closed') {
-          setStatus('closed');
-          clearInterval(pollRef.current);
-          return;
-        }
-        const { data: updated } = await supabase.from('element6_lan_rooms').select('*').eq('id', room.id).maybeSingle();
-        if (updated.status === 'closed') {
-          setStatus('closed');
-          clearInterval(pollRef.current);
-        }
-      } catch (_) { /* ignore */ }
-    }, 2000);
-  }, [setupDataChannel]);
+  }, [setupDataChannel, resetPeer]);
 
   const closeConnection = useCallback(async () => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    stopStream();
-    if (dcRef.current) dcRef.current.close();
-    if (pcRef.current) pcRef.current.close();
-    if (roomIdRef.current) {
-      try { await supabase.rpc('close_element6_lan_room', { p_room_id: roomIdRef.current }); } catch (_) { /* ignore */ }
+    const activeRoomId = roomIdRef.current;
+    resetPeer();
+    if (activeRoomId) {
+      try { await supabase.rpc('close_element6_lan_room', { p_room_id: activeRoomId }); } catch (_) { /* ignore */ }
     }
     setStatus('idle');
     setRoomCode(null);
     setOpponentChar(null);
     setOpponentName(null);
     setFrameUrl(null);
-  }, [stopStream]);
+  }, [resetPeer]);
 
   // Heartbeat + stall detection (runs for the component lifetime)
   // Uses netCore ConnectionState for timeout/reconnection tracking.

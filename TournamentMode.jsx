@@ -147,7 +147,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
 
         <div className="bg-card border-2 border-accent rounded-xl p-6 text-center">
           <h3 className="font-heading text-lg text-accent mb-2">CHOOSE YOUR FIGHTER</h3>
-          <p className="text-xs text-muted-foreground font-body mb-4"><GameIcon icon="warning" size={14} /> This is locked for the entire tournament — choose wisely!</p>
+          <p className="text-xs text-muted-foreground font-body mb-4"><GameIcon icon="lock" size={14} /> This is locked for the entire tournament — choose wisely!</p>
           <div className="flex items-center justify-center gap-2 mb-4">
             <span className="text-xs font-heading text-muted-foreground">CPU Difficulty:</span>
             <select value={cpuDifficulty} onChange={e => setCpuDifficulty(e.target.value)}

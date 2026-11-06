@@ -3,6 +3,7 @@ import { ALL_CHARS } from './allCharacters.js';
 import { ERA_OPTIONS, ALIGNMENTS, getPowerName, filterCharacters, sortByEra } from './charSelectHelpers.js';
 import { sfx } from './sfx.js';
 import GameIcon from "./GameIcon.jsx";
+import MatchSettingsOverlay from './MatchSettingsOverlay.jsx';
 
 const DIFFICULTIES = ['newcomer', 'beginner', 'easy', 'amateur', 'regular', 'pro', 'hard', 'insane', 'honored'];
 
@@ -51,6 +52,7 @@ export default function ShapeshiftSelect({
   const [cpuDifficulty, setCpuDifficulty] = useState(defaultCPUDifficulty);
   const [p1Element, setP1Element] = useState('basic');
   const [p2Element, setP2Element] = useState('basic');
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [era, setEra] = useState('all');
   const [alignment, setAlignment] = useState('all');
@@ -122,13 +124,24 @@ export default function ShapeshiftSelect({
   };
 
   return (
-    <div className="w-full max-w-5xl flex flex-col gap-3">
+    <div className="e6-character-select-screen el6-character-select-scroll w-full max-w-5xl mx-auto h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] flex flex-col gap-3 overflow-y-auto overflow-x-hidden overscroll-contain pb-28" tabIndex={-1}>
+      <MatchSettingsOverlay
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        readOnly
+        modeLabel="Shapeshift"
+        config={{ mode: 'Fight', fightVariant: 'Shapeshift', slotCount: 2, slots: [{ kind: 'player' }, { kind: p2IsCPU ? 'cpu' : 'player' }], characterNames: [...p1Team, ...p2Team].map(id => getChar(id)?.name).filter(Boolean) }}
+        onChange={() => {}}
+      />
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-heading text-primary tracking-wider">SHAPESHIFT MODE</h2>
           <p className="text-xs text-muted-foreground font-body">Pick 3 fighters per team. Press SUPER in-game to morph — stocks & damage persist, supers disabled.</p>
         </div>
-        <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setSettingsOpen(true)} className="px-3 py-2 bg-primary/20 text-primary rounded-lg font-heading text-xs hover:opacity-80">MATCH SETTINGS</button>
+          <button onClick={onBack} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-heading text-sm hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
+        </div>
       </div>
 
       {/* Team panels */}
@@ -227,7 +240,7 @@ export default function ShapeshiftSelect({
       </div>
 
       {/* Start button */}
-      <div className="flex justify-center">
+      <div className="e6-character-select-start flex justify-center">
         <button onClick={handleStart} disabled={!p1Ready || !p2Ready}
           className={`px-10 py-3 rounded-lg font-heading text-lg transition ${p1Ready && p2Ready ? 'bg-primary text-primary-foreground hover:opacity-80 shadow-lg' : 'bg-secondary text-muted-foreground cursor-not-allowed'}`}>
           {p1Ready && p2Ready ? ' START SHAPESHIFT' : 'FILL ALL 6 SLOTS'}

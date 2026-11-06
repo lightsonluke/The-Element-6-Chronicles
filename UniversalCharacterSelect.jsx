@@ -428,7 +428,9 @@ export default function UniversalCharacterSelect({
     });
   }, [p2, p2IsCPU, equippedElements, playerCount]);
 
-  if (cpuOnly && !p2IsCPU) setP2IsCPU(true);
+  useEffect(() => {
+    if (cpuOnly) setP2IsCPU(true);
+  }, [cpuOnly]);
 
   const filtered = useMemo(() => {
     let result = filterCharacters(ALL_DISPLAY, { era, alignment });
@@ -499,14 +501,14 @@ export default function UniversalCharacterSelect({
 
   return (
     <div className="e6-character-select-screen el6-character-select-scroll flex flex-col gap-3 w-full max-w-6xl mx-auto h-[calc(100dvh-24px)] max-h-[calc(100dvh-24px)] overflow-y-auto overflow-x-hidden overscroll-contain pr-2 pb-28" tabIndex={-1}>
-      {enableMatchSettings && <MatchSettingsOverlay open={settingsOpen} onClose={() => setSettingsOpen(false)} config={{ ...matchConfig, customControls: settings?.customControls || [], characterNames: picks.slice(0, activePlayerCount).map(id => ALL_CHARS.find(c => c.id === id)?.name || id) }} onChange={handleMatchConfigChange} />}
+      <MatchSettingsOverlay open={settingsOpen} onClose={() => setSettingsOpen(false)} readOnly={!enableMatchSettings} modeLabel={modeLabel || title} config={{ ...matchConfig, customControls: settings?.customControls || [], characterNames: picks.slice(0, activePlayerCount).map(id => ALL_CHARS.find(c => c.id === id)?.name || id) }} onChange={handleMatchConfigChange} />
       {/* Header */}
       <div className="e6-character-select-header flex justify-between items-center">
         <h2 className="text-xl font-heading text-foreground tracking-wider">MANAGE MATCH</h2>
         <div className="flex gap-2 items-center">
           {rankedRandom && <span className="text-[9px] text-muted-foreground"><GameIcon icon="lock" size={14} /> P2: Random</span>}
           <button onClick={onBack} className="px-2 py-1 bg-muted text-muted-foreground rounded font-heading text-xs hover:opacity-80"><GameIcon icon="info" size={14} /> BACK</button>
-          {enableMatchSettings && <button onClick={() => setSettingsOpen(true)} className="px-2 py-1 bg-primary text-primary-foreground rounded font-heading text-xs hover:opacity-80">MATCH SETTINGS</button>}
+          <button onClick={() => setSettingsOpen(true)} className="px-2 py-1 bg-primary text-primary-foreground rounded font-heading text-xs hover:opacity-80">MATCH SETTINGS</button>
         </div>
       </div>
 
@@ -684,7 +686,7 @@ export default function UniversalCharacterSelect({
       {extraControls}
 
       {/* Start button */}
-      <div className="flex flex-col gap-1 items-center">
+      <div className="e6-character-select-start flex flex-col gap-1 items-center">
         {p1Locked && <p className="text-[9px] text-destructive font-heading"><GameIcon icon="lock" size={14} /> P1 character is locked — unlock in Shop to use</p>}
         {p2Locked && <p className="text-[9px] text-destructive font-heading"><GameIcon icon="lock" size={14} /> P2 character is locked — unlock in Shop to use</p>}
         <button onClick={handleStart} disabled={!canStart}

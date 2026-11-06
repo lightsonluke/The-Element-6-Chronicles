@@ -388,7 +388,8 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
   // accidentally click Retreat; re-enable when the battle ends so CONTINUE is clickable.
   useEffect(() => {
     window.__el6GameplayActive = !result;
-    return () => { window.__el6GameplayActive = false; };
+    window.__el6GameplayCaptureActive = !result;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
   }, [result]);
 
   return (
@@ -404,7 +405,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
       <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs">{paused ? 'RESUME' : 'PAUSE (ESC)'}</button>
       {paused && <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 pointer-events-none"><div className="bg-card border-2 border-accent rounded-xl px-8 py-6 text-center"><p className="font-heading text-3xl text-accent">PAUSED</p><p className="text-xs text-muted-foreground mt-2">Press ESC or P to resume.</p></div></div>}
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={W} height={H} className="border-2 border-destructive/50 rounded-lg shadow-2xl" style={{ maxWidth: '100%' }} />
+        <canvas ref={canvasRef} width={W} height={H} data-e6-game-canvas="true" className="el6-match-canvas border-2 border-destructive/50 rounded-lg shadow-2xl" style={{ maxWidth: '100%' }} />
       </GameCanvasPortal>
       {result && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-lg gap-4">

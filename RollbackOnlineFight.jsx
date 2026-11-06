@@ -23,11 +23,11 @@ import { readGamepadInput } from './controllerProfiles.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { drawAccessory, getEquippedAccessories, isBehindAccessory, resolveAccColor } from './cosmetics.js';
 import { drawShikigamiFollower } from './shikigami.js';
+import { drawMovementTrail } from './movementTrails.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import PauseMenu from './PauseMenu.jsx';
 import GameIcon from './GameIcon.jsx';
-import { useClipRecorder } from './useClipRecorder.js';
 import { RollbackSession } from './rollback/rollbackSession.js';
 import { SupabaseRollbackTransport } from './rollback/realtimeTransport.js';
 import { checksumState } from './rollback/stateChecksum.js';
@@ -94,7 +94,6 @@ export default function RollbackOnlineFight({
   const [connectionText, setConnectionText] = useState('CONNECTING…');
   const [networkError, setNetworkError] = useState(null);
   const [resyncing, setResyncing] = useState(false);
-  useClipRecorder(canvasRef);
 
   const isHost = role === 'host';
   const myCharData = getCharData(myChar);
@@ -136,6 +135,7 @@ export default function RollbackOnlineFight({
     let lastPeerMessageAt = Date.now();
     let transport;
     let session;
+    const movementTrailHistory = {};
 
     const hostCharacter = isHost ? myCharData : oppCharData;
     const guestCharacter = isHost ? oppCharData : myCharData;
@@ -184,6 +184,7 @@ export default function RollbackOnlineFight({
       const skinColor = getCharRenderColor(character.id, loadout?.equippedSkins);
       skinParts.filter(part => isBehindAccessory(part.type)).forEach(part => drawAccessory(ctx, fighter.x, fighter.y, part.type, part.color, fighter.frame, 1, character.id, fighter.state, fighter.facing, fighter.powerActive, fighter.emote));
       accessories.filter(accessory => isBehindAccessory(accessory.type)).forEach(accessory => drawAccessory(ctx, fighter.x, fighter.y, accessory.type, skinColor && accessory.type === 'soccer_kit' ? skinColor : resolveAccColor(accessory, character), fighter.frame, 1, character.id, fighter.state, fighter.facing, fighter.powerActive, fighter.emote));
+      drawMovementTrail(ctx, fighter, loadout?.equippedMovementTrails?.[character.id], movementTrailHistory, label);
       drawStickman(ctx, fighter.x, fighter.y, renderColor, fighter.facing, fighter.frame, 1, character.isSpirit, fighter.state, character, fighter.powerActive, false, null, fighter.emote, fighter.attackData);
       skinParts.filter(part => !isBehindAccessory(part.type)).forEach(part => drawAccessory(ctx, fighter.x, fighter.y, part.type, part.color, fighter.frame, 1, character.id, fighter.state, fighter.facing, fighter.powerActive, fighter.emote));
       accessories.filter(accessory => !isBehindAccessory(accessory.type)).forEach(accessory => drawAccessory(ctx, fighter.x, fighter.y, accessory.type, skinColor && accessory.type === 'soccer_kit' ? skinColor : resolveAccColor(accessory, character), fighter.frame, 1, character.id, fighter.state, fighter.facing, fighter.powerActive, fighter.emote));
@@ -481,8 +482,9 @@ export default function RollbackOnlineFight({
 
   useEffect(() => {
     window.__el6GameplayActive = !winner;
-    return () => { window.__el6GameplayActive = false; };
-  }, [winner]);
+    window.__el6GameplayCaptureActive = gameStarted && !winner;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [gameStarted, winner]);
 
   if (winner) {
     const won = winner === 'me';
@@ -511,7 +513,7 @@ export default function RollbackOnlineFight({
       {networkError && <p className="text-xs text-destructive font-body">{networkError}</p>}
       {resyncing && <div className="absolute inset-0 z-20 grid place-items-center bg-black/70 font-heading text-accent text-2xl">RESYNCING MATCH…</div>}
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={ONLINE_STAGE_WIDTH} height={ONLINE_STAGE_HEIGHT} className="el6-match-canvas" />
+        <canvas ref={canvasRef} width={ONLINE_STAGE_WIDTH} height={ONLINE_STAGE_HEIGHT} data-e6-game-canvas="true" className="el6-match-canvas" />
       </GameCanvasPortal>
       {countdown > 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">

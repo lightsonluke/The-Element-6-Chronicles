@@ -7,6 +7,8 @@
 // Renderers use gradient shading, layered body parts, secondary motion
 // (tail wag, wing flap, ear twitch), and ambient particles for depth.
 
+import { BATTLE_PASSES_2027, HOLIDAY_EVENTS_2027 } from './season2027.js';
+
 const GLOW = (ctx, x, y, r, color, a = 0.5) => {
   const g = ctx.createRadialGradient(x, y, 0, x, y, r);
   g.addColorStop(0, color);
@@ -126,8 +128,99 @@ export const SHIKIGAMI = [
   { id: 'enko', name: 'Enko', desc: 'Playful Japanese monkey spirit with a red scarf and a peach-shaped charm.', price: 200, color: '#B86F4C', accent: '#FFB6C1', draw: drawEnko },
 ];
 
-// All Shikigami cost the same price
-SHIKIGAMI.forEach(s => { s.price = 2000; });
+const EVENT_SPIRIT_COLORS = {
+  'frost-found-2027': ['#DFF6FF','#75CFFF'], 'yokai-rising-2027': ['#542A81','#D58BFF'],
+  'petal-metal-2027': ['#FFB9D2','#FF6EAA'], 'six-oclock-2027': ['#FFB85C','#FFE36F'],
+  'out-of-this-element-2027': ['#5652A3','#7FE6FF'], 'sixth-eclipse-2027': ['#70253C','#FF526A'],
+  'new-year-2027': ['#E9C66D','#FFF0A8'], 'new-year-2028': ['#E9C66D','#FFF0A8'],
+  'love-at-first-fight': ['#F28BA8','#FFD8E2'], 'luck-of-the-sixth': ['#397D54','#A8E28A'],
+  'egg-stinction-event': ['#F5C5A0','#FFE7A0'], 'elemental-prank': ['#F37B70','#FFE16F'],
+  'planet-of-the-elements': ['#557B48','#A8D18C'], 'trick-or-beatdown': ['#663E7E','#FFA04D'],
+  'living-chronicles': ['#A84738','#F4C66A'], 'thanks-for-the-elements': ['#A16C38','#E9B954'],
+  'winter-wonderland': ['#CFEFFF','#8ED8FF'],
+};
+
+const seasonalSpiritRows = [...BATTLE_PASSES_2027, ...HOLIDAY_EVENTS_2027]
+  .flatMap(event => event.rewards.filter(reward => reward.type === 'shikigami').map(reward => ({ event, reward })))
+  .filter(({ reward }, index, rows) => rows.findIndex(row => row.reward.shikigamiId === reward.shikigamiId) === index);
+
+SHIKIGAMI.push(...seasonalSpiritRows.filter(({ reward }) => !SHIKIGAMI.some(spirit => spirit.id === reward.shikigamiId)).map(({ event, reward }) => {
+  const [color, accent] = EVENT_SPIRIT_COLORS[event.id] || ['#8272B8','#D9CAFF'];
+  const desc = reward.description || 'A seasonal spirit companion.';
+  return {
+    id: reward.shikigamiId, name: reward.name, desc, color, accent, price: 0,
+    seasonal: true, eventId: event.id,
+    draw: makeSeasonalSpiritDraw(reward.name, desc, color, accent),
+  };
+}));
+
+// Existing shop companions keep their shared Token price. Event companions
+// are owned only through their reward claim and never enter the shop economy.
+SHIKIGAMI.forEach(s => { if (!s.seasonal) s.price = 2000; });
+
+function makeSeasonalSpiritDraw(name, description, color, accent) {
+  const text = `${name} ${description}`.toLowerCase();
+  const shape = /clockwork|fox/.test(text) ? 'fox'
+    : /crane|owl|bird/.test(text) ? 'bird'
+      : /deer|clover/.test(text) ? 'deer'
+        : /dragon|serpent/.test(text) ? 'dragon'
+          : /turtle/.test(text) ? 'turtle'
+            : /rabbit|bunny|hare/.test(text) ? 'rabbit'
+              : /squirrel/.test(text) ? 'squirrel'
+                : /koi|fish/.test(text) ? 'fish'
+                  : /egg/.test(text) ? 'egg'
+                    : /pumpkin|lantern|ghost|spirit/.test(text) ? 'wisp' : 'orb';
+  const seed = [...name].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  return (ctx, x, y, frame, scale = 1) => {
+    const bob = Math.sin(frame * .055 + seed) * 1.8 * scale;
+    const cx = x, cy = y + bob;
+    GLOW(ctx, cx, cy, 20 * scale, accent, .2);
+    ctx.save();
+    if (shape === 'fox' || shape === 'squirrel') {
+      ELL(ctx,cx,cy+3*scale,10*scale,6*scale,.08,color);
+      CIR(ctx,cx+7*scale,cy-5*scale,6*scale,color);
+      EAR(ctx,cx+3*scale,cy-10*scale,scale,color,accent); EAR(ctx,cx+11*scale,cy-10*scale,scale,color,accent);
+      for(let i=0;i<(shape==='fox'?2:1);i++){ctx.strokeStyle=accent;ctx.lineWidth=(shape==='fox'?3:4)*scale;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(cx-7*scale,cy+2*scale);ctx.quadraticCurveTo(cx-18*scale,cy-6*scale, cx-13*scale+Math.sin(frame*.06+i)*2*scale,cy-12*scale+i*5*scale);ctx.stroke();}
+      if(shape==='squirrel'){ELL(ctx,cx-13*scale,cy-4*scale,6*scale,8*scale,Math.sin(frame*.04)*.5,accent);}
+    } else if (shape === 'bird') {
+      CIR(ctx,cx,cy,8*scale,color);
+      for(const dir of [-1,1]){ctx.fillStyle=accent;ctx.beginPath();ctx.moveTo(cx+dir*4*scale,cy);ctx.quadraticCurveTo(cx+dir*(18+Math.sin(frame*.08)*2)*scale,cy-10*scale,cx+dir*15*scale,cy+5*scale);ctx.quadraticCurveTo(cx+dir*8*scale,cy+8*scale,cx+dir*4*scale,cy);ctx.fill();}
+      ctx.fillStyle=accent;ctx.beginPath();ctx.moveTo(cx+5*scale,cy-1*scale);ctx.lineTo(cx+13*scale,cy+2*scale);ctx.lineTo(cx+5*scale,cy+4*scale);ctx.fill();
+    } else if (shape === 'deer') {
+      ELL(ctx,cx,cy+3*scale,9*scale,7*scale,.05,color); CIR(ctx,cx+5*scale,cy-6*scale,6*scale,color);
+      ctx.strokeStyle=accent;ctx.lineWidth=1.6*scale;for(const dir of [-1,1]){ctx.beginPath();ctx.moveTo(cx+dir*3*scale,cy-10*scale);ctx.lineTo(cx+dir*7*scale,cy-17*scale);ctx.lineTo(cx+dir*12*scale,cy-19*scale);ctx.moveTo(cx+dir*8*scale,cy-16*scale);ctx.lineTo(cx+dir*8*scale,cy-21*scale);ctx.stroke();}
+      if(/clover/.test(text)){for(let i=0;i<4;i++)CIR(ctx,cx+((i%2)*2-1)*3*scale,cy-3*scale+Math.floor(i/2)*3*scale,2.2*scale,accent);}
+    } else if (shape === 'dragon') {
+      ctx.strokeStyle=color;ctx.lineWidth=7*scale;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(cx-12*scale,cy+6*scale);ctx.bezierCurveTo(cx-17*scale,cy-8*scale,cx+15*scale,cy+9*scale,cx+4*scale,cy-8*scale);ctx.stroke();
+      CIR(ctx,cx+5*scale,cy-9*scale,6*scale,color);EAR(ctx,cx+2*scale,cy-14*scale,.7*scale,accent,color);EAR(ctx,cx+9*scale,cy-14*scale,.7*scale,accent,color);
+      ctx.strokeStyle=accent;ctx.lineWidth=1.5*scale;ctx.beginPath();ctx.moveTo(cx+9*scale,cy-8*scale);ctx.lineTo(cx+16*scale,cy-5*scale);ctx.stroke();
+    } else if (shape === 'turtle') {
+      ELL(ctx,cx,cy+2*scale,10*scale,7*scale,.05,color);ELL(ctx,cx,cy+1*scale,7*scale,5*scale,0,accent);CIR(ctx,cx+10*scale,cy-3*scale,4*scale,color);
+      for(const dir of [-1,1]){CIR(ctx,cx+dir*7*scale,cy+8*scale,2.3*scale,accent);}
+    } else if (shape === 'rabbit') {
+      ELL(ctx,cx,cy+4*scale,9*scale,7*scale,0,color);CIR(ctx,cx,cy-5*scale,6*scale,color);
+      ELL(ctx,cx-3*scale,cy-14*scale,2.5*scale,8*scale,-.25,accent);ELL(ctx,cx+3*scale,cy-14*scale,2.5*scale,8*scale,.25,accent);
+    } else if (shape === 'fish') {
+      ELL(ctx,cx,cy,11*scale,7*scale,Math.sin(frame*.04)*.08,color);ctx.fillStyle=accent;ctx.beginPath();ctx.moveTo(cx-9*scale,cy);ctx.lineTo(cx-17*scale,cy-6*scale);ctx.lineTo(cx-16*scale,cy+7*scale);ctx.fill();
+      ctx.strokeStyle=accent;ctx.lineWidth=1.6*scale;ctx.beginPath();ctx.arc(cx,cy,6*scale,-1.2,1.2);ctx.stroke();
+    } else if (shape === 'egg') {
+      ELL(ctx,cx,cy+1*scale,8*scale,11*scale,0,color);EAR(ctx,cx-4*scale,cy-8*scale,.8*scale,accent,color);EAR(ctx,cx+4*scale,cy-8*scale,.8*scale,accent,color);
+      ctx.strokeStyle=accent;ctx.lineWidth=1.5*scale;ctx.beginPath();ctx.moveTo(cx-6*scale,cy+2*scale);ctx.lineTo(cx+6*scale,cy+2*scale);ctx.stroke();
+    } else if (shape === 'wisp') {
+      ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(cx-9*scale,cy+8*scale);ctx.quadraticCurveTo(cx-13*scale,cy-8*scale,cx,cy-11*scale);ctx.quadraticCurveTo(cx+13*scale,cy-8*scale,cx+9*scale,cy+8*scale);ctx.lineTo(cx+4*scale,cy+4*scale);ctx.lineTo(cx,cy+8*scale);ctx.lineTo(cx-4*scale,cy+4*scale);ctx.closePath();ctx.fill();
+      if(/pumpkin/.test(text)){ctx.strokeStyle=accent;ctx.lineWidth=1.5*scale;ctx.beginPath();ctx.moveTo(cx,cy-10*scale);ctx.lineTo(cx,cy-14*scale);ctx.stroke();}
+      if(/clockwork/.test(text)){RING(ctx,cx-10*scale,cy-9*scale,4*scale,accent,1.5*scale);}
+    } else {
+      CIR(ctx,cx,cy,9*scale,color);RING(ctx,cx,cy,13*scale,accent,1.5*scale);
+      for(let i=0;i<3;i++)ORB(ctx,cx,cy,frame,15*scale,i,.035,1.6*scale,accent,seed);
+    }
+    if(!['bird','dragon'].includes(shape)){
+      EYE(ctx,cx-2.5*scale,cy-3*scale,1.35*scale,accent,'#17121F');
+      EYE(ctx,cx+2.5*scale,cy-3*scale,1.35*scale,accent,'#17121F');
+    }
+    ctx.restore();
+  };
+}
 
 function drawYatagarasu(ctx,x,y,f,s=1){const b=Math.sin(f*.06)*2*s;GLOW(ctx,x,y+b,20*s,'#FFD34D',.28);ctx.save();ctx.translate(x,y+b);ctx.fillStyle='#17121F';ctx.beginPath();ctx.ellipse(0,2*s,11*s,8*s,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#2A2335';ctx.beginPath();ctx.moveTo(-9*s,0);ctx.quadraticCurveTo(-20*s,-7*s,-13*s,7*s);ctx.quadraticCurveTo(-5*s,4*s,-4*s,2*s);ctx.fill();ctx.beginPath();ctx.moveTo(9*s,0);ctx.quadraticCurveTo(20*s,-7*s,13*s,7*s);ctx.quadraticCurveTo(5*s,4*s,4*s,2*s);ctx.fill();ctx.fillStyle='#FFD34D';ctx.beginPath();ctx.moveTo(9*s,-1*s);ctx.lineTo(17*s,2*s);ctx.lineTo(9*s,3*s);ctx.fill();EYE(ctx,-4*s,-1*s,1.7*s,'#FFD34D');EYE(ctx,4*s,-1*s,1.7*s,'#FFD34D');for(let i=0;i<3;i++){ctx.strokeStyle='#FFD34D';ctx.lineWidth=1*s;ctx.beginPath();ctx.moveTo((-7+i*7)*s,8*s);ctx.lineTo((-8+i*8)*s,13*s);ctx.stroke();}ctx.restore();}
 function drawKappa(ctx,x,y,f,s=1){const b=Math.sin(f*.07)*2*s;GLOW(ctx,x,y+b,17*s,'#62D6FF',.25);ELL(ctx,x,y+3*s+b,9*s,8*s,.05,'#4E9F70');ELL(ctx,x,y-6*s+b,7*s,6*s,0,'#67B982');CIR(ctx,x,y-10*s+b,5*s,'#83D6A0');CIR(ctx,x,y-10*s+b,3*s,'#7DD3FC');EAR(ctx,x-5*s,y-10*s+b,1,'#4E9F70','#B8F0C8');EAR(ctx,x+5*s,y-10*s+b,1,'#4E9F70','#B8F0C8');EYE(ctx,x-2.5*s,y-6*s+b,1.3*s,'#FDE68A');EYE(ctx,x+2.5*s,y-6*s+b,1.3*s,'#FDE68A');ctx.strokeStyle='#8DE7FF';ctx.lineWidth=1.2*s;ctx.beginPath();ctx.arc(x,y+5*s+b,7*s,0,Math.PI);ctx.stroke();}

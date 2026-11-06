@@ -13,13 +13,13 @@ import PauseMenu from './PauseMenu';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import { getKeybinds, readPlayerInput, readSinglePlayerInput, getSchemeKeybinds, getSoloKeybinds } from './keybinds.js';
-import { useClipRecorder } from './useClipRecorder.js';
 import { drawMaterialOverlay } from './materials.js';
 import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor, getEquippedAccessories } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { getCrossoverColor, getCrossoverAttackColor, getCrossover, getCrossoverParts } from './crossovers.js';
 import { drawKillFX } from './killFX.js';
 import { drawShikigamiFollower } from './shikigami.js';
+import { drawMovementTrail } from './movementTrails.js';
 import { applyElement } from './elements.js';
 import { EMOTES, getEmoteById, getEmoteProgress, drawEmote } from './emotes.js';
 import { getEmoteForKey } from './emoteSlots.js';
@@ -568,6 +568,7 @@ export default function PlatformFighter({
   customCharsData = {},
   equippedCrossovers = {},
   equippedShikigami = {},
+  equippedMovementTrails = {},
   mods = null,
   comboMode = false,
   onMove = null,
@@ -591,7 +592,6 @@ export default function PlatformFighter({
   const lastResultAwardedRef = useRef(false); // guards against double-paying the same match (rematch vs exit)
   const onMoveRef = useRef(onMove);
   onMoveRef.current = onMove;
-  useClipRecorder(canvasRef);
 
   useEffect(() => {
     const releaseViewport = acquireGameplayViewport();
@@ -606,6 +606,7 @@ export default function PlatformFighter({
   botAccessoriesRef.current = _mergedAccs;
   const botShikigamiRef = useRef(_mergedShik);
   botShikigamiRef.current = _mergedShik;
+  const movementTrailHistoryRef = useRef({});
 
   const mapId = customPlatforms ? 'custom' : (selectedMap || 'splitcity');
   const activeEvent = getActiveEvent();
@@ -1333,6 +1334,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           skinParts.filter(p => isBehindAccessory(p.type)).forEach(p => drawAccessory(ctx, f.x, f.y, p.type, p.color, f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote));
           accs.filter(a => isBehindAccessory(a.type)).forEach(a => drawAccessory(ctx, f.x, f.y, a.type, skinColor && a.type === 'soccer_kit' ? skinColor : resolveAccColor(a, f.char), f.frame, fScale, effId, f.state, f.facing, f.powerActive, f.emote));
         }
+        drawMovementTrail(ctx, f, equippedMovementTrails?.[effId] || equippedMovementTrails?.[f.char.id], movementTrailHistoryRef.current, `slot-${slot}`, fScale);
         // Shikigami — purely cosmetic floating companion (behind + above the fighter)
         drawShikigamiFollower(ctx, f, botShikigamiRef.current?.[effId], f.frame, fScale);
         if (!flashing) drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote, f.attackData);
@@ -1575,8 +1577,9 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
   // when paused or finished so the player can click buttons with the controller.
   useEffect(() => {
     window.__el6GameplayActive = !winner;
-    return () => { window.__el6GameplayActive = false; };
-  }, [winner]);
+    window.__el6GameplayCaptureActive = gameStarted && !winner;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [gameStarted, winner]);
 
   return (
     <div className="el6-gameplay-shell relative flex flex-col items-center gap-2 w-full">
@@ -1585,7 +1588,7 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80">PAUSE (ESC)</button>
       </div>
       <canvas
-        ref={canvasRef} width={W} height={H}
+        ref={canvasRef} width={W} height={H} data-e6-game-canvas="true"
         className="el6-fullscreen-gameplay-canvas border-2 border-border rounded-lg shadow-2xl w-full"
         style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
       />

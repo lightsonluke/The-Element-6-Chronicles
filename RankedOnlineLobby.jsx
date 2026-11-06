@@ -34,6 +34,7 @@ function SupabaseFightLobby({
   favoriteId,
   equippedSkins = {},
   equippedAccessories = {},
+  equippedMovementTrails = {},
   sfxVolume = 70,
   musicVolume = 50,
   settings = {},
@@ -60,7 +61,7 @@ function SupabaseFightLobby({
   const matchmakingTrainingController = useRef({ botMode: 'dummy', repeatJump: false, damageResetEnabled: false, damageResetValue: 0, damageResetTimer: 0, resetWhenGrounded: false, positionResetEnabled: false, positionResetTimer: 0, positionResetWhenGrounded: false, paused: false, stepDelta: 0, jumpInterval: 45 });
   const countdownStarted = useRef(false);
 
-  const loadout = { equippedSkins, equippedAccessories, equippedShikigami, element: myElement };
+  const loadout = { equippedSkins, equippedAccessories, equippedShikigami, equippedMovementTrails, element: myElement };
 
   useEffect(() => {
     music.setVolume(musicVolume);

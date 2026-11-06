@@ -9,6 +9,8 @@ import { GUARDIANS } from './guardians.js';
 import { sfx } from './sfx.js';
 import GameIcon from "./GameIcon.jsx";
 import { sendOnlineChallenge } from './onlineChallenges.js';
+import { supabase } from './supabaseClient.js';
+import { getTitleById } from './profileTitles.js';
 
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 
@@ -22,10 +24,17 @@ export default function PlayerProfileModal({ player, me, onClose, onPlayCampaign
   const [campaigns, setCampaigns] = useState([]);
   const [flyers, setFlyers] = useState([]);
   const [toast, setToast] = useState('');
+  const [accountTitle, setAccountTitle] = useState(player.title || '');
 
   useEffect(() => {
-    db.entities.LeaderboardEntry.filter({ user_id: player.id }).then(list => setEntry(list[0] || null)).catch(() => {});
-  }, [player.id]);
+    let active = true;
+    setAccountTitle(player.title || '');
+    db.entities.LeaderboardEntry.filter({ user_id: player.id }).then(list => { if (active) setEntry(list[0] || null); }).catch(() => {});
+    supabase.from('player_profiles').select('profile_title').eq('user_id', player.id).maybeSingle()
+      .then(({ data }) => { if (active) setAccountTitle(data?.profile_title ? (getTitleById(data.profile_title)?.name || '') : ''); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [player.id, player.title]);
 
   const flash = (msg) => { setToast(msg); sfx.purchaseSuccess(); setTimeout(() => setToast(''), 3000); };
 
@@ -130,7 +139,7 @@ export default function PlayerProfileModal({ player, me, onClose, onPlayCampaign
         <div className="flex justify-between items-center mb-3">
           <div>
             <h3 className="font-heading text-base text-foreground">{player.username || player.name}</h3>
-            <p className="text-[10px] text-muted-foreground">Fav: {ALL.find(c => c.id === player.charId)?.name || '?'} • {player.title || 'No title'}</p>
+            <p className="text-[10px] text-muted-foreground">Fav: {ALL.find(c => c.id === player.charId)?.name || '?'} • {accountTitle || 'No title'}</p>
           </div>
           <button onClick={() => onClose?.()} className="text-xs text-muted-foreground"><GameIcon icon="close" size={14} /></button>
         </div>
@@ -151,7 +160,7 @@ export default function PlayerProfileModal({ player, me, onClose, onPlayCampaign
             </div>
             <p className="text-[9px] font-heading text-primary mb-1">COSMETICS</p>
             <div className="bg-muted/30 rounded-lg p-2 mb-3 text-[10px] font-body text-muted-foreground">
-              <p>Skin: <span className="text-foreground">{player.skin || 'Default'}</span> • Acc: <span className="text-foreground">{player.accessory || 'None'}</span> • Kill FX: <span className="text-foreground">{player.killfx || 'None'}</span> • Title: <span className="text-accent">{player.title || 'None'}</span></p>
+              <p>Skin: <span className="text-foreground">{player.skin || 'Default'}</span> • Acc: <span className="text-foreground">{player.accessory || 'None'}</span> • Kill FX: <span className="text-foreground">{player.killfx || 'None'}</span> • Title: <span className="text-accent">{accountTitle || 'None'}</span></p>
             </div>
             <div className="grid grid-cols-2 gap-1.5">
               {actions.map(([label, fn]) => (

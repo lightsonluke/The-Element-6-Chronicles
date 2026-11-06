@@ -96,7 +96,8 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
   useEffect(() => {
     if (phase !== 'play') return;
     window.__el6GameplayActive = true;
-    return () => { window.__el6GameplayActive = false; };
+    window.__el6GameplayCaptureActive = true;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
   }, [phase]);
 
   useEffect(() => {
@@ -328,7 +329,7 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
         </div>
       )}
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={W} height={H} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
+        <canvas ref={canvasRef} width={W} height={H} data-e6-game-canvas="true" className="el6-match-canvas el6-sport-canvas rounded-lg shadow-2xl w-full"
                 style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#8fc69a' }} />
       </GameCanvasPortal>
     </div>

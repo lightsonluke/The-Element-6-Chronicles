@@ -47,7 +47,7 @@ function Toggle({ on, onClick }) {
   );
 }
 
-export default function Settings({ onBack, settings, onSave, onReset, onUsernameChange, onOpenController, onOpenMobileControls }) {
+export default function Settings({ onBack, settings, onSave, onReset, onUsernameChange, onEquipTitle, onOpenController, onOpenMobileControls }) {
   const [local, setLocal] = useState(settings || {});
   const { pads } = useGamepad();
   const [uploading, setUploading] = useState(null);
@@ -56,6 +56,7 @@ export default function Settings({ onBack, settings, onSave, onReset, onUsername
   const [username, setUsername] = useState('');
   const [originalUsername, setOriginalUsername] = useState('');
   const [equippedTitle, setEquippedTitle] = useState('');
+  const [profileTitleError, setProfileTitleError] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [allowFriendRequests, setAllowFriendRequests] = useState(true);
   const [allowChatsFromNonFriends, setAllowChatsFromNonFriends] = useState(true);
@@ -280,14 +281,15 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
           <div>
             <span className="text-xs font-body text-muted-foreground block mb-1">Profile Title (shown above username on HUD):</span>
             <div className="flex flex-wrap gap-1">
-              <SoundButton onClick={async () => { await db.auth.updateMe({ profile_title: '' }); setEquippedTitle(''); sfx.click(); }}
+              <SoundButton onClick={async () => { try { const saved = await onEquipTitle?.(''); if (saved === false) throw new Error('Could not update the profile title.'); setEquippedTitle(''); setProfileTitleError(''); sfx.click(); } catch (error) { setProfileTitleError(error?.message || 'Could not update the profile title.'); } }}
                 className={`px-2 py-1 rounded font-heading text-[10px] ${!equippedTitle ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}>NONE</SoundButton>
               {PROFILE_TITLES.filter(t => ownsTitle(t.id, { ownedPacks: local.ownedPacks, ownedTitles: local.ownedTitles })).map(t => (
-                <SoundButton key={t.id} onClick={async () => { await db.auth.updateMe({ profile_title: t.id }); setEquippedTitle(t.id); sfx.click(); }}
+                <SoundButton key={t.id} onClick={async () => { try { const saved = await onEquipTitle?.(t.id); if (saved === false) throw new Error('You do not own this title or the account update failed.'); setEquippedTitle(t.id); setProfileTitleError(''); sfx.click(); } catch (error) { setProfileTitleError(error?.message || 'Could not update the profile title.'); } }}
                   className={`px-2 py-1 rounded font-heading text-[10px] ${equippedTitle === t.id ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'}`}
                   style={{ color: getTitleColor(t.id) }}>{t.name}</SoundButton>
               ))}
             </div>
+            {profileTitleError && <p role="alert" className="text-xs text-destructive mt-2">{profileTitleError}</p>}
             {PROFILE_TITLES.filter(t => ownsTitle(t.id, { ownedPacks: local.ownedPacks, ownedTitles: local.ownedTitles })).length === 0 && (
               <p className="text-[10px] text-muted-foreground mt-1">Unlock titles in the Shop (Paid tab <GameIcon icon="arrowRight" size={14} /> All Profile Titles Pack).</p>
             )}
@@ -444,13 +446,20 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
             <div className="flex flex-col gap-0.5 pr-4">
               <span className="text-xs font-body text-muted-foreground">Enable Clips:</span>
               <span className="text-[9px] text-muted-foreground/70 font-body">
-                Save 30-second game clips from the Element 6 game canvas. Starts off.
+                Starts off. In a live match, use Save Clip in the pause menu or press F8.
               </span>
             </div>
             <Toggle
               on={local.enableClips === true}
               onClick={() => apply({ enableClips: local.enableClips !== true })}
             />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-0.5 pr-4">
+              <span className="text-xs font-body text-muted-foreground">Automatically Save Match Replays:</span>
+              <span className="text-[9px] text-muted-foreground/70 font-body">Save completed matches as MP4 files in the local replay library. New accounts have this on by default.</span>
+            </div>
+            <Toggle on={local.autoSaveMatchReplays !== false} onClick={() => apply({ autoSaveMatchReplays: local.autoSaveMatchReplays === false })} />
           </div>
 
           <div className="flex items-center justify-between"><span className="text-xs font-body text-muted-foreground">Social notifications:</span><Toggle on={local.socialNotifications !== false} onClick={() => apply({ socialNotifications: !local.socialNotifications })} /></div>

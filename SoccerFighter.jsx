@@ -30,7 +30,6 @@ const mergeGp = (kb, gp) => gp ? {
 import { EMOTES, drawEmote } from './emotes.js';
 import { getEmoteForKey } from './emoteSlots.js';
 import PauseMenu from './PauseMenu.jsx';
-import { useClipRecorder } from './useClipRecorder.js';
 import GameIcon from "./GameIcon.jsx";
 
 
@@ -171,7 +170,6 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
   const goalFlashColorRef = useRef('#FFD700');
   const p1PenDirRef = useRef(null);
   const p2PenDirRef = useRef(null);
-  useClipRecorder(canvasRef);
   const remoteInputRef = useRef(null);
   const remoteStateRef = useRef(null);
   const onStateExportRef = useRef(null);
@@ -1415,8 +1413,9 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
   // when paused or finished so the player can click buttons with the controller.
   useEffect(() => {
     window.__el6GameplayActive = !winner;
-    return () => { window.__el6GameplayActive = false; };
-  }, [winner]);
+    window.__el6GameplayCaptureActive = gameStarted && !winner;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [gameStarted, winner]);
 
   return (
     <div className="el6-match-viewport">
@@ -1425,7 +1424,7 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className={`el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80 ${tournamentMode ? 'ml-auto' : ''}`}>PAUSE (ESC)</button>
       </div>
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={W} height={H}
+        <canvas ref={canvasRef} width={W} height={H} data-e6-game-canvas="true"
                 className="el6-match-canvas el6-sport-canvas"
                 style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
               />

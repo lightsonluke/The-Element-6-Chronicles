@@ -29,7 +29,8 @@ export default function SaveCodes({ progress, onImport, onBack }) {
 
       // Make absolutely sure the newest progress is stored on the account
       // before generating the recovery code.
-      await saveCloudProgress(progress);
+      const saved = await saveCloudProgress(progress);
+      if (!saved) throw new Error('Sign in and finish loading account progress before creating a save code.');
 
       const { data, error } = await supabase.rpc(
         'create_element6_save_code',
@@ -103,7 +104,8 @@ export default function SaveCodes({ progress, onImport, onBack }) {
 
       // Save the imported progress to the actual account BEFORE
       // changing the game's active state.
-      await saveCloudProgress(parsed);
+      const saved = await saveCloudProgress(parsed);
+      if (!saved) throw new Error('Sign in and finish loading account progress before importing a save code.');
 
       // Update the running game.
       onImport?.(parsed);

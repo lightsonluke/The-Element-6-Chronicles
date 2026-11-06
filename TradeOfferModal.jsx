@@ -10,6 +10,7 @@ import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { sfx } from './sfx.js';
 import GameIcon from "./GameIcon.jsx";
+import { createTransactionRequestId } from './transactionIds.js';
 
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 
@@ -27,7 +28,7 @@ export default function TradeOfferModal({ mode = 'trade', peer, progress, userId
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const requestIdRef = useRef(null);
-  if (!requestIdRef.current) requestIdRef.current = globalThis.crypto?.randomUUID?.() || `trade-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  if (!requestIdRef.current) requestIdRef.current = createTransactionRequestId();
 
   // Only expose the tradeable inventory snapshot returned after the server
   // verifies that the two accounts are accepted friends.
@@ -72,12 +73,13 @@ export default function TradeOfferModal({ mode = 'trade', peer, progress, userId
     setBusy(true);
     setError('');
     try {
-      const { error: tradeError } = await supabase.rpc('element6_create_trade', {
+      const { data: result, error: tradeError } = await supabase.rpc('element6_create_trade', {
         p_to_user: peer.user_id || peer.id,
         p_give: { tokens: offer.tokens || 0, skins: offer.skins, accessories: offer.accessories, killFX: offer.killFX, chars: offer.chars, requestId: requestIdRef.current },
         p_request: { tokens: request.tokens || 0, skins: request.skins, accessories: request.accessories, killFX: request.killFX, chars: request.chars },
       });
       if (tradeError) throw tradeError;
+      if (!result?.transaction_id || result.status !== 'pending') throw new Error('The server did not confirm a pending trade offer.');
       sfx.purchaseSuccess();
       await onConfirm?.({ give: offer, request });
     } catch (e) { setError(e?.message || 'The trade offer could not be sent.'); sfx.warning(); }

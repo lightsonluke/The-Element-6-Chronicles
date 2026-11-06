@@ -160,7 +160,7 @@ export default function RockClimbing2P({ onExit, onAward, unlockedIds = ['yellow
     return () => { if (phase === 'play') music.stop(); };
   }, [phase, musicVolume, sfxVolume]);
 
-  useEffect(() => { if (phase !== 'play') return; window.__el6GameplayActive = true; return () => { window.__el6GameplayActive = false; }; }, [phase]);
+  useEffect(() => { if (phase !== 'play') return; window.__el6GameplayActive = true; window.__el6GameplayCaptureActive = true; return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; }; }, [phase]);
 
   useEffect(() => {
     if (phase !== 'play') return;
@@ -411,7 +411,7 @@ export default function RockClimbing2P({ onExit, onAward, unlockedIds = ['yellow
           The whole canvas scales down to fit the width, so each view keeps its
           proper proportions (smaller, never squished). */}
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={VW * 2} height={VH} className="el6-sport-canvas rounded-lg shadow-2xl w-full"
+        <canvas ref={canvasRef} width={VW * 2} height={VH} data-e6-game-canvas="true" className="el6-match-canvas el6-sport-canvas rounded-lg shadow-2xl w-full"
                 style={{ width: '100%', maxWidth: VW * 2 + 'px', aspectRatio: `${VW * 2} / ${VH}`, height: 'auto', background: '#0e1a14' }} />
       </GameCanvasPortal>
     </div>

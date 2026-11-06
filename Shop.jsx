@@ -197,7 +197,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
       <div>
         <p className="text-[10px] font-heading text-muted-foreground mb-2">ACCESSORIES{char ? ` FOR ${char.name.toUpperCase()}` : ''}</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {available.filter(a => !a.exclusiveTo || a.exclusiveTo === selected).sort((a, b) => (a.id === 'clan_badge' ? -1 : b.id === 'clan_badge' ? 1 : 0)).map(a => {
+          {available.filter(a => !a.seasonal && (!a.exclusiveTo || a.exclusiveTo === selected)).sort((a, b) => (a.id === 'clan_badge' ? -1 : b.id === 'clan_badge' ? 1 : 0)).map(a => {
             const isOwned = owned.includes(a.id);
             const isTrying = tryOn === a.id;
             return (
@@ -375,7 +375,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
       <div>
         <p className="text-[10px] font-heading text-muted-foreground mb-2">SHIKIGAMI — Purely cosmetic floating companions. Equip one per character; it follows you in every mode. No gameplay effect.</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {SHIKIGAMI.map(s => {
+          {SHIKIGAMI.filter(s => !s.seasonal).map(s => {
             const isOwned = ownedShikigami.includes(s.id);
             const isEquipped = equippedShikigami[char?.id] === s.id;
             return (
@@ -406,7 +406,7 @@ export default function Shop({ progress, onBuy, onEquip, onBuySkin, onEquipSkin,
       <div>
         <p className="text-[10px] font-heading text-muted-foreground mb-2">EMOTES — Animated character poses triggered with number keys (1-0) during battle. Free emotes are automatically owned.</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {ALL_EMOTES.map(e => {
+          {ALL_EMOTES.filter(e => !e.seasonal).map(e => {
             const isOwned = (progress?.ownedEmotes || []).includes(e.id) || e.price === 0;
             return (
               <div key={e.id} className={`bg-card border rounded-xl p-3 flex flex-col items-center ${isOwned ? 'border-accent' : 'border-border'}`}>

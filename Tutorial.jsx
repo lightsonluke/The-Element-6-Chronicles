@@ -110,7 +110,8 @@ export default function Tutorial({ onBack }) {
   // nav so the player can click REPLAY/DONE with the controller.
   useEffect(() => {
     window.__el6GameplayActive = fighting && !cur.last;
-    return () => { window.__el6GameplayActive = false; };
+    window.__el6GameplayCaptureActive = fighting && !cur.last;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
   }, [fighting, cur.last]);
 
   if (fighting) {

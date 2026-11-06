@@ -382,7 +382,8 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
   // accidentally click Retreat; re-enable when the battle ends so CONTINUE is clickable.
   useEffect(() => {
     window.__el6GameplayActive = !result;
-    return () => { window.__el6GameplayActive = false; };
+    window.__el6GameplayCaptureActive = !result;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
   }, [result]);
 
   return (
@@ -396,7 +397,7 @@ export default function StoryBattle({ heroId, villainId, enemyIds, allyIds, stag
         <span className="text-[10px] text-muted-foreground font-body">Arrows · , sig · ,+ '↑' recovery · . power · l side heavy · l+ '↓' down/pound · / super</span>
       </div>
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={W} height={H} className="border-2 border-destructive/50 rounded-lg shadow-2xl" style={{ maxWidth: '100%' }} />
+        <canvas ref={canvasRef} width={W} height={H} data-e6-game-canvas="true" className="el6-match-canvas border-2 border-destructive/50 rounded-lg shadow-2xl" style={{ maxWidth: '100%' }} />
       </GameCanvasPortal>
       {result && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-lg gap-4">

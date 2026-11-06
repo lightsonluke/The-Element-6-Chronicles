@@ -13,7 +13,7 @@ export default function PowerInfoCard({ char, compact = false }) {
     <div className="rounded-lg p-3 border-2 w-full" style={{ borderColor: char.color + '55', backgroundColor: char.color + '0d' }}>
       <div className="flex items-center gap-2 mb-2">
         <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: char.color + '22' }}>
-          <span className="text-xs font-heading" style={{ color: char.color }}><GameIcon icon="warning" size={14} /></span>
+          <span className="text-xs font-heading" style={{ color: char.color }}><GameIcon icon="fire" size={14} /></span>
         </div>
         <div>
           <p className="font-heading text-sm" style={{ color: char.color }}>{effect.name}</p>

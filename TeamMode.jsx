@@ -15,7 +15,6 @@ import { getAccessory, getEquippedAccessories, isBehindAccessory, drawAccessory,
 import { drawShikigamiFollower } from './shikigami.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
 import { getEmoteForKey } from './emoteSlots.js';
-import { useClipRecorder } from './useClipRecorder.js';
 import PauseMenu from './PauseMenu';
 import CharStats from './CharStats';
 import ElementSelect from './ElementSelect';
@@ -280,7 +279,6 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
   const [winTeam, setWinTeam] = useState(null);
   const [countdown, setCountdown] = useState(3);
   const [gameStarted, setGameStarted] = useState(false);
-  useClipRecorder(canvasRef);
 
   const ALL = withCustomChars(ALL_CHARS, customCharsData, customNumberMap);
   const getCharData = (id) => ALL.find(c => c.id === id);
@@ -643,8 +641,9 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
   // when paused or finished so the player can click buttons with the controller.
   useEffect(() => {
     window.__el6GameplayActive = !winner;
-    return () => { window.__el6GameplayActive = false; };
-  }, [winner]);
+    window.__el6GameplayCaptureActive = gameStarted && !winner;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
+  }, [gameStarted, winner]);
 
   return (
     <div className="relative flex flex-col items-center gap-2 w-full">
@@ -652,8 +651,8 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
         <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs hover:opacity-80">PAUSE (ESC)</button>
       </div>
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={W} height={H}
-                className="el6-fight-canvas border-2 border-border rounded-lg shadow-2xl w-full"
+        <canvas ref={canvasRef} width={W} height={H} data-e6-game-canvas="true"
+                className="el6-match-canvas el6-fight-canvas border-2 border-border rounded-lg shadow-2xl w-full"
                 style={{ width: '100%', maxWidth: '1280px', aspectRatio: '16 / 9', height: 'auto' }}
               />
       </GameCanvasPortal>

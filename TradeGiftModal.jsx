@@ -7,6 +7,7 @@ import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { sfx } from './sfx.js';
 import GameIcon from "./GameIcon.jsx";
+import { createTransactionRequestId } from './transactionIds.js';
 
 const ALL = [...HEROES, ...VILLAINS, ...GUARDIANS];
 
@@ -18,7 +19,7 @@ export default function TradeGiftModal({ mode, peerName, progress, onConfirm, on
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const requestIdRef = useRef(null);
-  if (!requestIdRef.current) requestIdRef.current = globalThis.crypto?.randomUUID?.() || `gift-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  if (!requestIdRef.current) requestIdRef.current = createTransactionRequestId();
 
   const toggle = (category, id) => {
     setSelected(prev => {

@@ -296,7 +296,8 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
   useEffect(() => {
     if (phase !== 'play') return;
     window.__el6GameplayActive = true;
-    return () => { window.__el6GameplayActive = false; };
+    window.__el6GameplayCaptureActive = true;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
   }, [phase]);
 
   // ── Input ──
@@ -768,7 +769,7 @@ export default function RockClimbing({ onExit, onAward, unlockedIds = ['yellow']
         </div>
       )}
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas"
+        <canvas ref={canvasRef} width={W} height={H} data-e6-game-canvas="true" className="el6-match-canvas"
                 style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#0e1a14' }} />
       </GameCanvasPortal>
     </div>
@@ -813,7 +814,7 @@ function draw(ctx, s, charId, customCharsData, skins, accs) {
   if (s.windActive && s.windWarn > 0) {
     ctx.fillStyle = `rgba(255,200,80,${0.1 + 0.1 * Math.sin(Date.now() * 0.02)})`; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#ffcc44'; ctx.font = 'bold 14px Orbitron'; ctx.textAlign = 'center';
-    ctx.fillText('<GameIcon icon="warning" size={14} /> WIND GUST INCOMING', W / 2, 60);
+    ctx.fillText('WIND GUST INCOMING', W / 2, 60);
   } else if (s.windActive) {
     ctx.fillStyle = `rgba(120,180,220,${0.05 + 0.05 * Math.sin(Date.now() * 0.02)})`; ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = 'rgba(200,220,255,0.2)'; ctx.lineWidth = 1;

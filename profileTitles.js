@@ -3,7 +3,9 @@
 // the "All Profile Titles Pack" automatically own every title, including
 // future ones added to this list (checked via ownedPacks in progress).
 
-export const PROFILE_TITLES = [
+import { BATTLE_PASSES_2027, HOLIDAY_EVENTS_2027 } from './season2027.js';
+
+const ORIGINAL_PROFILE_TITLES = [
   { id: 'founder',  name: 'Founder',  rarity: 'legendary' },
   { id: 'hero',     name: 'Hero',     rarity: 'rare' },
   { id: 'villain',  name: 'Villain',  rarity: 'rare' },
@@ -14,6 +16,13 @@ export const PROFILE_TITLES = [
   { id: 'veteran',  name: 'Veteran',  rarity: 'rare' },
   { id: 'collector',name: 'Collector',rarity: 'epic' },
 ];
+
+const EVENT_PROFILE_TITLES = [...BATTLE_PASSES_2027, ...HOLIDAY_EVENTS_2027]
+  .flatMap(event => event.rewards
+    .filter(reward => reward.type === 'title')
+    .map(reward => ({ id: reward.titleId, name: reward.name, rarity: 'legendary', eventId: event.id })));
+
+export const PROFILE_TITLES = [...ORIGINAL_PROFILE_TITLES, ...EVENT_PROFILE_TITLES];
 
 export const getTitleById = (id) => PROFILE_TITLES.find(t => t.id === id);
 

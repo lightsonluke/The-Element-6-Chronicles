@@ -224,7 +224,8 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
   useEffect(() => {
     if (phase !== 'play') return;
     window.__el6GameplayActive = true;
-    return () => { window.__el6GameplayActive = false; };
+    window.__el6GameplayCaptureActive = true;
+    return () => { window.__el6GameplayActive = false; window.__el6GameplayCaptureActive = false; };
   }, [phase]);
 
   // ── Input ──
@@ -582,7 +583,7 @@ export default function SplitCityParkour({ onExit, onAward, unlockedIds = ['yell
       </div>
       {paused && <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 rounded-lg"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={onExit} /></div>}
       <GameCanvasPortal>
-        <canvas ref={canvasRef} width={W} height={H} className="el6-match-canvas el6-sport-canvas"
+        <canvas ref={canvasRef} width={W} height={H} data-e6-game-canvas="true" className="el6-match-canvas el6-sport-canvas"
                 style={{ width: '100%', maxWidth: W + 'px', height: 'auto', aspectRatio: `${W} / ${H}`, background: '#0a1228' }} />
       </GameCanvasPortal>
     </div>
