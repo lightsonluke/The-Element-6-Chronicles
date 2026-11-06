@@ -28,7 +28,9 @@ function imageReady(image) {
 }
 
 function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
-  if (!imageReady(splitCityStage)) return false;
+  // Keep the collision shape invisible while the image is still loading too;
+  // never fall back to drawing the generic platform slab for this stage.
+  if (!imageReady(splitCityStage)) return true;
   // Draw the complete main-platform PNG without distortion. The top face in
   // the supplied collision reference spans y=205..214 of its 736px image.
   const visualX = platform._visualX ?? platform.x;

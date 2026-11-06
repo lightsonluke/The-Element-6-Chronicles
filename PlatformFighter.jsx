@@ -42,7 +42,9 @@ const MAP_PLATFORMS = {
   splitcity: [
     // Collision lines follow only the black top-face strokes in the supplied
     // reference PNGs. The art is drawn at its natural aspect ratio.
-    { x: 49, y: 570, w: 1182, h: 10, material: 'split_city_joined', _splitCityMain: true, _visualX: 0, _visualW: 1280, _visualY: 570 },
+    // The invisible collider follows the complete visible depth of the main
+    // platform art: from its top surface (image y=205) to the image bottom.
+    { x: 49, y: 570, w: 1182, h: 318, material: 'split_city_joined', _splitCityMain: true, _visualX: 0, _visualW: 1280, _visualY: 570 },
     { x: 431, y: 420, w: 419, h: 10, material: 'split_city_dropthrough', _splitCityDropthrough: true, _visualX: 400, _visualW: 480, _visualY: 420 },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
@@ -1293,7 +1295,12 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       ctx.setLineDash([]); ctx.shadowBlur = 0; ctx.restore();
       }
 
-      platforms.forEach(p => drawMaterialOverlay(ctx, p, f1.frame));
+      platforms.forEach(p => {
+        // Split City collision shapes are invisible; the dedicated stage art
+        // is drawn by drawPlatforms and already supplies their appearance.
+        if (mapId === 'splitcity' && (p._splitCityMain || p._splitCityDropthrough)) return;
+        drawMaterialOverlay(ctx, p, f1.frame);
+      });
       // Visual indicator for erased platforms
       platforms.forEach(p => {
         if (p._deleted > 0) {
