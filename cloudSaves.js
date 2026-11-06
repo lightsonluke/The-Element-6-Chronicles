@@ -41,17 +41,36 @@ export function acceptCloudProgressRevision(userId, updatedAt) {
 }
 
 export async function getCloudUser() {
-  const { data: { user }, error } = await supabase.auth.getUser();
+  // getSession reads the browser tab's stored auth state. Do not make an auth
+  // verification request for a guest that has no session at all.
+  const { data, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  const sessionUser = data?.session?.user;
+  if (!sessionUser?.id) return null;
+  const { data: verified, error } = await supabase.auth.getUser();
   if (error) throw error;
+  const user = verified?.user;
+  return user?.id === sessionUser.id ? user : null;
+}
+
+// Read the tab's locally stored Supabase session before touching account data.
+// A guest tab has no session, so it never reaches getUser() (which may make an
+// auth network request) or the user_progress table/RPCs below.
+async function getAuthenticatedCloudUser(expectedUserId) {
+  if (!expectedUserId || activeCloudOwnerId !== expectedUserId) return null;
+  // Confirm the stored session with Supabase only for an explicitly signed-in
+  // account, then fence delayed auth responses against sign-out/account swaps.
+  const user = await getCloudUser();
+  if (!user?.id || user.id !== expectedUserId || activeCloudOwnerId !== expectedUserId) return null;
   return user;
 }
 
 export async function loadCloudProgress(expectedUserId = activeCloudOwnerId) {
-  // A guest session has no account snapshot to read. Require an explicit,
-  // currently active account owner before making any account-data request.
+  // Guest tabs keep local progress only. Do not request or synchronize any
+  // account snapshot unless this tab has an authenticated owner.
   if (!expectedUserId || !activeCloudOwnerId || expectedUserId !== activeCloudOwnerId) return null;
-  const user = await getCloudUser();
-  if (!user || user.id !== expectedUserId) return null;
+  const user = await getAuthenticatedCloudUser(expectedUserId);
+  if (!user) return null;
   if (activeCloudOwnerId !== user.id) return null;
   const { data, error } = await supabase
     .from('user_progress')
@@ -61,7 +80,7 @@ export async function loadCloudProgress(expectedUserId = activeCloudOwnerId) {
   if (error) throw error;
   // A slow read from an account that was switched away from must not seed the
   // revision cache used by the newly active account.
-  const currentUser = await getCloudUser();
+  const currentUser = await getAuthenticatedCloudUser(user.id);
   if (!currentUser || currentUser.id !== user.id || activeCloudOwnerId !== user.id) return null;
   cloudRevisions.set(user.id, data?.updated_at || null);
   conflictedOwners.delete(user.id);
@@ -74,8 +93,8 @@ export async function saveCloudProgress(progress, ownerId = activeCloudOwnerId) 
   if (conflictedOwners.has(ownerId)) throw new Error('Progress changed in another session. Reload the account data before saving again.');
   const previous = saveQueues.get(ownerId) || Promise.resolve();
   const next = previous.catch(() => {}).then(async () => {
-    const user = await getCloudUser();
-    if (!user || user.id !== ownerId || activeCloudOwnerId !== ownerId || !cloudOwnerReady) return false;
+    const user = await getAuthenticatedCloudUser(ownerId);
+    if (!user || activeCloudOwnerId !== ownerId || !cloudOwnerReady) return false;
     const { data, error } = await supabase.rpc('save_element6_progress_v2', {
       p_progress: progress,
       p_expected_updated_at: cloudRevisions.get(ownerId) || null,

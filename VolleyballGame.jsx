@@ -96,7 +96,7 @@ function newPlayer(x) { return { x, base: x, y: FLOOR, vx: 0, vy: 0, jump: 0, on
 function newPlayerStats() { return { spikes: 0, sets: 0, bumps: 0, digs: 0, receives: 0, points: 0, assists: 0 }; }
 function addStat(s, side, slot, field, n = 1) { const k = `${side}-${slot}`; if (s.playerStats[k]) s.playerStats[k][field] += n; }
 
-export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Chars, p2IsCPU = true, difficulty = 'regular', onResult, onQuit, p1Jersey = true, p2Jersey = true, musicVolume = 50, sfxVolume = 70, p1Elements = [], p2Elements = [], equippedSkins = {}, equippedAccessories = {}, settings = {}, lanConnection = null, lanRole = null, localScheme = null, remoteState = null, onStateExport = null, isOnlineHost = false }) {
+export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Chars, p2IsCPU = true, difficulty = 'regular', onResult, onQuit, p1Jersey = true, p2Jersey = true, musicVolume = 50, sfxVolume = 70, p1Elements = [], p2Elements = [], equippedSkins = {}, equippedAccessories = {}, settings = {}, lanConnection = null, lanRole = null, localScheme = null, remoteState = null, onStateExport = null, isOnlineHost = false, online2v2 = false, localPlayerSlot = 0 }) {
   // SportsShell normally supplies complete arrays. Normalize them here as a hard
   // safety boundary so an incomplete tournament/online payload can never crash
   // the match during first render.
@@ -105,6 +105,8 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
   const safeP1Elements = Array.isArray(p1Elements) ? p1Elements : [];
   const safeP2Elements = Array.isArray(p2Elements) ? p2Elements : [];
   const is1v1 = p1Chars.length === 1;
+  const onlineDoubles = Boolean(online2v2 && lanConnection && p1Chars.length === 2 && p2Chars.length === 2);
+  const ownOnlineSlot = Number.isInteger(Number(localPlayerSlot)) && Number(localPlayerSlot) >= 0 && Number(localPlayerSlot) < 4 ? Number(localPlayerSlot) : 0;
   const canvasRef = useRef(null);
   const [countdown, setCountdown] = useState(3);
   const [started, setStarted] = useState(false);
@@ -113,6 +115,8 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
   const keysRef = useRef({});
   const gpRef = useRef({ 0: {}, 1: {} }); // gamepad state per slot
   const gpPrevRef = useRef({ 0: {}, 1: {} }); // previous gamepad state for edge detection
+  const onlineDoublesInputs = useRef({ 0: {}, 1: {}, 2: {}, 3: {} });
+  const onlineDoublesPadPrev = useRef({});
   const st = useRef(null);
   const remoteKeysProc = useRef(false);
   const remoteStateRef = useRef(null);
@@ -169,11 +173,13 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
   // Input + actions
   useEffect(() => {
     if (!started) return;
-    const tryHit = (side, type) => {
+    const tryHit = (side, type, requestedSlot = null) => {
       const s = st.current;
+      const teamSlot = Number.isInteger(requestedSlot) ? requestedSlot : null;
       // Serve: two-step — first press tosses up, second press hits over
       if (type === 'serve') {
         if (s.phase !== 'serve' || s.serverSide !== side) return;
+        if (teamSlot != null && teamSlot !== (side === 1 ? s.serverSlot1 : s.serverSlot2)) return;
         if (!s.serveTossed) {
           s.serveTossed = true;
           s.ball.alive = true;
@@ -183,7 +189,7 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
           s.tossTimer = 90;
           sfx.hit();
         } else {
-          const slot = side === 1 ? s.serverSlot1 : s.serverSlot2;
+          const slot = teamSlot ?? (side === 1 ? s.serverSlot1 : s.serverSlot2);
           const team = side === 1 ? s.t1 : s.t2;
           const p = team[slot];
           const dx = Math.abs(s.ball.x - p.x), dy = Math.abs(s.ball.y - (p.y - 40));
@@ -214,14 +220,16 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
       if (s.servingTeamLocked === side) return;
       // Only a bump can return a serve — any other input is ignored
       if (s.serveFirstCross && !s.serveReturned && type !== 'bump') return;
-      const p = team[s[ak]];
+      const actorSlot = teamSlot ?? s[ak];
+      const p = team[actorSlot];
+      if (!p) return;
       const b = s.ball;
       if (!b.alive) return;
 
       // Foul: non-server teammate touches before ball crosses net for first time
       if (!s.serveFirstCross && s.serverSide === side) {
         const serverSlot = side === 1 ? s.serverSlot1 : s.serverSlot2;
-        if (s[ak] !== serverSlot) {
+        if (actorSlot !== serverSlot) {
           score(s, side === 1 ? 2 : 1, is1v1, p1Chars, p2Chars, 'Illegal touch before serve crossed');
           return;
         }
@@ -231,17 +239,17 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
       const onMySide = side === 1 ? b.x < NET_X : b.x > NET_X;
       if (!onMySide) return;
       if (Math.hypot(b.x - p.x, b.y - (p.y - 40)) > HIT_R) return;
-      const touchKey = `${side}-${s[ak]}`;
+      const touchKey = `${side}-${actorSlot}`;
       const isSame = touchKey === b.lastTouchKey;
       if (isSame && b.consecTouches >= 2) return;
 
       // Can't block a spike with another spike
       if (type === 'spike' && b.spike && b.last !== side) return;
 
-      const charId = side === 1 ? p1Chars[s[ak]] : p2Chars[s[ak]];
-      const c = charFor(charId, (side === 1 ? safeP1Elements : safeP2Elements)?.[s[ak]]);
+      const charId = side === 1 ? p1Chars[actorSlot] : p2Chars[actorSlot];
+      const c = charFor(charId, (side === 1 ? safeP1Elements : safeP2Elements)?.[actorSlot]);
       const dir = side === 1 ? 1 : -1;
-      recordHit(s, side, s[ak], type, b);
+      recordHit(s, side, actorSlot, type, b);
       if (type === 'bump') {
         const ctrl = c?.stats?.control || 5;
         b.vx = dir * (7 + ctrl * 0.15); b.vy = -15;
@@ -268,21 +276,24 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
       registerTeamHit(s, side);
     };
 
-    const tryDive = (side) => {
+    const tryDive = (side, requestedSlot = null, directionOverride = null) => {
       const s = st.current;
       if (s.phase !== 'rally' && s.phase !== 'serve') return;
       if (s.servingTeamLocked === side) return;
       const ak = side === 1 ? 'active1' : 'active2';
       const teamKey = side === 1 ? 't1' : 't2';
-      const p = s[teamKey][s[ak]];
+      const actorSlot = Number.isInteger(requestedSlot) ? requestedSlot : s[ak];
+      const p = s[teamKey][actorSlot];
       if (!p || p.diveCD > 0 || p.diving || !p.onGround) return;
       const binds = side === 1 ? (p2IsCPU && soloKb ? soloKb : kb.p1) : kb.p2;
       const leftKey = String(binds.left).toLowerCase();
       const rightKey = String(binds.right).toLowerCase();
       const gp = gpRef.current[side === 1 ? 0 : 1] || {};
-      let dir = 0;
-      if (keysRef.current[leftKey] || gp.left) dir = -1;
-      else if (keysRef.current[rightKey] || gp.right) dir = 1;
+      let dir = Number.isFinite(directionOverride) ? directionOverride : 0;
+      if (directionOverride == null) {
+        if (keysRef.current[leftKey] || gp.left) dir = -1;
+        else if (keysRef.current[rightKey] || gp.right) dir = 1;
+      }
       if (dir === 0) return;
       p.diving = true; p.diveDir = dir; p.diveTimer = 22; p.diveCD = 600;
       p.actionState = 'bump'; p.actionTimer = 22;
@@ -295,6 +306,35 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
     const kb = getKeybinds(settings);
     const soloKb = getSoloKeybinds(settings);
     const bindFor = side => (side === 1 && p2IsCPU && soloKb ? soloKb : kb[side === 1 ? 'p1' : 'p2']);
+    const applyOnlineDoublesAction = (slot, action, down, replicate = false) => {
+      if (!onlineDoubles || !Number.isInteger(slot) || slot < 0 || slot > 3) return;
+      const side = slot % 2 === 0 ? 1 : 2;
+      const teamSlot = Math.floor(slot / 2);
+      const state = onlineDoublesInputs.current[slot] || (onlineDoublesInputs.current[slot] = {});
+      const wasDown = Boolean(state[action]);
+      state[action] = Boolean(down);
+      if (replicate && lanConnection) lanConnection.sendMessage({ type: 'volleyball-control', action, down: Boolean(down), playerSlot: slot });
+      if (!down || wasDown) return;
+      const s = st.current;
+      if (action === 'switch') { s[side === 1 ? 'active1' : 'active2'] = teamSlot; return; }
+      if (action === 'sig') {
+        if (s.phase === 'serve' && s.serverSide === side && (side === 1 ? s.serverSlot1 : s.serverSlot2) === teamSlot) tryHit(side, 'serve', teamSlot);
+        else tryHit(side, 'bump', teamSlot);
+      } else if (action === 'power') {
+        const player = s[side === 1 ? 't1' : 't2'][teamSlot];
+        tryHit(side, player?.jump > 0 ? 'spike' : 'set', teamSlot);
+      } else if (action === 'heavy') {
+        const direction = state.left ? -1 : state.right ? 1 : 0;
+        tryDive(side, teamSlot, direction);
+      }
+    };
+    const onlineDoublesActionForKey = (slot, key) => {
+      const side = slot % 2 === 0 ? 1 : 2;
+      const binds = kb[side === 1 ? 'p1' : 'p2'];
+      const normalized = String(key).toLowerCase();
+      const actions = { left:'left', right:'right', up:'jump', down:'down', sig:'sig', power:'power', superMove:'switch', heavy:'heavy' };
+      return Object.entries(actions).find(([bindAction]) => String(binds?.[bindAction] || '').toLowerCase() === normalized)?.[1] || null;
+    };
     const resolveKey = (key) => {
       if (!lanConnection || remoteKeysProc.current) return key;
       const scheme = localScheme || (lanRole === 'host' ? 'p1' : 'p2');
@@ -309,13 +349,18 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
       return key;
     };
     const kd = e => {
-      const rk = resolveKey(e.key);
-      const k = rk.toLowerCase(); keysRef.current[k] = true;
-      if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: true });
+      if (onlineDoubles && e.key !== 'Escape' && !['F5','F12'].includes(e.key)) {
+        const action = onlineDoublesActionForKey(ownOnlineSlot, e.key);
+        if (action) { applyOnlineDoublesAction(ownOnlineSlot, action, true, true); e.preventDefault(); }
+        return;
+      }
       if (e.key === 'Escape') {
         if (started) { e.preventDefault(); pausedRef.current = !pausedRef.current; setPaused(pausedRef.current); }
         return;
       }
+      const rk = resolveKey(e.key);
+      const k = rk.toLowerCase(); keysRef.current[k] = true;
+      if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: true });
       if (['F5','F12'].includes(e.key)) return;
       const b1 = bindFor(1);
       const b2 = kb.p2;
@@ -336,12 +381,23 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
       if (!p2IsCPU && !is1v1 && sideForKey(2, k2)) { e.preventDefault(); return; }
       e.preventDefault();
     };
-    const ku = e => { const rk = resolveKey(e.key); keysRef.current[rk.toLowerCase()] = false; if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: false }); };
+    const ku = e => {
+      if (onlineDoubles) {
+        const action = onlineDoublesActionForKey(ownOnlineSlot, e.key);
+        if (action) applyOnlineDoublesAction(ownOnlineSlot, action, false, true);
+        return;
+      }
+      const rk = resolveKey(e.key); keysRef.current[rk.toLowerCase()] = false; if (lanConnection && !remoteKeysProc.current) lanConnection.sendMessage({ type: 'key', key: rk, down: false });
+    };
     if (lanConnection) {
       lanConnection.onMessage((msg) => {
         if (!msg) return;
         if (msg.type === 'state' && msg.state && lanRole !== 'host') {
           remoteStateRef.current = msg.state;
+          return;
+        }
+        if (onlineDoubles && msg.type === 'volleyball-control') {
+          applyOnlineDoublesAction(Number(msg.playerSlot), msg.action, Boolean(msg.down), false);
           return;
         }
         if (msg.type !== 'key') return;
@@ -357,9 +413,18 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
     let gpRaf;
     const pollGamepad = () => {
       if (gpEnabled) {
-        for (const slot of [0, 1]) {
+        for (const slot of (onlineDoubles ? [0] : [0, 1])) {
           const gp = readGamepadInput(slot);
           gpRef.current[slot] = gp || {};
+          if (onlineDoubles && slot === 0) {
+            const actions = { left:'left', right:'right', up:'jump', down:'down', sig:'sig', power:'power', superMove:'switch', heavy:'heavy' };
+            const previous = onlineDoublesPadPrev.current;
+            for (const [button, action] of Object.entries(actions)) {
+              if (Boolean(gp?.[button]) !== Boolean(previous[button])) applyOnlineDoublesAction(ownOnlineSlot, action, Boolean(gp?.[button]), true);
+            }
+            onlineDoublesPadPrev.current = Object.fromEntries(Object.keys(actions).map(button => [button, Boolean(gp?.[button])]));
+            continue;
+          }
           if (gp) {
             const prev = gpPrevRef.current[slot] || {};
             // P1 = slot 0, P2 = slot 1 (or alt controls when vs CPU)
@@ -386,7 +451,7 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
     if (gpEnabled) gpRaf = requestAnimationFrame(pollGamepad);
 
     return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); if (gpRaf) cancelAnimationFrame(gpRaf); };
-  }, [started, p2IsCPU, p1Chars, p2Chars, onQuit, is1v1, settings, lanConnection, lanRole, localScheme]);
+  }, [started, p2IsCPU, p1Chars, p2Chars, onQuit, is1v1, settings, lanConnection, lanRole, localScheme, onlineDoubles, ownOnlineSlot]);
 
   // Game loop
   useEffect(() => {
@@ -540,6 +605,21 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
 
       // Movement
       const canMove = (s.phase === 'rally' || s.phase === 'serve');
+      if (onlineDoubles) {
+        for (let slot = 0; slot < 4; slot++) {
+          const side = slot % 2 === 0 ? 1 : 2;
+          const teamSlot = Math.floor(slot / 2);
+          const team = side === 1 ? s.t1 : s.t2;
+          const player = team[teamSlot];
+          if (!player) continue;
+          const input = onlineDoublesInputs.current[slot] || {};
+          const frozen = s.phase === 'serve' && s.serverSide === side && !s.serveTossed && (side === 1 ? s.serverSlot1 : s.serverSlot2) === teamSlot;
+          if (player.diving) updateDive(s, player, side, side === 1 ? p1Chars : p2Chars, false);
+          else if (frozen) moveFrozen(player, input.jump);
+          else if (canMove) movePlayer(player, input.left, input.right, input.jump, 4.5, side === 1);
+          else idlePlayer(player);
+        }
+      } else {
       const p1Main = s.t1[s.active1];
       const gp1 = gpRef.current[0] || {};
       const gp2 = gpRef.current[1] || {}; // P2/CPU gamepad is never used for P1 movement.
@@ -579,6 +659,7 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
           teammateBot(s, 2, s.active2, p2Chars);
         }
       }
+      }
 
       [s.t1[0], s.t1[1], s.t2[0], s.t2[1]].forEach(p => {
         if (!p) return;
@@ -608,7 +689,7 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
     };
     raf = requestAnimationFrame(safeLoop);
     return () => cancelAnimationFrame(raf);
-  }, [started, p1Chars, p2Chars, p2IsCPU, difficulty, p1Jersey, p2Jersey, onResult, is1v1, equippedSkins, equippedAccessories]);
+  }, [started, p1Chars, p2Chars, p2IsCPU, difficulty, p1Jersey, p2Jersey, onResult, is1v1, equippedSkins, equippedAccessories, onlineDoubles]);
 
   function movePlayer(p, left, right, up, sp, leftSide) {
     if (left) p.vx = Math.max(p.vx - sp * 0.5, -sp);

@@ -450,6 +450,9 @@ export default function Game() {
         setAccountLoadStatus('error');
       }
     };
+    // This reads only the tab's auth session. A guest is switched to the local
+    // profile path below; no account-progress query/save is started without a
+    // session user ID.
     supabase.auth.getSession().then(({ data }) => {
       if (!authEventSeen) loadSignedInProgress(data?.session?.user?.id || null);
     }).catch(() => {

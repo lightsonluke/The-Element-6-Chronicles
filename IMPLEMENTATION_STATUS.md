@@ -14,10 +14,10 @@ full requested redesign or multiplayer/networking scope as complete.
 - Party, Table, and Custom Room changes use the migration sequence in
   `PARTY_MIGRATION_ORDER.txt`. Table launch fills real vacant slots with the
   Honored AI; party-linked rooms and Tables use server-side membership checks.
-- Custom Room membership, settings, readiness, launch, and snapshots use server
-  RPCs. The fight renderer is the only currently supported shared Custom Room
-  renderer; unsupported sports modes are rejected rather than launched as
-  unrelated local simulations.
+- Custom Room membership, settings, readiness, launch, snapshots, and the
+  existing host-authoritative sport renderer use server RPCs. Sport room launch
+  requires the Custom Room sports-renderer migration and an exact human roster;
+  unsupported sport modes are rejected rather than started as local matches.
 - The clip shortcut is F8 and does not consume Space/Jump. Save Clip is a
   focusable pause-menu action, available through the shared controller menu
   navigation. Failed replay conversion preserves its WebM source for retry.
@@ -50,10 +50,20 @@ full requested redesign or multiplayer/networking scope as complete.
   non-host member when the server heartbeat marks the old host stale. The
   authoritative snapshot returns the updated leader to every polling client;
   active-match host migration is still not implemented.
-- Waiting Custom Rooms now do the same server-side host recovery from their
-  authoritative snapshot. It is deliberately restricted to the lobby; the
-  live match host and renderer lifecycle still need a state-preserving
-  migration design.
+- Waiting Custom Rooms recover their host from the authoritative snapshot.
+  Sport matches can elect a new active host with a monotonically increasing
+  host epoch; the existing shared sport engines resume from the last accepted
+  checkpoint where one is available. This is host-authoritative recovery, not
+  deterministic rollback.
+- Ready parties can launch a server-created soccer, 2v2 volleyball, dodgeball,
+  or Banger match through `element6_party_queue_online_sport`. Roster size,
+  presence, readiness, and host permission are checked in SQL. Volleyball 2v2
+  maps all four player slots to separate human-controlled fighters, including
+  controller input.
+- Guest progress stays in the current device's local storage. Account-progress
+  reads and writes require a matching authenticated Supabase session; signed-out
+  tabs do not query `user_progress` or call account-save RPCs. Delayed saves are
+  still fenced against sign-out and account changes.
 
 ## Still incomplete
 
@@ -63,10 +73,14 @@ full requested redesign or multiplayer/networking scope as complete.
   service covering every offline and online mode from which to derive XP.
 - The screen work is a shared visual treatment, not a bespoke rebuild from
   scratch of every active menu, overlay, dialog, and special-case screen.
-- Parties only launch modes with implemented shared sessions. Grand Circuit,
-  online sports party flows, and several other requested group activities are
-  not implemented. Active-match host migration is also incomplete.
-- Custom Rooms currently support shared networked fights only. This update adds host-controlled room capacity, stock count, timer, starting damage, bot difficulty, and stage selection, with server validation. Shared network renderers for sports modes, spectators, the full expanded settings catalog, and complete multiplayer regression coverage remain unfinished.
+- Parties only launch modes with implemented shared sessions. Grand Circuit
+  and several other requested group activities are not implemented. Active
+  sports and Custom Room host recovery exists, but party leadership and all
+  other mode-specific active-match migration paths are not complete.
+- Custom Room sport rendering supports the existing Soccer, Volleyball,
+  Dodgeball, and Banger engines through host-authoritative snapshots. Spectators,
+  the expanded settings catalog, and complete multiplayer regression coverage
+  remain unfinished.
 - Table and Custom Room matches use the current host-authoritative transport;
   this is not deterministic frame-perfect rollback and has not been validated
   for parity across every mode.
@@ -75,73 +89,17 @@ full requested redesign or multiplayer/networking scope as complete.
   controller accessibility audit have not been completed in this pass.
 
 No production build or automated test suite was run for this pass, per the
-current instruction. All 187 root JavaScript modules passed Node's syntax
-checker. JSX files were manually reviewed because the project parser/build
-dependencies are not installed in this source checkout. These items need
-implementation and verification before a release package can be described as
-complete.
+current instruction. The final JavaScript edits and JSX changes were manually
+reviewed. These items need implementation and verification before a release
+package can be described as complete.
 
+## Current continuation pass
 
-## November 6 package additions
-
-- Fixed the reported `infinite recursion detected in policy for relation "element6_party_members"` error. The migration replaces self-referencing membership policies with a security-definer membership check that bypasses RLS only inside the helper.
-- Added Custom Room setting validation and host-only Table match settings.
-- Added supported-range settings for local fight, offline Tournament, Custom Room, and The Table. Grand Circuit, party, LAN, and offline sports retain the participant formats currently implemented by their game engines; arbitrary counts are not enabled where the engine or transport cannot play them.
-- The background and authenticated-only cloud-read changes are included in the overlay.
-
-
-## November 6 continuation
-
-- The home menu explicitly receives the requested Split City cherry-blossom
-  backdrop asset (`public/assets/e6-home-menu-background.png`).
-- Signed-out progress is saved only to the local guest key. Guest saves do not
-  enqueue cloud synchronization, and the legacy unscoped progress key is not
-  loaded into a guest session.
-- Regular Battle's multi-fighter launch carries the selected 2–8 fighter count,
-  human/CPU slots, stocks, starting damage, team settings, and selected stage
-  into the existing 8-fighter renderer. The renderer accepts two local keyboard
-  players; remaining selected slots are CPUs.
-- Tournament setup now supports one or two local entrants. Player 2 selects a
-  fighter and can use the arrow-key layout or a second connected controller.
-  The opening match is head-to-head; its winner advances under that fighter's
-  identity.
-- The Table host can set the active fighter total from 2 to 8. Its start RPC
-  validates that the setting can hold the connected human roster and fills the
-  remaining selected slots with Honored Bots. The SQL order was updated so the
-  settings column exists before the launch RPC is installed.
-- Monthly clan tournament rewards now use a pool of 7,000 Tokens per current
-  member and divide it using the claimant's recorded XP share. A one-member
-  clan therefore cannot claim the former fixed 100,000-token pool. The final
-  SQL file reapplies this function after earlier clan reward migrations.
-
-No production build was run. This source checkout has neither Node.js nor
-installed project dependencies, so the final JSX edits were manually reviewed.
-
-
-## November 6 continuation
-
-- The home menu explicitly receives the requested Split City cherry-blossom
-  backdrop asset (`public/assets/e6-home-menu-background.png`).
-- Signed-out progress is saved only to the local guest key. Guest saves do not
-  enqueue cloud synchronization, delayed writes are discarded after sign-out or
-  account switching, and the legacy unscoped progress key is not loaded into a
-  guest session.
-- Regular Battle's multi-fighter launch carries the selected 2–8 fighter count,
-  human/CPU slots, stocks, starting damage, team settings, and selected stage
-  into the existing 8-fighter renderer. The renderer accepts two local keyboard
-  players; remaining selected slots are CPUs.
-- Tournament setup supports one or two local entrants. Player 2 selects a
-  fighter and can use the arrow-key layout or a second connected controller.
-  The two local entrants play head-to-head in the opening round; the winner
-  advances under that fighter's identity.
-- The Table host can set the active fighter total from 2 to 8. Its start RPC
-  validates that the setting can hold the connected human roster and fills the
-  remaining selected slots with Honored Bots. The SQL order installs the settings
-  column before the launch RPC.
-- Monthly clan tournament rewards use a pool of 7,000 Tokens per current member
-  and divide it using the claimant's recorded XP share. A one-member clan
-  therefore cannot claim the former fixed 100,000-token pool. The final SQL file
-  reapplies this function after earlier clan reward migrations.
-
-No production build was run. This source checkout has neither Node.js nor
-installed project dependencies, so the final JSX edits were manually reviewed.
+- Added party sports matchmaking, live sport-host election, epoch-filtered
+  sport transport, and independent human input for all four Volleyball 2v2
+  slots. Added the migration order and focused patch package. Tightened cloud
+  save helpers so guests remain local and account data is never queried or
+  written without a verified session matching the active account owner.
+- This continuation did not rebuild every screen or add deterministic rollback
+  to each game engine. Existing mode-specific sports and room simulation still
+  use host-authoritative state snapshots.

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from './supabaseClient.js';
 import SoccerFighter from './SoccerFighter.jsx';
 import VolleyballGame from './VolleyballGame.jsx';
@@ -26,6 +26,9 @@ export default function ActualSportsOnlineMatch({
 }) {
   const [me, setMe] = useState(null);
   const [remoteState, setRemoteState] = useState(null);
+  const [serverHostId, setServerHostId] = useState(match?.host_user_id || null);
+  const [hostEpoch, setHostEpoch] = useState(Number(match?.host_epoch || 0));
+  const hostAuthorityRef = useRef({ hostId: match?.host_user_id || null, epoch: Number(match?.host_epoch || 0) });
   const [status, setStatus] = useState('CONNECTING…');
   const [result, setResult] = useState(null);
   const [syncing, setSyncing] = useState(false);
@@ -43,6 +46,14 @@ export default function ActualSportsOnlineMatch({
   const lastHostStateRef = useRef(null);
   const resyncRequestersRef = useRef(new Set());
 
+  const applyHostAuthority = useCallback((hostId, epochValue) => {
+    const epoch = Number(epochValue || 0);
+    if (epoch < hostAuthorityRef.current.epoch) return;
+    hostAuthorityRef.current = { hostId: hostId || null, epoch };
+    setServerHostId(hostId || null);
+    setHostEpoch(epoch);
+  }, []);
+
   const showResyncOnce = () => {
     if (resyncVisible.current) return;
     resyncVisible.current = true;
@@ -50,7 +61,7 @@ export default function ActualSportsOnlineMatch({
     setSyncing(true);
     if (!isHost && channel.current && me?.id) {
       syncRequestRef.current = true;
-      channel.current.send({ type: 'broadcast', event: 'control', payload: { sender: me.id, kind: 'sync-request', lastFrame: lastRemoteFrame.current } });
+      channel.current.send({ type: 'broadcast', event: 'control', payload: { sender: me.id, kind: 'sync-request', lastFrame: lastRemoteFrame.current, epoch: hostEpoch } });
     }
     clearTimeout(resyncTimer.current);
     resyncTimer.current = setTimeout(() => {
@@ -62,13 +73,22 @@ export default function ActualSportsOnlineMatch({
     supabase.auth.getUser().then(({ data }) => setMe(data.user || null));
   }, []);
 
+  useEffect(() => {
+    hostAuthorityRef.current = { hostId: match?.host_user_id || null, epoch: Number(match?.host_epoch || 0) };
+    setServerHostId(match?.host_user_id || null);
+    setHostEpoch(Number(match?.host_epoch || 0));
+    setRemoteState(null);
+    lastRemoteFrame.current = -1;
+    lastRemoteAt.current = Date.now();
+  }, [match?.id, match?.host_user_id, match?.host_epoch]);
+
   const orderedPlayers = useMemo(
     () => [...(players || [])].sort((a, b) => Number(a.slot) - Number(b.slot)),
     [players],
   );
   const sport = getSport(match?.mode);
   const isVolleyball2v2 = match?.mode === 'volleyball_2v2_online';
-  const hostId = match?.host_user_id || orderedPlayers[0]?.user_id;
+  const hostId = serverHostId || match?.host_user_id || orderedPlayers[0]?.user_id;
   const isHost = Boolean(me?.id && String(me.id) === String(hostId));
   const p1Team = orderedPlayers.filter(player => Number(player.team) === 1);
   const p2Team = orderedPlayers.filter(player => Number(player.team) === 2);
@@ -84,11 +104,17 @@ export default function ActualSportsOnlineMatch({
 
   useEffect(() => {
     if (!match?.id || !me?.id || !sport) return undefined;
-    const beat = () => supabase.rpc('online_sport_heartbeat', { p_match_id: match.id }).catch(() => {});
+    let active = true;
+    const beat = async () => {
+      const { data, error } = await supabase.rpc('element6_online_sport_heartbeat', { p_match_id: match.id });
+      if (active && !error && data) {
+        applyHostAuthority(data.host_user_id, data.host_epoch);
+      }
+    };
     beat();
     const timer = setInterval(beat, 5000);
-    return () => clearInterval(timer);
-  }, [match?.id, me?.id, sport]);
+    return () => { active = false; clearInterval(timer); };
+  }, [match?.id, me?.id, sport, applyHostAuthority]);
 
   useEffect(() => {
     if (!match?.id || !me?.id || !sport) return undefined;
@@ -98,11 +124,15 @@ export default function ActualSportsOnlineMatch({
     });
     channel.current = realtime;
     realtime
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'online_sport_matches', filter: `id=eq.${match.id}` }, ({ new: next }) => {
+        if (!active || !next) return;
+        applyHostAuthority(next.host_user_id, next.host_epoch);
+      })
       .on('broadcast', { event: 'input' }, ({ payload }) => {
-        if (active && payload?.sender !== me.id) messageHandler.current?.(payload?.message);
+        if (active && payload?.sender !== me.id && Number(payload?.epoch) === hostEpoch) messageHandler.current?.(payload?.message);
       })
       .on('broadcast', { event: 'state' }, ({ payload }) => {
-        if (active && !isHost && payload?.state) {
+        if (active && !isHost && Number(payload?.epoch) === hostEpoch && String(payload?.hostId) === String(hostId) && payload?.state) {
           const nextFrame = Number(payload.state.frame ?? 0);
           if (nextFrame < lastRemoteFrame.current) return;
           lastRemoteFrame.current = nextFrame;
@@ -110,19 +140,19 @@ export default function ActualSportsOnlineMatch({
           setRemoteState(payload.state);
           if (payload.resync || (stalledRef.current && syncRequestRef.current)) {
             syncRequestRef.current = false;
-            channel.current?.send({ type: 'broadcast', event: 'control', payload: { sender: me.id, kind: 'sync-ack', frame: nextFrame, syncToken: payload.syncToken || null } });
+            channel.current?.send({ type: 'broadcast', event: 'control', payload: { sender: me.id, kind: 'sync-ack', frame: nextFrame, syncToken: payload.syncToken || null, epoch: hostEpoch } });
           }
         }
       })
       .on('broadcast', { event: 'control' }, ({ payload }) => {
-        if (!active || !payload || payload.sender === me.id) return;
+        if (!active || !payload || payload.sender === me.id || Number(payload.epoch) !== hostEpoch) return;
         if (payload.kind === 'sync-request' && isHost) {
           stalledRef.current = true;
           setSyncing(true);
           if (payload.sender) resyncRequestersRef.current.add(payload.sender);
           const state = lastHostStateRef.current || payload.state || null;
           if (state) {
-            channel.current?.send({ type: 'broadcast', event: 'state', payload: { state, resync: true, syncToken: Date.now() } });
+            channel.current?.send({ type: 'broadcast', event: 'state', payload: { state, resync: true, syncToken: Date.now(), hostId: me.id, epoch: hostEpoch } });
             // Never leave the entire match paused because one client vanished.
             clearTimeout(resyncTimer.current);
             resyncTimer.current = setTimeout(() => {
@@ -130,7 +160,7 @@ export default function ActualSportsOnlineMatch({
               stalledRef.current = false;
               syncRequestRef.current = false;
               setSyncing(false);
-              channel.current?.send({ type: 'broadcast', event: 'control', payload: { sender: me.id, kind: 'sync-resume' } });
+              channel.current?.send({ type: 'broadcast', event: 'control', payload: { sender: me.id, kind: 'sync-resume', epoch: hostEpoch } });
             }, 1200);
           }
         } else if (payload.kind === 'sync-ack' && isHost) {
@@ -138,9 +168,9 @@ export default function ActualSportsOnlineMatch({
           if (resyncRequestersRef.current.size === 0) {
             stalledRef.current = false;
             setSyncing(false);
-            channel.current?.send({ type: 'broadcast', event: 'control', payload: { sender: me.id, kind: 'sync-resume' } });
+            channel.current?.send({ type: 'broadcast', event: 'control', payload: { sender: me.id, kind: 'sync-resume', epoch: hostEpoch } });
           }
-        } else if (payload.kind === 'sync-resume') {
+        } else if (payload.kind === 'sync-resume' && String(payload.sender) === String(hostId)) {
           stalledRef.current = false;
           syncRequestRef.current = false;
           setSyncing(false);
@@ -148,7 +178,7 @@ export default function ActualSportsOnlineMatch({
         }
       })
       .on('broadcast', { event: 'result' }, ({ payload }) => {
-        if (active && payload?.winnerTeam) setResult(payload);
+        if (active && Number(payload?.epoch) === hostEpoch && payload?.winnerTeam) setResult(payload);
       })
       .subscribe(state => {
         if (active) setStatus(state === 'SUBSCRIBED' ? 'CONNECTED' : state);
@@ -159,7 +189,7 @@ export default function ActualSportsOnlineMatch({
       channel.current = null;
       supabase.removeChannel(realtime);
     };
-  }, [match?.id, me?.id, sport, isHost]);
+  }, [match?.id, me?.id, sport, isHost, hostId, hostEpoch, applyHostAuthority]);
 
   useEffect(() => {
     if (!match?.id || !me?.id || !sport || isHost) return undefined;
@@ -168,11 +198,11 @@ export default function ActualSportsOnlineMatch({
         syncRequestRef.current = true;
         stalledRef.current = true;
         setSyncing(true);
-        channel.current?.send({ type: 'broadcast', event: 'control', payload: { sender: me.id, kind: 'sync-request', lastFrame: lastRemoteFrame.current } });
+        channel.current?.send({ type: 'broadcast', event: 'control', payload: { sender: me.id, kind: 'sync-request', lastFrame: lastRemoteFrame.current, epoch: hostEpoch } });
       }
     }, 100);
     return () => clearInterval(timer);
-  }, [match?.id, me?.id, sport, isHost]);
+  }, [match?.id, me?.id, sport, isHost, hostEpoch]);
 
   const lanConnection = useMemo(() => ({
     onMessage(handler) {
@@ -181,12 +211,12 @@ export default function ActualSportsOnlineMatch({
     },
     sendMessage(message) {
       if (channel.current && me?.id) {
-        channel.current.send({ type: 'broadcast', event: 'input', payload: { sender: me.id, message: { ...message, playerSlot: Number(mePlayer?.slot || 1) - 1 } } });
+        channel.current.send({ type: 'broadcast', event: 'input', payload: { sender: me.id, epoch: hostEpoch, message: { ...message, playerSlot: Number(mePlayer?.slot ?? 0) } } });
       }
     },
     get stalled() { return stalledRef.current; },
     stalledRef,
-  }), [me?.id, mePlayer?.slot]);
+  }), [me?.id, mePlayer?.slot, hostEpoch]);
 
   const onStateExport = state => {
     // Existing games export every animation frame; send at ~20Hz instead.
@@ -196,7 +226,7 @@ export default function ActualSportsOnlineMatch({
     // Keep authoritative checkpoints flowing even while the guest is stalled.
     // Stopping snapshots during a stall made recovery impossible because the
     // very player that needed the state could never receive a fresh one.
-    channel.current.send({ type: 'broadcast', event: 'state', payload: { state, resync: stalledRef.current } });
+    channel.current.send({ type: 'broadcast', event: 'state', payload: { state, resync: stalledRef.current, hostId: me?.id, epoch: hostEpoch } });
   };
 
   const finish = winnerTeam => {
@@ -205,11 +235,12 @@ export default function ActualSportsOnlineMatch({
     const payload = {
       winnerTeam,
       finalFrame: Math.max(1, Math.floor((Date.now() - startedAt.current) / (1000 / 60))),
+      epoch: hostEpoch,
       // Both clients receive this match result through the same Realtime message.
       checksum: `actual-sport-${match.id}-${winnerTeam}`,
     };
     setResult(payload);
-    channel.current?.send({ type: 'broadcast', event: 'result', payload });
+    channel.current?.send({ type: 'broadcast', event: 'result', payload: { ...payload, epoch: hostEpoch, hostId: me?.id } });
   };
 
   useEffect(() => {
@@ -261,7 +292,7 @@ export default function ActualSportsOnlineMatch({
       remoteState={isHost ? null : remoteState}
       isOnlineHost={isHost}
       online2v2={isVolleyball2v2}
-      localPlayerSlot={Number(mePlayer?.slot || 1) - 1}
+      localPlayerSlot={Number(mePlayer?.slot ?? 0)}
     />}
     {sport === 'dodgeball' && <DodgeballGame
       {...shared}
@@ -283,7 +314,7 @@ export default function ActualSportsOnlineMatch({
       remoteState={isHost ? null : remoteState}
       onStateExport={isHost ? onStateExport : undefined}
       isOnlineHost={isHost}
-      localPlayerSlot={Number(mePlayer?.slot || 1) - 1}
+      localPlayerSlot={Number(mePlayer?.slot ?? 0)}
       onResult={matchResult => { if (isHost) finish(matchResult?.p1Won ? 1 : 2); }}
       onQuit={onEnd}
     />}
