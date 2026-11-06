@@ -47,9 +47,11 @@ export async function getCloudUser() {
 }
 
 export async function loadCloudProgress(expectedUserId = activeCloudOwnerId) {
+  // A guest session has no account snapshot to read. Require an explicit,
+  // currently active account owner before making any account-data request.
+  if (!expectedUserId || !activeCloudOwnerId || expectedUserId !== activeCloudOwnerId) return null;
   const user = await getCloudUser();
-  if (!user) return null;
-  if (expectedUserId && user.id !== expectedUserId) return null;
+  if (!user || user.id !== expectedUserId) return null;
   if (activeCloudOwnerId !== user.id) return null;
   const { data, error } = await supabase
     .from('user_progress')

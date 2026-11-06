@@ -1,12 +1,20 @@
-# Element 6 Character Design Files
+# Element 6 quick update
 
-This is a small overlay for the supplied Element 6 project. Copy these files into the project root and replace the existing files with the same names.
+Copy the files into the game project root, keeping folders and replacing matching files. This is a changed-files overlay, not the whole game. The supplied home backdrop and matching game favicon are included.
 
 ## Included
 
-- `characterPainter.js` — builds a clear, cel-shaded side-view sprite atlas for each roster entry and selects the matching pose at runtime.
-- `characterVisuals.js` — per-character hair, clothing, footwear, accessory, palette, and movement-style definitions.
-- `stickman.js` and `renderer.js` — route the existing visual state into the matching authored pose. Physics, collision, hurtboxes, abilities, and combat values remain with the game.
-- `CharacterDesignPreview.html` — roster gallery showing idle, two run poses, dash, wall slide, jump, landing, and attack poses. Serve it from the project root so the game's ES modules can load.
+- Restores the supplied city background on the home menu without the extra translucent wash or ornamental lines.
+- Reads cloud progress only for the currently authenticated account; signed-out play remains local.
+- Adds local fight rules and player/CPU selection within the fighter counts the active fight engine supports.
+- Adds configurable 8/16/32 entrant size, stocks, match timer, and CPU difficulty to offline Tournament.
+- Keeps Grand Circuit's existing selectable human roster and its 32-entrant bracket.
+- Adds host controls for Custom Room capacity (2–8), stocks, timer, starting damage, bot difficulty, and stage selection.
+- Adds host-controlled stocks, timer, and starting damage to The Table; its existing 2–8 human rule and Honored Bot fill remain intact.
+- Fixes recursive RLS evaluation on `element6_party_members` with a restricted security-definer membership helper and adds server-side room-setting validation.
 
-The sprite art preserves each character's established exposed body color. Every hand is a simple rounded stump with no fingers or thumbs.
+Player counts remain constrained to what each current engine and server flow supports. LAN Play uses a two-device peer connection, sports modes expose their implemented formats, and party capacity remains eight; this update does not fake larger multiplayer support.
+
+## SQL
+
+Read `SQL/README.txt` and apply the two migrations after the existing party/Custom Room and Table setup scripts. No production build was run for this package.

@@ -7,11 +7,17 @@ import { music } from './music.js';
 import GameIcon from "./GameIcon.jsx";
 
 const ALL = ALL_CHARS;
-const ROUND_NAMES = ['Round of 16', 'Quarterfinal', 'Semifinal', 'GRAND FINAL'];
 const MAP_IDS = STAGE_MAPS.map(m => m.id);
 
 function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function randomMap() { return MAP_IDS[Math.floor(Math.random() * MAP_IDS.length)]; }
+const tournamentRoundName = (round, size) => {
+  const playersInRound = Math.max(2, size / (2 ** round));
+  if (playersInRound === 2) return 'GRAND FINAL';
+  if (playersInRound === 4) return 'SEMIFINAL';
+  if (playersInRound === 8) return 'QUARTERFINAL';
+  return `ROUND OF ${playersInRound}`;
+};
 
 const TEAM_FORMATS = [
   { id: 'pp_cc', label: 'P+P vs C+C', desc: 'Two players vs two CPUs' },
@@ -31,17 +37,22 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
   const [roundMap, setRoundMap] = useState('splitcity');
   const [log, setLog] = useState([]);
   const [cpuDifficulty, setCpuDifficulty] = useState('pro');
+  const [bracketSize, setBracketSize] = useState(16);
+  const [stockCount, setStockCount] = useState(3);
+  const [matchTime, setMatchTime] = useState(240);
 
   useEffect(() => { music.play('menu'); return () => music.stop(); }, []);
 
-  const newTournament = () => {
+  const newTournament = (nextSize = bracketSize) => {
+    const size = [8, 16, 32].includes(Number(nextSize)) ? Number(nextSize) : 16;
     const pool = shuffle(ALL.filter(c => c.id !== 'evil'));
-    let newSlots = pool.slice(0, 16).map(c => c.id);
+    let newSlots = pool.slice(0, size).map(c => c.id);
     // Ensure favorite is in the pool if unlocked
     if (favoriteId && unlockedIds.includes(favoriteId) && !newSlots.includes(favoriteId)) {
       newSlots[0] = favoriteId;
     }
     setSlots(newSlots);
+    setBracketSize(size);
     setCurrentRound(0);
     setResults({});
     setLog([]);
@@ -78,7 +89,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
   };
 
   const simulateOtherMatches = (round) => {
-    const numMatches = [8, 4, 2, 1][round];
+    const numMatches = Math.pow(2, Math.log2(bracketSize) - round - 1);
     const newResults = { ...results };
     newResults[round] = { ...(newResults[round] || {}) };
     newResults[round][0] = playerChar;
@@ -97,10 +108,10 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
     const won = result?.p1Won === true;
     if (won) {
       simulateOtherMatches(currentRound);
-      setLog(l => [...l, `${ROUND_NAMES[currentRound]}: You defeated ${nameOf(opponent)}!`]);
+      setLog(l => [...l, `${tournamentRoundName(currentRound, bracketSize)}: You defeated ${nameOf(opponent)}!`]);
       onAwardCoins?.(15);
       onAwardXP?.(playerChar, 10 + currentRound * 5);
-      if (currentRound >= 3) {
+      if (currentRound >= Math.log2(bracketSize) - 1) {
         setPhase('champion');
         onChampion?.();
         const locked = ALL.filter(c => !unlockedIds.includes(c.id));
@@ -129,6 +140,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
       <PlatformFighter
         p1Char={playerChar} p2Char={opponent} p2IsCPU
         gameMode="regular" selectedMap={roundMap} cpuDifficulty={cpuDifficulty}
+        stockCount={stockCount} matchTime={matchTime}
         onEnd={handleEnd}
         equippedAccessories={equippedAccessories}
         equippedSkins={equippedSkins}
@@ -161,7 +173,25 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
               if (unlocked.length > 0) handlePickChar(unlocked[Math.floor(Math.random() * unlocked.length)].id);
             }} className="px-4 py-1.5 bg-primary/40 text-primary-foreground rounded font-heading text-xs hover:opacity-80">RANDOM</button>
           </div>
-          <div className="grid grid-cols-8 gap-2 mb-4 max-w-2xl mx-auto">
+          <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <label className="flex flex-col gap-1 text-left text-xs font-heading text-muted-foreground">TOURNAMENT SIZE
+                  <select value={bracketSize} onChange={e => newTournament(Number(e.target.value))} className="min-h-10 rounded-lg bg-secondary px-3 text-foreground">
+                    {[8, 16, 32].map(n => <option key={n} value={n}>{n} entrants</option>)}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-left text-xs font-heading text-muted-foreground">STOCKS PER FIGHT
+                  <select value={stockCount} onChange={e => setStockCount(Number(e.target.value))} className="min-h-10 rounded-lg bg-secondary px-3 text-foreground">
+                    {[1, 2, 3, 4, 5, 7, 9].map(n => <option key={n} value={n}>{n} stocks</option>)}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-left text-xs font-heading text-muted-foreground">MATCH TIMER
+                  <select value={matchTime} onChange={e => setMatchTime(Number(e.target.value))} className="min-h-10 rounded-lg bg-secondary px-3 text-foreground">
+                    {[[60, '1 minute'], [120, '2 minutes'], [180, '3 minutes'], [240, '4 minutes'], [300, '5 minutes'], [480, '8 minutes'], [600, '10 minutes'], [0, 'Unlimited']].map(([n, label]) => <option key={n} value={n}>{label}</option>)}
+                  </select>
+                </label>
+          </div>
+          <p className="mb-3 text-xs text-muted-foreground">{bracketSize} entrants · {Math.log2(bracketSize)} rounds · 1 human slot, remaining slots filled by CPU opponents</p>
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mb-4 max-w-2xl mx-auto">
             {slots.map((id, i) => {
               const c = ALL.find(x => x.id === id);
               const locked = !unlockedIds.includes(id);
@@ -190,7 +220,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
         </div>
 
         <div className="bg-card border border-border rounded-xl p-4">
-          <p className="text-[10px] font-heading text-accent mb-3">TOURNAMENT BRACKET — {ROUND_NAMES[currentRound]}</p>
+          <p className="text-[10px] font-heading text-accent mb-3">TOURNAMENT BRACKET — {tournamentRoundName(currentRound, bracketSize)}</p>
           <BracketVisualization
             slots={slots}
             results={results}
@@ -201,7 +231,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
         </div>
 
         <div className="bg-card border-2 border-accent rounded-xl p-4 text-center">
-          <p className="font-heading text-sm text-primary mb-2">{ROUND_NAMES[currentRound]}</p>
+          <p className="font-heading text-sm text-primary mb-2">{tournamentRoundName(currentRound, bracketSize)}</p>
           <div className="flex justify-center items-center gap-4 mb-4">
             <div className="flex flex-col items-center">
               <div className="w-12 h-12 rounded-full" style={{ backgroundColor: ALL.find(c => c.id === playerChar)?.color }} />
@@ -215,7 +245,7 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
           </div>
           <button onClick={beginRound}
             className="px-8 py-3 bg-accent text-accent-foreground rounded-lg font-heading text-lg hover:opacity-90 shadow-lg">
-            FIGHT! ({ROUND_NAMES[currentRound]})
+            FIGHT! ({tournamentRoundName(currentRound, bracketSize)})
           </button>
         </div>
 
@@ -249,10 +279,10 @@ export default function TournamentMode({ unlockedIds, favoriteId, onUnlock, onAw
         </div>
 
         <div className="bg-card border-2 border-green-600 rounded-xl p-6 text-center">
-          <p className="text-xl font-heading text-green-500 mb-2"><GameIcon icon="check" size={14} /> {ROUND_NAMES[currentRound]} WON!</p>
+          <p className="text-xl font-heading text-green-500 mb-2"><GameIcon icon="check" size={14} /> {tournamentRoundName(currentRound, bracketSize)} WON!</p>
           <p className="text-sm text-muted-foreground font-body mb-4">You defeated {nameOf(opponent)}!</p>
           <button onClick={advanceRound} className="px-8 py-3 bg-primary text-primary-foreground rounded-lg font-heading text-lg hover:opacity-80">
-            CONTINUE TO {currentRound < 3 ? ROUND_NAMES[currentRound + 1] : 'FINAL'}
+            CONTINUE TO {currentRound < Math.log2(bracketSize) - 1 ? tournamentRoundName(currentRound + 1, bracketSize) : 'FINAL'}
           </button>
         </div>
 

@@ -91,6 +91,8 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
       const f = createFighter(modifiedCd, sx, sy, SPAWN_FACE[i % 8]);
       const configuredStocks = Number(room?.settings?.stocks);
       if (Number.isInteger(configuredStocks) && configuredStocks > 0) f.stocks = configuredStocks;
+      const configuredDamage = Number(room?.settings?.startingDamage);
+      if (Number.isFinite(configuredDamage) && configuredDamage >= 0 && configuredDamage <= 250) f.damage = configuredDamage;
       if (pin) f.respawnPoint = { x: pin.x, y: pin.y };
       f.grounded = true;
       f.isAI = p.is_bot;

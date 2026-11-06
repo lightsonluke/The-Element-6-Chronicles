@@ -110,7 +110,6 @@ export default function MainMenu({ onNavigate, coins = 0, favoriteName, favorite
 
   return (
     <main className="e6-home-menu" style={{ '--e6-home-image': `url("${import.meta.env.BASE_URL}assets/e6-home-menu-background.png")` }}>
-      <div className="e6-home-backdrop" aria-hidden="true" />
       <header className="e6-home-topbar">
         <div className="e6-home-brand" aria-label="Element 6">
           <span className="e6-home-brand-mark"><img src={`${import.meta.env.BASE_URL}favicon.png`} alt="" /></span>
@@ -144,7 +143,7 @@ export default function MainMenu({ onNavigate, coins = 0, favoriteName, favorite
             <button type="button" onClick={() => navigate('events')}><GameIcon icon="calendar" size={16} /><span>BATTLE PASS</span></button>
             <button type="button" onClick={() => navigate('equip')}><GameIcon icon="package" size={16} /><span>LOADOUT</span></button>
           </div>
-          <div className="e6-home-caption"><span /> YOUR NEXT CHAPTER STARTS HERE</div>
+          <div className="e6-home-caption">YOUR NEXT CHAPTER STARTS HERE</div>
         </div>
 
         <aside className="e6-home-navigation" aria-label="Game destinations">

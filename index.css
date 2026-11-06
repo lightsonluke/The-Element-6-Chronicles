@@ -1894,15 +1894,16 @@ body { font-family: var(--font-body); background-color: hsl(var(--background)); 
   display: flex;
   flex-direction: column;
   color: #fff7ff;
-  background-image: linear-gradient(90deg, rgba(14, 7, 32, .62), rgba(20, 8, 42, .26) 48%, rgba(14, 5, 31, .52)), var(--e6-home-image);
+  background-color: #160b35;
+  background-image: var(--e6-home-image);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   isolation: isolate;
   font-family: 'DM Sans', system-ui, sans-serif;
 }
-.e6-home-backdrop { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, rgba(12, 5, 29, .48), transparent 28%, transparent 70%, rgba(12, 5, 29, .7)); }
-.e6-home-topbar { width: min(100%, 1480px); margin: 0 auto; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: clamp(1rem, 3vw, 3.2rem); padding: .25rem 0 1.1rem; border-bottom: 1px solid rgba(255,255,255,.18); }
+.e6-home-backdrop { display: none; }
+.e6-home-topbar { width: min(100%, 1480px); margin: 0 auto; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: clamp(1rem, 3vw, 3.2rem); padding: .25rem 0 1.1rem; }
 .e6-home-brand { display: inline-flex; align-items: center; gap: .85rem; min-width: 195px; color: white; }
 .e6-home-brand-mark { display: grid; place-items: center; width: 2.7rem; height: 2.7rem; border: 1px solid rgba(255,255,255,.44); border-radius: 50%; background: rgba(199, 89, 227, .22); box-shadow: inset 0 0 20px rgba(255, 160, 246, .14), 0 0 26px rgba(210, 69, 239, .24); font: 800 1.4rem 'Oxanium', sans-serif; }
 .e6-home-brand-mark img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: contain; }
@@ -1922,7 +1923,7 @@ body { font-family: var(--font-body); background-color: hsl(var(--background)); 
 .e6-home-layout { width: min(100%, 1480px); margin: auto; padding: clamp(1.5rem, 4vh, 3.5rem) 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(350px, 440px); align-items: center; gap: clamp(2rem, 7vw, 7rem); }
 .e6-home-hero { max-width: 720px; padding: clamp(.5rem, 2vw, 1.7rem) 0; }
 .e6-home-season { display: inline-flex; align-items: center; gap: .7rem; color: #f6cae9; font-size: .67rem; font-weight: 700; letter-spacing: .19em; }
-.e6-home-season::before { content: ''; width: 2rem; height: 1px; background: #f0a2e4; box-shadow: 0 0 12px #f0a2e4; }
+.e6-home-season::before { content: none; display: none; }
 .e6-home-hero h1 { margin: .6rem 0 .25rem; color: #fff; font: 800 clamp(3.6rem, 8.8vw, 8.5rem)/.91 'Oxanium', sans-serif; letter-spacing: -.07em; text-shadow: 0 8px 40px rgba(20, 4, 40, .38); }
 .e6-home-hero h1 span { color: #f1a0ed; text-shadow: 0 0 34px rgba(233, 107, 255, .56); }
 .e6-home-subtitle { max-width: 34rem; margin: 1.2rem 0 1.7rem; color: rgba(255,244,255,.82); font-size: clamp(.95rem, 1.4vw, 1.18rem); line-height: 1.7; }
@@ -1940,7 +1941,6 @@ body { font-family: var(--font-body); background-color: hsl(var(--background)); 
 .e6-home-quicklinks button { min-height: 40px; display: inline-flex; align-items: center; gap: .45rem; padding: .55rem .85rem; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; color: rgba(255,255,255,.87); background: rgba(17, 7, 36, .36); backdrop-filter: blur(10px); font-size: .66rem; font-weight: 700; letter-spacing: .08em; transition: .2s ease; }
 .e6-home-quicklinks button:hover { border-color: rgba(246, 177, 255, .66); color: white; transform: translateY(-1px); }
 .e6-home-caption { display: flex; align-items: center; gap: .6rem; margin-top: clamp(1.5rem, 4vh, 3rem); color: rgba(255,255,255,.58); font-size: .59rem; font-weight: 700; letter-spacing: .16em; }
-.e6-home-caption > span { width: 1.5rem; height: 1px; background: #ed9be9; }
 .e6-home-navigation { padding: 1.2rem; border: 1px solid rgba(255,255,255,.26); border-radius: 1.8rem; background: linear-gradient(150deg, rgba(27, 13, 52, .78), rgba(24, 9, 42, .62)); box-shadow: 0 30px 90px rgba(10, 3, 25, .36), inset 0 1px rgba(255,255,255,.09); backdrop-filter: blur(24px) saturate(1.18); }
 .e6-home-nav-heading { display: flex; align-items: center; justify-content: space-between; padding: .25rem .25rem .9rem; }
 .e6-home-nav-heading h2 { margin: .15rem 0 0; color: white; font: 650 1.35rem 'Outfit', sans-serif; letter-spacing: -.035em; }

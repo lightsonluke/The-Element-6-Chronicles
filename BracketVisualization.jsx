@@ -3,7 +3,7 @@ import GameIcon from "./GameIcon.jsx";
 
 // Renders a tournament bracket.
 // Two modes:
-//   1. Tree bracket (16-slot single-elim) — pass `slots` (16 char IDs) + `results` + `currentRound`
+//   1. Tree brackets (8/16/32-slot single-elim) — pass `slots` + `results` + `currentRound`
 //   2. Linear bracket (sequential rounds) — pass `participants` + `results` + `currentIdx`
 //
 // Props for tree mode:
@@ -20,6 +20,9 @@ import GameIcon from "./GameIcon.jsx";
 //   hideFuture: bool — if true, hide opponents beyond currentIdx
 
 export default function BracketVisualization(props) {
+  if (props.slots && props.slots.length === 32) {
+    return <ThirtyTwoSlotBracket {...props} />;
+  }
   if (props.slots && props.slots.length === 16) {
     return <TreeBracket {...props} />;
   }
@@ -27,6 +30,42 @@ export default function BracketVisualization(props) {
     return <EightSlotBracket {...props} />;
   }
   return <LinearBracket {...props} />;
+}
+
+function ThirtyTwoSlotBracket({ slots, results = {}, currentRound = 0, playerSlot = 0, allChars = [] }) {
+  if (!slots || slots.length < 32) return null;
+  const rounds = Math.log2(slots.length);
+  const getChar = id => id ? allChars.find(char => char.id === id) : null;
+  return (
+    <div className="flex max-h-[55vh] items-stretch gap-2 overflow-auto pb-2">
+      {Array.from({ length: rounds }, (_, round) => {
+        const matches = slots.length / (2 ** (round + 1));
+        const entrantsThisRound = slots.length / (2 ** round);
+        return (
+          <div key={round} className="flex min-w-[126px] flex-1 flex-col gap-1">
+            <p className="sticky top-0 z-10 rounded bg-card/95 px-1 py-1 text-center text-[8px] font-heading text-muted-foreground">{entrantsThisRound === 2 ? 'FINAL' : entrantsThisRound === 4 ? 'SEMIFINAL' : entrantsThisRound === 8 ? 'QUARTERFINAL' : `ROUND OF ${entrantsThisRound}`}</p>
+            {Array.from({ length: matches }, (_, match) => {
+              const first = round === 0 ? slots[match * 2] : results[round - 1]?.[match * 2];
+              const second = round === 0 ? slots[match * 2 + 1] : results[round - 1]?.[match * 2 + 1];
+              const winner = results[round]?.[match];
+              const playerMatch = first === slots[playerSlot] || second === slots[playerSlot];
+              return (
+                <div key={match} className={`min-h-10 rounded border px-1 py-0.5 ${round === currentRound && playerMatch && winner === undefined ? 'border-accent bg-accent/10' : 'border-border bg-card/70'}`}>
+                  {[first, second].map((id, i) => {
+                    const char = getChar(id);
+                    return <div key={i} className={`flex items-center gap-1 truncate text-[8px] ${winner === id ? 'text-emerald-400' : 'text-foreground'}`}>
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: char?.color || '#444' }} />
+                      <span className="truncate">{char?.name || 'TBD'}</span>
+                    </div>;
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 // ── 8-slot single-elimination bracket (soccer tournament) ──

@@ -142,7 +142,7 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
       room_code: raw.room_code,
       status: raw.status === 'waiting' ? 'open' : raw.status,
       host_user_id: raw.host_id,
-      max_players: Number(settingsRaw.maxPlayers || 2),
+      max_players: Number(settingsRaw.maxPlayers || 8),
       players,
       stage_name: settingsRaw.stageName || 'Split City',
       stage_platforms: settingsRaw.stagePlatforms || [],
@@ -267,6 +267,10 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
           stageName: STAGE_OPTIONS[0].name,
           stagePlatforms: STAGE_OPTIONS[0].platforms,
           stageSpawnPoints: [],
+          stocks: 3,
+          matchTime: 180,
+          startingDamage: 0,
+          defaultCPUDifficulty: DIFFICULTIES.includes(settings?.defaultCPUDifficulty) ? settings.defaultCPUDifficulty : 'regular',
           bots: [],
           equippedSkins,
           equippedAccessories,
@@ -323,6 +327,7 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
         return {
           ...prev,
           settings: next,
+          max_players: Number(next.maxPlayers || prev.max_players || 8),
           players,
           ...('stageName' in patch ? { stage_name: next.stageName } : {}),
           ...('stagePlatforms' in patch ? { stage_platforms: next.stagePlatforms } : {}),
@@ -346,7 +351,9 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
     const usedSlots = new Set((r.players || []).map(player => Number(player.slot)));
     const freeSlot = Array.from({ length: r.max_players || 8 }, (_, slot) => slot).find(slot => !usedSlots.has(slot));
     if (freeSlot === undefined) return;
-    const defaultDifficulty = DIFFICULTIES.includes(settings?.defaultCPUDifficulty) ? settings.defaultCPUDifficulty : 'regular';
+    const defaultDifficulty = DIFFICULTIES.includes(r.settings?.defaultCPUDifficulty)
+      ? r.settings.defaultCPUDifficulty
+      : (DIFFICULTIES.includes(settings?.defaultCPUDifficulty) ? settings.defaultCPUDifficulty : 'regular');
     bots.push({ slot: freeSlot, char: botChar, is_bot: true, difficulty: defaultDifficulty, user_id: null, name: `Bot ${bots.length + 1}`, loadout: {} });
     await updateRoomSettings({ bots });
   };
@@ -583,6 +590,50 @@ export default function CustomRoomLobby({ onBack, onEnd, partyId = null, partyRo
           {isHost && players.length < (room.max_players || 8) && (
             <button onClick={addBot} className="mt-2 w-full py-2 bg-primary/30 border border-dashed border-primary rounded-lg font-heading text-xs text-primary hover:opacity-80">+ ADD BOT</button>
           )}
+        </div>
+
+        {/* Shared match settings: these values are persisted through the
+            authoritative room-settings RPC and consumed by CustomRoomGame. */}
+        <div className="w-full rounded-xl border border-primary/40 bg-card p-3">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-heading text-primary">MATCH SETTINGS</p>
+              <p className="text-[10px] text-muted-foreground">Fight rules, capacity and stage apply to every room member.</p>
+            </div>
+            {!isHost && <span className="text-[9px] font-heading text-muted-foreground">HOST CONTROLLED</span>}
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <label className="flex flex-col gap-1 text-[10px] font-heading text-muted-foreground">
+              PLAYER CAPACITY · {players.length}/{room.max_players || 8}
+              <select disabled={!isHost} value={room.max_players || 8} onChange={e => updateRoomSettings({ maxPlayers: Number(e.target.value) })} className="min-h-10 rounded-lg border border-border bg-secondary px-2 text-foreground disabled:opacity-70">
+                {Array.from({ length: 7 }, (_, i) => i + 2).map(n => <option key={n} value={n} disabled={n < players.length}>{n} players</option>)}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-[10px] font-heading text-muted-foreground">
+              STOCKS PER FIGHTER
+              <select disabled={!isHost} value={room.settings?.stocks ?? 3} onChange={e => updateRoomSettings({ stocks: Number(e.target.value) })} className="min-h-10 rounded-lg border border-border bg-secondary px-2 text-foreground disabled:opacity-70">
+                {[1, 2, 3, 4, 5, 7, 9].map(n => <option key={n} value={n}>{n} stocks</option>)}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-[10px] font-heading text-muted-foreground">
+              MATCH TIME
+              <select disabled={!isHost} value={room.settings?.matchTime ?? 180} onChange={e => updateRoomSettings({ matchTime: Number(e.target.value) })} className="min-h-10 rounded-lg border border-border bg-secondary px-2 text-foreground disabled:opacity-70">
+                {[[60, '1 minute'], [120, '2 minutes'], [180, '3 minutes'], [240, '4 minutes'], [300, '5 minutes'], [480, '8 minutes'], [600, '10 minutes']].map(([n, label]) => <option key={n} value={n}>{label}</option>)}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-[10px] font-heading text-muted-foreground">
+              STARTING DAMAGE
+              <select disabled={!isHost} value={room.settings?.startingDamage ?? 0} onChange={e => updateRoomSettings({ startingDamage: Number(e.target.value) })} className="min-h-10 rounded-lg border border-border bg-secondary px-2 text-foreground disabled:opacity-70">
+                {[0, 50, 100, 150, 200, 250].map(n => <option key={n} value={n}>{n}%</option>)}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-[10px] font-heading text-muted-foreground">
+              DEFAULT BOT DIFFICULTY
+              <select disabled={!isHost} value={room.settings?.defaultCPUDifficulty || 'regular'} onChange={e => updateRoomSettings({ defaultCPUDifficulty: e.target.value })} className="min-h-10 rounded-lg border border-border bg-secondary px-2 text-foreground disabled:opacity-70">
+                {DIFFICULTIES.map(d => <option key={d} value={d}>{d.toUpperCase()}</option>)}
+              </select>
+            </label>
+          </div>
         </div>
 
         {/* Stage selection (host only) */}
