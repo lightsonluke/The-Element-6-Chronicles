@@ -8,6 +8,7 @@ import { drawSportChar } from './sportDraw.jsx';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
+import { drawOffscreenIndicator } from './renderer.js';
 import GameIcon from "./GameIcon.jsx";
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
@@ -516,6 +517,9 @@ export default function DodgeballGame({
     drawPlayerFig(ctx, s.p2, 2, s);
     // held balls (in front, in hand)
     for (const b of s.balls) if (b.heldBy !== null) drawBall(ctx, b);
+    drawOffscreenIndicator(ctx, { x: s.p1.x, y: s.p1.y - 30, label: 'P1', color: TEAM_COLOR_P1 });
+    drawOffscreenIndicator(ctx, { x: s.p2.x, y: s.p2.y - 30, label: 'P2', color: TEAM_COLOR_P2 });
+    for (const b of s.balls) if (b.heldBy === null) drawOffscreenIndicator(ctx, { x: b.x, y: b.y, label: 'BALL', color: '#FFD84A' });
     ctx.restore();
     // HUD (no shake)
     drawHUD(ctx, s, ms);

@@ -5,6 +5,7 @@ import GameIcon from './GameIcon.jsx';
 import { ALL_CHARS_MAP } from './allCharacters.js';
 import { drawSportChar } from './sportDraw.jsx';
 import { readGamepadInput } from './controllerProfiles.js';
+import { drawOffscreenIndicator } from './renderer.js';
 
 const W=1280,H=720,PLAYER_R=16,MAX=30;
 const randSeed=s=>{let x=0;for(const c of String(s)){x=(x*31+c.charCodeAt(0))>>>0}return()=>{x^=x<<13;x^=x>>>17;x^=x<<5;return(x>>>0)/4294967296}};
@@ -58,6 +59,7 @@ export default function RaceGame({matchId,me,players,seed,settings={},sfxVolume=
      ctx.textAlign='center';ctx.font='bold 8px Orbitron';ctx.fillStyle=p.id===localId?'#ffd84a':p.isBot?'#b9b9c9':'#8bd5ff';ctx.fillText(String(p.name||'Player').slice(0,14),p.x,p.y-PLAYER_R-16);
      if(p.attack>0){ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.strokeRect(p.x+10,p.y-12,38,24)}
    });
+   Object.values(st.players).forEach((p,i)=>{if(p.alive&&p.id!==localId)drawOffscreenIndicator(ctx,{x:p.x,y:p.y-PLAYER_R-8,label:`P${i+1}`,color:p.isBot?'#B9B9C9':'#8BD5FF'})});
    ctx.restore();ctx.fillStyle='#fff';ctx.font='bold 20px Orbitron';ctx.fillText(`RACE · ${Object.values(st.players).filter(p=>p.alive).length}/${MAX}`,20,34);ctx.font='12px Rajdhani';ctx.fillText('MOVE: ← →   JUMP: SPACE/↑   ATTACK: X',20,55);ctx.fillText('THE WALL NEVER OUTRUNS YOU — KEEP MOVING',20,74);
  };
  if(finished)return <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80"><div className="bg-card border-2 border-accent rounded-2xl p-8 text-center"><h2 className="text-4xl font-heading text-accent">{finished===me?.id?'YOU WIN!':'RACE OVER'}</h2><p className="mt-2">{finished===me?.id?'You survived the wall.':`Winner: ${Object.values(state.current?.players||{}).find(p=>p.id===finished)?.name||'Player'}`}</p><button onClick={onEnd} className="mt-5 px-6 py-3 rounded bg-primary text-primary-foreground">CONTINUE</button></div></div>;

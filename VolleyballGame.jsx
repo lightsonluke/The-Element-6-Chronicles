@@ -10,6 +10,7 @@ import { mergeBotCosmetics } from './botCosmetics.js';
 import PauseMenu from './PauseMenu.jsx';
 import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 import { getKeybinds, getSoloKeybinds } from './keybinds.js';
+import { drawOffscreenIndicator } from './renderer.js';
 
 import VolleyballCanvasPortal from './VolleyballCanvasPortal.jsx';
 const charFor = (id, element) => { const c = ALL_CHARS.find(c => c.id === id); if (!c) return null; if (element && element !== 'basic') return { ...c, stats: applyElement(c.stats || {}, element) }; return c; };
@@ -1453,6 +1454,13 @@ function draw(ctx, s, p1Chars, p2Chars, j1, j2, p2IsCPU, is1v1, equippedSkins, e
       ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = '12px Rajdhani';
       ctx.fillText(s.flashReason, W / 2, H / 2 + 30);
     }
+  }
+
+  [...(s.t1 || []).map((p, i) => ({ p, label: `P${i + 1}`, color: TEAM_COLOR_P1 })),
+    ...(s.t2 || []).map((p, i) => ({ p, label: `P${i + 1 + (s.t1?.length || 0)}`, color: TEAM_COLOR_P2 }))]
+    .forEach(({ p, label, color }) => drawOffscreenIndicator(ctx, { x: p?.x, y: (p?.y ?? 0) - 34, label, color }));
+  if (s.ball && (s.ball.alive || s.phase === 'serve')) {
+    drawOffscreenIndicator(ctx, { x: s.ball.x, y: s.ball.y, label: 'BALL', color: '#FFE28A' });
   }
 
   ctx.restore();

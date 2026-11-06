@@ -3,7 +3,7 @@ import { ALL_CHARS } from './sports.js';
 import { applyElement, getCharLevelData, getUnlockedElements } from './elements.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, loseStock, updateProjectiles, drawProjectiles } from './fighter.js';
 import { navigateToward, selectTarget } from './botNavigation.js';
-import { drawStickman, drawPlatforms, drawAttackEffect } from './renderer.js';
+import { drawStickman, drawPlatforms, drawAttackEffect, drawOffscreenIndicator } from './renderer.js';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import { readGamepadInput } from './controllerProfiles.js';
@@ -946,6 +946,13 @@ function drawScene(ctx, g, frame, camX, camY, vp) {
     ctx.beginPath(); ctx.arc(f.x, f.y - 52, 4, 0, Math.PI * 2); ctx.fill();
     if (f.attackData && (f.state === 'attacking' || f.state === 'attackHold')) drawAttackEffect(ctx, f.x, f.y, f.attackData, f.attackData.holding ? (-1 - Math.max(0, Math.min(1, f.attackData.holdProgress || 0))) : f.attackData.progress, f.facing, f.attackData.color || charColor, f.attackData.isNormal, f.char?.id, f.char?.power, f.powerActive);
     drawProjectiles(ctx, f);
+  });
+
+  fighters.forEach((f, index) => {
+    if (f.hp > 0) drawOffscreenIndicator(ctx, {
+      x: f.x, y: f.y - 34, label: `P${index + 1}`, color: f.char?.color || TEAM_COLORS[f.team] || '#FFFFFF',
+      viewport: { x: vx, y: vy, w: vw, h: vh },
+    });
   });
 
   ctx.restore();

@@ -5,7 +5,7 @@ import { GUARDIANS } from './guardians.js';
 import { ALL_CHARS_MAP } from './allCharacters.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, CPU_DIFFICULTY, updateProjectiles, drawProjectiles, loseStock } from './fighter.js';
 import {
-  drawStickman, drawAttackEffect, drawSuperEffect,
+  drawStickman, drawAttackEffect, drawSuperEffect, drawOffscreenIndicator,
   drawTimer, drawPlayerStatusIndicator, drawCompactPlayerMeters, drawPlatforms, drawBackground,
   drawHitSparks, drawDoubleJumpParticles, drawSuperFlash,
 } from './renderer.js';
@@ -1515,6 +1515,8 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
           ctx.fillText('◆', c.x, c.y + 3);
         });
       }
+      drawOffscreenIndicator(ctx, { x: f1.x, y: f1.y - 30, label: 'P1', color: f1.char?.color || '#67D8FF' });
+      drawOffscreenIndicator(ctx, { x: f2.x, y: f2.y - 30, label: 'P2', color: f2.char?.color || '#FF7799' });
       ctx.restore();
 
       drawTimer(ctx, W, gameRef.current.timer);

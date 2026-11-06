@@ -14,6 +14,7 @@ import { universalBangerDecision } from './botIntelligence.js';
 import GameIcon from "./GameIcon.jsx";
 import PauseMenu from './PauseMenu.jsx';
 import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
+import { drawOffscreenIndicator } from './renderer.js';
 
 import GameCanvasPortal from './GameCanvasPortal.jsx';
 // ── Banger — Element 6 Original ──
@@ -482,6 +483,10 @@ export default function BangerGame({
     drawTeam(ctx, s, 2, p2Chars, p2Elements, TEAM_COLOR_P2);
     drawBall(ctx, s);
     if (s.phase === 'aim') drawAimArrow(ctx, s);
+    [...(s.t1 || []).map((p, i) => ({ p, label: `P${i + 1}`, color: p.char?.color || TEAM_COLOR_P1 })),
+      ...(s.t2 || []).map((p, i) => ({ p, label: `P${i + 1 + (s.t1?.length || 0)}`, color: p.char?.color || TEAM_COLOR_P2 }))]
+      .forEach(({ p, label, color }) => { if (!p.dead) drawOffscreenIndicator(ctx, { x: p.x, y: p.y - 32, label, color }); });
+    if (s.ball?.alive) drawOffscreenIndicator(ctx, { x: s.ball.x, y: s.ball.y, label: 'BALL', color: '#FFE28A' });
     ctx.save();
     ctx.translate(-OFFSET_X, 0);
     drawHUD(ctx, s);

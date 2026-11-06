@@ -14,7 +14,7 @@ import React, { useRef, useEffect, useState } from 'react';
 
 import { ALL_CHARS } from './allCharacters.js';
 import { createFighter, updateFighter, updateProjectiles, updateAI, checkHit, applyHit, loseStock, drawProjectiles, platformNavigate } from './fighter.js';
-import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles, drawBackground, drawPlayerStatusIndicator } from './renderer.js';
+import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles, drawBackground, drawPlayerStatusIndicator, drawOffscreenIndicator } from './renderer.js';
 import { getEquippedAccessories, drawAccessory, isBehindAccessory, resolveAccColor } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { drawShikigamiFollower } from './shikigami.js';
@@ -735,6 +735,17 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
       }
 
       ctx.restore();
+
+      if (aliveList().length > 2) {
+        fighters.forEach((fighter, index) => {
+          if (fighter._eliminated || fighter.stocks <= 0 || fighter._userId === myUserId) return;
+          drawOffscreenIndicator(ctx, {
+            screenX: fighter.x - camX, screenY: fighter.y - camY - 30,
+            label: `P${Number.isInteger(fighter.playerIndex) ? fighter.playerIndex + 1 : index + 1}`,
+            color: fighter.char?.color || '#FFD84A',
+          });
+        });
+      }
 
       // ── Final-fight arrow: when only 2 remain, point toward the other fighter ──
       const aliveForArrow = aliveList().length;

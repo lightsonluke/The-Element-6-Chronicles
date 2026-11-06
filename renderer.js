@@ -1795,6 +1795,75 @@ export function drawPlayerStatusIndicator(ctx, { x, y, playerNumber, color, stat
   ctx.restore();
 }
 
+// Draw a compact edge badge for a target whose transformed world position is
+// outside the active viewport. Call while the world camera transform is active;
+// `screenX/screenY` can be supplied by renderers that already converted it.
+export function drawOffscreenIndicator(ctx, {
+  x, y, screenX, screenY, label = 'P', color = '#FFD84A', viewport = null,
+  margin = 34,
+}) {
+  if (!ctx || !Number.isFinite(screenX ?? x) || !Number.isFinite(screenY ?? y)) return false;
+  let sx = screenX, sy = screenY;
+  if (!Number.isFinite(sx) || !Number.isFinite(sy)) {
+    const transform = ctx.getTransform?.();
+    if (transform) {
+      sx = transform.a * x + transform.c * y + transform.e;
+      sy = transform.b * x + transform.d * y + transform.f;
+    } else { sx = x; sy = y; }
+  }
+  const canvasW = ctx.canvas?.width || 0, canvasH = ctx.canvas?.height || 0;
+  const box = viewport || { x: 0, y: 0, w: canvasW, h: canvasH };
+  if (![sx, sy, box.x, box.y, box.w, box.h].every(Number.isFinite) || box.w < 40 || box.h < 40) return false;
+  const inset = Math.max(22, Math.min(margin, box.w / 3, box.h / 3));
+  if (sx >= box.x + inset && sx <= box.x + box.w - inset && sy >= box.y + inset && sy <= box.y + box.h - inset) return false;
+
+  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+  const dx = sx - cx, dy = sy - cy;
+  if (Math.abs(dx) + Math.abs(dy) < 0.001) return false;
+  const tx = Math.abs(dx) > 0.001 ? (box.w / 2 - inset) / Math.abs(dx) : Infinity;
+  const ty = Math.abs(dy) > 0.001 ? (box.h / 2 - inset) / Math.abs(dy) : Infinity;
+  const t = Math.min(tx, ty);
+  const edgeX = cx + dx * t, edgeY = cy + dy * t;
+  const angle = Math.atan2(dy, dx), ux = Math.cos(angle), uy = Math.sin(angle);
+  const badgeX = edgeX - ux * 18, badgeY = edgeY - uy * 18;
+
+  ctx.save();
+  try {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    // Directional triangle points from the badge toward the off-screen target.
+    ctx.translate(edgeX, edgeY);
+    ctx.save();
+    ctx.rotate(angle);
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.moveTo(2, 0); ctx.lineTo(-10, -7); ctx.lineTo(-8, 0); ctx.lineTo(-10, 7);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    // Lens badge stays upright while the triangle follows the target direction.
+    ctx.translate(badgeX - edgeX, badgeY - edgeY);
+    const text = String(label).slice(0, 5).toUpperCase();
+    const width = Math.max(38, 24 + text.length * 6.5);
+    ctx.fillStyle = 'rgba(8,12,26,0.94)';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(-width / 2, -12, width, 24, 12); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(-width / 2 + 11, 0, 5, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(-width / 2 + 11, 0, 2, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 9px Orbitron, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, -width / 2 + 20, 0);
+  } finally {
+    ctx.restore();
+  }
+  return true;
+}
+
 // Two compact, unlabeled meters sit beside the fighter name. Super is always
 // above power; power follows the character's configured color.
 export function drawCompactPlayerMeters(ctx, fighter, x, y, requestedWidth = 62) {

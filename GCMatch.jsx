@@ -6,7 +6,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 import { ALL_CHARS_MAP } from './allCharacters.js';
 import { createFighter, updateFighter, updateProjectiles, checkHit, applyHit, updateAI, loseStock } from './fighter.js';
-import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles, drawPlayerStatusIndicator, drawCompactPlayerMeters } from './renderer.js';
+import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles, drawPlayerStatusIndicator, drawCompactPlayerMeters, drawOffscreenIndicator } from './renderer.js';
 import { updateResonanceMatch, drawResonanceOrb, drawResonanceRangeGlow, getConstructAttackGeometry, drawConstructWeapon } from './resonanceConstructs.js';
 import { drawProjectiles } from './projectileRenderer.js';
 import { drawStageBackground } from './stageBackgrounds.js';
@@ -294,6 +294,8 @@ export default function GCMatch({ p1Char, p2Char, p1IsHuman, p2IsHuman, p1Scheme
       };
       drawF(f1, c1, true);
       drawF(f2, c2, false);
+      drawOffscreenIndicator(ctx, { x: f1.x, y: f1.y - 30, label: 'P1', color: c1.color || '#67D8FF' });
+      drawOffscreenIndicator(ctx, { x: f2.x, y: f2.y - 30, label: 'P2', color: c2.color || '#FF7799' });
 
       drawGCHUD(ctx, f1, f2, c1, c2, matchTime);
 

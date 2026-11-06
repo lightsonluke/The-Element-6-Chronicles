@@ -5,7 +5,7 @@ import { ALL_CHARS } from './allCharacters.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, CPU_DIFFICULTY } from './fighter.js';
-import { drawStickman, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles } from './renderer.js';
+import { drawStickman, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawOffscreenIndicator } from './renderer.js';
 import { drawSoccerKit, getAccessory, getEquippedAccessories, drawAccessory, isBehindAccessory, resolveAccColor } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { getCrossoverColor } from './crossovers.js';
@@ -1212,6 +1212,13 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         ctx.fillText('x' + ball.damage.toFixed(1), ball.x, ball.y - ball.r - 4);
       }
       ctx.restore();
+
+      allFighters.forEach((fighter, index) => drawOffscreenIndicator(ctx, {
+        x: fighter.x, y: fighter.y - 30, label: `P${index + 1}`, color: fighter.char?.color || '#FFFFFF',
+      }));
+      if (ball.alive || gameRef.current.phase === 'play') {
+        drawOffscreenIndicator(ctx, { x: ball.x, y: ball.y, label: 'BALL', color: '#FFE27A' });
+      }
 
       ctx.restore();
 
