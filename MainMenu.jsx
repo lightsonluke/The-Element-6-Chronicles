@@ -109,7 +109,8 @@ export default function MainMenu({ onNavigate, coins = 0, favoriteName, favorite
   };
 
   return (
-    <main className="e6-home-menu" style={{ '--e6-home-image': `url("${backdropUrl}")` }}>
+    <main className="e6-home-menu">
+      <img className="e6-home-backdrop" src={backdropUrl} alt="" aria-hidden="true" draggable="false" loading="eager" />
       <header className="e6-home-topbar">
         <div className="e6-home-brand" aria-label="Element 6">
           <span className="e6-home-brand-mark"><img src={`${import.meta.env.BASE_URL}favicon.png`} alt="" /></span>

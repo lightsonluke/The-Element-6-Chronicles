@@ -23,7 +23,6 @@ import SoccerMode from './SoccerMode.jsx';
 import { calculateSoccerXP } from './SoccerMatchReview.jsx';
 import SportsHub from './SportsHub.jsx';
 import HowToPlay from './HowToPlay.jsx';
-import { calculateSportXP } from './sports.js';
 import TeamMode from './TeamMode.jsx';
 import MeetCharacters from './MeetCharacters.jsx';
 import DailyQuests from './DailyQuests.jsx';
@@ -665,7 +664,6 @@ export default function Game() {
     } catch {}
   };
   const progressRef = useRef(progress);
-  const seasonXpMatchIdsRef = useRef(new WeakMap());
   useEffect(() => { music.setCustomTracks(progress?.settings?.customMusic || {}); }, [progress?.settings?.customMusic]);
   // Load (or clear) the custom backdrop image so it persists across reloads
   useEffect(() => {
@@ -1252,28 +1250,16 @@ export default function Game() {
     else setScreen(dest);
   };
 
-  const award2027EventXp = async (amount, matchResult) => {
-    const xp = Math.max(0, Math.min(300, Math.floor(Number(amount) || 0)));
-    if (!xp) return;
-    const date = new Date();
-    const eventIds = [getActive2027BattlePass(date)?.id, getActive2027Holiday(date)?.id].filter(Boolean);
-    if (!eventIds.length) return;
+  const award2027EventXp = async (matchResult) => {
+    if (!matchResult || typeof matchResult !== 'object') return;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      let matchId;
-      if (matchResult && typeof matchResult === 'object') {
-        matchId = seasonXpMatchIdsRef.current.get(matchResult);
-        if (!matchId) {
-          matchId = crypto.randomUUID();
-          seasonXpMatchIdsRef.current.set(matchResult, matchId);
-        }
-      } else matchId = crypto.randomUUID();
-      const { data, error } = await supabase.rpc('element6_award_season_xp_v1', {
-        p_event_ids: eventIds,
-        p_xp: xp,
-        p_match_id: matchId,
-      });
+      // Only a server-issued match ID can unlock account-backed seasonal XP.
+      // Offline/client-created IDs are not trusted evidence of a completed match.
+      const candidate = matchResult?.authoritativeMatchId ?? matchResult?.serverMatchId ?? matchResult?.match_id ?? matchResult?.matchId;
+      if (typeof candidate !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(candidate)) return;
+      const { data, error } = await supabase.rpc('element6_award_verified_season_xp_v1', { p_match_id: candidate });
       if (error) throw error;
       if (data?.progress && data?.updated_at) {
         acceptCloudProgressRevision(user.id, data.updated_at);
@@ -1284,7 +1270,7 @@ export default function Game() {
         });
       }
     } catch (error) {
-      console.warn('[Element 6] Seasonal progress could not be saved:', error?.message || error);
+      console.warn('[Element 6] Verified seasonal progress could not be saved:', error?.message || error);
     }
   };
 
@@ -2027,7 +2013,7 @@ export default function Game() {
       }).catch(() => {});
     }
     const xpGained = calculateBattleXP(fighters.difficulty, won, isPvP);
-    award2027EventXp(xpGained, fighters);
+    award2027EventXp(fighters);
     // Track daily quest stats
     const stats = m.stats || {};
     setProgress(prev => {
@@ -2107,7 +2093,7 @@ export default function Game() {
     const won = result.p1Won === true;
     const xp = 0;
     const seasonStats = result.soccerStats?.p1 || result.stats || {};
-    award2027EventXp(calculateSportXP(sport, seasonStats, won), result);
+    award2027EventXp(result);
     // Match tokens/XP are intentionally disabled. Keep leaderboard/stat tracking below.
     const clanSportMode = ({
       soccer: result.online ? 'soccer_online' : 'soccer_offline',
@@ -2628,7 +2614,7 @@ export default function Game() {
                 bumpTrophy('sport');
                 // No match rewards.
                 const ev = getActiveEvent();
-                if (result.battlePassXP) award2027EventXp(result.battlePassXP, result);
+                if (result.battlePassXP) award2027EventXp(result);
                 if (ev && result.battlePassXP && !getActive2027BattlePass(new Date()) && !getActive2027Holiday(new Date())) {
                   setProgress(prev => {
                     const ep2 = { ...(prev.eventProgress || {}) };

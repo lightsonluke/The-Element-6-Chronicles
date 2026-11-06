@@ -1,12 +1,7 @@
-Fire Hero performance + readable animation update
+THE CHRONICLES — REQUIRED FILES PATCH
 
-Replace the matching files in the game's project root with the files in this ZIP.
+Copy MainMenu.jsx, Game.jsx, and index.css into the matching locations in the game project. Copy public/assets/e6-home-menu-background.png into the same public/assets path. The CSS in this package explicitly displays the image layer; the previous archive hid it with display:none.
 
-Changes:
-- Fire Hero's effect rendering now disables expensive canvas shadow blur throughout fire attacks/super, not only on selected shapes. This targets a major source of frame-time spikes.
-- Fire rings and blobs use a reduced number of contour points/flame lobes in performance mode, and the super draws fewer decorative rays/impact nodes. The recognizable flame core, rings, and bright attack trails remain.
-- Side Signature / Fire Hero's Wave now uses a 54-frame timeline (20 startup, 12 active, 22 endlag). Its crouch-roll windup and pop-up slash move progressively across the animation.
-- Side Heavy / Rend Strike now uses a 90-frame timeline (36 startup, 14 active, 40 endlag). The recoil, fire gathering, palm extension, and flame core travel are spread across more frames.
-- Attack spec timing metadata is updated alongside the animation and fighter timeline so active collision frames remain aligned to the authored move phases.
+SQL: Run SQL/Supabase-Element6-Season-Verified-XP.sql only after Supabase-Element6-Season-2027-Claims.sql has already been installed. This disables client-chosen seasonal XP. A trusted service-role match simulator must write verified match records before seasonal match XP can be awarded; that simulator is not included here.
 
-Note: no code change can guarantee literally zero lag on every device/browser. These changes remove costly per-frame blur and reduce repeated drawing work, which should materially reduce effect-related frame spikes. Please test in-game, especially on lower-end devices.
+IMPLEMENTATION_STATUS.md lists remaining unfinished work. This is a small patch package, not a complete implementation of party sports, Custom Room sports, deterministic rollback, or a bespoke redesign of every screen.

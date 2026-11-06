@@ -1881,7 +1881,7 @@ body { font-family: var(--font-body); background-color: hsl(var(--background)); 
 .el6-global-pause-layer :is(button, [role='button']) { border-radius: 1rem !important; }
 
 /* Home Menu: full-viewport supplied artwork with the old grid, scanlines, and update board removed. */
-.el6-home-menu::before, .el6-home-menu::after { content: none !important; display: none !important; }
+.e6-home-menu::before, .e6-home-menu::after { content: none !important; display: none !important; }
 .e6-home-menu {
   position: fixed;
   inset: 0;
@@ -1895,14 +1895,15 @@ body { font-family: var(--font-body); background-color: hsl(var(--background)); 
   flex-direction: column;
   color: #fff7ff;
   background-color: #160b35;
-  background-image: var(--e6-home-image);
+  background-image: none;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   isolation: isolate;
   font-family: 'DM Sans', system-ui, sans-serif;
 }
-.e6-home-backdrop { display: none; }
+.e6-home-backdrop { position: absolute; inset: 0; z-index: 0; display: block !important; width: 100%; height: 100%; object-fit: cover; object-position: center; pointer-events: none; user-select: none; }
+.e6-home-menu > :not(.e6-home-backdrop) { position: relative; z-index: 1; }
 .e6-home-topbar { width: min(100%, 1480px); margin: 0 auto; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: clamp(1rem, 3vw, 3.2rem); padding: .25rem 0 1.1rem; }
 .e6-home-brand { display: inline-flex; align-items: center; gap: .85rem; min-width: 195px; color: white; }
 .e6-home-brand-mark { display: grid; place-items: center; width: 2.7rem; height: 2.7rem; border: 1px solid rgba(255,255,255,.44); border-radius: 50%; background: rgba(199, 89, 227, .22); box-shadow: inset 0 0 20px rgba(255, 160, 246, .14), 0 0 26px rgba(210, 69, 239, .24); font: 800 1.4rem 'Oxanium', sans-serif; }
