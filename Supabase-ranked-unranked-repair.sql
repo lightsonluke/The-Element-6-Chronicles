@@ -72,6 +72,9 @@ declare
   v_rating integer := 1000;
 begin
   if v_user is null then raise exception 'Sign in first'; end if;
+  -- Serialize simultaneous queue requests from the same account (double clicks
+  -- and multiple tabs) before stale-row cleanup and opponent selection.
+  perform pg_advisory_xact_lock(hashtextextended(v_user::text, 1));
   if p_mode not in ('ranked', 'unranked') then raise exception 'Unsupported online mode'; end if;
   if coalesce(length(trim(p_character_id)), 0) = 0 then raise exception 'Choose a character'; end if;
 
@@ -80,9 +83,8 @@ begin
   set status='cancelled', updated_at=now()
   where status='searching' and host_last_seen < now() - interval '45 seconds';
 
-  if exists (select 1 from public.online_matches where status='matched' and (host_user_id=v_user or guest_user_id=v_user)) then
-    raise exception 'Already in an active online match';
-  end if;
+  -- Do not reject a stale matched row here. The heartbeat timeout cleanup
+  -- below must run first so abandoned matches cannot lock an account out.
 
   if p_mode = 'ranked' then
     insert into public.ranked_ratings (user_id) values (v_user)
