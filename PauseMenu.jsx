@@ -28,7 +28,7 @@ const CONTROLS = [
     ]},
 ];
 
-export default function PauseMenu({ onResume, onQuit, tournamentMode = false, onSimRest, onEndNow, online = false }) {
+export default function PauseMenu({ onResume, onQuit, tournamentMode = false, onSimRest, onEndNow, online = false, alivePlayers = null }) {
   const resumeRef = useRef(null);
   useEffect(() => {
     window.__el6PauseMenuOpen = true;
@@ -36,12 +36,27 @@ export default function PauseMenu({ onResume, onQuit, tournamentMode = false, on
     return () => { window.__el6PauseMenuOpen = false; };
   }, []);
   return (
-    <div data-match-continues={online ? 'true' : 'false'} className="el6-pause-overlay-layer flex flex-col items-center justify-center bg-black/80 rounded-lg backdrop-blur-sm">
+    <div data-match-continues={online ? 'true' : 'false'} className="el6-pause-overlay-layer fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/85 rounded-lg backdrop-blur-sm p-3">
       <div className="bg-card border border-border rounded-2xl p-8 w-[520px] shadow-2xl">
         <h2 className="text-3xl font-heading text-center text-foreground mb-1 tracking-widest">PAUSED</h2>
         {online && <p className="text-center text-[10px] font-body text-accent mb-3">ONLINE MATCH CONTINUES — ONLY YOUR INPUT IS PAUSED</p>}
         <div className="w-24 h-0.5 bg-primary mx-auto mb-6 rounded" />
 
+        {Array.isArray(alivePlayers) && (
+          <section className="mb-5 rounded-xl border border-border bg-background/70 p-3">
+            <h3 className="mb-2 text-xs font-heading tracking-wider text-accent">PLAYERS ALIVE ({alivePlayers.length})</h3>
+            {alivePlayers.length ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto">
+                {alivePlayers.map((player, index) => (
+                  <div key={player.id || `${player.name}-${index}`} className="flex items-center gap-2 rounded-lg bg-secondary/70 px-2 py-1.5 text-xs">
+                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: player.color || '#aaa' }} />
+                    <span className="truncate">{player.name || `Player ${index + 1}`}</span>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="text-xs text-muted-foreground">No players remain alive.</p>}
+          </section>
+        )}
         <div className="grid grid-cols-2 gap-6 mb-6">
           {CONTROLS.map(group => (
             <div key={group.section}>

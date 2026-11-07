@@ -888,8 +888,8 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
 
     // DIVE CHECK: if ball is too far to reach by running, dive for it
     if (p.onGround && !p.diving && p.diveCD <= 0 && b.vy > 0 && !mateReceiving) {
-      const tToFloor = (FLOOR - b.y) / Math.max(0.1, b.vy);
-      const landingX = b.x + b.vx * tToFloor * 0.85;
+      const tToFloor = Math.max(0, Math.min(90, (-b.vy + Math.sqrt(Math.max(0, b.vy * b.vy + 2 * GRAV * (FLOOR - b.y)))) / Math.max(0.05, GRAV)));
+      const landingX = b.x + b.vx * tToFloor * 0.82;
       const distToLanding = landingX - p.x;
       const canReach = Math.abs(distToLanding) < 4 * tToFloor * 0.8;
       if (!canReach && Math.abs(distToLanding) < 170 && tToFloor < 28 && tToFloor > 3) {
@@ -956,6 +956,18 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
     }
   }
 
+  // Solve the ball's vertical ballistic path to estimate its next floor contact.
+  // Using current vertical velocity alone badly underestimates flight time while
+  // the ball is still rising and causes CPU handlers to run to stale X positions.
+  function predictBallLandingX(ball) {
+    if (!ball) return NET_X;
+    const g = Math.max(0.05, GRAV);
+    const dy = FLOOR - ball.y;
+    const discriminant = Math.max(0, ball.vy * ball.vy + 2 * g * dy);
+    const t = Math.max(0, Math.min(90, (-ball.vy + Math.sqrt(discriminant)) / g));
+    return ball.x + ball.vx * t * 0.82;
+  }
+
   // Maintain court spacing — bot mirrors teammate position to maximize coverage
   function maintainSpacing(p, teammate, lo, hi) {
     const courtMid = (lo + hi) / 2;
@@ -1013,7 +1025,7 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
       // Dive for far balls
       tryCpuDive(s, p, 0, lo, hi, mult);
 
-      const target = Math.max(lo, Math.min(hi, b.x));
+      const target = Math.max(lo, Math.min(hi, predictBallLandingX(b)));
       if (p.x < target - 6) p.vx = Math.min(p.vx + 0.5 * mult, 4 * mult);
       else if (p.x > target + 6) p.vx = Math.max(p.vx - 0.5 * mult, -4 * mult);
       else p.vx *= 0.7;
@@ -1068,8 +1080,7 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
 
     // ── 2v2: handler chases the ball, supporter maintains spacing ──
     const ballSet = false;
-    let predictX = b.x;
-    if (b.vy > 0) { const t = (FLOOR - b.y) / Math.max(0.1, b.vy); predictX = b.x + b.vx * t * 0.8; }
+    const predictX = predictBallLandingX(b);
     const refX = ballSet ? b.x : predictX;
     const handler = Math.abs(team[0].x - refX) <= Math.abs(team[1].x - refX) ? 0 : 1;
     s.active2 = handler; // visual indicator
@@ -1140,8 +1151,8 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
 
     // DIVE CHECK: ball too far to reach by running → dive for it (last resort)
     if (p.onGround && !p.diving && p.diveCD <= 0 && b.vy > 0 && !mateReceiving) {
-      const tToFloor = (FLOOR - b.y) / Math.max(0.1, b.vy);
-      const landingX = b.x + b.vx * tToFloor * 0.85;
+      const tToFloor = Math.max(0, Math.min(90, (-b.vy + Math.sqrt(Math.max(0, b.vy * b.vy + 2 * GRAV * (FLOOR - b.y)))) / Math.max(0.05, GRAV)));
+      const landingX = b.x + b.vx * tToFloor * 0.82;
       const distToLanding = landingX - p.x;
       const canReach = Math.abs(distToLanding) < 4.5 * mult * tToFloor * 1.0;
       if (!canReach && Math.abs(distToLanding) < 170 && tToFloor < 28 && tToFloor > 3) {
@@ -1158,11 +1169,7 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
     if (mateDist < myDist - 30) { maintainSpacing(p, teammate, lo, hi); return; }
 
     // Move to predicted landing spot
-    let predictX = b.x;
-    if (b.vy > 0) {
-      const tToFloor = (FLOOR - b.y) / Math.max(0.1, b.vy);
-      predictX = b.x + b.vx * tToFloor * 0.8;
-    }
+    const predictX = predictBallLandingX(b);
     const clampedTarget = Math.max(NET_X + 25, Math.min(COURT_RIGHT - 15, predictX));
     if (Math.abs(p.x - clampedTarget) > 8) {
       if (p.x < clampedTarget) p.vx = Math.min(p.vx + 0.5 * mult, 4 * mult);
@@ -1213,8 +1220,8 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
     const b = s.ball;
     if (p.diving || p.diveCD > 0 || !p.onGround) return;
     if (!b.alive || b.vy <= 0) return;
-    const tToFloor = (FLOOR - b.y) / Math.max(0.1, b.vy);
-    const landingX = b.x + b.vx * tToFloor * 0.85;
+    const tToFloor = Math.max(0, Math.min(90, (-b.vy + Math.sqrt(Math.max(0, b.vy * b.vy + 2 * GRAV * (FLOOR - b.y)))) / Math.max(0.05, GRAV)));
+    const landingX = b.x + b.vx * tToFloor * 0.82;
     const distToLanding = landingX - p.x;
     const canReach = Math.abs(distToLanding) < 4.5 * mult * tToFloor * 1.0;
     if (!canReach && Math.abs(distToLanding) < 170 && tToFloor < 28 && tToFloor > 3) {

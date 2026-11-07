@@ -14,7 +14,7 @@ import React, { useRef, useEffect, useState } from 'react';
 
 import { ALL_CHARS } from './allCharacters.js';
 import { createFighter, updateFighter, updateProjectiles, updateAI, checkHit, applyHit, loseStock, drawProjectiles, platformNavigate } from './fighter.js';
-import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles, drawBackground, drawPlayerStatusIndicator, drawOffscreenIndicator } from './renderer.js';
+import { drawStickman, drawAttackEffect, drawSuperEffect, drawHitSparks, drawDoubleJumpParticles, drawBackground, drawOffscreenIndicator } from './renderer.js';
 import { getEquippedAccessories, drawAccessory, isBehindAccessory, resolveAccColor } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
 import { drawShikigamiFollower } from './shikigami.js';
@@ -81,6 +81,11 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
   brAccessoriesRef.current = brMerged.equippedAccessories;
   equippedShikigamiRef.current = brMerged.equippedShikigami;
   const [paused, setPaused] = useState(false);
+  const [alivePlayers, setAlivePlayers] = useState(() => (players || []).map((p, i) => ({
+    id: p.user_id || p.id || `player-${i}`,
+    name: p.username || p.name || `Player ${i + 1}`,
+    color: getChar(p.char_id)?.color || '#aaa',
+  })));
   const [reconnecting, setReconnecting] = useState(false);
   const pausedRef = useRef(false);
   const spectateIdxRef = useRef(0);
@@ -622,10 +627,10 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
         const snap = { left: input.left, right: input.right, jump: input.jump, up: input.up, down: input.down, sig: input.sig, power: input.power, superMove: input.superMove, heavy: input.heavy };
         if (!isHost) sendGuestInput(snap);
       }
-      if (isHost) {
+      if (isHost && !pausedRef.current) {
         hostStep(dt, input);
         if (frameCount === 1 || frameCount % SYNC_INTERVAL === 0) broadcast();
-      } else if (remoteState?.fighters) {
+      } else if (!pausedRef.current && remoteState?.fighters) {
         // Apply the complete authoritative fighter state before rendering.
         for (const sf of remoteState.fighters) {
           const f = fighters[sf.idx];
@@ -651,6 +656,20 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
           if (Array.isArray(hz.moving)) hz.moving.forEach((v,i)=>{ if(brHazards.moving[i]) Object.assign(brHazards.moving[i],{x:v.x,y:v.y}); });
           if (Array.isArray(hz.water)) hz.water.forEach((v,i)=>{ if(brHazards.water[i]) Object.assign(brHazards.water[i],{x:v.x,y:v.y,w:v.w}); });
         }
+      }
+
+      // Keep player identities in the pause menu, not over normal gameplay.
+      if (frameCount % 12 === 0) {
+        const roster = aliveList().map((f, i) => ({
+          id: f._userId || `bot-${f.playerIndex ?? i}`,
+          name: f._name || f.char?.name || `Player ${i + 1}`,
+          color: f.char?.color || '#aaa',
+        }));
+        setAlivePlayers(prev => {
+          if (prev.length === roster.length && prev.every((p, i) =>
+            p.id === roster[i].id && p.name === roster[i].name && p.color === roster[i].color)) return prev;
+          return roster;
+        });
       }
 
       // ── Determine the state to render ──
@@ -681,7 +700,12 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
       const camY = Math.max(0, Math.min(target.y - VIEW_H / 2, BR_H - VIEW_H));
 
       ctx.clearRect(0, 0, VIEW_W, VIEW_H);
-      // background — Split City skyline
+      const sky = ctx.createLinearGradient(0, 0, 0, VIEW_H);
+      sky.addColorStop(0, '#101b38');
+      sky.addColorStop(0.62, '#263b61');
+      sky.addColorStop(1, '#52647a');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
       drawBackground(ctx, VIEW_W, VIEW_H, frameCount, 'splitcity');
 
       ctx.save();
@@ -784,17 +808,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
       ctx.font = 'bold 18px Orbitron';
       ctx.fillText(`${mm}:${ss.toString().padStart(2, '0')}`, VIEW_W - 16, 26);
 
-      // Actual participant slots, including eliminated players, stay visible
-      // in one compact top-right stack.
-      fighters.forEach((fighter, index) => drawPlayerStatusIndicator(ctx, {
-        x: VIEW_W - 246,
-        y: 42 + index * 54,
-        playerNumber: Number.isInteger(fighter.playerIndex) ? fighter.playerIndex + 1 : index + 1,
-        color: fighter.char?.color,
-        name: fighter._name || fighter.char?.name,
-        fighter,
-        stocks: fighter.stocks, damage: fighter.damage,
-      }));
+      // Player identities are intentionally shown in the pause menu only.
 
       // The small map stays separate from the participant rows and keeps the
       // player's position and shrinking safe zone visible.
@@ -897,7 +911,7 @@ export default function BattleRoyaleEngine({ matchId, role, myUserId, myChar, my
         </div>
       )}
       <button onClick={() => { pausedRef.current = !pausedRef.current; setPaused(v => !v); }} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs">PAUSE (ESC)</button>
-      {paused && !winner && <PauseMenu online onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
+      {paused && !winner && <PauseMenu online={false} alivePlayers={alivePlayers} onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={handleQuit} />}
       {reconnecting && !winner && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
           <div className="flex flex-col items-center gap-2">

@@ -452,10 +452,10 @@ export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePla
 
       <div className="bg-card border border-border rounded-xl p-4 w-full max-w-lg">
         <h3 className="font-heading text-sm text-accent mb-2">HOW TO PLAY SOCCER</h3>
-        <p className="text-xs text-muted-foreground font-body">• Use your attacks to hit the ball into the opponent's net</p>
+        <p className="text-xs text-muted-foreground font-body">• Move, jump, and kick the ball into the opponent's net</p>
         <p className="text-xs text-muted-foreground font-body">• First to {10} goals wins the match</p>
-        <p className="text-xs text-muted-foreground font-body">• Super moves & heavy attacks are disabled — signatures only!</p>
-        <p className="text-xs text-muted-foreground font-body">• Powers launch the ball at 5x damage toward the opponent's goal!</p>
+        <p className="text-xs text-muted-foreground font-body">• SIG is a soccer kick; Power is a stronger shot. Fighter attacks are disabled.</p>
+        <p className="text-xs text-muted-foreground font-body">• Use Power near the ball for a stronger soccer shot.</p>
         <p className="text-xs text-muted-foreground font-body">• Own goals are blocked — ball bounces off your own net</p>
         <p className="text-xs text-muted-foreground font-body">• Clock shows 90s but each second counts double — more time to score!</p>
         <p className="text-xs text-muted-foreground font-body">• Tied after regulation <GameIcon icon="arrowRight" size={14} /> 30s extra time <GameIcon icon="arrowRight" size={14} /> sudden death (or penalties if enabled)</p>
@@ -472,11 +472,11 @@ export default function SoccerMode({ onBack, onEnd, onAward, onShop, onOnlinePla
               <button onClick={() => setShowRules(false)} className="text-muted-foreground hover:text-foreground text-xl"><GameIcon icon="close" size={14} /></button>
             </div>
             <div className="space-y-2 text-xs text-muted-foreground font-body">
-              <p>• Use your signature attacks to hit the ball into the opponent's net</p>
+              <p>• Use the soccer kick control to strike the ball toward goal</p>
               <p>• First to 10 goals wins the match</p>
               <p>• Goals are BEHIND the wall — shoot through the narrow gap to score!</p>
-              <p>• Super moves and heavy attacks are disabled — signatures only</p>
-              <p>• Powers launch the ball at 5x damage toward the opponent's goal</p>
+              <p>• Fighter signatures, heavy attacks, and supers are disabled</p>
+              <p>• Power triggers a stronger soccer shot when close to the ball</p>
               <p>• Own goals are blocked — the ball bounces off your own net</p>
               <p>• Match clock shows 90s but each second counts as 2 — more time to score!</p>
               <p>• Tied after regulation <GameIcon icon="arrowRight" size={14} /> 30s extra time <GameIcon icon="arrowRight" size={14} /> sudden death (or penalties if enabled)</p>

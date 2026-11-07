@@ -412,26 +412,53 @@ export default function Ziplining({ onExit, onAward, unlockedIds = ['yellow'], e
     // harness attachment to current cable
     const cableYNow = LANES[s.lane] + Math.sin(PLAYER_X * 0.02 + s.animT * 0.05 + s.lane) * 3 + (PLAYER_X / W) * 18;
     ctx.strokeStyle = '#999'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(PLAYER_X, cableYNow); ctx.lineTo(PLAYER_X, s.y - PH * 0.42 + sway * 1); ctx.stroke();
-    ctx.fillStyle = '#bbb'; ctx.fillRect(PLAYER_X - 7, cableYNow - 4, 14, 6);
+    ctx.beginPath(); ctx.moveTo(PLAYER_X, cableYNow); ctx.lineTo(PLAYER_X, s.y - 72 + sway * 2); ctx.stroke();
+    // Visible trolley and hanging harness connect the rider to the cable.
+    ctx.fillStyle = '#bbb'; ctx.fillRect(PLAYER_X - 9, cableYNow - 5, 18, 7);
+    ctx.strokeStyle = '#d7d7d7'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(PLAYER_X - 5, cableYNow + 1); ctx.lineTo(PLAYER_X - 5, cableYNow + 10);
+    ctx.moveTo(PLAYER_X + 5, cableYNow + 1); ctx.lineTo(PLAYER_X + 5, cableYNow + 10); ctx.stroke();
   }
 
   function drawCharacter(ctx, s) {
     const char = s.char;
     const sway = Math.sin(s.animT * 0.04);
-    let state = 'idle';
-    if (s.switchT > 0) state = 'jumping';
-    // Keep a continuous motion cycle while suspended; cable sway should not freeze the limbs.
-    else state = 'moving';
+    // A rider hangs beneath the trolley rather than using the generic running pose.
+    // The body has a small pendulum sway and the legs cycle independently.
+    const state = s.switchT > 0 ? 'jumping' : 'idle';
     // speed trail
     ctx.save(); ctx.globalAlpha = 0.25;
     for (let i = 1; i <= 3; i++) { ctx.fillStyle = `rgba(255,255,255,${0.12 - i * 0.03})`; ctx.beginPath(); ctx.ellipse(PLAYER_X - i * 14, s.y, PW - i, PH * 0.4, 0, 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
-    // clothing flap (rotate-ish via small x jitter)
-    drawSportChar(ctx, PLAYER_X + sway * 0.6, s.y, char, {
+    // Character base, then a clear zipline-specific pose: both hands grip
+    // the overhead handle while the knees bend and the feet trail behind.
+    const riderX = PLAYER_X + sway * 0.6;
+    drawSportChar(ctx, riderX, s.y, char, {
       facing: 1, frame: s.frame, scale: 0.95, jersey: false, sport: 'climb', state,
       equippedSkins, equippedAccessories,
     });
+    ctx.save();
+    ctx.translate(riderX, s.y);
+    ctx.rotate(sway * 0.035);
+    const riderColor = char?.color || '#eeeeee';
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = riderColor; ctx.lineWidth = 5;
+    // Arms reach upward to the zipline handle.
+    ctx.beginPath();
+    ctx.moveTo(-6, -31); ctx.quadraticCurveTo(-18, -48, -10, -70);
+    ctx.moveTo(6, -31); ctx.quadraticCurveTo(18, -48, 10, -70);
+    ctx.stroke();
+    // Gloved hands wrapped around the handle.
+    ctx.strokeStyle = '#dedede'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(-14, -72); ctx.lineTo(14, -72); ctx.stroke();
+    // Bent, trailing legs react to the rider's forward motion.
+    const kick = Math.sin(s.animT * 0.11) * 5;
+    ctx.strokeStyle = riderColor; ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-4, -12); ctx.lineTo(-13, 5); ctx.lineTo(-23 - kick, 10);
+    ctx.moveTo(4, -12); ctx.lineTo(13, 1); ctx.lineTo(24 + kick, 4);
+    ctx.stroke();
+    ctx.restore();
   }
 
   function drawObstacles(ctx, s) {

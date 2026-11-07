@@ -541,6 +541,37 @@ export default function Game() {
     };
   }, [screen, fighters, pending?.mode, onlineSport]);
 
+  // Keep Supabase party presence alive from the authenticated application
+  // session. Party launch RPCs use this timestamp to distinguish a real online
+  // member from a stale row; without this heartbeat every member ages offline.
+  useEffect(() => {
+    if (!me?.id) return undefined;
+    let active = true;
+    const publishPresence = () => {
+      if (!active) return;
+      const status = (window.__el6IsPlaying || window.__el6GameplayActive) ? 'playing' : 'online';
+      const mode = String(window.__el6CurrentMode || screen || '').slice(0, 80);
+      supabase.rpc('element6_set_app_presence', {
+        p_status: status,
+        p_mode: mode || null,
+      }).then(({ error }) => {
+        if (error && active) console.warn('[Element 6] Presence heartbeat failed:', error.message);
+      }).catch(error => {
+        if (active) console.warn('[Element 6] Presence heartbeat failed:', error?.message || error);
+      });
+    };
+    publishPresence();
+    const heartbeat = window.setInterval(publishPresence, 25000);
+    window.addEventListener('focus', publishPresence);
+    document.addEventListener('visibilitychange', publishPresence);
+    return () => {
+      active = false;
+      window.clearInterval(heartbeat);
+      window.removeEventListener('focus', publishPresence);
+      document.removeEventListener('visibilitychange', publishPresence);
+    };
+  }, [me?.id, screen, fighters?.gameMode, onlineSport, pending?.mode]);
+
   // Human-readable URLs work while browsing. GitHub Pages still needs its
   // normal SPA fallback for a direct refresh on a non-root URL.
   useEffect(() => {

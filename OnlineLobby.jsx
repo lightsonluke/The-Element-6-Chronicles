@@ -1,14 +1,15 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
-import { getSignedInOnlinePlayer, matchmakeOnlineGame, getOnlineMatch, subscribeToOnlineMatch, heartbeatOnlineMatch, leaveOnlineMatch } from './rankedOnline.js';
+import { getSignedInOnlinePlayer, getMyRankedRating, matchmakeOnlineGame, getOnlineMatch, subscribeToOnlineMatch, heartbeatOnlineMatch, leaveOnlineMatch } from './rankedOnline.js';
 import RollbackOnlineFight from './RollbackOnlineFight.jsx';
 import OnlineSoccerFight from './OnlineSoccerFight.jsx';
 import UniversalCharacterSelect from './UniversalCharacterSelect.jsx';
 import GameIcon from './GameIcon.jsx';
 
-export default function OnlineLobby({ mode, onBack, onEnd, unlockedIds, favoriteId, equippedSkins = {}, equippedAccessories = {}, sfxVolume = 70, musicVolume = 50, settings = {}, botElo = 1000, onlineElo = 1000, charLevels = {}, equippedElements = {}, onEquipElement, equippedShikigami = {}, equippedEmotes = {}, ownedAccessories = [], ownedShikigami = [], onEquipAccessory }) {
+export default function OnlineLobby({ mode, onBack, onEnd, onRatingChange, unlockedIds, favoriteId, equippedSkins = {}, equippedAccessories = {}, sfxVolume = 70, musicVolume = 50, settings = {}, botElo = 1000, onlineElo = 1000, charLevels = {}, equippedElements = {}, onEquipElement, equippedShikigami = {}, equippedEmotes = {}, ownedAccessories = [], ownedShikigami = [], onEquipAccessory }) {
   const [me, setMe] = useState(null);
+  const [serverRankedRating, setServerRankedRating] = useState(null);
   const [myChar, setMyChar] = useState(favoriteId || 'yellow');
   const [myElement, setMyElement] = useState(equippedElements?.[favoriteId || 'yellow'] || 'basic');
   const [phase, setPhase] = useState('pick');
@@ -19,14 +20,24 @@ export default function OnlineLobby({ mode, onBack, onEnd, unlockedIds, favorite
   const [error, setError] = useState(null);
   const heartbeatRef = useRef(null);
   const subscribedMatchRef = useRef(null);
+  const ratingChangeRef = useRef(onRatingChange);
+  ratingChangeRef.current = onRatingChange;
 
-  const myElo = mode === 'ranked' ? (onlineElo ?? 1000) : (botElo ?? 1000);
+  const myElo = mode === 'ranked' ? (serverRankedRating ?? onlineElo ?? 1000) : (botElo ?? 1000);
 
   useEffect(() => {
     music.setVolume(musicVolume); sfx.setVolume(sfxVolume); music.play('menu');
     getSignedInOnlinePlayer().then(setMe).catch(() => setMe(null));
+    if (mode === 'ranked') {
+      getMyRankedRating().then(rating => {
+        const value = Number(rating?.rating);
+        if (Number.isFinite(value)) { setServerRankedRating(value); ratingChangeRef.current?.(value); }
+      }).catch(error => console.warn('[Element 6] Could not refresh ranked rating:', error?.message || error));
+    } else {
+      setServerRankedRating(null);
+    }
     return () => music.stop();
-  }, [musicVolume, sfxVolume]);
+  }, [musicVolume, sfxVolume, mode]);
 
   useEffect(() => { setMyElement(equippedElements?.[myChar] || 'basic'); }, [equippedElements, myChar]);
 
@@ -102,6 +113,19 @@ export default function OnlineLobby({ mode, onBack, onEnd, unlockedIds, favorite
     setMatchId(null); setMatch(null); setPhase('pick'); setError(null);
   };
 
+  const handleFightEnd = async result => {
+    if (mode === 'ranked') {
+      try {
+        const rating = await getMyRankedRating();
+        const value = Number(rating?.rating);
+        if (Number.isFinite(value)) { setServerRankedRating(value); ratingChangeRef.current?.(value); }
+      } catch (error) {
+        console.warn('[Element 6] Could not refresh ranked rating after match:', error?.message || error);
+      }
+    }
+    onEnd?.(result);
+  };
+
   if (phase === 'fight' && match) {
     const oppChar = role === 'host' ? match.guest_char : match.host_char;
     const oppLoadout = role === 'host' ? (match.guest_loadout || {}) : (match.host_loadout || {});
@@ -121,7 +145,7 @@ export default function OnlineLobby({ mode, onBack, onEnd, unlockedIds, favorite
       oppElo={role === 'host' ? (match.guest_elo ?? 1000) : (match.host_elo ?? 1000)}
       sfxVolume={sfxVolume} musicVolume={musicVolume} settings={settings}
       equippedEmotes={equippedEmotes}
-      onEnd={onEnd}
+      onEnd={handleFightEnd}
     />;
   }
 

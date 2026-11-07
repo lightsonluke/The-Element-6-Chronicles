@@ -4,7 +4,7 @@ import { HEROES } from './heroes.js';
 import { ALL_CHARS } from './allCharacters.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
-import { createFighter, updateFighter, checkHit, applyHit, updateAI, CPU_DIFFICULTY } from './fighter.js';
+import { createFighter, updateFighter } from './fighter.js';
 import { drawStickman, drawPlatforms, drawBackground, drawHitSparks, drawDoubleJumpParticles, drawOffscreenIndicator } from './renderer.js';
 import { drawSoccerKit, getAccessory, getEquippedAccessories, drawAccessory, isBehindAccessory, resolveAccColor } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
@@ -599,6 +599,24 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
       // Freeze all inputs during post-goal countdown
       if (resetCountdownRef.current > 0) { p1In = noInput; p2In = noInput; if (f1bIn) f1bIn = noInput; if (f2bIn) f2bIn = noInput; }
 
+      // Soccer maps the primary action buttons to a ball kick. Never pass
+      // fighting signatures, powers, heavies, or supers into fighter.js.
+      const soccerInputs = teamMode ? [p1In, f1bIn || noInput, p2In, f2bIn || noInput] : [p1In, p2In];
+      const soccerKickRequests = allFighters.map((fighter, index) => {
+        const action = soccerInputs[index] || noInput;
+        const held = !!(action.sig || action.power);
+        const pressed = held && !fighter._soccerKickWasDown;
+        fighter._soccerKickWasDown = held;
+        return { kick: pressed, power: !!action.power, down: !!action.down };
+      });
+      const fighterOnlyMovement = input => ({
+        ...input, sig: false, power: false, superMove: false, heavy: false,
+      });
+      p1In = fighterOnlyMovement(p1In);
+      p2In = fighterOnlyMovement(p2In);
+      if (f1bIn) f1bIn = fighterOnlyMovement(f1bIn);
+      if (f2bIn) f2bIn = fighterOnlyMovement(f2bIn);
+
       // ── Penalty shootout state machine ──
       if (penPhaseRef.current) {
         const targetIsRight = penTargetGoalRef.current === 'right';
@@ -705,6 +723,11 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         updateFighter(f1b, f1bIn || noInput, fieldPlatforms, W, H, f2);
         updateFighter(f2b, f2bIn || noInput, fieldPlatforms, W, H, f1);
       }
+      // Fighting attack state and hitboxes are never part of soccer.
+      allFighters.forEach(f => {
+        f.attackData = null;
+        if (f.state === 'attacking' || f.state === 'attackHold' || f.state === 'superAttack') f.state = 'idle';
+      });
       // Update emote timers — cancel if airborne, decrement timer
       allFighters.forEach(f => {
         if (f.emote && f.emote.timer > 0) {
@@ -760,75 +783,6 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         ball.y = penTransPosRef.current.ballY;
         ball.vx = 0; ball.vy = 0;
       }
-
-      // Soccer power: launch the ball — only when touching it & it's in front; shot goes the way you face.
-      allFighters.forEach((f) => {
-        if (penPhaseRef.current) return;
-        if (f._soccerPowerActivated) {
-          f._soccerPowerActivated = false;
-          const dx = ball.x - f.x;
-          const front = Math.sign(dx) === f.facing || Math.abs(dx) < 16;
-          const near = Math.abs(dx) < 140 && Math.abs(ball.y - (f.y - 40)) < 90;
-          if (!front || !near) return; // must be touching the ball, and it must be in front of you
-          const team = f.team;
-          const isP1 = f === f1;
-          const isP2 = f === f2;
-          const low = isP1 ? (_rawP1?.down ?? p1In?.down ?? false) : isP2 ? (_rawP2?.down ?? p2In?.down ?? false) : false;
-          if (ball._prePowerDamage !== undefined) ball.damage = ball._prePowerDamage;
-          ball._prePowerDamage = ball.damage;
-          ball.damage = 3.0;
-          ball.lastTeam = team;
-          ball.lastTouch = f;
-          f._kickAnim = 16;
-          if (!f.grounded) {
-            // BICYCLE KICK — airborne power shot aims at top corner of net; triggers slow-mo
-            f._bicycleKick = 28;
-            slowMoRef.current = 0.6;
-            const attackGoalX = f.facing > 0 ? GOAL_LINE_R : GOAL_LINE_L;
-            const ddx = attackGoalX - ball.x;
-            const ddy = 475 - ball.y; // target the very top of the net (crossbar at 480)
-            const ddist = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
-            const bspeed = 22; // slower — easier for keeper to save
-            ball.vx = (ddx / ddist) * bspeed;
-            ball.vy = (ddy / ddist) * bspeed;
-            shakeMag = Math.max(shakeMag, 16);
-            sfx.superActivate();
-          } else {
-            // GROUNDED POWER SHOT — Down = bottom of net, no Down = top of net
-            ball.vx = f.facing * 24 * (f.statPowerMul || 1) + f.vx * 0.3;
-            ball.vy = low ? 6 : -14;
-            shakeMag = Math.max(shakeMag, 12);
-            sfx.power();
-          }
-          registerShot(team);
-        }
-      });
-
-      // Super-move button → lofted chip, only when near the ball & facing it; goes the way you face
-      allFighters.forEach((f) => {
-        if (penPhaseRef.current) return;
-        const isP1 = f === f1;
-        const isP2 = f === f2;
-        const superPressed = isP1 ? (_rawP1?.superMove ?? p1In?.superMove ?? false) : isP2 ? (_rawP2?.superMove ?? p2In?.superMove ?? false) : false;
-        if (superPressed && !f._soccerChipLaunched) {
-          f._soccerChipLaunched = true;
-          const dx = ball.x - f.x;
-          const front = Math.sign(dx) === f.facing || Math.abs(dx) < 16;
-          const near = Math.abs(dx) < 140 && Math.abs(ball.y - (f.y - 40)) < 90;
-          if (front && near) {
-            if (ball._prePowerDamage !== undefined) ball.damage = ball._prePowerDamage;
-            ball._prePowerDamage = ball.damage;
-            ball.damage = 3.0;
-            ball.lastTeam = f.team;
-            ball.lastTouch = f;
-            ball.vx = f.facing * 10 + f.vx * 0.2; // high and forward arc
-            ball.vy = -16; // goes high but doesn't hit the roof
-            shakeMag = Math.max(shakeMag, 13);
-            sfx.superActivate();
-          }
-        }
-        if (!superPressed) f._soccerChipLaunched = false;
-      });
 
       // Tick down bicycle-kick animation timers
       allFighters.forEach(f => { if (f._bicycleKick > 0) f._bicycleKick--; if (f._kickAnim > 0) f._kickAnim--; });
@@ -954,36 +908,26 @@ export default function SoccerFighter({ p1Char, p2Char, p2IsCPU, p1IsCPU = false
         }
       });
 
-      // Attack-ball collision — launch ball (sig only, no heavy in soccer) — skip during penalties
-      // Must be touching the ball AND it must be in front; shot goes the way you face (works in the air too).
-      const _allInputs = teamMode ? [p1In, f1bIn || noInput, p2In, f2bIn || noInput] : [p1In, p2In];
+      // Soccer kick action: a clean ball interaction, not a fighter attack or hitbox.
       allFighters.forEach((f, idx) => {
-        if (penPhaseRef.current) return;
-        if (f.attackData && f.attackData.progress > 0.1 && f.attackData.progress < 0.85 && !f.attackData._ballHit) {
-          const dx = ball.x - f.x;
-          const dy = ball.y - (f.y - 30);
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const front = Math.sign(dx) === f.facing || Math.abs(dx) < 16;
-          if (dist < 140 && front) {
-            f.attackData._ballHit = true;
-            if (ball._prePowerDamage !== undefined) { ball.damage = ball._prePowerDamage; ball._prePowerDamage = undefined; }
-            const team = f.team;
-            ball.damage = Math.min(ball.damage + 0.1, 3); // attacks build knockback slowly; 3.0x max
-            ball.lastTeam = team;
-            const basePower = f.attackData.damage * 0.4 * (f.statPowerMul || 1);
-            const power = basePower * ball.damage * attackMul;
-            ball.vx = f.facing * power + f.vx * 0.5;
-            if (_allInputs[idx] && _allInputs[idx].down) {
-              ball.vy = Math.abs(power) * 0.4 + 3;
-            } else {
-              ball.vy = -Math.abs(power) * 1.0 - 5;
-            }
-            ball.lastTouch = f;
-            registerShot(team);
-            shakeMag = Math.max(shakeMag, 6);
-            sfx.hit();
-          }
-        }
+        const action = soccerKickRequests[idx];
+        if (!action?.kick || penPhaseRef.current) return;
+        const dx = ball.x - f.x;
+        const dy = ball.y - (f.y - 30);
+        const dist = Math.hypot(dx, dy);
+        const front = Math.sign(dx) === f.facing || Math.abs(dx) < 20;
+        if (dist >= 145 || !front) return;
+        const team = f.team;
+        const strength = (action.power ? 23 : 14) * (f.statPowerMul || 1);
+        ball.lastTeam = team;
+        ball.lastTouch = f;
+        ball.damage = Math.min(3, Math.max(1, ball.damage || 1) + (action.power ? 0.25 : 0.05));
+        ball.vx = f.facing * strength + f.vx * 0.55;
+        ball.vy = action.down ? Math.max(3, strength * 0.22) : -Math.max(6, strength * 0.62);
+        f._kickAnim = 16;
+        registerShot(team);
+        shakeMag = Math.max(shakeMag, action.power ? 9 : 4);
+        sfx.hit();
       });
 
       // Freeze ball at center during post-goal countdown

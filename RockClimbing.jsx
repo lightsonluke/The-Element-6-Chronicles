@@ -788,6 +788,9 @@ function draw(ctx, s, charId, customCharsData, skins, accs) {
   drawBackground(ctx, camY, env, progress, s);
 
   ctx.save();
+  // Keep world-space climbing particles, chalk, and character effects inside
+  // the actual canvas viewport while the camera transform is active.
+  ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
   ctx.translate(MARGIN + shakeX, -camY + shakeY);
 
   drawCliffFace(ctx, -40, camY - 100, 40, H + 200, env, 'left', s);

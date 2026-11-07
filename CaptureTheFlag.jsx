@@ -100,14 +100,14 @@ export default function CaptureTheFlag({
   const keysRef = useRef({});
   const onlineRef = useRef(onlineSession);
   onlineRef.current = onlineSession;
-  const pausedRef = useRef(paused);
-  pausedRef.current = paused;
   const remoteStateRef = useRef(null);
   const remoteInputsRef = useRef([{}, {}, {}, {}]);
   const remoteInputAtRef = useRef([0, 0, 0, 0]);
   const lastInputSendRef = useRef(0);
   const [phase, setPhase] = useState(onlineSession?.enabled ? 'play' : 'setup');
   const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  pausedRef.current = paused;
   const [combo, setCombo] = useState('pp_cc');
   const [slots, setSlots] = useState({ p1: unlockedIds[0] || 'yellow', p2: 'red', p3: 'blue', p4: 'green' });
   const [elements, setElements] = useState({ p1: 'basic', p2: 'basic', p3: 'basic', p4: 'basic' });

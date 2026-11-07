@@ -91,7 +91,8 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
       if (Number.isInteger(configuredStocks) && configuredStocks > 0) f.stocks = configuredStocks;
       const configuredDamage = Number(room?.settings?.startingDamage);
       if (Number.isFinite(configuredDamage) && configuredDamage >= 0 && configuredDamage <= 250) f.damage = configuredDamage;
-      if (pin) f.respawnPoint = { x: pin.x, y: pin.y };
+      f.respawnPoint = { x: sx, y: sy };
+      f.spawnFacing = SPAWN_FACE[i % 8];
       f.grounded = true;
       f.isAI = p.is_bot;
       f.cpuDifficulty = p.difficulty || 'regular';
@@ -312,7 +313,8 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
         const sx = pin ? pin.x : SPAWN_X[myPlayerIdx % 8];
         const sy = pin ? pin.y : (platforms[0]?.y ?? 620);
         localFighter = createFighter(modifiedCd, sx, sy, SPAWN_FACE[myPlayerIdx % 8]);
-        if (pin) localFighter.respawnPoint = { x: pin.x, y: pin.y };
+        localFighter.respawnPoint = { x: sx, y: sy };
+        localFighter.spawnFacing = SPAWN_FACE[myPlayerIdx % 8];
         localFighter.grounded = true;
         localFighter.fullJump = true;
       }
@@ -395,8 +397,21 @@ export default function CustomRoomGame({ room, isHost, myUserId, sfxVolume = 70,
           if (f._pendingDeath && f.stocks > 0) { f._pendingDeath = false; loseStock(f, W, H); }
           if (f.x < -150 || f.x > W + 150 || f.y > H + 200) {
             if (f.stocks > 0) loseStock(f, W, H);
-            const rp = f.respawnPoint;
-            f.x = rp ? rp.x : SPAWN_X[f.playerSlot % 8]; f.y = rp ? rp.y : 100; f.vx = 0; f.vy = 0; f.invincible = 90;
+            const slot = Number.isInteger(f.playerSlot) ? f.playerSlot : 0;
+            const rp = f.respawnPoint || { x: SPAWN_X[slot % 8], y: platforms[0]?.y ?? 620 };
+            f.x = rp.x; f.y = rp.y; f.prevX = rp.x; f.prevY = rp.y;
+            f.vx = 0; f.vy = 0; f.facing = f.spawnFacing || SPAWN_FACE[slot % 8];
+            f.grounded = true; f.jumps = f.maxJumps || 2; f.coyoteTime = 0;
+            f.state = 'idle'; f.attackData = null; f.attackHold = null; f.attackTimer = 0;
+            f.hitstun = 0; f.diX = 0; f.diY = 0; f.knockbackMul = 1; f.knockbackReduction = 0;
+            f.jumpHeld = false; f.jumpCutApplied = false; f.gravityInverted = false;
+            f.dashTimer = 0; f.dashCooldown = 0; f.dashDirection = { x: 0, y: 0 };
+            f.dashInvulnerable = false; f.wallSlide = false; f.wallSide = 0; f.wallContactActive = false;
+            f.wallGrantsUsed = 0; f.wallGrantPending = false; f.airDodgeUses = 2; f.recoveryAirUses = 0;
+            f.groundPoundCooldown = 0; f.recoveryCooldown = 0; f.powerCooldown = 0;
+            f.powerActive = null; f.powerTimer = 0; f.isFlying = false; f.trapped = false;
+            f.speedBoost = 1; f.damageBoost = 1; f.rangeBoost = 1;
+            f.invincible = 90;
           }
         });
 
