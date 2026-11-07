@@ -1,0 +1,2713 @@
+import { GEN1_TIMINGS, gen1MoveKey } from './gen1AttackGeometry.js';
+// Fighter physics, state management, and combat logic — Brawlhalla-style smooth collisions
+// Each fighter has: heavy attacks (unique per character), signatures, super moves, and power activation
+
+import { getPowerEffect, SINGLE_RANDOM_POWER_CHARS } from './powerEffects.js';
+import { getResonanceConstructHitboxes } from './resonanceConstructs.js';
+import { applyShikigamiStat } from './shikigami.js';
+import { DOWN_HEAVIES } from './downHeavies.js';
+import { UP_HEAVIES } from './upHeavies.js';
+import { drawWhip } from './whipRenderer.js';
+import { activateGenPower, updateGenProjectiles, onGenPowerExpire } from './genPowers.js';
+import { updateMovementAbilities, onMovementAbilityLanded, resetMovementAbilityState } from './movementAbilities.js';
+import { getAttackSpecForData, getActiveSpecHitboxes, hitboxIntersectsBody, specKnockbackVector } from './attackSpecs.js';
+import { mvTick, mvHitShapes, mvStageShare, mvLaunchFor, mvLocalResult } from './mvEngine.js';
+import { anchor as mvAnchor } from './mvCore.js';
+import { FRIC as MV_FRIC } from './mvKB.js';
+
+export const GRAVITY = 0.42;
+export const JUMP_FORCE = -14.5;
+export const DOUBLE_JUMP_FORCE = -12.5;
+export const MOVE_SPEED = 4.0;
+export const AIR_SPEED = 3.4;
+export const MAX_FALL_SPEED = 15;
+export const KNOCKBACK_DECAY = 0.86; // smoother decay = floatier, more Brawlhalla-like
+export const GROUND_FRICTION = 0.78;
+export const AIR_FRICTION = 0.94;
+export const ACCEL_GROUND = 1.2;
+export const ACCEL_AIR = 0.9;
+
+const SIG_COOLDOWN = 0;
+const NORMAL_COOLDOWN = 8;
+const HEAVY_COOLDOWN = 0; // Heavy/signature lockout is governed by attack duration/endlag only.
+const KNOCKBACK_SCALE = 0.36; // another 10% reduction across legacy attacks; heavies get an extra trim below
+
+// CPU difficulty configs
+// (CPU_DIFFICULTY moved to botAI.js)
+
+// Stat-derived combat multipliers — stats 3..10 map to visible differences
+// Speed: Yellow(10)=1.40x vs Grey(3)=0.70x — Yellow wins a race by a wide margin
+// Power: Red(10)=1.35x vs Magenta(3)=0.75x — strong hits deal visibly more damage
+// Defense: Silver(10)=40% reduction vs Emerald(3)=0% — tanky characters survive longer
+function statSpeedMul(s) { return 0.55 + (s || 5) * 0.085; }
+function statPowerMul(s) { return 0.60 + (s || 5) * 0.075; }
+function statDefenseReduction(s) { return Math.max(0, ((s || 5) - 3) * 0.057); } // 3→0%, 10→40%
+// Control: higher = faster attack recovery + more hitstun applied to enemies
+function statControlRecoveryMul(s) { return 1.0 - Math.max(0, ((s || 5) - 3) * 0.04); } // 3→1.0, 10→0.72
+function statControlHitstunMul(s) { return 1.0 + Math.max(0, ((s || 5) - 3) * 0.04); } // 3→1.0, 10→1.28
+// Utility: higher = faster movement, higher jumps, longer mining range
+function statUtilityMul(s) { return 1.0 + Math.max(0, ((s || 5) - 3) * 0.03); } // 3→1.0, 10→1.21
+
+export function createFighter(charData, startX, startY, facing) {
+  // Shikigami grants +0.5 to one stat in combat (silent — not shown in stats UI).
+  // Modes set `charData.shikigamiId` before calling createFighter to opt in.
+  const stats = applyShikigamiStat(charData?.stats || {}, charData?.shikigamiId);
+  return {
+    char: charData,
+    statSpeedMul: statSpeedMul(stats.speed),
+    statPowerMul: statPowerMul(stats.power),
+    statDefenseReduction: statDefenseReduction(stats.defense),
+    statControlRecoveryMul: statControlRecoveryMul(stats.control),
+    statControlHitstunMul: statControlHitstunMul(stats.control),
+    statUtilityMul: statUtilityMul(stats.utility),
+    x: startX,
+    y: startY,
+    prevX: startX,
+    prevY: startY,
+    vx: 0,
+    vy: 0,
+    facing,
+    grounded: false,
+    coyoteTime: 0,
+    jumps: 2,
+    maxJumps: 2,
+    damage: 0,
+    stocks: 3,
+    frame: 0,
+    state: 'idle',
+    attackTimer: 0,
+    attackData: null,
+    attackHold: null,
+    superMeter: 50,
+    maxSuper: 100,
+    hitstun: 0,
+    invincible: 0,
+    isAI: false,
+    aiTimer: 0,
+    aiAction: null,
+    hitEffects: [],
+    landingLag: 0,
+    sigCooldown: 0,
+    normalCooldown: 0,
+    heavyCooldown: 0,
+    doubleJumpParticles: [],
+    cpuDifficulty: 'regular',
+    canFly: false,
+    isFlying: false,
+    canPhase: charData?.id === 'emerald',
+    gravityInverted: false,
+    // Variable jump height
+    jumpHeld: false,
+    jumpCutApplied: false,
+    // DI (directional influence) — slight knockback steering
+    diX: 0,
+    diY: 0,
+    recoveryCooldown: 0,
+    groundPoundCooldown: 0,
+    powerCooldown: 0,
+    powerActive: null,
+    powerTimer: 0,
+    gameMode: null,
+    hp: 150,
+    speedBoost: 1,
+    damageBoost: 1,
+    rangeBoost: 1,
+    shieldAmount: 0,
+    slowTimer: 0,
+    noBlastKill: 0,
+    dotTargets: null,
+    dotDamage: 0,
+    moveStats: { heavy: 0, downHeavy: 0, groundPound: 0, recovery: 0, aerial: 0, sigSide: 0, sigUp: 0, sigDown: 0, super: 0, power: 0, normal: 0, signatureKOs: 0, groundPoundKOs: 0, emoteBeforeMove: 0 },
+    recoveryAirUses: 0,
+    // Universal movement abilities — shared by every non-sports fight mode.
+    _movementTapState: {
+      left: -9999, right: -9999, up: -9999, down: -9999,
+      leftHeld: false, rightHeld: false, upHeld: false, downHeld: false,
+    },
+    dashCooldown: 0,
+    dashTimer: 0,
+    dashDirection: { x: 0, y: 0 },
+    dashInvulnerable: false,
+    airDodgeUses: 2,
+    wallSlide: false,
+    wallSide: 0,
+    wallContactActive: false,
+    wallGrantsUsed: 0,
+    wallGrantPending: false,
+    platformMaterial: null,
+    powerDisabled: 0,
+    trapped: false,
+    projectiles: [],
+    knockbackMul: 1,
+    knockbackReduction: 0,
+  };
+}
+
+function activatePower(fighter, opponent) {
+  const effect = getPowerEffect(fighter.char.baseCharId || fighter.char.id, fighter.char);
+  if (!effect) return;
+
+  // Soccer mode: powers launch the ball instead of damaging opponents
+  if (fighter.gameMode === 'soccer') {
+    fighter.powerCooldown = effect.cooldown * 60;
+    fighter._maxPowerCooldown = fighter.powerCooldown;
+    fighter.powerActive = 'soccer_power';
+    fighter.powerTimer = 20;
+    fighter._soccerPowerActivated = true;
+    return;
+  }
+
+  // Multiple opponents: pick a random alive one for targeted powers
+  let _savedAllOpps = null;
+  if (fighter._allOpponents && fighter._allOpponents.length > 1) {
+    const alive = fighter._allOpponents.filter(o => o && o.stocks > 0);
+    if (alive.length > 0) opponent = alive[Math.floor(Math.random() * alive.length)];
+    // For characters whose power should only ever hit ONE random opponent
+    // (even in 3+ player matches), restrict the target list to that single
+    // pick so every "forEach opponent" loop below affects only them.
+    if (SINGLE_RANDOM_POWER_CHARS.has(fighter.char.id)) {
+      _savedAllOpps = fighter._allOpponents;
+      fighter._allOpponents = opponent ? [opponent] : [];
+    }
+  }
+
+  fighter.powerCooldown = effect.cooldown * 60;
+  const selfDamageBonus = effect.damageScalesWithSelfDamage ? fighter.damage * 0.01 : 0;
+
+  // ── Gen 1-4 custom power button abilities — handle before the generic switch ──
+  if (activateGenPower(fighter, opponent, effect)) {
+    if (_savedAllOpps) fighter._allOpponents = _savedAllOpps;
+    return;
+  }
+
+  switch (effect.type) {
+    case 'stat_boost':
+      fighter.powerActive = 'stat_boost'; fighter.powerTimer = Math.min(effect.duration, 10) * 60;
+      fighter.speedBoost = effect.speedMul || 1; fighter.damageBoost = effect.damageMul || 1; fighter.rangeBoost = effect.rangeMul || 1;
+      if (effect.knockbackMul) fighter.knockbackMul = effect.knockbackMul;
+      if (effect.damageReduction) fighter.shieldAmount = effect.damageReduction;
+      if (effect.knockbackImmune) fighter.invincible = Math.max(fighter.invincible, effect.knockbackImmune);
+      if (effect.selfDamage) fighter.damage += effect.selfDamage;
+      break;
+    case 'spawn_clone':
+      fighter.powerActive = 'spawn_clone'; fighter.powerTimer = Math.min(effect.duration, 10) * 60;
+      fighter.damageBoost = effect.damageMul || 1;
+      fighter._clone = { x: fighter.x - fighter.facing * 50, y: fighter.y, facing: -fighter.facing, frame: 0, life: Math.min(effect.duration, 10) * 60, char: fighter.char };
+      break;
+    case 'invincible': {
+      const iDur = Math.min(effect.duration, 5); // phasing/immunity capped at 5s
+      fighter.powerActive = 'invincible'; fighter.powerTimer = iDur * 60; fighter.invincible = iDur * 60;
+      if (effect.damageReduction) fighter.shieldAmount = effect.damageReduction;
+      break;
+    }
+    case 'shield': {
+      // noAttackImmune (Silver): no invincibility — just damage + knockback reduction for the full duration.
+      // Other shields: full attack immunity, capped at 5s.
+      const sDur = effect.noAttackImmune ? Math.min(effect.duration, 5) : Math.min(effect.duration, 5);
+      fighter.powerActive = 'shield'; fighter.powerTimer = sDur * 60; fighter.shieldAmount = effect.damageReduction || 0.5;
+      fighter.knockbackReduction = effect.knockbackReduction || 0;
+      if (!effect.noAttackImmune) fighter.invincible = Math.max(fighter.invincible, sDur * 60);
+      if (effect.stunImmune) fighter.invincible = Math.max(fighter.invincible, 20);
+      break;
+    }
+    case 'freeze_opponent':
+      fighter.powerActive = 'freeze'; fighter.powerTimer = Math.min(effect.duration, 5) * 60;
+      if (opponent) { opponent.hitstun = Math.min(effect.duration, 5) * 60; opponent.state = 'hitstun'; opponent.vx = 0; opponent.vy = 0; }
+      break;
+    case 'launch_opponent':
+      if (opponent) {
+        const force = effect.launchForce || 18;
+        opponent.vy = (effect.reverseGravity ? force : -force) * KNOCKBACK_SCALE;
+        opponent.grounded = false; opponent.noBlastKill = 120; opponent.state = 'hitstun'; opponent.hitstun = 30;
+        if (effect.reverseGravity) opponent.gravityInverted = true;
+      }
+      break;
+    case 'teleport': {
+      let destX = opponent ? opponent.x + fighter.facing * 80 : fighter.x + fighter.facing * 200;
+      const destY = opponent ? opponent.y : fighter.y;
+      // Raycast from fighter to destination — stop portal at first solid wall/platform
+      const plats = fighter._platforms || [];
+      const dir = Math.sign(destX - fighter.x) || 1;
+      const totalDist = Math.abs(destX - fighter.x);
+      for (let d = 0; d <= totalDist; d += 8) {
+        const checkX = fighter.x + dir * d;
+        for (const p of plats) {
+          const mat = p.material || 'normal';
+          if (['water','lava','cloud','acid','tar','antigravity'].includes(mat)) continue;
+          if (p._deleted > 0 || p.h < 18) continue;
+          if (checkX > p.x - 16 && checkX < p.x + p.w + 16 && fighter.y > p.y && fighter.y < p.y + p.h) {
+            destX = dir > 0 ? p.x - 20 : p.x + p.w + 20;
+            d = totalDist + 1; break;
+          }
+        }
+      }
+      if (opponent) {
+        fighter._portalEffect = { fromX: fighter.x, fromY: fighter.y, toX: destX, toY: destY, timer: 40, maxTimer: 40 };
+        fighter.x = destX; fighter.y = destY; fighter.facing = -fighter.facing;
+      } fighter.invincible = 15;
+      break;
+    }
+    case 'damage_over_time':
+      fighter.powerActive = 'dot'; fighter.powerTimer = Math.min(effect.duration, 10) * 60; fighter.dotDamage = effect.dotDamage || 2;
+      fighter.dotTargets = (fighter._allOpponents || (opponent ? [opponent] : [])).filter(o => o && o.stocks > 0);
+      break;
+    case 'slow_opponent':
+      fighter.powerActive = 'slow'; fighter.powerTimer = Math.min(effect.duration, 10) * 60;
+      { const _opps = fighter._allOpponents || (opponent ? [opponent] : []);
+        _opps.forEach(opp => { if (!opp || opp.stocks <= 0) return;
+          opp.slowTimer = effect.duration * 60; opp.speedMul = effect.speedMul ?? 0.4; }); }
+      break;
+    case 'flight':
+      fighter.powerActive = 'flight'; fighter.powerTimer = Math.min(effect.duration, 10) * 60; fighter.canFly = true;
+      break;
+    case 'infinite_jumps':
+      fighter.powerActive = 'infinite_jumps'; fighter.powerTimer = Math.min(effect.duration, 10) * 60;
+      fighter.maxJumps = 999; fighter.jumps = 999; fighter.canFly = true;
+      break;
+    case 'heal':
+      fighter.powerActive = 'heal'; fighter.powerTimer = Math.min(effect.duration, 10) * 60;
+      fighter._healPerTick = effect.healAmount ? effect.healAmount / (Math.min(effect.duration, 10) * 2) : 0;
+      fighter._healOpponents = !!effect.healOpponents;
+      if (effect.reviveChance) fighter.reviveChance = effect.reviveChance;
+      break;
+    case 'lightning_strike':
+      fighter.powerActive = 'lightning_strike'; fighter.powerTimer = 60;
+      if (opponent) {
+        fighter.projectiles = fighter.projectiles || [];
+        fighter.projectiles.push({
+          type: 'lightning_bolt', x: opponent.x, y: -50, vx: 0, vy: 0,
+          targetX: opponent.x, targetY: opponent.y,
+          damage: (effect.damage || 25) * (fighter.damageBoost || 1) * (fighter.statPowerMul || 1) + selfDamageBonus,
+          color: '#FFFF44', life: 85, hitApplied: false, warning: 45, size: 50,
+        });
+      }
+      break;
+    case 'pull_opponent':
+      if (opponent) {
+        const dx = fighter.x - opponent.x; const force = effect.pullForce || 14;
+        opponent.vx = Math.sign(dx) * force * KNOCKBACK_SCALE; opponent.state = 'hitstun'; opponent.hitstun = effect.stunDuration || 15;
+      }
+      break;
+    case 'range_boost':
+      fighter.powerActive = 'range_boost'; fighter.powerTimer = Math.min(effect.duration, 10) * 60; fighter.rangeBoost = effect.rangeMul || 1.5;
+      break;
+    case 'charge_attack':
+      fighter.powerActive = 'charge_attack'; fighter.powerTimer = Math.min(effect.duration, 10) * 60;
+      fighter.damageBoost = (effect.damageMul || 2) + selfDamageBonus;
+      break;
+    case 'beam': {
+      fighter.powerActive = 'beam'; fighter.powerTimer = 20;
+      fighter.projectiles = fighter.projectiles || [];
+      fighter.projectiles.push({
+        type: 'beam',
+        x: fighter.x + fighter.facing * 36, y: fighter.y - 38,
+        vx: fighter.facing * (effect.speed || 18), vy: 0,
+        damage: (effect.damage || 18) * (fighter.damageBoost || 1) * (fighter.statPowerMul || 1) + selfDamageBonus,
+        knockback: effect.knockback || 14,
+        color: effect.color || fighter.char.color || '#DC143C',
+        life: 48, facing: fighter.facing, hitIds: {},
+      });
+      break;
+    }
+    case 'homing':
+      fighter.powerActive = 'homing'; fighter.powerTimer = Math.min(effect.duration, 10) * 60;
+      if (effect.dodgeChance) fighter.dodgeChance = effect.dodgeChance;
+      break;
+    case 'reverse_controls':
+      fighter.powerActive = 'reverse'; fighter.powerTimer = Math.min(effect.duration, 5) * 60;
+      { const _opps = fighter._allOpponents || (opponent ? [opponent] : []);
+        _opps.forEach(opp => { if (!opp || opp.stocks <= 0) return;
+          opp.reverseControls = Math.min(effect.duration, 5) * 60; opp.slowTimer = Math.min(opp.slowTimer || 0, 30); }); }
+      break;
+    case 'random_effect': {
+      const types = ['stat_boost', 'invincible', 'shield', 'freeze_opponent', 'damage_over_time', 'slow_opponent', 'reverse_controls'];
+      const rt = types[Math.floor(Math.random() * types.length)];
+      fighter.powerActive = rt; fighter.powerTimer = Math.min(effect.duration || 5, 10) * 60;
+      const _rops = fighter._allOpponents || (opponent ? [opponent] : []);
+      if (rt === 'stat_boost') { fighter.speedBoost = 1.5; fighter.damageBoost = 1.5; }
+      else if (rt === 'invincible') fighter.invincible = 5 * 60;
+      else if (rt === 'shield') fighter.shieldAmount = 0.5;
+      else if (rt === 'freeze_opponent') { _rops.forEach(o => { if (o && o.stocks > 0) { o.hitstun = 8 * 60; o.state = 'hitstun'; } }); }
+      else if (rt === 'damage_over_time') { fighter.dotDamage = 2; fighter.dotTargets = _rops.filter(o => o && o.stocks > 0); }
+      else if (rt === 'slow_opponent') { _rops.forEach(o => { if (o && o.stocks > 0) o.slowTimer = 8 * 60; }); }
+      else if (rt === 'reverse_controls') { _rops.forEach(o => { if (o && o.stocks > 0) o.reverseControls = 5 * 60; }); }
+      break;
+    }
+    // ── NEW POWER TYPES ──
+    case 'dash_slash': {
+      // Actual dash (not teleport): drive horizontal velocity over a short
+      // window. Normal platform collision stops the fighter at walls, so the
+      // dash can't pass through them. Damage is applied per-frame to opponents
+      // the fighter overlaps during the dash.
+      fighter.powerActive = 'dash_slash'; fighter.powerTimer = 18; fighter.invincible = 18;
+      const dir = fighter.facing;
+      const dmg = (effect.damage || 22) * (fighter.damageBoost || 1) * (fighter.statPowerMul || 1);
+      const kb = effect.knockback || 1.4;
+      let dist;
+      if (effect.dashDistance) {
+        dist = effect.dashDistance;
+      } else if (opponent) {
+        const dx = opponent.x - fighter.x;
+        fighter.facing = Math.sign(dx) || fighter.facing;
+        dist = Math.min(Math.abs(dx) + 60, 420);
+      } else {
+        dist = 260;
+      }
+      fighter.vx = fighter.facing * 52;
+      fighter.vy = 0;
+      fighter._dash = { dir: fighter.facing, distance: dist, traveled: 0, damage: dmg, knockback: kb, hitIds: {}, color: effect.color || fighter.char.color || '#9933FF' };
+      fighter._dashSlashEffect = { fromX: fighter.x, toX: fighter.x + fighter.facing * dist, y: fighter.y - 30, timer: 25, maxTimer: 25, facing: fighter.facing };
+      break;
+    }
+    case 'earth_drop':
+      fighter.powerActive = 'earth_drop'; fighter.powerTimer = 30;
+      if (opponent) {
+        fighter.projectiles = fighter.projectiles || [];
+        fighter.projectiles.push({
+          type: 'stone_drop', x: opponent.x, y: -100, vx: 0, vy: 0,
+          targetX: opponent.x, targetY: opponent.y,
+          damage: (effect.damage || 20) * (fighter.damageBoost || 1) * (fighter.statPowerMul || 1),
+          color: '#886633', life: 120, hitApplied: false, size: 40,
+          _onlyTarget: SINGLE_RANDOM_POWER_CHARS.has(fighter.char.id) ? opponent : null,
+        });
+      }
+      break;
+    case 'homing_projectile':
+      fighter.powerActive = 'homing_projectile'; fighter.powerTimer = 30;
+      fighter.projectiles = fighter.projectiles || [];
+      fighter.projectiles.push({
+        type: effect.projectileType || 'fireball',
+        x: fighter.x, y: fighter.y - 30, vx: fighter.facing * 4, vy: 0, target: opponent,
+        damage: (effect.damage || 25) * (fighter.statPowerMul || 1),
+        knockback: effect.knockback || 1,
+        color: effect.color || '#FF3333', life: 180, hitApplied: false, speed: 4.5,
+      });
+      break;
+    case 'energy_ball': {
+      fighter.powerActive = 'energy_ball'; fighter.powerTimer = 30;
+      fighter.projectiles = fighter.projectiles || [];
+      // Grand Circuit: Maroon's Energy power returns only 1/3 of damage taken (per stock)
+      // instead of the full accumulated damage.
+      const energyDmg = fighter._gcNoBlast ? Math.floor(fighter.damage / 4) : Math.floor(fighter.damage);
+      fighter.projectiles.push({
+        type: 'energy_ball', x: fighter.x, y: fighter.y - 30, vx: fighter.facing * 4, vy: 0, target: opponent,
+        damage: energyDmg, color: '#800000', life: 180, hitApplied: false, speed: 4,
+        willMiss: Math.random() < 0.5,
+      });
+      break;
+    }
+    case 'gravity_flip':
+      fighter.powerActive = 'gravity_flip'; fighter.powerTimer = effect.duration * 60;
+      // Gravity Switch — launch ALL opponents upward, auto-stopped before KO ceiling
+      {
+        const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+        opps.forEach(opp => {
+          if (!opp || opp.stocks <= 0) return;
+          opp.vy = -6;
+          opp.grounded = false;
+          opp.noBlastKill = effect.duration * 60 + 60;
+          opp._gravCeiling = -450;
+          opp._gravCeilingTimer = effect.duration * 60;
+          opp._gravFloat = true;
+          opp.state = 'hitstun';
+          opp.hitstun = 10;
+        });
+      }
+      break;
+    case 'demon_strike': {
+      fighter.powerActive = 'demon_strike'; fighter.powerTimer = 50;
+      fighter.projectiles = fighter.projectiles || [];
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      const tgt = opps.length > 0 ? opps[Math.floor(Math.random() * opps.length)] : opponent;
+      if (tgt) {
+        const side = tgt.x < fighter.x ? 1 : -1; // spawn on far side so it swoops across
+        fighter.projectiles.push({
+          type: 'demon', x: tgt.x + side * 320, y: tgt.y - 260, vx: -side * 7, vy: -2,
+          targetX: tgt.x, targetY: tgt.y,
+          damage: (effect.damage || 18) * (fighter.statPowerMul || 1),
+          color: '#FF2400', life: 160, hitApplied: false, size: 52, gravity: 0.22, wing: 0,
+        });
+      }
+      break;
+    }
+    case 'whip_stun': {
+      fighter.powerActive = 'whip_stun'; fighter.powerTimer = 25;
+      fighter.projectiles = fighter.projectiles || [];
+      fighter.projectiles.push({
+        type: 'whip', x: fighter.x + fighter.facing * 20, y: fighter.y - 38,
+        vx: 0, vy: 0, facing: fighter.facing,
+        damage: (effect.damage || 20) * (fighter.statPowerMul || 1),
+        stunDuration: effect.stunDuration || 120, color: effect.color || '#44DDFF',
+        life: 32, maxReach: 340, reach: 0, hitIds: {}, bolts: [], fireMode: effect.fireMode, embers: [],
+      });
+      break;
+    }
+    case 'platform_delete':
+      fighter.powerActive = 'platform_delete'; fighter.powerTimer = 30;
+      fighter._platformsToDelete = effect.deleteCount || 2;
+      break;
+    case 'gambit':
+      fighter.powerActive = 'gambit'; fighter.powerTimer = 20;
+      { const _opps = fighter._allOpponents || (opponent ? [opponent] : []);
+        _opps.forEach(opp => { if (!opp || opp.stocks <= 0) return;
+          if (Math.random() < 0.3) {
+            const damages = [10, 30, 50, 100, 200];
+            const dmg = damages[Math.floor(Math.random() * damages.length)];
+            opp.damage += dmg; opp.hitstun = 25; opp.state = 'hitstun';
+            opp.vy = -12 * KNOCKBACK_SCALE; opp.grounded = false;
+          } }); }
+      break;
+    case 'copy_move':
+      fighter.powerActive = 'copy_move'; fighter.powerTimer = effect.duration * 60;
+      if (opponent && opponent.attackData) {
+        fighter.attackData = { ...opponent.attackData, hitApplied: false, progress: 0 };
+        fighter.state = 'attacking'; fighter.attackTimer = opponent.attackData.duration || 18;
+      }
+      break;
+
+    // ── Death: add flat damage to opponent's current total ──
+    case 'add_damage': {
+      fighter.powerActive = 'add_damage'; fighter.powerTimer = 20;
+      const targets = fighter._allOpponents || (opponent ? [opponent] : []);
+      targets.forEach(opp => {
+        if (opp && opp.stocks > 0) opp.damage += (effect.damage || 10);
+      });
+      break;
+    }
+    // ── Magneto: pull ALL opponents toward him with strong force ──
+    case 'pull_all': {
+      fighter.powerActive = 'pull_all'; fighter.powerTimer = 20;
+      const force = effect.pullForce || 22;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      opps.forEach(opp => {
+        if (!opp || opp.stocks <= 0) return;
+        const dx = fighter.x - opp.x;
+        opp.vx = Math.sign(dx) * force * KNOCKBACK_SCALE; opp.state = 'hitstun'; opp.hitstun = effect.stunDuration || 14; opp.grounded = false;
+      });
+      break;
+    }
+    // ── Corpent: throw hammer forward, it comes back to him ──
+    case 'hammer_throw': {
+      fighter.powerActive = 'hammer_throw'; fighter.powerTimer = 90;
+      fighter.projectiles = fighter.projectiles || [];
+      fighter.projectiles.push({
+        type: 'hammer', x: fighter.x + fighter.facing * 30, y: fighter.y - 40,
+        vx: fighter.facing * 14, vy: -3, ownerId: fighter.playerIndex,
+        damage: (effect.damage || 22) * (fighter.statPowerMul || 1),
+        knockback: effect.knockback || 1.4, color: '#8B7355', life: 120,
+        facing: fighter.facing, phase: 'out', hitIds: {}, spin: 0,
+        originX: fighter.x, originY: fighter.y - 40,
+      });
+      break;
+    }
+    // ── Whami: throw a conical potion flask at the opponent ──
+    case 'potion_throw': {
+      fighter.powerActive = 'potion_throw'; fighter.powerTimer = 60;
+      fighter.projectiles = fighter.projectiles || [];
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      const tgt = opps.length > 0 ? opps[Math.floor(Math.random() * opps.length)] : opponent;
+      const tx = tgt ? tgt.x : fighter.x + fighter.facing * 600;
+      const ty = tgt ? tgt.y - 30 : fighter.y - 100;
+      const dx = tx - fighter.x, dy = ty - (fighter.y - 40);
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const speed = 11;
+      fighter.projectiles.push({
+        type: 'potion', x: fighter.x + fighter.facing * 24, y: fighter.y - 40,
+        vx: (dx / dist) * speed, vy: (dy / dist) * speed - 2,
+        damage: (effect.damage || 20) * (fighter.statPowerMul || 1),
+        color: '#88FF44', life: 150, hitApplied: false, gravity: 0.18,
+        target: tgt, brew: Math.random() < 0.5 ? 'poison' : 'slow',
+      });
+      break;
+    }
+    // ── Lavender: dream platform beneath her ──
+    case 'spawn_platform': {
+      fighter.powerActive = 'spawn_platform'; fighter.powerTimer = effect.duration * 60;
+      fighter.projectiles = fighter.projectiles || [];
+      fighter.projectiles.push({
+        type: 'spawn_platform', x: fighter.x, y: fighter.y + 14, w: 180, h: 16,
+        color: effect.color || fighter.char.color, life: effect.duration * 60,
+        owner: fighter, hitApplied: false,
+      });
+      break;
+    }
+    // ── Grey: iron walls on both sides ──
+    case 'spawn_walls': {
+      fighter.powerActive = 'spawn_walls'; fighter.powerTimer = effect.duration * 60;
+      fighter.projectiles = fighter.projectiles || [];
+      fighter.projectiles.push({ type: 'iron_wall', x: fighter.x - 120, y: fighter.y - 40, w: 18, h: 120, side: -1, color: '#888888', life: effect.duration * 60, hitIds: {} });
+      fighter.projectiles.push({ type: 'iron_wall', x: fighter.x + 120, y: fighter.y - 40, w: 18, h: 120, side: 1, color: '#888888', life: effect.duration * 60, hitIds: {} });
+      break;
+    }
+    // ── Turquoise: transform — copy nearest opponent's stat multipliers ──
+    case 'transform': {
+      fighter.powerActive = 'transform'; fighter.powerTimer = Math.min(effect.duration, 10) * 60;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      const tgt = opps.find(o => o && o.stocks > 0) || opponent;
+      if (tgt) {
+        fighter._mimicTarget = tgt;
+        fighter._origStatSpeedMul = fighter.statSpeedMul;
+        fighter._origStatPowerMul = fighter.statPowerMul;
+        fighter._origStatDefenseReduction = fighter.statDefenseReduction;
+        fighter.statSpeedMul = tgt.statSpeedMul || fighter.statSpeedMul;
+        fighter.statPowerMul = tgt.statPowerMul || fighter.statPowerMul;
+        fighter.statDefenseReduction = Math.max(fighter.statDefenseReduction, tgt.statDefenseReduction || 0);
+        fighter.projectiles = fighter.projectiles || [];
+        fighter.projectiles.push({ type: 'mimic_aura', target: fighter, mimic: tgt, color: tgt.char.color, life: Math.min(effect.duration, 10) * 60, hitApplied: false });
+      }
+      break;
+    }
+    // ── Magenta: glue trap — gunk the opponent to a near-halt ──
+    case 'glue_trap': {
+      fighter.powerActive = 'glue_trap'; fighter.powerTimer = 20;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      opps.forEach(opp => {
+        if (!opp || opp.stocks <= 0) return;
+        const dur = Math.min(effect.duration, 5) * 60;
+        opp.slowTimer = dur; opp.speedMul = 0.05;
+        fighter.projectiles = fighter.projectiles || [];
+        fighter.projectiles.push({ type: 'glue', target: opp, color: '#AA66CC', life: dur, hitApplied: false });
+      });
+      break;
+    }
+    // ── Willow: vine snare — root the opponent in place ──
+    case 'vine_snare': {
+      fighter.powerActive = 'vine_snare'; fighter.powerTimer = 20;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      opps.forEach(opp => {
+        if (!opp || opp.stocks <= 0) return;
+        opp.trapped = true; opp.hitstun = Math.min(effect.duration, 5) * 60; opp.state = 'hitstun'; opp.vx = 0; opp.vy = 0;
+        fighter.projectiles = fighter.projectiles || [];
+        fighter.projectiles.push({ type: 'vines', target: opp, color: '#448833', life: Math.min(effect.duration, 5) * 60, hitApplied: false });
+      });
+      break;
+    }
+    // ── Temple: stage slice — a sweeping blade across the stage ──
+    case 'stage_slice': {
+      fighter.powerActive = 'stage_slice'; fighter.powerTimer = 40;
+      fighter.projectiles = fighter.projectiles || [];
+      fighter.projectiles.push({
+        type: 'stage_slice', x: fighter.x, y: fighter.y - 30,
+        vx: fighter.facing * 16, color: '#DDBB88', life: 60, hitApplied: false, hitIds: {},
+        damage: (effect.damage || 22) * (fighter.statPowerMul || 1), facing: fighter.facing, sweep: 0,
+      });
+      break;
+    }
+    // ── Nightmare: shadow drain — latch a shadow that drains + slows ──
+    case 'shadow_drain': {
+      fighter.powerActive = 'shadow_drain'; fighter.powerTimer = effect.duration * 60;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      opps.forEach(opp => {
+        if (!opp || opp.stocks <= 0) return;
+        opp.slowTimer = effect.duration * 60; opp.speedMul = 0.5;
+        fighter.projectiles = fighter.projectiles || [];
+        fighter.projectiles.push({ type: 'shadow_drain', target: opp, color: '#553377', life: effect.duration * 60, tick: 0, dotDamage: effect.dotDamage || 3, hitApplied: false });
+      });
+      break;
+    }
+    // ── Controller: marionette — strings that stun + reverse opponent ──
+    case 'marionette': {
+      fighter.powerActive = 'marionette'; fighter.powerTimer = Math.min(effect.duration, 5) * 60;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      opps.forEach(opp => {
+        if (!opp || opp.stocks <= 0) return;
+        const dur = Math.min(effect.duration, 5) * 60;
+        opp.hitstun = dur; opp.state = 'hitstun'; opp.reverseControls = dur;
+        fighter.projectiles = fighter.projectiles || [];
+        fighter.projectiles.push({ type: 'marionette', target: opp, color: '#1A1A6A', life: dur, hitApplied: false });
+      });
+      break;
+    }
+    // ── Blue: bubble trap — encase opponent in a slowing bubble (no rise) ──
+    case 'bubble_trap': {
+      fighter.powerActive = 'bubble_trap'; fighter.powerTimer = 20;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      opps.forEach(opp => {
+        if (!opp || opp.stocks <= 0) return;
+        const dur = Math.min(effect.duration, 5) * 60;
+        opp.slowTimer = dur; opp.speedMul = 0.25;
+        fighter.projectiles = fighter.projectiles || [];
+        fighter.projectiles.push({ type: 'bubble', target: opp, color: effect.color || '#3399FF', life: dur, hitApplied: false, ringOnly: effect.ringOnly });
+      });
+      break;
+    }
+    // ── Snodvor: deep freeze — freeze opponent solid ──
+    case 'deep_freeze': {
+      fighter.powerActive = 'deep_freeze'; fighter.powerTimer = 20;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      opps.forEach(opp => {
+        if (!opp || opp.stocks <= 0) return;
+        const dur = Math.min(effect.duration, 5) * 60;
+        opp.hitstun = dur; opp.state = 'hitstun'; opp.vx = 0; opp.vy = 0; opp.slowTimer = dur; opp.speedMul = 0;
+        fighter.projectiles = fighter.projectiles || [];
+        fighter.projectiles.push({ type: 'ice_block', target: opp, color: '#AAEEFF', life: dur, hitApplied: false });
+      });
+      break;
+    }
+    // ── Hazel: poison cloud — bubbling toxic cloud on opponent ──
+    case 'poison_cloud': {
+      fighter.powerActive = 'poison_cloud'; fighter.powerTimer = effect.duration * 60;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      opps.forEach(opp => {
+        if (!opp || opp.stocks <= 0) return;
+        fighter.projectiles = fighter.projectiles || [];
+        fighter.projectiles.push({ type: 'poison_cloud', target: opp, color: '#66CC44', life: effect.duration * 60, tick: 0, dotDamage: effect.dotDamage || 4, hitApplied: false });
+      });
+      break;
+    }
+    // ── Pearl: sonar pulse — expanding ring that stuns opponents it hits ──
+    case 'sonar_pulse': {
+      fighter.powerActive = 'sonar_pulse'; fighter.powerTimer = 40;
+      fighter.projectiles = fighter.projectiles || [];
+      fighter.projectiles.push({ type: 'sonar_pulse', x: fighter.x, y: fighter.y - 30, r: 0, maxR: 320, color: '#EEEEDD', life: 50, hitApplied: false, hitIds: {} });
+      break;
+    }
+    // ── Utsuro: Elementor Call — spawn 3–7 random-colored hollow runners ──
+    case 'elementor_call': {
+      fighter.powerActive = 'elementor_call'; fighter.powerTimer = 60;
+      fighter.projectiles = fighter.projectiles || [];
+      const count = 3 + Math.floor(Math.random() * 5); // 3–7 runners
+      const colors = ['#FF4444', '#44FF44', '#4444FF', '#FFFF44', '#FF44FF', '#44FFFF', '#FF8844', '#8844FF', '#FF4488', '#44FF88', '#FFAA00', '#AA00FF'];
+      for (let i = 0; i < count; i++) {
+        fighter.projectiles.push({
+          type: 'elementor_runner',
+          x: fighter.x + (Math.random() - 0.5) * 30,
+          y: fighter.y,
+          baseY: fighter.y,
+          vx: fighter.facing * (4 + Math.random() * 3),
+          vy: -3 - Math.random() * 3,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          damage: (effect.damage || 15) * (fighter.statPowerMul || 1),
+          life: 180, facing: fighter.facing, hitIds: {}, runFrame: Math.random() * 6,
+        });
+      }
+      break;
+    }
+    // ── Yui: Steal Power — steals one opponent's power and uses it in their color ──
+    case 'steal_power': {
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      const alive = opps.filter(o => o && o.stocks > 0);
+      if (alive.length === 0) break;
+      const target = alive[Math.floor(Math.random() * alive.length)];
+      const stolenEffect = getPowerEffect(target.char.id, target.char);
+      if (!stolenEffect || stolenEffect.type === 'steal_power') break;
+
+      // Store stolen power info so the aura renders in the original holder's color
+      fighter._stolenPowerColor = target.char.color || '#FFFFFF';
+      fighter._stolenPowerCharId = target.char.id;
+      fighter._stolenPowerName = stolenEffect.name || target.char.power || 'Stolen Power';
+
+      // Temporarily swap char so the stolen effect applies with its own parameters/color
+      const origChar = fighter.char;
+      fighter.char = target.char;
+      activatePower(fighter, target); // recursively apply the stolen power
+      fighter.char = origChar;
+
+      // Use steal_power's own cooldown (not the stolen power's)
+      fighter.powerCooldown = effect.cooldown * 60;
+      fighter._maxPowerCooldown = fighter.powerCooldown;
+      break;
+    }
+  }
+
+  // Restore the full opponent list if we restricted it for a single-random power
+  if (_savedAllOpps) fighter._allOpponents = _savedAllOpps;
+}
+
+export function activateFighterPower(fighter, opponent) { activatePower(fighter, opponent); }
+
+export function updateProjectiles(fighter, opponent) {
+  if (fighter.genProjectiles && fighter.genProjectiles.length > 0) {
+    updateGenProjectiles(fighter, opponent);
+  }
+  if (!fighter.projectiles || fighter.projectiles.length === 0) return;
+  fighter.projectiles = fighter.projectiles.filter(p => {
+    p.life--;
+    if (p.life <= 0) return false;
+
+    if (p.type === 'fireball' || p.type === 'electric' || p.type === 'energy_ball' || p.type === 'energy') {
+      if (p.target) {
+        const dx = p.target.x - p.x;
+        const dy = (p.target.y - 30) - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 5) { p.vx += (dx / dist) * 0.5; p.vy += (dy / dist) * 0.5; }
+        const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+        const maxSp = p.speed || 5;
+        if (sp > maxSp) { p.vx = (p.vx / sp) * maxSp; p.vy = (p.vy / sp) * maxSp; }
+      }
+      p.x += p.vx; p.y += p.vy;
+      if (!p.hitApplied && p.target && Math.abs(p.x - p.target.x) < 40 && Math.abs(p.y - (p.target.y - 20)) < 50) {
+        if (p.willMiss) { p.willMiss = false; p.vy = -10; p.vx = Math.sign(p.vx || 1) * 8; return true; }
+        p.hitApplied = true;
+        if (p.target.invincible <= 0) {
+          if (p.damage > 0) p.target.damage += p.damage;
+          p.target.hitstun = 25; p.target.state = 'hitstun';
+          const kb = p.knockback || 1;
+          p.target.vx = Math.sign(p.vx || 1) * (10 + kb * 6) * KNOCKBACK_SCALE; p.target.vy = (-8 - kb * 2) * KNOCKBACK_SCALE; p.target.grounded = false;
+        }
+        return false;
+      }
+      return true;
+    }
+
+    if (p.type === 'stone_drop') {
+      p.vy += 0.8; p.y += p.vy;
+      if (!p.hitApplied && p.y >= p.targetY - 20) {
+        p.hitApplied = true;
+        const opps = p._onlyTarget ? [p._onlyTarget] : (fighter._allOpponents || (opponent ? [opponent] : []));
+        opps.forEach(opp => {
+          if (opp && opp.stocks > 0 && Math.abs(opp.x - p.x) < 60) {
+            opp.damage += p.damage; opp.hitstun = 25; opp.state = 'hitstun';
+            opp.vy = -15 * KNOCKBACK_SCALE; opp.grounded = false;
+          }
+        });
+        return false;
+      }
+      return true;
+    }
+    if (p.type === 'demon') {
+      // Swooping demon — arcs through the air toward the target
+      p.vy += p.gravity; p.x += p.vx; p.y += p.vy; p.wing += 0.4;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      for (const opp of opps) {
+        if (!opp || opp.stocks <= 0) continue;
+        if (Math.abs(opp.x - p.x) < 55 && Math.abs(opp.y - p.y) < 70 && (opp.invincible || 0) <= 0) {
+          opp.damage += p.damage; opp.hitstun = 28; opp.state = 'hitstun';
+          opp.vx = Math.sign(p.vx) * 12 * KNOCKBACK_SCALE; opp.vy = -10 * KNOCKBACK_SCALE; opp.grounded = false;
+          p.hitApplied = true; return false;
+        }
+      }
+      return p.life > 0 && p.x > -400 && p.x < 1900 && p.y < 1400;
+    }
+    if (p.type === 'hammer') {
+      p.spin += 0.5;
+      if (p.phase === 'out') {
+        p.x += p.vx; p.vy += 0.3; p.y += p.vy;
+        const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+        for (const opp of opps) {
+          if (!opp || opp.stocks <= 0) continue;
+          const key = opp.playerIndex != null ? 'p' + opp.playerIndex : opp;
+          if (p.hitIds[key]) continue;
+          if (Math.abs(opp.x - p.x) < 45 && Math.abs((opp.y - 30) - p.y) < 55 && (opp.invincible || 0) <= 0) {
+            p.hitIds[key] = true;
+            opp.damage += p.damage; opp.hitstun = 22; opp.state = 'hitstun';
+            opp.vx = p.facing * p.knockback * 8 * KNOCKBACK_SCALE; opp.vy = -8 * KNOCKBACK_SCALE; opp.grounded = false;
+          }
+        }
+        if (Math.abs(p.x - p.originX) > 420 || p.life < 70) p.phase = 'return';
+      } else {
+        // Return to fighter's hand
+        const dx = fighter.x - p.x, dy = (fighter.y - 40) - p.y;
+        const d = Math.sqrt(dx * dx + dy * dy) || 1;
+        p.x += (dx / d) * 15; p.y += (dy / d) * 15;
+        if (d < 40) return false;
+      }
+      return p.life > 0;
+    }
+    if (p.type === 'potion') {
+      p.vy += p.gravity; p.x += p.vx; p.y += p.vy;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      for (const opp of opps) {
+        if (!opp || opp.stocks <= 0) continue;
+        if (Math.abs(opp.x - p.x) < 40 && Math.abs((opp.y - 30) - p.y) < 55 && !p.hitApplied && (opp.invincible || 0) <= 0) {
+          p.hitApplied = true;
+          opp.damage += p.damage; opp.hitstun = 18; opp.state = 'hitstun';
+          opp.vx = Math.sign(p.vx) * 8 * KNOCKBACK_SCALE; opp.vy = -6 * KNOCKBACK_SCALE; opp.grounded = false;
+          if (p.brew === 'poison') { opp.slowTimer = 180; opp.speedMul = 0.4; }
+          else { opp.slowTimer = 180; opp.speedMul = 0.3; }
+          return false;
+        }
+      }
+      if (p.y > 720 || p.x < -50 || p.x > 1900) return false;
+      return p.life > 0;
+    }
+    if (p.type === 'whip') {
+      p.reach = Math.min(p.maxReach, p.reach + 28);
+      const tipX = p.x + p.facing * p.reach;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      for (const opp of opps) {
+        if (!opp || opp.stocks <= 0) continue;
+        const key = opp.playerIndex != null ? 'p' + opp.playerIndex : opp;
+        if (p.hitIds[key]) continue;
+        const inReach = p.facing > 0 ? (opp.x > p.x && opp.x < tipX + 30) : (opp.x < p.x && opp.x > tipX - 30);
+        if (inReach && Math.abs((opp.y - 30) - p.y) < 50 && (opp.invincible || 0) <= 0) {
+          p.hitIds[key] = true;
+          opp.damage += p.damage; opp.hitstun = p.stunDuration; opp.state = 'hitstun';
+          opp.vx = p.facing * 6 * KNOCKBACK_SCALE; opp.grounded = false;
+          // Electric bolts erupt from the stunned victim
+          p.bolts.push({ x: opp.x, y: opp.y - 30, life: 30 });
+        }
+      }
+      p.bolts = (p.bolts || []).filter(b => { b.life--; return b.life > 0; });
+      return p.life > 0;
+    }
+    if (p.type === 'lightning_bolt') {
+      p.warning--;
+      if (p.warning <= 0 && !p.hitApplied) {
+        p.hitApplied = true;
+        const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+        opps.forEach(opp => {
+          if (opp && opp.stocks > 0 && Math.abs(opp.x - p.targetX) < 55 && opp.invincible <= 0) {
+            opp.damage += p.damage; opp.hitstun = 25; opp.state = 'hitstun';
+            opp.vy = -12 * KNOCKBACK_SCALE; opp.grounded = false;
+          }
+        });
+      }
+      return p.life > 0;
+    }
+    if (p.type === 'beam') {
+      p.x += p.vx;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      opps.forEach(opp => {
+        if (!opp || opp.stocks <= 0) return;
+        const key = opp._id != null ? opp._id : (opp.playerIndex != null ? 'p' + opp.playerIndex : opp);
+        if (p.hitIds[key]) return;
+        const dx = opp.x - p.x;
+        const inFront = p.facing > 0 ? (dx > -30 && dx < 70) : (dx < 30 && dx > -70);
+        const inHeight = Math.abs((opp.y - 30) - p.y) < 55;
+        if (inFront && inHeight && (opp.invincible || 0) <= 0) {
+          p.hitIds[key] = true;
+          if (fighter.gameMode === 'hp' || (fighter.gameMode === 'brawl' && !fighter._isBR)) opp.hp = Math.max(0, (opp.hp ?? 150) - p.damage);
+          else opp.damage += p.damage;
+          opp.hitstun = 25; opp.state = 'hitstun';
+          opp.vx = p.facing * p.knockback * KNOCKBACK_SCALE; opp.vy = -8 * KNOCKBACK_SCALE; opp.grounded = false;
+        }
+      });
+      return p.life > 0 && p.x > -300 && p.x < 1900;
+    }
+    // ── Status-visual projectiles that follow their target ──
+    if (p.type === 'glue' || p.type === 'vines' || p.type === 'ice_block' || p.type === 'bubble' || p.type === 'marionette' || p.type === 'shadow_drain' || p.type === 'poison_cloud' || p.type === 'mimic_aura') {
+      // Control-effect projectiles expire immediately when the victim is hit by any attack
+      if ((p.type === 'glue' || p.type === 'vines' || p.type === 'ice_block' || p.type === 'bubble' || p.type === 'marionette') && p.target && p.target._controlBroken) {
+        p.target._controlBroken = false;
+        return false;
+      }
+      if ((p.type === 'shadow_drain' || p.type === 'poison_cloud')) {
+        p.tick = (p.tick || 0) + 1;
+        if (p.tick % 30 === 0 && p.target && p.target.stocks > 0) p.target.damage += p.dotDamage || 3;
+      }
+      if (p.type === 'bubble' && p.target && p.target.stocks > 0) {
+        p.target.speedMul = 0.25; p.target.slowTimer = Math.max(p.target.slowTimer || 0, p.life);
+      }
+      if (p.type === 'vines' && p.target && p.target.stocks > 0) {
+        p.target.vx = 0; p.target.trapped = true;
+      }
+      if (p.type === 'mimic_aura' && p.target && p.mimic) {
+        // re-copy stat multipliers each frame in case opponent's change
+        p.target.statSpeedMul = p.mimic.statSpeedMul || p.target.statSpeedMul;
+        p.target.statPowerMul = p.mimic.statPowerMul || p.target.statPowerMul;
+      }
+      return p.life > 0 && p.target && p.target.stocks > 0;
+    }
+    // ── Lavender: dream platform — fighters can land on it ──
+    if (p.type === 'spawn_platform') {
+      const allF = [p.owner, ...((p.owner && p.owner._allOpponents) || [])].filter(Boolean);
+      allF.forEach(f => {
+        if (!f || f.stocks <= 0) return;
+        if (f.vy >= 0 && f.x > p.x - p.w / 2 - 10 && f.x < p.x + p.w / 2 + 10 && f.y >= p.y - 6 && (f.prevY || f.y) <= p.y + 4) {
+          f.y = p.y; f.vy = 0; f.grounded = true; f.jumps = f.maxJumps; f.recoveryAirUses = 0;
+        }
+      });
+      return p.life > 0;
+    }
+    // ── Grey: iron walls — push opponents back ──
+    if (p.type === 'iron_wall') {
+      const opps = fighter._allOpponents || [];
+      opps.forEach(opp => {
+        if (!opp || opp.stocks <= 0) return;
+        if (Math.abs(opp.x - (p.x + p.w / 2)) < p.w / 2 + 18 && Math.abs(opp.y - p.y) < p.h) {
+          opp.x += p.side * 3;
+          if (p.side > 0 && opp.vx < 0) opp.vx = 0;
+          if (p.side < 0 && opp.vx > 0) opp.vx = 0;
+        }
+      });
+      return p.life > 0;
+    }
+    // ── Temple: stage slice — sweeping blade ──
+    if (p.type === 'stage_slice') {
+      p.x += p.vx; p.sweep += 1;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      opps.forEach(opp => {
+        if (!opp || opp.stocks <= 0) return;
+        const key = opp.playerIndex != null ? 'p' + opp.playerIndex : opp;
+        if (p.hitIds[key]) return;
+        if (Math.abs(opp.x - p.x) < 60 && Math.abs((opp.y - 30) - p.y) < 70 && (opp.invincible || 0) <= 0) {
+          p.hitIds[key] = true;
+          opp.damage += p.damage; opp.hitstun = 22; opp.state = 'hitstun';
+          opp.vx = p.facing * 14 * KNOCKBACK_SCALE; opp.vy = -8 * KNOCKBACK_SCALE; opp.grounded = false;
+        }
+      });
+      return p.life > 0 && p.x > -200 && p.x < 1900;
+    }
+    // ── Pearl: sonar pulse — expanding ring ──
+    if (p.type === 'sonar_pulse') {
+      p.r += 14;
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      opps.forEach(opp => {
+        if (!opp || opp.stocks <= 0) return;
+        const key = opp.playerIndex != null ? 'p' + opp.playerIndex : opp;
+        if (p.hitIds[key]) return;
+        const d = Math.abs(opp.x - p.x) + Math.abs((opp.y - 30) - p.y);
+        if (d < p.r + 30 && d > p.r - 30 && (opp.invincible || 0) <= 0) {
+          p.hitIds[key] = true;
+          opp.hitstun = 40; opp.state = 'hitstun'; opp.slowTimer = 120; opp.speedMul = 0.4;
+        }
+      });
+      return p.life > 0 && p.r < p.maxR;
+    }
+    // ── Purple: persistent dash-line hitbox — damages opponents who touch the trail
+    if (p.type === 'dash_line') {
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      for (const opp of opps) {
+        if (!opp || opp.stocks <= 0) continue;
+        const key = opp.playerIndex != null ? 'p' + opp.playerIndex : ('o' + opps.indexOf(opp));
+        if (p.hitIds[key]) continue;
+        const minX = Math.min(p.fromX, p.toX) - 30, maxX = Math.max(p.fromX, p.toX) + 30;
+        if (opp.x >= minX && opp.x <= maxX && Math.abs((opp.y - 30) - p.y) < 50 && (opp.invincible || 0) <= 0) {
+          p.hitIds[key] = true;
+          opp.damage += p.damage; opp.hitstun = 20; opp.state = 'hitstun';
+          opp.vx = p.facing * 14 * p.knockback * KNOCKBACK_SCALE; opp.vy = -8 * KNOCKBACK_SCALE; opp.grounded = false;
+        }
+      }
+      return p.life > 0;
+    }
+    // ── Utsuro: Elementor Call — hollow runners that charge forward with gravity ──
+    if (p.type === 'elementor_runner') {
+      p.runFrame += 0.3;
+      // Apply gravity so runners arc and fall realistically
+      p.vy += 0.42;
+      if (p.vy > 15) p.vy = 15;
+      p.x += p.vx;
+      p.y += p.vy;
+      // Land on the ground level and keep running along it
+      if (p.y >= p.baseY) { p.y = p.baseY; p.vy = 0; }
+      const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+      for (const opp of opps) {
+        if (!opp || opp.stocks <= 0) continue;
+        const key = opp.playerIndex != null ? 'p' + opp.playerIndex : opp;
+        if (p.hitIds[key]) continue;
+        if (Math.abs(opp.x - p.x) < 35 && Math.abs((opp.y - 30) - p.y) < 55 && (opp.invincible || 0) <= 0) {
+          p.hitIds[key] = true;
+          opp.damage += p.damage || 15;
+          opp.powerDisabled = 1800; // 30 seconds at 60fps
+          opp.vx = p.facing * 12 * KNOCKBACK_SCALE; opp.vy = -8 * KNOCKBACK_SCALE; opp.grounded = false; opp.state = 'hitstun'; opp.hitstun = 20;
+        }
+      }
+      return p.life > 0 && p.x > -200 && p.x < 1900;
+    }
+    return true;
+  });
+}
+
+export { drawProjectiles } from './projectileRenderer.js';
+// Re-export AI + power modules so existing imports from fighter.js still work
+export { CPU_DIFFICULTY, updateAI, platformNavigate } from './botAI.js';
+
+
+function isGen1Fighter(f) { return String(f?.char?.id || '').startsWith('g1_'); }
+
+function gen1ReferenceDuration(charId, sigType, isHeavy=false, isSuper=false) {
+  // Duration is the complete authored move timeline (startup + active + endlag).
+  // Do not compress animation time to make controls feel responsive: responsiveness
+  // comes from removing the extra cooldown lockout, not speeding up the animation.
+  if (charId === 'g1_fire') {
+    if (isSuper) return 120;                        // Longer, readable charge, travel and recovery
+    if (sigType === 'groundPound') return 62;       // 20f startup + 8f active + 34f endlag
+    if (sigType === 'recovery') return 42;          // 7f startup + 6f active + 29f endlag
+    if (sigType === 'downHeavy') return 62;         // Sunder Slam: 24f startup + 8f active + 30f endlag
+    if (sigType === 'upHeavy') return 68;           // Ascendant Breaker: 18f startup + 7f active + 43f endlag
+    if (sigType === 'heavy') return 90;             // Rend Strike: 36f startup + 14f active + 40f endlag
+    if (sigType === 'side') return 54;              // Wave: 20f startup + 12f active + 22f endlag
+    if (sigType === 'up') return 34;                // Rising: 14f startup + 4f active + 16f endlag
+    if (sigType === 'down') return 50;              // Quake: 15f startup + 4f active + 31f endlag
+  }
+  // Other Generation I moves retain their existing authored timings.
+  if (String(charId || '').startsWith('g1_')) {
+    if (isSuper) return 34;
+    if (sigType === 'downHeavy') return 18;
+    if (sigType === 'upHeavy') return 18;
+    if (sigType === 'heavy') return 14;
+    if (sigType === 'side') return 11;
+    if (sigType === 'up') return 21;
+    if (sigType === 'down') return 16;
+  }
+  return 0;
+}
+
+function gen1HoldMaxFrames(charId, sigType, isHeavy=false) {
+  // Grounded signatures/heavies can be held for up to four seconds.
+  return 240; // Four seconds at 60 FPS for every grounded fighter.
+}
+
+function startGen1Hold(fighter, button, sigType, wasAirborne = false, wasGrounded = false) {
+  fighter.attackHold = {
+    button,
+    sigType,
+    frames: 0,
+    maxFrames: gen1HoldMaxFrames(fighter.char.id, sigType, button === 'heavy'),
+    wasAirborne,
+    wasGrounded,
+  };
+  fighter.state = 'attackHold';
+  fighter.attackData = {
+    name: 'Charging', type: 'attackHold', sigType,
+    color: fighter.char.color, progress: 0, holding: true,
+    holdProgress: 0, holdCharge: 0, hitApplied: false, duration: 1,
+    isHeavy: button === 'heavy', isSuper: false,
+  };
+}
+
+function executeGen1HeldAttack(fighter, hold) {
+  const id = fighter.char.id;
+  const sigType = hold.sigType;
+  let data = null;
+  let isHeavy = hold.button === 'heavy';
+
+  if (isHeavy) {
+    if (sigType === 'upHeavy') data = fighter.resonanceActive ? fighter.char?.upHeavy : (fighter.char?.upHeavy || UP_HEAVIES[id]);
+    else if (sigType === 'downHeavy') data = fighter.resonanceActive ? fighter.char?.downHeavy : (fighter.char?.downHeavy || DOWN_HEAVIES[id]);
+    else data = fighter.char.heavyAttack;
+  } else {
+    data = fighter.char.signatures?.[sigType];
+  }
+  if (!data) { fighter.attackHold = null; fighter.attackData = null; fighter.state = fighter.grounded ? 'idle' : 'jumping'; return; }
+
+  // Capture the original directional choice. The current direction keys are
+  // deliberately ignored here, so changing direction during the hold cannot
+  // turn one attack into another.
+  const refDur = gen1ReferenceDuration(id, sigType, isHeavy, false);
+  const dur = refDur || Math.min(data.duration || (isHeavy ? 20 : 16), isHeavy ? 23 : 19);
+  const fireFrames = id === 'g1_fire' ? ({ up:[14,4,16], down:[15,4,31], side:[10,8,26], upHeavy:[18,7,43], downHeavy:[24,8,30], heavy:[28,10,34] }[sigType] || null) : null;
+  fighter.attackData = {
+    ...data,
+    duration: dur,
+    sigType,
+    hitApplied: false,
+    progress: 0,
+    holding: false,
+    holdProgress: 1,
+    // Preserve the real amount of time this attack was charged. 0 = instant release,
+    // 1 = the full four-second charge. This is used by applyHit() for the damage bonus.
+    holdCharge: Math.min(1, hold.frames / hold.maxFrames),
+    isHeavy,
+    ...(!isHeavy ? { _signatureEndLagRemaining: 3 } : {}),
+    ...(fireFrames ? { startupFrames: fireFrames[0], activeFrames: fireFrames[1], endlagFrames: fireFrames[2] } : {}),
+  };
+  if (!isHeavy && sigType === 'up' && hold.wasAirborne) {
+    fighter.attackData.type = 'recovery';
+    fighter.attackData.isRecovery = true;
+    fighter.attackData.recoveryAnimationKey = 'recovery';
+    if (id === 'g1_fire') { fighter.attackData.name = 'Return Return'; fighter.attackData.duration = 42; fighter.attackData.damage = 5; fighter.attackData.range = 85; fighter.attackData.startupFrames = 7; fighter.attackData.activeFrames = 6; fighter.attackData.endlagFrames = 29; fighter.attackData.sigType = 'up'; }
+  }
+  if (isHeavy && sigType === 'downHeavy' && hold.wasAirborne) {
+    fighter.attackData.type = 'groundPound';
+    fighter.attackData.isGroundPound = true;
+    if (id === 'g1_fire') {
+      fighter.attackData.name = 'Meteor Pound';
+      fighter.attackData.sigType = 'down';
+      fighter.attackData.startupFrames = 20; fighter.attackData.activeFrames = 8; fighter.attackData.endlagFrames = 34;
+      fighter.attackData.duration = 62;
+      fighter.attackData.damage = 9;
+      fighter.attackData.range = 150;
+      fighter.attackData.color = '#FF6600';
+      fighter.attackTimer = 62;
+      fighter.groundPoundCooldown = 0;
+      fighter.vy = Math.max(fighter.vy || 0, 18);
+    }
+  }
+  fighter.attackData.spec = getAttackSpecForData(id, fighter.attackData);
+  fighter.attackTimer = dur;
+  fighter.state = 'attacking';
+  fighter.attackHold = null;
+  if (isHeavy) {
+    fighter.heavyCooldown = 0;
+    fighter.moveStats.heavy++;
+  } else {
+    fighter.sigCooldown = 0;
+    if (sigType === 'side') fighter.moveStats.sigSide++;
+    else if (sigType === 'up') fighter.moveStats.sigUp++;
+    else if (sigType === 'down') fighter.moveStats.sigDown++;
+  }
+  // Do not overwrite the momentum carried into the hold. The attack begins
+  // with the velocity that existed when the player released/auto-fired.
+  if (fighter.grounded && isHeavy && !fighter.attackData.isGroundPound) fighter.vy = 0;
+}
+
+function updateGen1HoldPhysics(fighter, platforms, stageWidth, stageHeight) {
+  // Holding blocks player actions, but never freezes physics. Existing dash or
+  // dodge momentum gets its normal continuation; otherwise gravity continues.
+  if (fighter.dashTimer > 0) {
+    fighter.vx = fighter.dashDirection.x * 9.5;
+    fighter.vy = fighter.dashDirection.y * 9.5;
+    if (fighter.dashDirection.x) fighter.facing = fighter.dashDirection.x;
+  } else {
+    const gravMul = fighter.lowGravity ? 0.45 : 1;
+    const grav = (fighter.gravityInverted ? -GRAVITY : GRAVITY) * gravMul;
+    if (!fighter.grounded || fighter.canFly) fighter.vy += grav;
+    fighter.vx *= fighter.grounded ? GROUND_FRICTION : AIR_FRICTION;
+    if (Math.abs(fighter.vx) < 0.05) fighter.vx = 0;
+    fighter.vy = Math.max(-MAX_FALL_SPEED, Math.min(MAX_FALL_SPEED, fighter.vy));
+  }
+  fighter.x += fighter.vx;
+  fighter.y += fighter.vy;
+  resolveCollisions(fighter, platforms, stageWidth, stageHeight);
+}
+
+export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeight, opponent) {
+  fighter.frame++;
+  fighter.prevX = fighter.x;
+  fighter.prevY = fighter.y;
+  fighter._platforms = platforms;
+  if (fighter._dropThroughTimer > 0) fighter._dropThroughTimer--;
+
+  // Authored throw in progress: pinned to the thrower's hands until the throw's release phase, then thrown.
+  if (fighter._mvGrabBy) {
+    const gb = fighter._mvGrabBy, gs = gb && gb.attackData && gb.attackData._mv;
+    if (!gs || !gs.m.grab || gs.grabbed !== fighter || gb.state === 'hitstun' || gb.state === 'dead' || gb.state === 'respawning') {
+      fighter._mvGrabBy = null; if (fighter.state === 'captured') fighter.state = 'falling';          // thrower interrupted → released unharmed
+    } else if ((Number(gs.pc) || 0) >= gs.m.grab.at || gs.f >= gs.total - 1) {
+      fighter._mvGrabBy = null; gs.grabbed = null; gs.grabRelease = true;
+      const _sx = fighter.x; fighter.x = gb.x + (gb.facing || 1) * 24; fighter.y = Math.min(fighter.y, gb.y - 6);
+      applyHit(gb, fighter); gs.grabRelease = false; void _sx;
+      return;
+    } else {
+      const r = mvLocalResult(gb), h = mvAnchor(r.J, 'hands'), fc = gb.facing || 1;
+      fighter.x = gb.x + fc * h[0] + fc * 10; fighter.y = Math.min(gb.y, gb.y + h[1] + 34);
+      fighter.vx = 0; fighter.vy = 0; fighter.grounded = false; fighter.state = 'captured'; fighter.hitstun = 0; fighter.facing = -fc;
+      return;
+    }
+  }
+
+  // Captured fighters cannot steer, jump, attack, or be repeatedly recaptured.
+  // The attacker completes the authored move and then releases with a bounded
+  // directional throw; if the attacker is interrupted, the victim is released.
+  if (fighter._resonanceCapturedBy) {
+    const captor=fighter._resonanceCapturedBy, attack=captor?.attackData;
+    if (!attack || captor.state==='hitstun' || captor.state==='dead' || captor.state==='respawning') {
+      fighter._resonanceCapturedBy=null; fighter._resonanceCaptureUntil=0; fighter.state='falling';
+    } else {
+      fighter.x=captor.x+(captor.facing||1)*22; fighter.y=captor.y-5;
+      fighter.vx=0; fighter.vy=0; fighter.state='captured'; fighter.grounded=false;
+      if ((Number(attack.progress)||0) >= (Number(fighter._resonanceCaptureUntil)||.72)) {
+        const weapon=String(fighter._resonanceCaptureWeapon||'');
+        const f=captor.facing||1, launch=(weapon==='Greatblade'||weapon==='Resonance Rapier')?1.0:0.82;
+        fighter.vx=f*launch*7.5; fighter.vy=(weapon==='Pulse Tonfas'||weapon==='Resonance Rapier')?-8.5:-4.5;
+        fighter.damage=(Number(fighter.damage)||0)+6;
+        fighter.hitstun=18; fighter.state='hitstun'; fighter.grounded=false;
+        fighter._lastHitBy=captor; fighter._resonanceCapturedBy=null; fighter._resonanceCaptureUntil=0;
+        if (attack._resonanceCapturedTarget===fighter) attack._resonanceCapturedTarget=null;
+      }
+      return;
+    }
+  }
+
+  // Reverse controls (Controller / Nightmare / Whami powers) — swap left/right and up/down
+  if (fighter.reverseControls > 0) {
+    const tmp = inputs.left; inputs.left = inputs.right; inputs.right = tmp;
+    const tmp2 = inputs.up; inputs.up = inputs.down; inputs.down = tmp2;
+  }
+
+  if (fighter.invincible > 0) fighter.invincible--;
+  if (fighter.landingLag > 0) fighter.landingLag--;
+  if (fighter.sigCooldown > 0) fighter.sigCooldown--;
+  if (fighter.normalCooldown > 0) fighter.normalCooldown--;
+  if (fighter.heavyCooldown > 0) fighter.heavyCooldown--;
+  if (fighter.recoveryCooldown > 0) fighter.recoveryCooldown--;
+  if (fighter.groundPoundCooldown > 0) fighter.groundPoundCooldown--;
+  if (fighter.dashCooldown > 0) fighter.dashCooldown--;
+  if (fighter.dashTimer > 0) fighter.dashTimer--;
+  // A power cannot recharge while its animation/effect is still running.
+  // This is shared by every mode that uses updateFighter (offline, LAN,
+  // battle royale, campaign, sandbox, and the rollback fight simulation).
+  if (fighter.powerCooldown > 0 && !fighter.powerActive && fighter.powerTimer <= 0) fighter.powerCooldown--;
+  if (fighter.slowTimer > 0) fighter.slowTimer--;
+  if (fighter.noBlastKill > 0) fighter.noBlastKill--;
+  if (fighter.reverseControls > 0) fighter.reverseControls--;
+  if (fighter.powerDisabled > 0) fighter.powerDisabled--;
+  // ── Passive healing + 500% KO: Battle Royale ONLY (not regular brawl) ──
+  if (fighter._isBR) {
+    if (fighter.damage > 0 && fighter.frame % 150 === 0) {
+      fighter.damage = Math.max(0, fighter.damage - 1);
+    }
+    if (fighter.damage >= 500 && fighter.stocks > 0 && !fighter._pendingDeath) {
+      fighter._pendingDeath = true;
+    }
+  }
+  if (fighter._gravCeilingTimer > 0) {
+    fighter._gravCeilingTimer--;
+    // Slow upward float — gentle continuous lift while gravity flip is active
+    if (fighter._gravFloat) {
+      fighter.vy -= 0.5;
+      if (fighter.vy < -2.5) fighter.vy = -2.5; // cap upward speed for a slow float
+    }
+    if (fighter.y < fighter._gravCeiling) {
+      fighter.y = fighter._gravCeiling;
+      fighter.vy = 0;
+    }
+    if (fighter._gravCeilingTimer <= 0) {
+      fighter._gravCeiling = null;
+      fighter._gravFloat = false;
+    }
+  }
+  if (fighter.powerTimer > 0) {
+    fighter.powerTimer--;
+    if (fighter.powerTimer <= 0) {
+      // Restore copied stats when Turquoise's transform ends
+      if (fighter.powerActive === 'transform' && fighter._origStatSpeedMul !== undefined) {
+        fighter.statSpeedMul = fighter._origStatSpeedMul;
+        fighter.statPowerMul = fighter._origStatPowerMul;
+        fighter.statDefenseReduction = fighter._origStatDefenseReduction;
+        fighter._mimicTarget = null;
+      }
+      onGenPowerExpire(fighter);
+      const wasInfiniteJumps = fighter.powerActive === 'infinite_jumps';
+      fighter.powerActive = null;
+      fighter._dash = null;
+      fighter.speedBoost = 1; fighter.damageBoost = 1; fighter.rangeBoost = 1; fighter.shieldAmount = 0;
+      fighter.knockbackMul = 1; fighter.knockbackReduction = 0; fighter._healPerTick = 0;
+      fighter.speedMul = undefined; fighter.dodgeChance = undefined; fighter.reviveChance = 0;
+      if (wasInfiniteJumps) { fighter.maxJumps = 2; fighter.jumps = Math.min(fighter.jumps, 2); }
+      fighter.canFly = false;
+      // Clear stolen power rendering flags when the stolen power expires
+      fighter._stolenPowerColor = null;
+      fighter._stolenPowerCharId = null;
+      fighter._stolenPowerName = null;
+    }
+    if (fighter.powerActive === 'dot' && fighter.dotTargets && fighter.frame % 30 === 0) {
+      (fighter.dotTargets || []).forEach(opp => { if (opp && opp.stocks > 0) opp.damage += fighter.dotDamage || 2; });
+    }
+    if (fighter.powerActive === 'heal' && fighter._healPerTick && fighter.frame % 30 === 0) {
+      fighter.damage = Math.max(0, fighter.damage - fighter._healPerTick);
+      if (fighter._healOpponents && fighter._allOpponents) {
+        fighter._allOpponents.forEach(opp => { if (opp && opp.stocks > 0) opp.damage = Math.max(0, opp.damage - fighter._healPerTick * 0.6); });
+      }
+    }
+  }
+  // Update clone
+  if (fighter._clone) { fighter._clone.life--; if (fighter._clone.life <= 0) fighter._clone = null; }
+  // Update visual effect timers (portal, dash slash) — expire so animations go away
+  if (fighter._portalEffect) { fighter._portalEffect.timer--; if (fighter._portalEffect.timer <= 0) fighter._portalEffect = null; }
+  if (fighter._dashSlashEffect) { fighter._dashSlashEffect.timer--; if (fighter._dashSlashEffect.timer <= 0) fighter._dashSlashEffect = null; }
+
+  // Update particles
+  fighter.doubleJumpParticles = (fighter.doubleJumpParticles || []).filter(p => {
+    p.life--;
+    p.vy += 0.15;
+    p.x += p.vx;
+    p.y += p.vy;
+    return p.life > 0;
+  });
+
+  if (fighter.grounded) {
+    fighter.coyoteTime = 8;
+  } else if (fighter.coyoteTime > 0) {
+    fighter.coyoteTime--;
+  }
+
+  // Universal dash / air-dodge / wall-slide input processing.
+  // Sports modes are explicitly excluded by movementAbilities.js.
+  updateMovementAbilities(fighter, inputs, platforms, stageWidth, stageHeight);
+
+  // Track DI from inputs
+  fighter.diX = (inputs.left ? -1 : 0) + (inputs.right ? 1 : 0);
+  fighter.diY = (inputs.down ? 0.5 : 0) + (inputs.up ? -0.3 : 0);
+  // Down + jump on a one-way platform deliberately drops through it instead
+  // of triggering an upward jump. The short timer lets the fighter pass the
+  // platform plane before normal landing checks resume.
+  if (fighter.grounded && inputs.down && inputs.jump && !fighter._dropThroughInputHeld) {
+    const standingOnOneWay = (platforms || []).some(p => p && !p._forceSolid && p.h <= 20 && p._deleted <= 0 &&
+      fighter.x > p.x - 16 && fighter.x < p.x + p.w + 16 && Math.abs(fighter.y - p.y) <= 3);
+    if (standingOnOneWay) {
+      fighter._dropThroughTimer = 8;
+      fighter.grounded = false;
+      fighter.y += 4;
+      fighter.vy = Math.max(2, fighter.vy || 0);
+      fighter.jumpHeld = true;
+    }
+  }
+  fighter._dropThroughInputHeld = !!(inputs.down && inputs.jump);
+
+  // ── Hitstun: smooth knockback with DI influence ──
+  if (fighter.hitstun > 0) {
+    fighter.hitstun--;
+    if (fighter._mvLaunch) { const sp = Math.abs(fighter.vx); fighter.vx = sp <= MV_FRIC ? 0 : fighter.vx - Math.sign(fighter.vx) * MV_FRIC; if (fighter.hitstun <= 0) fighter._mvLaunch = null; }
+    else fighter.vx *= KNOCKBACK_DECAY;
+    // Apply DI — slight steering during knockback (Brawlhalla-style)
+    fighter.vx += fighter.diX * 0.15;
+    fighter.vy += fighter.diY * 0.12;
+    const gravMul = fighter.lowGravity ? 0.45 : 1;
+    const grav = (fighter.gravityInverted ? -GRAVITY : GRAVITY) * gravMul;
+    fighter.vy += grav;
+    if (Math.abs(fighter.vy) > MAX_FALL_SPEED) fighter.vy = Math.sign(fighter.vy) * MAX_FALL_SPEED;
+    fighter.x += fighter.vx;
+    fighter.y += fighter.vy;
+    resolveCollisions(fighter, platforms, stageWidth, stageHeight);
+    onMovementAbilityLanded(fighter, inputs);
+    if (fighter.attackData) updateAttackProgress(fighter);
+    return fighter;
+  }
+
+  // ── Grounded signature/heavy hold system ─────────────────────────────────
+  // Grounded signatures/heavies begin on button-down, fire on release, or auto-fire after four seconds. The directional choice is captured
+  // on the first frame and cannot be changed while charging.
+  if (fighter.attackHold) {
+    const h = fighter.attackHold;
+    h.frames++;
+    const released = !inputs[h.button];
+    const forced = h.frames >= h.maxFrames;
+    const hp = Math.min(1, h.frames / h.maxFrames);
+    if (fighter.attackData) {
+      fighter.attackData.holdProgress = hp;
+      fighter.attackData.holdCharge = hp;
+    }
+    if (released || forced) {
+      executeGen1HeldAttack(fighter, h);
+      if (h.button === 'sig') inputs._sigConsumed = !released;
+      if (h.button === 'heavy') inputs._heavyConsumed = !released;
+    } else {
+      updateGen1HoldPhysics(fighter, platforms, stageWidth, stageHeight);
+      return fighter;
+    }
+  }
+
+  // Attack state — can't act but still apply physics
+  if (fighter.state === 'attacking' || fighter.state === 'superAttack') {
+    fighter._mvStageW = stageWidth;
+    const mvOn = mvTick(fighter);
+    const fireMove = !mvOn && fighter.char?.id === 'g1_fire' ? fighter.attackData : null;
+    const fireElapsed = fireMove ? Math.max(0, (Number(fireMove.duration) || 1) - fighter.attackTimer) : -1;
+    // Flame's choreography includes real body displacement as well as the authored VFX.
+    // Each beat is applied once at its intended frame; attack timing itself is not sped up.
+    if (fireMove && !fireMove._choreoFlags) fireMove._choreoFlags = {};
+    if (fireMove && fireMove.sigType === 'side' && !fireMove.isHeavy && fireElapsed < 10) {
+      fighter.vx = (fighter.facing || 1) * (fireElapsed < 4 ? 2.6 : 4.8);
+    }
+    if (fireMove && fireMove.sigType === 'down' && !fireMove.isHeavy && fireElapsed >= 14 && !fireMove._choreoFlags.quakeHop) {
+      fireMove._choreoFlags.quakeHop = true; fighter.vx = -(fighter.facing || 1) * 2.6; fighter.vy = -3.2; fighter.grounded = false;
+    }
+    if (fireMove && fireMove.sigType === 'upHeavy' && fireElapsed >= 11 && !fireMove._choreoFlags.ascendantVault) {
+      fireMove._choreoFlags.ascendantVault = true; fighter.vy = -8.6; fighter.grounded = false; fighter.vx = (fighter.facing || 1) * 1.5;
+    }
+    if (fireMove && fireMove.sigType === 'downHeavy' && fireElapsed >= 9 && !fireMove._choreoFlags.sunderDrop) {
+      fireMove._choreoFlags.sunderDrop = true; if (fighter.grounded) { fighter.vy = -1.2; fighter.grounded = false; }
+    }
+    if (fireMove && fireMove.sigType === 'heavy' && fireElapsed < 8) fighter.vx = -(fighter.facing || 1) * 2.2;
+    if (fireMove && fireMove.sigType === 'heavy' && fireElapsed >= 17 && fireElapsed < 24) fighter.vx = (fighter.facing || 1) * 7.0;
+    if (fireMove && fireMove.isRecovery && fireElapsed >= 5 && !fireMove._choreoFlags.returnBounce) {
+      fireMove._choreoFlags.returnBounce = true; fighter.vx = (fighter.facing || 1) * 2.4; fighter.vy = -8.2; fighter.grounded = false;
+    }
+    fighter.attackTimer--;
+    // Construct actions have their own physical behavior: lunges, rising launches,
+    // and plunging slams are gameplay motion, not merely painted VFX.
+    const ca = fighter.attackData?.resonanceAction;
+    const cp = Number(fighter.attackData?.progress) || 0;
+    if (fighter.resonanceActive && fighter.attackData && !fighter.attackData.isNormal) {
+      if ((ca === 'dashThrust' || ca === 'grab') && cp >= .20 && cp <= .52) {
+        fighter.vx = (fighter.facing || 1) * (ca === 'grab' ? 4.2 : (fighter.attackData.isHeavy ? 9.2 : 7.0));
+      }
+      if ((ca === 'rise' || ca === 'projectileUp') && cp >= .18 && cp < .24 && !fighter.attackData.resonanceMotionApplied) {
+        fighter.attackData.resonanceMotionApplied = true;
+        fighter.vy = -9.4; fighter.grounded = false;
+      }
+      if (ca === 'slam' && cp >= .18 && cp < .24 && !fighter.attackData.resonanceMotionApplied && !fighter.grounded) {
+        fighter.attackData.resonanceMotionApplied = true;
+        fighter.vy = Math.max(fighter.vy || 0, 10.5);
+      }
+    }
+    // Reduced friction during attacks so you slide a bit (Brawlhalla momentum)
+    fighter.vx *= fighter.grounded ? 0.88 : 0.96;
+    if (fighter.attackTimer <= 0 && fighter.attackData?._signatureEndLagRemaining > 0) {
+      fighter.attackData._signatureEndLagRemaining--;
+      fighter.attackTimer = 1;
+    } else if (fighter.attackTimer <= 0) {
+      fighter.state = fighter.grounded ? 'idle' : 'jumping';
+      fighter.attackData = null;
+    }
+  }
+
+  const canAct = fighter.landingLag <= 0 &&
+    fighter.state !== 'attacking' &&
+    fighter.state !== 'superAttack' &&
+    !fighter.trapped;
+
+  if (canAct) {
+    // Recovery takes priority over Gen I's signature-hold capture.
+    // Up + Signature while airborne is the dedicated recovery move, so it must
+    // execute immediately instead of being intercepted by the 3-second hold
+    // system. Grounded Up+Signature still uses the normal Gen I hold behavior.
+    if (!fighter.grounded && inputs.sig && inputs.up &&
+        fighter.recoveryCooldown <= 0 && fighter.recoveryAirUses < 1) {
+      inputs._sigConsumed = true;
+      fighter.state = 'attacking';
+      const upSig = fighter.resonanceActive ? (fighter.char.recoveryAttack || fighter.char.signatures?.up) : fighter.char.signatures?.up;
+      const isFireRecovery = fighter.char.id === 'g1_fire';
+      const recoveryDuration = isFireRecovery ? 42 : Math.min(upSig?.duration || 16, 22);
+      fighter.attackTimer = recoveryDuration;
+      fighter.attackData = {
+        ...(upSig || {}),
+        name: isFireRecovery ? 'Return Return' : (upSig?.name || 'Recovery'),
+        type: 'recovery',
+        duration: recoveryDuration,
+        damage: isFireRecovery ? 5 : (upSig?.damage || 5),
+        range: isFireRecovery ? 85 : upSig?.range,
+        color: upSig?.color || fighter.char.color,
+        isRecovery: true,
+        sigType: 'up',
+        hitApplied: false,
+        progress: 0,
+        recoveryAnimationKey: 'recovery',
+        ...(isFireRecovery ? { startupFrames:7, activeFrames:6, endlagFrames:29 } : {}),
+      };
+      fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
+      fighter.vy = -14;
+      fighter.hitstun = 0;
+      fighter.recoveryCooldown = 40 * (fighter.statControlRecoveryMul || 1);
+      fighter.recoveryAirUses++;
+      fighter.moveStats.recovery++;
+    }
+
+    // Gen I captures the attack and direction on the initial button-down before
+    // jump/movement processing. This prevents Up+Signature from becoming a
+    // jump first, and guarantees the held move cannot be changed mid-charge.
+    if (fighter.grounded && !fighter.attackHold) {
+      if (inputs.heavy && !inputs._heavyConsumed) {
+        // Heavy alone means Up Heavy. Side Heavy requires an explicit left/right direction.
+        let holdType = inputs.down ? 'downHeavy' : ((inputs.left || inputs.right) ? 'heavy' : 'upHeavy');
+        let hasAttack = holdType === 'upHeavy' ? !!(fighter.resonanceActive ? fighter.char?.upHeavy : (fighter.char?.upHeavy || UP_HEAVIES[fighter.char.id])) : holdType === 'downHeavy' ? !!(fighter.resonanceActive ? fighter.char?.downHeavy : (fighter.char?.downHeavy || DOWN_HEAVIES[fighter.char.id])) : !!fighter.char.heavyAttack;
+        // A directionless Heavy always means Up Heavy; never silently turn it into Side Heavy.
+        if (hasAttack) {
+          inputs._heavyConsumed = true;
+          startGen1Hold(fighter, 'heavy', holdType, !fighter.grounded, fighter.grounded);
+          updateGen1HoldPhysics(fighter, platforms, stageWidth, stageHeight);
+          return fighter;
+        } else if (holdType === 'upHeavy') {
+          // Consume the press if this character has no Up Heavy, rather than firing Side Heavy.
+          inputs._heavyConsumed = true;
+        }
+      }
+      if (inputs.sig && !inputs._sigConsumed) {
+        const capturedType = (inputs.left || inputs.right) ? 'side' : (inputs.down ? 'down' : 'up');
+        inputs._sigConsumed = true;
+        startGen1Hold(fighter, 'sig', capturedType, !fighter.grounded, fighter.grounded);
+        updateGen1HoldPhysics(fighter, platforms, stageWidth, stageHeight);
+        return fighter;
+      }
+    }
+
+    const slowFactor = fighter.slowTimer > 0 ? (fighter.speedMul || 0.4) : 1;
+    const speed = (fighter.grounded ? MOVE_SPEED : AIR_SPEED) * (fighter.statSpeedMul || 1) * (fighter.statUtilityMul || 1) * (fighter.speedBoost || 1) * slowFactor;
+    const accel = (fighter.grounded ? ACCEL_GROUND : ACCEL_AIR) * (fighter.statSpeedMul || 1);
+
+    // Indigo's Gravity power: tap down to launch self upward (auto-stops before KO)
+    if (fighter.powerActive === 'gravity_flip') {
+      if (inputs.down && !fighter._gravDownHeld) {
+        fighter._gravDownHeld = true;
+        fighter.vy = -6;
+        fighter.grounded = false;
+        fighter._gravCeiling = -450;
+        fighter._gravCeilingTimer = fighter.powerTimer;
+        fighter._gravFloat = true;
+        fighter.noBlastKill = Math.max(fighter.noBlastKill, fighter.powerTimer + 30);
+      }
+      if (!inputs.down) fighter._gravDownHeld = false;
+    }
+
+    // ── Smoother movement — proper acceleration model ──
+    if (inputs.left) {
+      fighter.vx = Math.max(fighter.vx - accel, -speed);
+      fighter.facing = -1;
+      if (fighter.grounded) fighter.state = 'moving';
+    } else if (inputs.right) {
+      fighter.vx = Math.min(fighter.vx + accel, speed);
+      fighter.facing = 1;
+      if (fighter.grounded) fighter.state = 'moving';
+    } else {
+      // Smooth friction — ice platforms are much slicker
+      let friction = fighter.grounded ? GROUND_FRICTION : AIR_FRICTION;
+      if (fighter.grounded && fighter.platformMaterial === 'ice') friction = 0.995;
+      fighter.vx *= friction;
+      if (Math.abs(fighter.vx) < 0.15 && fighter.platformMaterial !== 'ice' && !fighter._slopeDownhill) fighter.vx = 0;
+      if (fighter.grounded && fighter.state === 'moving') fighter.state = 'idle';
+    }
+
+    // Material contact effects
+    if (fighter.grounded) {
+      if (fighter.platformMaterial === 'quicksand') {
+        fighter.vx *= 0.4;
+        fighter.vy += 0.5;
+      } else if (fighter.platformMaterial === 'conveyor') {
+        fighter.vx += (fighter._conveyorDir || 1) * 1.2;
+      } else if (fighter.platformMaterial === 'sand') {
+        fighter.vx *= 0.55;
+      } else if (fighter.platformMaterial === 'acid') {
+        fighter.damage += 0.5;
+        fighter.powerDisabled = 180;
+      }
+      if (fighter._slopeDownhill && Math.abs(fighter._slope || 0) > 0.035) {
+        // Gentle continuous roll. Objects use a much stronger acceleration.
+        fighter.vx += fighter._slopeDownhill * Math.min(0.08, Math.abs(fighter._slope) * 0.04);
+        fighter.vx = Math.max(-MOVE_SPEED * 1.1, Math.min(MOVE_SPEED * 1.1, fighter.vx));
+      }
+    }
+
+    // Fast fall
+    if (inputs.down && !fighter.grounded && !fighter.gravityInverted) {
+      fighter.vy = Math.min(fighter.vy + 2.5, MAX_FALL_SPEED);
+    }
+
+    // Flying (White)
+    if (fighter.canFly) {
+      if (inputs.jump && !fighter.jumpHeld && !(inputs.heavy && UP_HEAVIES[fighter.char.id])) {
+        fighter.vy = JUMP_FORCE * 0.7;
+        fighter.jumpHeld = true;
+        fighter.isFlying = true;
+      }
+    }
+
+    // ── Jump with variable height (Brawlhalla-style) — edge-detected via fighter.jumpHeld ──
+    if (inputs.jump && !fighter.jumpHeld && !(inputs.heavy && UP_HEAVIES[fighter.char.id])) {
+      fighter.jumpHeld = true;
+      fighter.jumpCutApplied = false;
+      const useGroundJump = fighter.coyoteTime > 0 && fighter.jumps >= fighter.maxJumps;
+      const useAirJump = !fighter.grounded && fighter.jumps > 0 && fighter.coyoteTime <= 0;
+
+      if (useGroundJump || useAirJump) {
+        const qsMul = (fighter.platformMaterial === 'quicksand' || fighter.platformMaterial === 'snow') ? 0.3 : 1;
+        const force = (useGroundJump ? JUMP_FORCE : DOUBLE_JUMP_FORCE) * qsMul * (fighter.statUtilityMul || 1);
+        fighter.vy = fighter.gravityInverted ? -force : force;
+        if (useGroundJump) {
+          fighter.jumps = fighter.maxJumps - 1;
+          fighter.airDodgeUses = Math.min(fighter.airDodgeUses, fighter.jumps);
+          fighter.coyoteTime = 0;
+          for (let i = 0; i < 8; i++) {
+            const angle = Math.PI + (Math.random() - 0.5) * Math.PI * 0.8;
+            fighter.doubleJumpParticles.push({
+              x: fighter.x + (Math.random() - 0.5) * 20,
+              y: fighter.y,
+              vx: Math.cos(angle) * (Math.random() * 2.2 + 0.3),
+              vy: Math.sin(angle) * (Math.random() * 1.2 + 0.2) + 0.5,
+              life: 12 + Math.floor(Math.random() * 8),
+              maxLife: 20,
+              color: '#FFFFFF',
+              isGroundPuff: true,
+            });
+          }
+        } else {
+          fighter.jumps--;
+          fighter.airDodgeUses = Math.min(fighter.airDodgeUses, fighter.jumps);
+          for (let i = 0; i < 14; i++) {
+            const angle = Math.PI * 0.5 + (Math.random() - 0.5) * 1.6;
+            fighter.doubleJumpParticles.push({
+              x: fighter.x + (Math.random() - 0.5) * 14,
+              y: fighter.y,
+              vx: Math.cos(angle) * (Math.random() * 2.5 + 0.5),
+              vy: Math.sin(angle) * (Math.random() * 1.5 + 0.5),
+              life: 18 + Math.floor(Math.random() * 10),
+              maxLife: 28,
+              color: fighter.char.color,
+              isGroundPuff: false,
+            });
+          }
+        }
+        fighter.grounded = false;
+        fighter.state = 'jumping';
+      }
+    }
+    // Variable jump height — cut velocity when jump released (short hop)
+    // fullJump flag (online mode): tapping jump always does a full jump — no short hop
+    if (!fighter.fullJump && fighter.jumpHeld && !inputs.jump && !fighter.jumpCutApplied && fighter.vy < 0) {
+      fighter.vy *= 0.55;
+      fighter.jumpCutApplied = true;
+    }
+    if (!inputs.jump) fighter.jumpHeld = false;
+
+    // ── Heavy Attack ──
+    // Aerial heavies execute immediately; charging is grounded-only.
+    // Up + heavy = character-specific Up Heavy. `up` is the same directional
+    // input as jump in the fight controls, so test both fields explicitly and
+    // consume the heavy before the jump logic can turn the input into a jump.
+    const wantsUpHeavy = !!inputs.heavy && (!!inputs.up || !!inputs.jump || (!inputs.down && !inputs.left && !inputs.right));
+    const availableUpHeavy = fighter.resonanceActive ? fighter.char?.upHeavy : (fighter.char?.upHeavy || UP_HEAVIES[fighter.char.id]);
+    if (wantsUpHeavy && !inputs._heavyConsumed && availableUpHeavy) {
+      inputs._heavyConsumed = true;
+      const upHeavy = fighter.resonanceActive ? fighter.char?.upHeavy : (fighter.char?.upHeavy || UP_HEAVIES[fighter.char.id]);
+      fighter.state = 'attacking';
+      const refDur = gen1ReferenceDuration(fighter.char.id, 'upHeavy', true, false);
+      const dur = refDur || Math.min(upHeavy.duration || 20, 22);
+      fighter.attackTimer = dur;
+      fighter.attackData = { ...upHeavy, duration: dur, sigType: 'upHeavy', hitApplied: false, progress: 0, isHeavy: true, ...(fighter.char.id === 'g1_fire' ? { startupFrames:18, activeFrames:7, endlagFrames:43 } : {}) };
+      fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
+      fighter.heavyCooldown = 0;
+      fighter.vy = 0;
+      fighter.moveStats.heavy++;
+    }
+    // Air + down + heavy = Ground Pound (slam down with AoE)
+    if (inputs.heavy && inputs.down && !fighter.grounded && !inputs._heavyConsumed) {
+      inputs._heavyConsumed = true;
+      fighter.state = 'attacking';
+      fighter.attackTimer = fighter.char.id === 'g1_fire' ? 62 : 20;
+      fighter.attackData = fighter.char.id === 'g1_fire'
+        ? { name: 'Meteor Pound', type: 'groundPound', duration: 62, damage: 9, range: 150, color: '#FF6600', sigType: 'down', hitApplied: false, progress: 0, isHeavy: true, isGroundPound: true, startupFrames:20, activeFrames:8, endlagFrames:34 }
+        : fighter.resonanceActive && fighter.char?.downHeavy
+          ? { ...fighter.char.downHeavy, name: `${fighter.resonanceConstruct || 'Resonance'} Diving Slam`, type: 'groundPound', duration: 20, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true, isGroundPound: true }
+          : { name: 'Ground Pound', type: 'groundPound', duration: 20, damage: 18, range: 130, color: fighter.char.color, sigType: 'down', hitApplied: false, progress: 0, isHeavy: true, isGroundPound: true };
+      fighter.heavyCooldown = 0;
+      fighter.groundPoundCooldown = 0;
+      fighter.vy = 18;
+      fighter.moveStats.groundPound++;
+    }
+    // Ground + down + heavy = Down Heavy (unique per character, different from side heavy)
+    else if (inputs.heavy && inputs.down && fighter.grounded && !inputs._heavyConsumed) {
+      inputs._heavyConsumed = true;
+      const downHeavy = fighter.resonanceActive ? fighter.char?.downHeavy : DOWN_HEAVIES[fighter.char.id];
+      if (downHeavy) {
+        fighter.state = 'attacking';
+        const refDur = gen1ReferenceDuration(fighter.char.id, 'downHeavy', true, false);
+        const dur = refDur || Math.min(downHeavy.duration, 21);
+        fighter.attackTimer = dur;
+        fighter.attackData = { ...downHeavy, duration: dur, sigType: 'downHeavy', hitApplied: false, progress: 0, isHeavy: true, ...(fighter.char.id === 'g1_fire' ? { startupFrames:24, activeFrames:8, endlagFrames:30 } : {}) };
+        fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
+        fighter.heavyCooldown = 0;
+        fighter.vy = 0;
+        fighter.moveStats.downHeavy++;
+      }
+    }
+    // No down + heavy = Side Heavy (existing heavyAttack)
+    else if (inputs.heavy && (inputs.left || inputs.right) && !inputs._heavyConsumed) {
+      inputs._heavyConsumed = true;
+      const heavy = fighter.char.heavyAttack;
+      if (heavy) {
+        fighter.state = 'attacking';
+        const refDur = gen1ReferenceDuration(fighter.char.id, 'heavy', true, false);
+        const dur = refDur || Math.min(heavy.duration, 22);
+        fighter.attackTimer = dur;
+        fighter.attackData = { ...heavy, duration: dur, sigType: 'heavy', hitApplied: false, progress: 0, isHeavy: true, ...(fighter.char.id === 'g1_fire' ? { startupFrames:28, activeFrames:10, endlagFrames:34 } : {}) };
+        fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
+        fighter.heavyCooldown = 0;
+        if (fighter.grounded) fighter.vy = 0;
+        if (heavy.hasArmor) fighter.invincible = Math.max(fighter.invincible, 8);
+        fighter.moveStats.heavy++;
+      }
+    }
+    if (!inputs.heavy) inputs._heavyConsumed = false;
+
+    // ── Signature / Recovery ──
+    if (inputs.sig && !inputs._sigConsumed) {
+      if (isGen1Fighter(fighter) && fighter.grounded) {
+        const capturedType = (inputs.left || inputs.right) ? 'side' : (inputs.down ? 'down' : 'up');
+        inputs._sigConsumed = true;
+        startGen1Hold(fighter, 'sig', capturedType, !fighter.grounded, fighter.grounded);
+        updateGen1HoldPhysics(fighter, platforms, stageWidth, stageHeight);
+        return fighter;
+      }
+      inputs._sigConsumed = true;
+
+      // Aerial attack: sig in air without up
+      if (!fighter.grounded) {
+        if (fighter.normalCooldown <= 0) {
+          fighter.state = 'attacking';
+          fighter.attackTimer = 14;
+          fighter.attackData = fighter.resonanceActive && fighter.char?.lightAttack
+            ? { ...fighter.char.lightAttack, name: `${fighter.resonanceConstruct || 'Resonance'} Aerial`, type: 'aerialNormal', duration: Math.min(fighter.char.lightAttack.duration || 18, 14), sigType: 'aerial', resonanceAction: ['bow','cannons','blasters','disc','projector','shards','rings','core'].includes(fighter.char.lightAttack.resonanceFamily) ? 'projectileUp' : 'rise', hitApplied: false, progress: 0, isNormal: true }
+            : {
+                name: 'Aerial', type: 'aerialNormal',
+                duration: 14, damage: 7 + Math.random() * 4,
+                range: 55, color: fighter.char.color,
+                sigType: 'aerial', hitApplied: false, progress: 0, isNormal: true,
+              };
+          fighter.normalCooldown = NORMAL_COOLDOWN * (fighter.statControlRecoveryMul || 1);
+          fighter.moveStats.aerial++;
+        }
+      } else if (fighter.sigCooldown <= 0) {
+        let sigType = 'up';
+        if (inputs.left || inputs.right) sigType = 'side';
+        else if (inputs.down) sigType = 'down';
+
+        const sig = fighter.char.signatures?.[sigType];
+        if (sig) {
+          fighter.state = 'attacking';
+          const refDur = gen1ReferenceDuration(fighter.char.id, sigType, false, false);
+          const dur = refDur || Math.min(sig.duration, 20);
+          fighter.attackTimer = dur;
+          fighter.attackData = { ...sig, duration: dur, sigType, hitApplied: false, progress: 0, _signatureEndLagRemaining: 3, ...(fighter.char.id === 'g1_fire' ? (sigType === 'up' ? { startupFrames:10, activeFrames:2, endlagFrames:13 } : sigType === 'down' ? { startupFrames:11, activeFrames:4, endlagFrames:27 } : { startupFrames:4, activeFrames:5, endlagFrames:17 }) : {}) };
+          fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
+          fighter.sigCooldown = 0;
+          fighter.vy = 0;
+          if (sigType === 'side') fighter.moveStats.sigSide++;
+          else if (sigType === 'up') fighter.moveStats.sigUp++;
+          else if (sigType === 'down') fighter.moveStats.sigDown++;
+        }
+      }
+    }
+    if (!inputs.sig) inputs._sigConsumed = false;
+
+    // ── Power Activation (replaces light attack) ──
+    if (inputs.power && !inputs._powerConsumed && !fighter.powerActive && fighter.powerTimer <= 0 && fighter.powerCooldown <= 0 && fighter.powerDisabled <= 0) {
+      inputs._powerConsumed = true;
+      fighter.moveStats.power++;
+      if (fighter.resonanceActive && fighter.char?.powerAttack) {
+        const burst = fighter.char.powerAttack;
+        const dur = Math.max(10, Math.min(24, burst.duration || 16));
+        fighter.state = 'attacking'; fighter.attackTimer = dur;
+        fighter.attackData = { ...burst, name: burst.name || 'Resonance Burst', duration: dur, sigType: 'power', hitApplied: false, progress: 0, isNormal: true };
+        fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
+        fighter.powerCooldown = Math.max(fighter.powerCooldown || 0, 48);
+        fighter.powerTimer = 0;
+      } else {
+        activatePower(fighter, opponent);
+      }
+    }
+    if (!inputs.power) inputs._powerConsumed = false;
+
+    // ── Super ──
+    if (inputs.superMove && !inputs._superConsumed && fighter.superMeter >= fighter.maxSuper) {
+      inputs._superConsumed = true;
+      fighter.superMeter = 0;
+      const sm = fighter.char?.superMove || { name: 'Super', duration: 42, damage: 30, color: fighter.char?.color || '#FFFFFF' };
+      fighter.state = 'superAttack';
+      const refDur = gen1ReferenceDuration(fighter.char.id, 'super', false, true);
+      const dur = refDur || Math.min(sm?.duration || 50, 55);
+      fighter.attackTimer = dur;
+      fighter.attackData = { ...(sm || {}), duration: dur, sigType: 'super', hitApplied: false, progress: 0, isSuper: true, ...(fighter.char.id === 'g1_fire' ? { startupFrames:45, activeFrames:24, endlagFrames:51 } : {}) };
+      fighter.attackData.spec = getAttackSpecForData(fighter.char.id, fighter.attackData);
+      fighter.moveStats.super++;
+    }
+    if (!inputs.superMove) inputs._superConsumed = false;
+  }
+
+  // Universal dash motion. Ground dashes are short horizontal bursts; air dodges
+  // remain invulnerable for their full 0.3s window.
+  if (fighter.dashTimer > 0) {
+    fighter.vx = fighter.dashDirection.x * 9.5;
+    fighter.vy = fighter.dashDirection.y * 9.5;
+    if (fighter.dashDirection.x) fighter.facing = fighter.dashDirection.x;
+  }
+
+  // Gravity
+  if (fighter.dashTimer <= 0 && (!fighter.grounded || fighter.canFly)) {
+    const gravMul2 = fighter.lowGravity ? 0.45 : 1;
+    const grav = (fighter.gravityInverted ? -GRAVITY : GRAVITY) * gravMul2;
+    fighter.vy += grav;
+    const maxFall = (fighter.gravityInverted ? -MAX_FALL_SPEED : MAX_FALL_SPEED) * (fighter.lowGravity ? 0.6 : 1);
+    if (!fighter.gravityInverted && fighter.vy > maxFall) fighter.vy = maxFall;
+    if (fighter.gravityInverted && fighter.vy < maxFall) fighter.vy = maxFall;
+  }
+
+  // Dash slash — drive horizontal velocity; collision stops the fighter at walls
+  if (fighter.powerActive === 'dash_slash' && fighter._dash) {
+    fighter.vx = fighter._dash.dir * 52;
+    fighter.facing = fighter._dash.dir;
+  }
+
+  fighter.x += fighter.vx;
+  fighter.y += fighter.vy;
+
+  resolveCollisions(fighter, platforms, stageWidth, stageHeight);
+  onMovementAbilityLanded(fighter, inputs);
+
+  // Dash slash — damage opponents in the path, end when distance covered or blocked
+  if (fighter.powerActive === 'dash_slash' && fighter._dash) {
+    const d = fighter._dash;
+    d.traveled += Math.abs(fighter.vx);
+    const opps = fighter._allOpponents || (opponent ? [opponent] : []);
+    for (const opp of opps) {
+      if (!opp || opp.stocks <= 0 || (opp.invincible || 0) > 0) continue;
+      const key = opp.playerIndex != null ? 'p' + opp.playerIndex : ('o' + opps.indexOf(opp));
+      if (d.hitIds[key]) continue;
+      if (Math.abs(opp.x - fighter.x) < 50 && Math.abs(opp.y - fighter.y) < 80) {
+        d.hitIds[key] = true;
+        opp.damage += d.damage; opp.hitstun = 20; opp.state = 'hitstun';
+        opp.vx = d.dir * 14 * d.knockback * KNOCKBACK_SCALE; opp.vy = -8 * KNOCKBACK_SCALE; opp.grounded = false;
+      }
+    }
+    if (d.traveled >= d.distance || Math.abs(fighter.vx) < 1) {
+      fighter._dash = null;
+      fighter.powerActive = null;
+      fighter.powerTimer = 0;
+      fighter.vx *= 0.3;
+    }
+  }
+
+  if (fighter.attackData) updateAttackProgress(fighter);
+
+  // Pass-through material effects (water, lava, cloud, antigravity) — overlap detection
+  let _inAntiGrav = false;
+  for (const p of platforms) {
+    const pmat = p.material || 'normal';
+    if (pmat !== 'water' && pmat !== 'lava' && pmat !== 'cloud' && pmat !== 'acid' && pmat !== 'tar' && pmat !== 'antigravity') continue;
+    const overlapX = fighter.x > p.x - 16 && fighter.x < p.x + p.w + 16;
+    const inMat = fighter.y > p.y && fighter.y < p.y + p.h + 20;
+    if (overlapX && inMat) {
+      fighter.platformMaterial = pmat;
+      if (pmat === 'antigravity') {
+        // Reverse gravity while inside the field — gentle upward float
+        _inAntiGrav = true;
+        fighter._antiGravActive = true;
+        fighter.gravityInverted = true;
+        fighter.vy -= 0.5;
+        if (fighter.vy < -4) fighter.vy = -4;
+        fighter.vx *= 0.96;
+        if (inputs.jump) fighter.vy = -7; // boost up
+      } else if (pmat === 'water' || pmat === 'lava') {
+        fighter.vy = Math.min(fighter.vy, 2.5); // slow fall
+        fighter.vx *= 0.92;
+        if (inputs.jump) fighter.vy = -5.5; // swim up
+        if (pmat === 'lava') fighter.damage += 0.8; // lava damages
+      } else if (pmat === 'acid') {
+        fighter.vy = Math.min(fighter.vy, 2.5); // slow fall — can swim through
+        fighter.vx *= 0.85;
+        if (inputs.jump) fighter.vy = -4; // swim up
+        fighter.damage += 0.5; // acid damages
+        fighter.powerDisabled = 180;
+      } else if (pmat === 'tar') {
+        fighter.vy = Math.min(fighter.vy, 1.5); // very slow fall — thick
+        fighter.vx *= 0.3; // very thick — hard to move
+        if (inputs.jump) fighter.vy = -2.5; // very hard to swim up
+        fighter.trapped = true; // still traps
+      }
+      // cloud: no effect, pass through
+      break;
+    }
+  }
+  // Leaving an anti-gravity field restores normal gravity (unless a power inverted it)
+  if (!_inAntiGrav && fighter._antiGravActive) {
+    fighter._antiGravActive = false;
+    if (!fighter.powerActive || fighter.powerActive !== 'gravity_flip') fighter.gravityInverted = false;
+  }
+  // HP mode + regular brawl: lose a stock when HP is depleted (BR uses 300% damage, not HP)
+  if ((fighter.gameMode === 'hp' || (fighter.gameMode === 'brawl' && !fighter._isBR)) && fighter.hp <= 0 && fighter.stocks > 0) {
+    loseStock(fighter, stageWidth, stageHeight);
+    fighter.hp = 150;
+  }
+
+  // 1500% damage = instant death (lose a stock) — checked here so ALL damage sources
+  // are caught: attacks (applyHit), power abilities, projectiles, hazards, items,
+  // and material effects (spikes, lava, acid, etc.). BR is excluded (own 500% threshold).
+  if (fighter.damage >= 1500 && fighter.stocks > 0 && !fighter._isBR && !fighter._pendingDeath) {
+    fighter._pendingDeath = true;
+  }
+  if (fighter._pendingDeath && fighter.stocks > 0 && !fighter._isBR) {
+    fighter._pendingDeath = false;
+    loseStock(fighter, stageWidth, stageHeight);
+  }
+
+  return fighter;
+}
+
+function freehandSlopeSample(p, x) {
+  if (!p?._freehandSlope) return null;
+  const x1 = Number(p.x1), y1 = Number(p.y1), x2 = Number(p.x2), y2 = Number(p.y2);
+  const r = Math.max(1, Number(p.radius) || 1);
+  const minX = Math.min(x1, x2) - r - 2;
+  const maxX = Math.max(x1, x2) + r + 2;
+  if (x < minX || x > maxX) return null;
+  const dx = x2 - x1;
+  const t = Math.max(0, Math.min(1, dx ? (x - x1) / dx : 0));
+  const lineY = y1 + (y2 - y1) * t;
+  const slope = dx ? (y2 - y1) / dx : 0;
+  return { surfaceY: lineY - r, slope, downhill: Math.sign(slope) || 0 };
+}
+
+// ── Smooth swept AABB collision (Brawlhalla-style) ──
+function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
+  const prevGrounded = fighter.grounded;
+  fighter.grounded = false;
+  fighter.platformMaterial = null;
+  fighter.trapped = false;
+  fighter._conveyorDir = 0;
+  fighter._slope = 0;
+  fighter._slopeDownhill = 0;
+
+  // Compact original figure: collision stays inside the drawn arms/legs so a
+  // side collision occurs only once the visible body reaches the stage side.
+  const charHalfW = 16;
+  fighter.wallSide = 0;
+  const prevBottom = fighter.prevY;
+  const currBottom = fighter.y;
+
+  const PASS_THROUGH = ['water', 'lava', 'cloud', 'acid', 'tar', 'antigravity'];
+
+  // ── Collect active iron_wall projectiles as solid platforms so fighters
+  //    can't walk through walls created by any fighter's spawn_walls power. ──
+  const wallPlatforms = [];
+  const collectWalls = (f) => {
+    if (!f) return;
+    if (f.projectiles) {
+      for (const wp of f.projectiles) {
+        if (wp.type === 'iron_wall' && wp.life > 0) {
+          wallPlatforms.push({ x: wp.x, y: wp.y, w: wp.w, h: wp.h, material: 'normal', _forceSolid: true });
+        }
+      }
+    }
+    if (f.genProjectiles) {
+      for (const wp of f.genProjectiles) {
+        // Every persistent wall/barrier power is a real shared solid platform.
+        // Read them from the owner AND every active opponent so a wall created
+        // by another fighter cannot be walked through or treated as local-only.
+        if ((
+          wp.type === 'gen_ice_wall' ||
+          wp.type === 'gen_glass_wall' ||
+          wp.type === 'gen_solid_barrier' ||
+          wp.type === 'gen_protect_wall'
+        ) && wp.life > 0) {
+          wallPlatforms.push({
+            x: wp.x,
+            y: wp.y - wp.h,
+            w: wp.w,
+            h: wp.h,
+            material: 'normal',
+            _forceSolid: true,
+          });
+        }
+      }
+    }
+  };
+  collectWalls(fighter);
+  if (fighter._allOpponents) fighter._allOpponents.forEach(collectWalls);
+  if (wallPlatforms.length > 0) platforms = [...platforms, ...wallPlatforms];
+
+  // Keep the requested stage rule: ordinary elevated 18–20px platforms are
+  // one-way, while the broad lowest stage floor and constructed walls are solid.
+  const stageFloorY = Math.max(...platforms.filter(p => p && !p._forceSolid).map(p => Number(p.y) || 0), 0);
+  const isJumpThroughPlatform = (p) => {
+    if (!p || p._forceSolid) return false;
+    if (p._splitCityMoving) return true;
+    const isWideLowestFloor = p.y >= stageFloorY - 8 && p.w >= stageWidth * 0.18;
+    return !isWideLowestFloor && p.h <= 20;
+  };
+
+  for (const p of platforms) {
+    if (p._freehandSlope) continue;
+    const mat = p.material || 'normal';
+    if (PASS_THROUGH.includes(mat)) continue;
+    if (p._deleted > 0) continue;
+    const isSoft = isJumpThroughPlatform(p);
+    if (isSoft && fighter._dropThroughTimer > 0) continue;
+
+    // One-way platform collision — only land when falling onto it from above
+    if (fighter.vy >= 0) {
+      // Normal platforms allow edge tolerance so the compact fighter can land
+      // without pixel-perfect centering. Split City’s raised top sits directly
+      // above solid side walls, though: edge tolerance lets a fighter pressed
+      // against the outside wall register a landing and refill jumps repeatedly.
+      // For that platform only, require the fighter's center to be over the top.
+      const overlapX = p._splitCityMain
+        ? (fighter.x > p.x + 0.5 && fighter.x < p.x + p.w - 0.5)
+        : (fighter.x > p.x - charHalfW && fighter.x < p.x + p.w + charHalfW);
+
+      // Swept check: was above last frame, now at/below platform top
+      const wasAbove = prevBottom <= p.y + 2;
+      const isAtOrBelow = currBottom >= p.y;
+
+      if (overlapX && wasAbove && isAtOrBelow) {
+        // Soft platforms: skip if moving up or phasing
+        if (isSoft && fighter.canPhase && !fighter.grounded) continue;
+        // Drop-through: if holding down and pressing jump on soft platform
+        if (isSoft && fighter.diY > 0 && fighter.jumpHeld === false && fighter.vy > 0 && Math.abs(fighter.vx) < 0.5) {
+          // Allow pass-through
+          continue;
+        }
+
+        fighter.platformMaterial = mat;
+
+        if (mat === 'quicksand') {
+          // Slowly sink through quicksand — grounded but sinking
+          fighter.y = p.y + 2;
+          fighter.vy = Math.max(fighter.vy, 0.4);
+          fighter.grounded = true;
+          fighter.jumps = fighter.maxJumps;
+        } else if (mat === 'snow') {
+          // Snow — sink slowly, weaker jumps
+          fighter.y = p.y + 1;
+          fighter.vy = Math.max(fighter.vy, 0.2);
+          fighter.grounded = true;
+          fighter.jumps = fighter.maxJumps;
+        } else if (mat === 'bounce') {
+          // Bouncer — launch upward on contact
+          fighter.y = p.y;
+          fighter.vy = -22;
+          fighter.grounded = false;
+          fighter.jumps = fighter.maxJumps;
+        } else if (mat === 'spike') {
+          // Spikes — damage + knockback, launch off
+          fighter.y = p.y;
+          fighter.vy = -14;
+          fighter.grounded = false;
+          fighter.damage += 8;
+          fighter.hitstun = 20;
+          fighter.state = 'hitstun';
+        } else if (mat === 'tar') {
+          // Tar — trap fighter until knocked out by a hit
+          fighter.y = p.y;
+          fighter.vy = 0;
+          fighter.grounded = true;
+          fighter.jumps = fighter.maxJumps;
+          fighter.trapped = true;
+        } else if (mat === 'conveyor') {
+          // Conveyor — solid, stores direction for push effect
+          fighter.y = p.y;
+          fighter.vy = 0;
+          fighter.grounded = true;
+          fighter.jumps = fighter.maxJumps;
+          fighter.gravityInverted = false;
+          fighter.recoveryAirUses = 0;
+          fighter._conveyorDir = p.conveyorDir || 1;
+        } else {
+          fighter.y = p.y;
+          fighter.vy = 0;
+          fighter.grounded = true;
+          fighter.jumps = fighter.maxJumps;
+          fighter.gravityInverted = false;
+          fighter.recoveryAirUses = 0;
+        }
+        if (!prevGrounded && fighter.state !== 'attacking') {
+          fighter.landingLag = 2;
+          fighter.state = 'idle';
+        } else if (!prevGrounded) {
+          fighter.landingLag = 2;
+        }
+        if (fighter.state === 'jumping') fighter.state = 'idle';
+        break;
+      }
+    }
+  }
+
+  // ── Smooth freehand/slope collision ──
+  // Freehand strokes are continuous sloped surfaces, not hundreds of tiny
+  // AABBs. This prevents the old "random stop" behavior and lets fighters
+  // naturally roll down a line.
+  for (const p of platforms) {
+    if (!p._freehandSlope || p._deleted > 0) continue;
+    const sample = freehandSlopeSample(p, fighter.x);
+    if (!sample) continue;
+    const surfaceY = sample.surfaceY;
+    if (fighter.vy >= 0 && fighter.prevY <= surfaceY + 5 && fighter.y >= surfaceY - 1) {
+      fighter.y = surfaceY;
+      fighter.vy = 0;
+      fighter.grounded = true;
+      fighter.platformMaterial = p.material || 'normal';
+      fighter.jumps = fighter.maxJumps;
+      fighter.gravityInverted = false;
+      fighter.recoveryAirUses = 0;
+      fighter._slope = sample.slope;
+      fighter._slopeDownhill = sample.downhill;
+      if (Math.abs(sample.slope) > 0.035 && !fighter.trapped) {
+        // Players roll gently; direct input can still overcome the slope.
+        const inputOpposes = (sample.downhill > 0 && fighter.vx < -0.1) || (sample.downhill < 0 && fighter.vx > 0.1);
+        if (!inputOpposes) fighter.vx += sample.downhill * Math.min(0.11, Math.abs(sample.slope) * 0.055);
+      }
+      break;
+    }
+    if (Math.abs(fighter.y - surfaceY) <= 3 && fighter.vy >= -1) {
+      fighter.y = surfaceY;
+      fighter.vy = 0;
+      fighter.grounded = true;
+      fighter.platformMaterial = p.material || 'normal';
+      fighter._slope = sample.slope;
+      fighter._slopeDownhill = sample.downhill;
+      break;
+    }
+  }
+
+  // ── Ceiling collision — hitting the bottom of a solid platform from below ──
+  // Resolved BEFORE side walls so the head stops naturally instead of being
+  // teleported sideways (was the underside-teleport bug). Platforms caught here
+  // are excluded from the side-wall pass below.
+  const ceilingHits = new Set();
+  if (fighter.vy < 0) {
+    for (const p of platforms) {
+      if (p._freehandSlope) continue;
+      const mat = p.material || 'normal';
+      if (PASS_THROUGH.includes(mat)) continue;
+      if (p._deleted > 0) continue;
+      if (isJumpThroughPlatform(p)) continue;
+      const overlapX = fighter.x > p.x - charHalfW && fighter.x < p.x + p.w + charHalfW;
+      if (!overlapX) continue;
+      const fighterHead = fighter.y - 55;
+      const prevHead = fighter.prevY - 55;
+      if (prevHead >= p.y + p.h && fighterHead < p.y + p.h) {
+        fighter.y = p.y + p.h + 55;
+        fighter.vy = 0;
+        ceilingHits.add(p);
+      }
+    }
+  }
+
+  // ── Side wall collisions for solid platforms — prevent walking through sides ──
+  for (const p of platforms) {
+    if (p._freehandSlope) continue;
+    const mat = p.material || 'normal';
+    if (PASS_THROUGH.includes(mat)) continue;
+    if (p._deleted > 0) continue;
+    if (isJumpThroughPlatform(p)) continue;
+    if (ceilingHits.has(p)) continue; // head caught on underside — fall back down, no sideways shove
+    // Split City uses independent top/side/bottom collision boundaries. The
+    // top surface is raised, while side walls begin at the visible wall face.
+    const sideTop = p._splitCityMain ? p.y : p.y;
+    const sideBottom = p._splitCityMain ? (p._collisionBottom ?? p.y + p.h) : p.y + p.h;
+    // Skip if standing on top of this platform
+    if (fighter.grounded && Math.abs(fighter.y - p.y) < 3) continue;
+    // Resolve side collisions whenever any part of the fighter overlaps the
+    // wall's vertical span. Do not skip based only on the feet being near the
+    // top edge: that let fighters briefly enter the upper side corners.
+    const fighterTop = fighter.y - 55;
+    const verticalOverlap = fighter.y > sideTop && fighterTop < sideBottom;
+    if (!verticalOverlap) continue;
+    // Check horizontal overlap
+    if (fighter.x + charHalfW > p.x && fighter.x - charHalfW < p.x + p.w) {
+      // Swept side collision: also catch a fast dash that crosses a wall between
+      // frames.  The previous check could miss that case, which made movement
+      // abilities appear to pass through solid stage geometry.
+      const crossedFromLeft = fighter.prevX + charHalfW <= p.x + 2 && fighter.x + charHalfW >= p.x;
+      const crossedFromRight = fighter.prevX - charHalfW >= p.x + p.w - 2 && fighter.x - charHalfW <= p.x + p.w;
+      // Push back to the side the fighter came from
+      if (crossedFromLeft || fighter.prevX + charHalfW <= p.x + 2) {
+        fighter.x = p.x - charHalfW;
+        fighter.wallSide = -1;
+        if (fighter.vx > 0) fighter.vx = 0;
+      } else if (crossedFromRight || fighter.prevX - charHalfW >= p.x + p.w - 2) {
+        fighter.x = p.x + p.w + charHalfW;
+        fighter.wallSide = 1;
+        if (fighter.vx < 0) fighter.vx = 0;
+      } else {
+        // Was already inside — push to nearest side
+        if (fighter.x < p.x + p.w / 2) {
+          fighter.x = p.x - charHalfW;
+          fighter.wallSide = -1;
+          if (fighter.vx > 0) fighter.vx = 0;
+        } else {
+          fighter.x = p.x + p.w + charHalfW;
+          fighter.wallSide = 1;
+          if (fighter.vx < 0) fighter.vx = 0;
+        }
+      }
+    }
+  }
+
+  // Blast zone — custom Stage Editor perimeter overrides the default bounds.
+  // Grand Circuit can still disable blast KOs with _gcNoBlast.
+  if (fighter._customBlastZoneDisabled) return fighter;
+  const bz = fighter._customBlastZone;
+  const blastLeft = Number(bz?.left ?? -500);
+  const blastRight = Number(bz?.right ?? stageWidth + 500);
+  const blastTop = Number(bz?.top ?? -600);
+  const blastBottom = Number(bz?.bottom ?? stageHeight + 450);
+  if (!fighter._gcNoBlast && fighter.noBlastKill <= 0 && (
+    fighter.x < blastLeft || fighter.x > blastRight ||
+    fighter.y < blastTop || fighter.y > blastBottom
+  )) {
+    loseStock(fighter, stageWidth, stageHeight);
+  }
+}
+
+function applyGen1MoveData(fighter) {
+  const d=fighter?.attackData, id=fighter?.char?.id;
+  if (d && d._mv) return;
+  if(!String(id||'').startsWith('g1_') || !d || d._gen1FrameApplied || d.isNormal || d.type==='attackHold' || d.holding) return;
+  if(!(d.isHeavy || d.isSuper || d.isRecovery || d.isGroundPound || ['up','down','side','upHeavy','downHeavy','aerial','upSignature','downSignature','downNormal','upheavy','aerialHeavy'].includes(d.sigType))) return;
+  const key=gen1MoveKey(id,d), frames=GEN1_TIMINGS[id]?.[key]; if(!frames) return;
+  const [startup,active,endlag]=frames, total=startup+active+endlag;
+  const oldDuration=Math.max(1,Number(d.duration)||total), elapsed=Math.max(0,oldDuration-(Number(fighter.attackTimer)||0));
+  d.duration=total; fighter.attackTimer=Math.max(0,total-Math.min(elapsed,total));
+  d.startupFrames=startup; d.activeFrames=active; d.endlagFrames=endlag;
+  const spec=d.spec || getAttackSpecForData(id,d);
+  if(spec){d.spec=spec;d.name=spec.name||d.name;d.damage=spec.damage??d.damage;d.range=spec.range??d.range;}
+  if(key==='super') d.multiHitStages=true;
+  d._gen1FrameApplied=true;
+}
+function updateAttackProgress(fighter) {
+  if (!fighter?.attackData) return;
+  if (fighter.attackData._mv) return;                       // the move engine owns timing for roster moves
+  applyGen1MoveData(fighter);
+  const elapsed = fighter.attackData.duration - fighter.attackTimer;
+  fighter.attackData.progress = Math.min(elapsed / fighter.attackData.duration, 1);
+}
+
+function gen1HitStage(attacker){
+  const d=attacker?.attackData; if (d?._mv) return d._mv.curStage|0; if(!d?.multiHitStages) return 0;
+  const q=Number(d.progress)||0;
+  if (d.isSuper) {
+    const elapsed=Math.max(0,(Number(d.duration)||1)-(Number(attacker.attackTimer)||0));
+    return elapsed < (Number(d.startupFrames)||0) + (Number(d.activeFrames)||0)*.5 ? 0 : 1;
+  }
+  if (attacker?.char?.id === 'g1_fire' && d.name === "Fire Hero's Quake") return q < .40 ? 0 : 1;
+  return q<.58 ? 0 : 1;
+}
+function defenderHitKey(defender){ return String(defender?.playerIndex ?? defender?.id ?? defender?.playerId ?? defender?.slot ?? Math.round(defender?.x||0)+':'+Math.round(defender?.y||0)); }
+
+// Each authored resonance combo window gets its own per-target hit token. This
+// is what lets a four-strike tonfa string or three-cut claw string actually hit
+// several times without dealing repeated damage on every animation frame.
+function resonanceHitStage(attacker) {
+  const a=attacker?.attackData;
+  if(!a?.resonanceFamily) return -1;
+  const p=Math.max(0,Math.min(1,Number(a.progress)||0));
+  const weapon=String(attacker.resonanceConstruct||a.resonanceSpec?.weapon||'');
+  const slot=String(a.resonanceMoveSlot||'').toLowerCase();
+  const windows={
+    'Twin Fangs':{sideheavy:[[.22,.37],[.48,.66]],upheavy:[[.24,.39],[.52,.69]],downheavy:[[.2,.34],[.38,.53]],sidesignature:[[.2,.3],[.34,.45],[.49,.65]],upsignature:[[.24,.35],[.36,.47],[.48,.59]],recovery:[[.2,.34],[.4,.54]]},
+    'Crescent Blades':{sideheavy:[[.24,.37],[.48,.62]],upheavy:[[.22,.34],[.36,.48],[.5,.62]],downheavy:[[.24,.36],[.37,.5]],upsignature:[[.24,.36],[.39,.51],[.54,.67]],recovery:[[.2,.32],[.35,.47],[.5,.65]]},
+    'Rift Claws':{sideheavy:[[.17,.27],[.32,.42],[.48,.61]],upheavy:[[.27,.39],[.46,.6]],sidesignature:[[.22,.32],[.35,.45],[.46,.58]],recovery:[[.23,.34],[.39,.5],[.55,.67]]},
+    'Pulse Tonfas':{sideheavy:[[.16,.26],[.29,.39],[.42,.53],[.55,.70]],upheavy:[[.28,.42],[.52,.69]],sidesignature:[[.2,.29],[.34,.43],[.48,.57],[.6,.71]],upsignature:[[.26,.37],[.38,.49],[.5,.61]],recovery:[[.28,.44]]},
+    'Reaper Scythe':{upsignature:[[.27,.38],[.44,.57]],recovery:[[.27,.38],[.39,.5],[.51,.63]]},
+    'Resonance Rapier':{upheavy:[[.18,.29],[.36,.47],[.55,.68]]},
+    'Phase Katana':{upheavy:[[.28,.4],[.41,.53]]}
+  };
+  const list=windows[weapon]?.[slot];
+  if(!list) return -1;
+  return list.findIndex(([lo,hi])=>p>=lo&&p<=hi);
+}
+
+// Counter stances (`counter` in the move def): an attack that connects inside the brace window is turned away
+// (no damage to the defender), the attacker is staggered, and ONLY then does the defender's answer strike go live.
+export function checkHit(attacker, defender) {
+  const hit = checkHitCore(attacker, defender);
+  if (!hit) return false;
+  const dmv = defender.attackData && defender.attackData._mv;
+  if (dmv && dmv.m.counter && !dmv.countered && dmv.f >= (dmv.m.counter.from || 2) && dmv.f < dmv.m.fr[0]) {
+    dmv.countered = true; dmv.f = dmv.m.fr[0] - 1;                       // next tick = first frame of the answer strike
+    if (attacker.attackData) { attacker.attackData._hitboxConsumed = true; attacker.attackData.hitApplied = true; }
+    const away = Math.sign(attacker.x - defender.x) || -(defender.facing || 1);
+    attacker.attackData = null; attacker.attackTimer = 0; attacker.attackHold = null;
+    attacker.state = 'hitstun'; attacker.hitstun = 16; attacker.vx = away * 1.6; attacker.vy = Math.min(attacker.vy || 0, -1.5);
+    defender.hitEffects = defender.hitEffects || []; defender.hitEffects.push({ x: defender.x + (defender.facing || 1) * 24, y: defender.y - 34, color: defender.char.color, spawnFrame: defender.frame });
+    return false;
+  }
+  return true;
+}
+function checkHitCore(attacker, defender) {
+  if (!attacker.attackData || attacker.attackData.type === 'attackHold' || attacker.attackData.holding || attacker.attackData._hitboxConsumed) return false;
+  const resonanceStage = resonanceHitStage(attacker);
+  const multi = !!attacker.attackData.multiHitStages || resonanceStage >= 0;
+  const stage = resonanceStage >= 0 ? resonanceStage : (multi ? gen1HitStage(attacker) : 0);
+  if (!multi && attacker.attackData.hitApplied) return false;
+  if (multi) {
+    attacker.attackData.hitStage = stage;
+    attacker.attackData.hitStageIds ||= {};
+    const key = defenderHitKey(defender);
+    if (attacker.attackData.hitStageIds[stage]?.[key]) return false;
+  }
+  if (defender.invincible > 0) return false;
+  // Explicit short defensive-trigger windows for Phase Katana, Rift Claws and
+  // Pulse Tonfas. These stances do not deal passive damage: only an incoming
+  // attack in front and within range can trigger the counter, once per stance.
+  const counterData=defender.attackData;
+  const counterWeapon=String(defender.resonanceConstruct||'');
+  const counterSlot=String(counterData?.resonanceMoveSlot||'').toLowerCase();
+  const counterWindow=counterWeapon==='Phase Katana' ? [.27,.47] : counterWeapon==='Rift Claws' ? [.29,.48] : counterWeapon==='Pulse Tonfas' ? [.28,.47] : null;
+  if (counterData?.resonanceFamily && counterSlot==='downsignature' && counterWindow && !counterData._counterUsed) {
+    const cp=Number(counterData.progress)||0, ap=Number(attacker.attackData.progress)||0;
+    const dx=attacker.x-defender.x, dy=(attacker.y||0)-(defender.y||0);
+    const inFront=dx*(defender.facing||1)>-8;
+    if (cp>=counterWindow[0] && cp<=counterWindow[1] && ap>=.12 && ap<=.82 && inFront && Math.abs(dx)<=76 && Math.abs(dy)<=65) {
+      counterData._counterUsed=true;
+      attacker.attackData.hitApplied=true;
+      attacker.attackData=null; attacker.attackTimer=0;
+      attacker.vx=(defender.facing||1)*8.5; attacker.vy=-4.8;
+      attacker.damage=(Number(attacker.damage)||0)+7;
+      attacker.hitstun=22; attacker.state='hitstun'; attacker.grounded=false;
+      attacker._lastHitBy=defender;
+      defender.vx=0; defender.vy=0;
+      return false;
+    }
+  }
+  // Pearl's Sixth Sense — 50% chance to auto-dodge any incoming attack
+  if (defender.dodgeChance && Math.random() < defender.dodgeChance) {
+    return false;
+  }
+
+  if (attacker.attackData._mv) {
+    const mvBoxes = mvHitShapes(attacker);
+    if (!mvBoxes.length) return false;
+    try { return mvBoxes.some(hb => hitboxIntersectsBody(hb, defender)); } catch (err) { return false; }
+  }
+  const p = attacker.attackData.progress;
+  if (p < 0.08 || p > 0.85) return false;
+
+  // Legacy supers use a generous distance check. Hand-authored supers below
+  // use their exact active geometry instead. Geometry generation is isolated so
+  // one malformed optional attack can never take down the whole match.
+  let activeSpecHitboxes = [];
+  try { activeSpecHitboxes = attacker.attackData?.resonanceFamily ? (getResonanceConstructHitboxes(attacker) || []) : (getActiveSpecHitboxes(attacker) || []); } catch (err) { activeSpecHitboxes = []; }
+  const hasExactSuper = attacker.attackData.isSuper && activeSpecHitboxes.length > 0;
+  if (attacker.attackData.isSuper && attacker.char?.id?.startsWith('g1_') && !hasExactSuper) return false;
+  if (attacker.attackData.isSuper && !hasExactSuper) {
+    const sdx = defender.x - attacker.x;
+    const sdy = defender.y - attacker.y;
+    return Math.sqrt(sdx * sdx + sdy * sdy) < 240;
+  }
+
+  // Hand-authored spec hitboxes take precedence for Generation I and any future
+  // move that supplies a spec. This keeps collision locked to the actual visual.
+  const specHitboxes = activeSpecHitboxes;
+  if (specHitboxes.length && !attacker.attackData.resonanceFamily) {
+    try { return specHitboxes.some(hb => hitboxIntersectsBody(hb, defender)); } catch (err) { return false; }
+  }
+
+  // Resonance collision uses exactly the same per-move geometry that the
+  // Settings -> Hitboxes overlay renders. No fallback range rectangle for these moves.
+  const resonance = attacker.attackData;
+  if (resonance.resonanceFamily) {
+    try {
+      const contact=activeSpecHitboxes.find(hb => hitboxIntersectsBody(hb, defender));
+      if (!contact) return false;
+      attacker.attackData._resonanceHitKind=contact.kind || null;
+      attacker.attackData._resonanceThrowWindow=contact.throwWindow || null;
+      return true;
+    } catch (err) { return false; }
+  }
+
+  // ── Fallback AABB hitbox collision ──
+  const baseRange = (attacker.attackData.range || 80) * (attacker.rangeBoost || 1);
+  const facing = attacker.facing;
+  const st = attacker.attackData.sigType;
+
+  // Build attack hitbox rectangle based on attack type
+  let hbW, hbH, hbCX, hbCY;
+  if (st === 'up' || st === 'aerial') {
+    hbW = 70; hbH = baseRange;
+    hbCX = attacker.x; hbCY = attacker.y - baseRange / 2 - 10;
+  } else if (st === 'down' || st === 'downNormal') {
+    hbW = 70; hbH = baseRange;
+    hbCX = attacker.x; hbCY = attacker.y + baseRange / 2 - 20;
+  } else if (st === 'heavy') {
+    hbW = baseRange * 1.1; hbH = 80;
+    hbCX = attacker.x + facing * (hbW / 2 - 10); hbCY = attacker.y - 30;
+  } else {
+    hbW = baseRange; hbH = 60;
+    hbCX = attacker.x + facing * (hbW / 2 - 10); hbCY = attacker.y - 30;
+  }
+
+  // Defender body box — rectangle centered on body
+  const dBW = 30, dBH = 70; // matches FIGHTER_HURTBOX in stickman.js
+  const dBX = defender.x, dBY = defender.y - 35;
+
+  // AABB overlap test
+  return (hbCX - hbW / 2) < (dBX + dBW / 2) &&
+         (hbCX + hbW / 2) > (dBX - dBW / 2) &&
+         (hbCY - hbH / 2) < (dBY + dBH / 2) &&
+         (hbCY + hbH / 2) > (dBY - dBH / 2);
+}
+
+export function applyHit(attacker, defender) {
+  if (!attacker.attackData) return;
+  // Every attack owns one live collision shape: the first confirmed contact
+  // consumes it immediately, while the fighter's authored recovery animation
+  // continues normally. This applies to multi-stage moves as well.
+  const hasMultiStageHit = !!attacker.attackData.multiHitStages || resonanceHitStage(attacker) >= 0;
+  // Single-hit moves consume their box immediately. Multi-stage moves instead
+  // consume only the current target/stage token so the later authored hit can land.
+  attacker.attackData._hitboxConsumed = !hasMultiStageHit;
+  if (hasMultiStageHit) {
+    const stage = resonanceHitStage(attacker) >= 0 ? resonanceHitStage(attacker) : gen1HitStage(attacker);
+    attacker.attackData.hitStageIds ||= {};
+    attacker.attackData.hitStageIds[stage] ||= {};
+    attacker.attackData.hitStageIds[stage][defenderHitKey(defender)] = true;
+    attacker.attackData.hitApplied = false;
+  } else {
+    attacker.attackData.hitApplied = true;
+  }
+  // Authored throws (move def `grab`): the first confirmed palm contact CAPTURES the target; the throw animation
+  // then carries them along the attacker's hands and the real hit (damage, launch, hitstun) lands at release.
+  {
+    const _mvs = attacker.attackData._mv;
+    if (_mvs && _mvs.m.grab && !_mvs.grabRelease && !defender._mvGrabBy) {
+      defender._mvGrabBy = attacker; _mvs.grabbed = defender; _mvs.grabAt = _mvs.f;
+      defender.trapped = false; defender.attackData = null; defender.attackHold = null; defender.attackTimer = 0;
+      defender.vx = 0; defender.vy = 0; defender.grounded = false; defender.state = 'captured';
+      return;
+    }
+  }
+  // Capture-style weapon contacts are triggers, not ordinary damage boxes.
+  // Only a confirmed overlap enters the captured state; a whiff never throws.
+  if (attacker.attackData.resonanceFamily && attacker.attackData._resonanceHitKind === 'grab') {
+    defender._resonanceCapturedBy = attacker;
+    defender._resonanceCaptureUntil = Math.max(Number(attacker.attackData.progress)||0, 0.48) + 0.24;
+    defender._resonanceCaptureWeapon = String(attacker.resonanceConstruct||'');
+    defender.vx = 0; defender.vy = 0; defender.grounded = false;
+    defender.state = 'captured';
+    attacker.attackData._resonanceCapturedTarget = defender;
+    attacker.attackData._resonanceHitKind = null;
+    return;
+  }
+  defender.trapped = false; // getting hit frees you from tar / vines / freeze
+  defender.reverseControls = 0; // getting hit frees you from reversed controls
+  defender.slowTimer = 0; defender.speedMul = undefined; // getting hit frees you from slows / glue
+  defender._controlBroken = true; // flag: expire control-effect projectiles (vines, ice, bubble, marionette, glue)
+
+  // Power stat scales damage up; defense stat + active shields reduce it.
+  // Charged Gen 1 attacks gain a small damage bonus based on how long they were
+  // held: instant release gets the normal damage, while a full 3-second charge
+  // gets +25%. The bonus scales smoothly in between.
+  const holdCharge = Math.max(0, Math.min(1, Number(attacker.attackData.holdCharge) || 0));
+  const holdDamageMul = 1 + holdCharge * 0.25;
+  const fireHero = attacker.char?.id === 'g1_fire';
+  const fireHeavy = !!attacker.attackData.isHeavy || !!attacker.attackData.isSuper;
+  // Flame starts at the authored low base damage, then gains a restrained bonus
+  // as the target's damage rises. Heavies/super scale a little harder than sigs.
+  const fireDamageScale = fireHero ? 1 + Math.min(200, Math.max(0, Number(defender.damage) || 0)) * (fireHeavy ? 0.00165 : 0.0010) : 1;
+  // A Gen-I super's baseline damage is split across its two authored stages:
+  // setup hits establish the route/marks; the later hit carries the finisher weight.
+  const mvOn = !!attacker.attackData._mv;
+  const gen1SuperStage = !mvOn && String(attacker.char?.id || '').startsWith('g1_') && attacker.attackData.isSuper
+    ? (Number(attacker.attackData.hitStage) || 0) : -1;
+  const gen1SuperDamageShare = gen1SuperStage < 0 ? 1 : (gen1SuperStage === 0 ? 0.32 : 0.68);
+  const rawDmg = (attacker.attackData.damage || 10) * (mvOn ? mvStageShare(attacker) : 1) * gen1SuperDamageShare * fireDamageScale * holdDamageMul * (attacker.damageBoost || 1) * (attacker.statPowerMul || 1);
+  const totalReduction = (defender.shieldAmount || 0) + (defender.statDefenseReduction || 0);
+  const dmg = rawDmg * Math.max(0.1, 1 - totalReduction);
+  // Super-only mode: non-super attacks deal no damage
+  if (attacker.gameMode === 'superonly' && !attacker.attackData.isSuper) {
+    return;
+  }
+  if (attacker.gameMode === 'hp') {
+    defender.hp = Math.max(0, (defender.hp ?? 150) - dmg);
+  } else {
+    defender.damage += dmg;
+    // Non-brawl modes (excludes Battle Royale & Grand Circuit, which use gameMode 'brawl'):
+    // reaching 1500 damage instantly KOs the fighter (loses a stock).
+    if (defender.damage >= 1500 && defender.stocks > 0 && defender.gameMode !== 'brawl') {
+      defender._pendingDeath = true;
+    }
+  }
+  defender._lastHitBy = attacker;
+  // Impact side in the defender's facing space: +1 = struck from the front,
+  // -1 = struck from behind. The renderer can use this to select the matching
+  // directional hurt reaction independently of the eventual launch vector.
+  defender._hitSide = Math.sign((attacker.x - defender.x) * (defender.facing || 1));
+
+  attacker.superMeter = Math.min(attacker.maxSuper, attacker.superMeter + dmg * 0.7);
+  defender.superMeter = Math.min(defender.maxSuper, defender.superMeter + dmg * 0.25);
+
+  // Knockback scales smoothly with damage (Brawlhalla-style curve)
+  const isLight = attacker.attackData.isNormal;
+  const kbMul = fireHero ? 1 + Math.min(160, Math.max(0, Number(defender.damage) || 0)) * (fireHeavy ? 0.032 : 0.025) : 1 + defender.damage * 0.025;
+  const kbBase = attacker.attackData.knockback || 1.0;
+  const kbFactor = isLight ? 0.16 : attacker.attackData.isHeavy ? 0.28 : 0.24;
+  const kb = dmg * kbFactor * kbMul * kbBase * (attacker.knockbackMul || 1) * KNOCKBACK_SCALE * (1 - (defender.knockbackReduction || 0));
+  const st = attacker.attackData.sigType;
+  if (attacker.attackData.resonanceAction === 'grab') {
+    // A successful tether/grab catches the target briefly before the throw.
+    defender.vx = (attacker.facing || 1) * Math.max(1.5, kb * .22);
+    defender.vy = -Math.max(1.8, kb * .16);
+    defender.hitstun = Math.max(defender.hitstun || 0, 8);
+    defender._resonanceGrabbed = 8;
+  }
+
+  const spec = attacker.attackData.spec || getAttackSpecForData(attacker.char?.id, attacker.attackData);
+  if (spec?.knockback) {
+    const dir = specKnockbackVector(attacker, defender, spec.knockback);
+    let mag = kb * (spec.kind === 'super' ? 1.15 : 1);
+    if (gen1SuperStage >= 0) mag *= gen1SuperStage === 0 ? 0.72 : 1.28;
+    defender.vx = dir.x * mag;
+    defender.vy = dir.y * mag;
+  } else if (attacker.attackData.isGroundPound) {
+    defender.vy = -kb * 0.5;
+    defender.vx = (defender.x > attacker.x ? 1 : -1) * kb * 1.5;
+  } else if (attacker.attackData.isRecovery) {
+    defender.vy = -kb * 2.0;
+    defender.vx = attacker.facing * kb * 0.3;
+  } else if (st === 'up' || st === 'aerial') {
+    defender.vy = -kb * 1.8;
+    defender.vx = attacker.facing * kb * 0.3;
+  } else if (st === 'down' || st === 'downNormal') {
+    defender.vy = kb * 0.6;
+    defender.vx = attacker.facing * kb * 0.5;
+  } else if (st === 'super') {
+    defender.vy = -kb * 1.4;
+    defender.vx = attacker.facing * kb * 1.2;
+  } else if (st === 'heavy') {
+    // Heavy attacks: strong, directional knockback based on attack type
+    const heavyType = attacker.attackData.type;
+    if (heavyType === 'groundSlam' || heavyType === 'freeze') {
+      defender.vy = -kb * 1.5;
+      defender.vx = attacker.facing * kb * 0.6;
+    } else if (heavyType === 'launch') {
+      defender.vy = -kb * 2.0;
+      defender.vx = attacker.facing * kb * 0.3;
+    } else {
+      // Forward-launching heavy
+      defender.vx = attacker.facing * kb * 1.4;
+      defender.vy = -kb * 0.6;
+    }
+  } else {
+    defender.vx = attacker.facing * kb * 1.2;
+    defender.vy = -kb * 0.55;
+  }
+
+  // Construct-specific launch vectors. These override the generic move-label
+  // direction so each of the first nine weapons can launch by its authored hit.
+  if (attacker.attackData.resonanceFamily) {
+    const weapon=String(attacker.resonanceConstruct||attacker.attackData.resonanceSpec?.weapon||'');
+    const slot=String(attacker.attackData.resonanceMoveSlot||'').toLowerCase();
+    const t=Math.max(0,Math.min(1,Number(attacker.attackData.progress)||0));
+    const face=attacker.facing||1;
+    let dir=null, power=1;
+    const finisher=(windows)=>windows.some(([lo,hi])=>t>=lo&&t<=hi);
+    if (weapon==='Resonance Blade') {
+      if(slot==='sideheavy') { if(finisher([[.22,.34]])){dir=defender.grounded?'forward':'down';power=.78;} else if(finisher([[.47,.61]])){dir='up';power=1.18;} }
+      else if(slot==='upheavy'||slot==='upsignature'||slot==='recovery'){dir='up';power=slot==='recovery'?1.1:1;}
+      else if(slot==='downheavy'){dir=defender.grounded?'forward':(defender.y<attacker.y?'down':'up');}
+      else if(slot==='sidesignature'||slot==='downsignature'){dir='forward';power=slot==='sidesignature'?1.1:.9;}
+    } else if (weapon==='Twin Fangs') {
+      if(slot==='sideheavy') {dir='forward';power=finisher([[.49,.63]])?1.05:.48;}
+      else if(slot==='upheavy') {dir='up';power=finisher([[.52,.67]])?1:.48;}
+      else if(slot==='downheavy'){dir='forward';power=.58;}
+      else if(slot==='sidesignature'){dir='forward';power=finisher([[.53,.64]])?1:.42;}
+      else if(slot==='upsignature'){dir='diagonalUp';power=finisher([[.43,.55]])?1:.42;}
+      else if(slot==='downsignature'){dir='forward';power=.88;}
+      else if(slot==='recovery'){dir='up';power=finisher([[.48,.61]])?1:.5;}
+    } else if (weapon==='Phase Katana') {
+      if(slot==='sideheavy'||slot==='sidesignature'){dir='forward';power=1.18;}
+      else if(slot==='upheavy'||slot==='upsignature'||slot==='recovery'){dir='up';power=slot==='recovery'?1.15:1;}
+      else if(slot==='downheavy'){dir=defender.grounded?'forward':'down';power=1.08;}
+      else if(slot==='downsignature'){dir='forward';power=1.22;}
+    } else if (weapon==='Resonance Rapier') {
+      if(slot==='sideheavy'||slot==='sidesignature'){dir='forward';power=slot==='sidesignature'?1.05:.72;}
+      else if(slot==='upheavy'){dir='up';power=finisher([[.55,.68]])?1:.42;}
+      else if(slot==='downheavy'){dir=defender.grounded?'forward':(defender.y<attacker.y?'down':'up');power=.62;}
+      else if(slot==='upsignature'||slot==='recovery'){dir='up';power=1.05;}
+      else if(slot==='downsignature'){dir='forward';power=1.05;}
+    } else if (weapon==='Crescent Blades') {
+      if(slot==='sideheavy'){dir='forward';power=finisher([[.48,.62]])?1:.48;}
+      else if(slot==='upheavy'||slot==='upsignature'||slot==='recovery'){dir='up';power=finisher([[.54,.67]])?1.05:.5;}
+      else if(slot==='downheavy'){dir='forward';power=finisher([[.38,.49]])?.78:.58;}
+      else if(slot==='sidesignature'){dir='forward';power=1;}
+      else if(slot==='downsignature'){dir='diagonalUp';power=1.05;}
+    } else if (weapon==='Greatblade') {
+      if(slot==='sideheavy'||slot==='sidesignature'){dir='forward';power=1.35;}
+      else if(slot==='upheavy'||slot==='recovery'){dir='up';power=1.3;}
+      else if(slot==='downheavy'){dir=defender.grounded?'forward':'down';power=1.35;}
+      else if(slot==='upsignature'){dir='diagonal';power=1.4;}
+      else if(slot==='downsignature'){dir=defender.grounded?'forward':'down';power=1.35;}
+    } else if (weapon==='Reaper Scythe') {
+      if(slot==='sideheavy'){dir='forward';power=1.1;}
+      else if(slot==='upheavy'||slot==='upsignature'||slot==='recovery'){dir='up';power=finisher([[.44,.57],[.47,.6]])?1.08:.48;}
+      else if(slot==='downheavy'){dir=defender.grounded?'forward':'down';power=.68;}
+      else if(slot==='sidesignature'){dir=finisher([[.56,.72]])?'forward':'pull';power=finisher([[.56,.72]])?1.15:.35;}
+      else if(slot==='downsignature'){dir=finisher([[.35,.5]])?'forward':'pull';power=.65;}
+    } else if (weapon==='Rift Claws') {
+      if(slot==='sideheavy'){dir='forward';power=finisher([[.48,.61]])?1:.42;}
+      else if(slot==='upheavy'){dir='up';power=finisher([[.46,.6]])?1:.45;}
+      else if(slot==='downheavy'){dir=defender.grounded?'forward':'diagonalDown';power=.85;}
+      else if(slot==='sidesignature'){dir='forward';power=finisher([[.45,.58]])?1.05:.35;}
+      else if(slot==='upsignature'){dir='up';power=1.05;}
+      else if(slot==='downsignature'){dir='forward';power=1.05;}
+      else if(slot==='recovery'){dir='up';power=finisher([[.55,.67]])?1:.42;}
+    } else if (weapon==='Pulse Tonfas') {
+      if(slot==='sideheavy'||slot==='sidesignature'){dir='forward';power=finisher([[.55,.70],[.60,.69]])?1:.35;}
+      else if(slot==='upheavy'||slot==='upsignature'||slot==='recovery'){dir='up';power=finisher([[.52,.69],[.28,.44]])?1:.45;}
+      else if(slot==='downheavy'){dir='forward';power=.62;}
+      else if(slot==='downsignature'){dir='forward';power=1.05;}
+    }
+    if (dir) {
+      const mag=kb*power;
+      if(dir==='up'){defender.vx=face*mag*.12;defender.vy=-mag*1.7;}
+      else if(dir==='down'){defender.vx=face*mag*.45;defender.vy=mag*1.15;}
+      else if(dir==='diagonalUp'){defender.vx=face*mag*.85;defender.vy=-mag*1.05;}
+      else if(dir==='diagonalDown'){defender.vx=face*mag*.85;defender.vy=mag*.8;}
+      else if(dir==='diagonal'){defender.vx=face*mag*1.1;defender.vy=-mag*.85;}
+      else if(dir==='pull'){defender.vx=-face*mag*.55;defender.vy=-mag*.15;}
+      else {defender.vx=face*mag*1.2;defender.vy=-mag*.35;}
+    }
+  }
+
+  const baseStun = attacker.attackData.isHeavy ? 20 : attacker.attackData.isSuper ? 35 : isLight ? 16 : 18;
+  const controlHitstunMul = attacker.statControlHitstunMul || 1;
+  defender.hitstun = Math.min(Math.round((baseStun + Math.floor(dmg * 0.4)) * controlHitstunMul), 50);
+  defender._mvLaunch = null;
+  if (mvOn) {
+    const L = mvLaunchFor(attacker, defender);
+    defender.vx = L.vx; defender.vy = L.vy;
+    defender.hitstun = Math.min(50, Math.max(8, Math.round(L.hitstun * controlHitstunMul)));
+    defender._mvLaunch = { fric: MV_FRIC };
+  }
+  // Leave a small combo window after the attacker recovers. Count any active
+  // frames still remaining, then add 10–17% of the move's endlag as extra stun.
+  const ad = attacker.attackData;
+  const moveSlot = ad._mv?.m?.slot || ad.mvSlot;
+  const isHeavyMove = !!ad.isHeavy || !!ad.isGroundPound || ['uh', 'dh', 'sh', 'gp'].includes(moveSlot);
+  const isSignatureMove = !ad.isNormal && !ad.isSuper && !ad.isRecovery && (
+    ['us', 'ds', 'ss'].includes(moveSlot) ||
+    ['up', 'down', 'side', 'upSignature', 'downSignature', 'sideSignature'].includes(ad.sigType)
+  );
+  const stunRatio = isHeavyMove ? 1.10 : isSignatureMove ? 1.17 : 1.12;
+  const rawEndlag = Number(ad._mv?.m?.fr?.[2] ?? ad.endlagFrames);
+  const moveEndlag = Number.isFinite(rawEndlag) ? Math.max(0, rawEndlag) : 0;
+  const remainingLockout = Math.max(0, Number(attacker.attackTimer) || 0, moveEndlag);
+  const endlagBasis = moveEndlag > 0 ? moveEndlag : remainingLockout;
+  if (remainingLockout > 0) {
+    const comboStun = Math.ceil((remainingLockout + endlagBasis * (stunRatio - 1)) * controlHitstunMul);
+    defender.hitstun = Math.max(defender.hitstun, comboStun);
+  }
+  // A third-party hit always hard-cancels the defender's current attack/charge.
+  // This prevents an interrupted Gen I attack from leaking into the running/idle pose.
+  defender.attackHold = null;
+  defender.attackData = null;
+  defender.attackTimer = 0;
+  defender.state = 'hitstun';
+  defender.grounded = false;
+
+  defender.hitEffects = defender.hitEffects || [];
+  defender.hitEffects.push({
+    x: defender.x, y: defender.y - 22,
+    color: attacker.char.color,
+    spawnFrame: defender.frame,
+  });
+}
+
+export function loseStock(fighter, stageWidth, stageHeight) {
+  const rp = fighter.respawnPoint;
+  // Life's Rebirth: 50% chance to revive if power is active
+  if (fighter.reviveChance && fighter.reviveChance > 0 && fighter.powerActive === 'heal') {
+    if (Math.random() < fighter.reviveChance) {
+      fighter.reviveChance = 0;
+      fighter.damage = Math.max(0, fighter.damage - 100);
+      fighter.x = rp ? rp.x : stageWidth / 2;
+      fighter.y = rp ? rp.y : 60;
+      fighter.vx = 0; fighter.vy = 0;
+      fighter.invincible = 120;
+      fighter.hitstun = 0;
+      fighter.state = 'idle';
+      fighter.attackHold = null;
+      fighter.attackData = null;
+      fighter.attackTimer = 0;
+      fighter.gravityInverted = false;
+      return;
+    }
+    fighter.reviveChance = 0; // chance used, didn't revive
+  }
+  fighter._deathX = fighter.x;
+  fighter._deathY = fighter.y;
+  // Attribute the KO to the last attacker when the death came from a hit.
+  // This powers daily objectives such as Signature KOs and Ground Pound KOs.
+  const killer = fighter._lastHitBy;
+  if (killer && killer !== fighter && killer.moveStats) {
+    const attack = killer.attackData || {};
+    if (attack.isGroundPound) killer.moveStats.groundPoundKOs = (killer.moveStats.groundPoundKOs || 0) + 1;
+    else if (attack.sigType === 'side' || attack.sigType === 'up' || attack.sigType === 'down') {
+      killer.moveStats.signatureKOs = (killer.moveStats.signatureKOs || 0) + 1;
+    }
+  }
+  fighter._lastHitBy = null;
+  fighter.stocks--;
+  fighter.damage = 0;
+  fighter.x = rp ? rp.x : (stageWidth / 2 + (Math.random() - 0.5) * 80);
+  fighter.y = rp ? rp.y : 60;
+  fighter.vx = 0;
+  fighter.vy = 0;
+  fighter.invincible = 90;
+  fighter.hitstun = 0;
+  fighter.state = 'idle';
+  fighter.attackHold = null;
+  fighter.attackData = null;
+  fighter.attackTimer = 0;
+  fighter.jumps = 2;
+  resetMovementAbilityState(fighter);
+  fighter.sigCooldown = 0;
+  fighter.normalCooldown = 0;
+  fighter.heavyCooldown = 0;
+  fighter.gravityInverted = false;
+  if (fighter.gameMode === 'hp') fighter.hp = 150;
+}
+
+// (CPU AI logic extracted to botAI.js — re-exported at top of file)
