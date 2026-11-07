@@ -34,7 +34,7 @@ const MUSIC_SCENES = [
 ];
 
 const SETTINGS_NAV = [
-  ['settings-account', 'Account'], ['settings-profile', 'Profile'], ['settings-audio', 'Audio'], ['settings-gameplay', 'Gameplay'],
+  ['settings-download', 'Download The Chronicles'], ['settings-account', 'Account'], ['settings-profile', 'Profile'], ['settings-audio', 'Audio'], ['settings-gameplay', 'Gameplay'],
   ['settings-controls', 'Controls'], ['settings-display', 'Display'], ['settings-themes', 'Themes'], ['settings-era', 'UI style'],
   ['settings-social', 'Social'], ['settings-online', 'Online'], ['settings-danger', 'Account reset'],
 ];
@@ -209,6 +209,36 @@ body { background: radial-gradient(ellipse at top, #1a0a30 0%, #0a0820 50%, #060
       <nav className="e6-settings-nav" aria-label="Settings sections">
         {SETTINGS_NAV.map(([id, label]) => <a key={id} href={`#${id}`} onClick={e => { e.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>{label}</a>)}
       </nav>
+
+      {/* DOWNLOAD THE CHRONICLES */}
+      <section id="settings-download" className="e6-settings-card bg-card border border-border rounded-xl p-5 scroll-mt-24">
+        <h3 className="font-heading text-sm text-primary mb-3">DOWNLOAD THE CHRONICLES</h3>
+        <p className="text-xs text-muted-foreground font-body mb-4">
+          Choose your desktop platform. Download links will be added here when the installers are ready.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="rounded-xl border border-border bg-secondary/40 p-4 flex flex-col gap-3">
+            <div>
+              <h4 className="font-heading text-sm text-foreground">Mac OS</h4>
+              <p className="text-xs text-muted-foreground mt-1">For macOS computers.</p>
+            </div>
+            <button type="button" disabled aria-disabled="true"
+              className="w-full rounded-lg px-4 py-3 bg-muted text-muted-foreground font-heading text-xs tracking-wide cursor-not-allowed opacity-75">
+              DOWNLOAD FOR MAC OS — COMING SOON
+            </button>
+          </div>
+          <div className="rounded-xl border border-border bg-secondary/40 p-4 flex flex-col gap-3">
+            <div>
+              <h4 className="font-heading text-sm text-foreground">Windows</h4>
+              <p className="text-xs text-muted-foreground mt-1">For Windows computers.</p>
+            </div>
+            <button type="button" disabled aria-disabled="true"
+              className="w-full rounded-lg px-4 py-3 bg-muted text-muted-foreground font-heading text-xs tracking-wide cursor-not-allowed opacity-75">
+              DOWNLOAD FOR WINDOWS — COMING SOON
+            </button>
+          </div>
+        </div>
+      </section>
 
       <div id="settings-account" className="e6-settings-account"><AccountPanel /></div>
 
