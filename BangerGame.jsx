@@ -333,7 +333,7 @@ export default function BangerGame({
     if (s.phase === 'flight') {
       const b = s.ball;
       b.vy += GRAV; b.x += b.vx; b.y += b.vy; b.spin += b.vx * 0.05;
-      b.trail.push({ x: b.x, y: b.y }); if (b.trail.length > 10) b.trail.shift();
+      b.trail = [];
       // net collision (swept)
       const prevX = b.x - b.vx, prevY = b.y - b.vy;
       const crossed = (prevX < NET_X && b.x >= NET_X) || (prevX > NET_X && b.x <= NET_X);
@@ -553,7 +553,7 @@ export default function BangerGame({
       return;
     }
     if (!b.alive && s.phase !== 'drop' && s.phase !== 'flight' && s.phase !== 'roll' && s.phase !== 'aim') return;
-    for (let i = 0; i < b.trail.length; i++) { const t = b.trail[i]; ctx.globalAlpha = (i / b.trail.length) * 0.3; ctx.fillStyle = '#FFEECC'; ctx.beginPath(); ctx.arc(t.x, t.y, 8, 0, Math.PI * 2); ctx.fill(); }
+    
     ctx.globalAlpha = 1;
     ctx.fillStyle = '#FFEECC'; ctx.shadowColor = '#FFCC66'; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(b.x, b.y, 9, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
     ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.spin); ctx.strokeStyle = '#DDA044'; ctx.lineWidth = 1.2; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(0, 0, 7, i * 2.094, i * 2.094 + 1.05); ctx.stroke(); } ctx.restore();

@@ -525,8 +525,7 @@ export default function VolleyballGame({ p1Chars: rawP1Chars, p2Chars: rawP2Char
         s.ball.vx *= 0.997;
         s.ball.spin += s.ball.vx * 0.03;
         const sp = Math.hypot(s.ball.vx, s.ball.vy);
-        if (sp > 4) { s.ball.trail.push({ x: s.ball.x, y: s.ball.y }); if (s.ball.trail.length > 8) s.ball.trail.shift(); }
-        else if (s.ball.trail.length) s.ball.trail.shift();
+        s.ball.trail = [];
         if (s.ball.y < CEILING) { s.ball.y = CEILING; s.ball.vy = Math.abs(s.ball.vy) * 0.4; }
         // Ball bounces off back walls (dotted lines) — stays in play
         if (s.ball.x <= COURT_LEFT) { s.ball.x = COURT_LEFT; s.ball.vx = Math.abs(s.ball.vx) * 0.55; sfx.hit(); }

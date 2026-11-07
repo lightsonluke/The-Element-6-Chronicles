@@ -5,6 +5,8 @@ import { applyElement } from './elements.js';
 import { getKeybinds, readPlayerInput } from './keybinds.js';
 import { readGamepadInput } from './controllerProfiles.js';
 import { drawSportChar } from './sportDraw.jsx';
+import PauseMenu from './PauseMenu.jsx';
+import { MatchPausePortal, MatchPauseButtonPortal } from './PauseLayerPortal.jsx';
 import { sfx } from './sfx.js';
 import { music } from './music.js';
 import { mergeBotCosmetics } from './botCosmetics.js';
@@ -189,7 +191,7 @@ export default function DodgeballGame({
     };
     const kd = (e) => {
       keysRef.current[e.key.length === 1 ? e.key.toLowerCase() : e.key] = true;
-      if (e.key === 'Escape') setPaused(p => !p);
+      if (e.key === 'Escape' || e.key.toLowerCase() === 'p') setPaused(p => !p);
       if (lanConnection && !remoteKeysProc.current) {
         const rk = resolveKey(e.key);
         lanConnection.sendMessage({ type: 'key', key: rk, down: true });
@@ -441,8 +443,7 @@ export default function DodgeballGame({
     if (b.x >= RIGHT - BALL_R) { b.x = RIGHT - BALL_R; b.vx *= -0.7; }
     if (b.y >= FLOOR - BALL_R - 1) { b.vx *= 0.985; if (Math.abs(b.vx) < 0.05) b.vx = 0; }
     // trail
-    if (Math.abs(b.vx) > 4 || Math.abs(b.vy) > 4) { b.trail.push({ x: b.x, y: b.y }); if (b.trail.length > 8) b.trail.shift(); }
-    else b.trail = [];
+    b.trail = [];
     // hit detection — only a fast, thrown ball scores
     if (b.hitCd === 0 && b.lastThrower !== 0 && Math.abs(b.vx) > 1.8) {
       const vs = b.lastThrower === 1 ? 2 : 1;
@@ -584,7 +585,7 @@ export default function DodgeballGame({
 
   function drawBall(ctx, b) {
     // trail
-    for (let i = 0; i < b.trail.length; i++) { const t = b.trail[i]; ctx.globalAlpha = (i / b.trail.length) * 0.3; ctx.fillStyle = '#ff4d4d'; ctx.beginPath(); ctx.arc(t.x, t.y, BALL_R * 0.8, 0, Math.PI * 2); ctx.fill(); }
+    
     ctx.globalAlpha = 1;
     // shadow on floor (only for free balls)
     if (b.heldBy === null) { ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(b.x, FLOOR - 2, BALL_R * 0.9, BALL_R * 0.3, 0, 0, Math.PI * 2); ctx.fill(); }
@@ -673,10 +674,13 @@ export default function DodgeballGame({
           </span>
         </div>
         <div className="el6-dodgeball-match-controls flex gap-2">
-          <button onClick={() => setPaused(p => !p)} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs">{paused ? ' RESUME' : ' PAUSE'}</button>
+          <MatchPauseButtonPortal>
+            <button onClick={() => setPaused(p => !p)} className="el6-match-pause-button el6-controller-pause-trigger px-3 py-2 bg-secondary/90 text-secondary-foreground rounded-lg font-heading text-xs">{paused ? ' RESUME' : ' PAUSE'}</button>
+          </MatchPauseButtonPortal>
           <button onClick={onQuit} className="px-3 py-1 bg-destructive text-destructive-foreground rounded font-heading text-xs">QUIT</button>
         </div>
       </div>
+      {paused && <MatchPausePortal><PauseMenu onResume={() => setPaused(false)} onQuit={onQuit} /></MatchPausePortal>}
       <GameCanvasPortal>
         <canvas ref={canvasRef} width={W} height={H} data-e6-game-canvas="true" className="el6-match-canvas el6-sport-canvas rounded-lg shadow-2xl w-full"
                 style={{ width: '100%', maxWidth: W + 'px', aspectRatio: `${W} / ${H}`, height: 'auto', background: '#15102a' }} />

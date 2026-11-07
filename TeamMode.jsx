@@ -668,7 +668,7 @@ function TeamFight({ p1, p1b, p2, p2b, cpuDifficulty, teamDamage, showTriangles,
           <span className="text-9xl font-heading text-accent animate-pulse">{countdown}</span>
         </div>
       )}
-      {paused && !winner && <PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={finishQuit} />}
+      {paused && !winner && <div className="absolute inset-0 z-[120] flex items-center justify-center"><PauseMenu onResume={() => { pausedRef.current = false; setPaused(false); }} onQuit={finishQuit} /></div>}
       {(() => {
         const winNames = winTeam === 1 ? [getCharData(p1)?.name, getCharData(p1b)?.name] : winTeam === 2 ? [getCharData(p2)?.name, getCharData(p2b)?.name] : [];
         return winner && (

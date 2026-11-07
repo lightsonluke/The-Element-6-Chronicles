@@ -122,69 +122,54 @@ function adjustFocusedControl(direction) {
 // natural in grids (character selects), columns (menus), and on-screen keyboards.
 function navigateFocusSpatial(direction) {
   const focusable = getVisibleFocusable();
-  if (focusable.length === 0) return;
+  if (!focusable.length) return;
   const current = document.activeElement;
   const currentIdx = focusable.indexOf(current);
 
-  if (currentIdx === -1 || !current || !focusable.includes(current)) {
-    focusable[0].focus();
-    focusable[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  // Only choose a nearby element genuinely in the requested direction.
+  // Never jump to an unrelated corner of the screen when no neighbor exists.
+  if (currentIdx < 0) {
+    const first = focusable.find(el => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    });
+    if (first) {
+      first.focus({ preventScroll: true });
+      first.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    }
     return;
   }
 
-  const currentRect = current.getBoundingClientRect();
-  const currentCx = currentRect.left + currentRect.width / 2;
-  const currentCy = currentRect.top + currentRect.height / 2;
-
+  const a = current.getBoundingClientRect();
+  const ax = a.left + a.width / 2;
+  const ay = a.top + a.height / 2;
   let best = null;
   let bestScore = Infinity;
 
-  for (let i = 0; i < focusable.length; i++) {
-    if (i === currentIdx) continue;
-    const el = focusable[i];
-    const rect = el.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dx = cx - currentCx;
-    const dy = cy - currentCy;
+  for (const el of focusable) {
+    if (el === current || el.contains(current) || current.contains(el)) continue;
+    const r = el.getBoundingClientRect();
+    const bx = r.left + r.width / 2;
+    const by = r.top + r.height / 2;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const primary = direction === 'left' ? -dx : direction === 'right' ? dx
+      : direction === 'up' ? -dy : dy;
+    const cross = direction === 'left' || direction === 'right' ? Math.abs(dy) : Math.abs(dx);
+    if (primary <= Math.max(8, (direction === 'left' || direction === 'right' ? a.width : a.height) * 0.12)) continue;
 
-    let valid = false;
-    let primaryDist = 0;
-    let crossDist = 0;
+    // Prefer same-row / same-column targets. A diagonal target is allowed only
+    // when it is still a plausible adjacent control, not a distant stray item.
+    const alignmentLimit = Math.max(36, primary * 0.72, (direction === 'left' || direction === 'right' ? a.height + r.height : a.width + r.width) * 0.65);
+    if (cross > alignmentLimit) continue;
 
-    if (direction === 'up') {
-      valid = dy < -2;
-      primaryDist = -dy;
-      crossDist = Math.abs(dx);
-    } else if (direction === 'down') {
-      valid = dy > 2;
-      primaryDist = dy;
-      crossDist = Math.abs(dx);
-    } else if (direction === 'left') {
-      valid = dx < -2;
-      primaryDist = -dx;
-      crossDist = Math.abs(dy);
-    } else if (direction === 'right') {
-      valid = dx > 2;
-      primaryDist = dx;
-      crossDist = Math.abs(dy);
-    }
-
-    if (!valid) continue;
-
-    // Score: prioritize primary axis distance, penalize cross-axis offset.
-    // Weighting of 1.5 on cross-axis makes grid navigation snap to columns
-    // while still allowing diagonal movement when no direct neighbor exists.
-    const score = primaryDist + crossDist * 1.5;
-    if (score < bestScore) {
-      bestScore = score;
-      best = el;
-    }
+    const score = primary + cross * 2.35 + (cross > primary * 0.35 ? 24 : 0);
+    if (score < bestScore) { bestScore = score; best = el; }
   }
 
   if (best) {
-    best.focus();
-    best.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    best.focus({ preventScroll: true });
+    best.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
   }
 }
 
@@ -373,9 +358,9 @@ export function useGamepadMenuNav(enabled = true) {
             if (!adjustFocusedControl(d)) navigateFocusSpatial(d);
             repeatTimer = 0;
           }
-          if (dir[d] && lastDir.current[d] && repeatTimer > 30) {
+          if (dir[d] && lastDir.current[d] && repeatTimer > 42) {
             if (!adjustFocusedControl(d)) navigateFocusSpatial(d);
-            repeatTimer = 25;
+            repeatTimer = 34;
           }
           if (!dir[d]) lastDir.current[d] = false;
           else lastDir.current[d] = true;
