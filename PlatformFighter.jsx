@@ -3,6 +3,7 @@ import { HEROES } from './heroes.js';
 import { VILLAINS } from './villains.js';
 import { GUARDIANS } from './guardians.js';
 import { ALL_CHARS_MAP } from './allCharacters.js';
+import { paintPower, paintPowerOverlay } from './mvPowerArt.js';
 import { createFighter, updateFighter, checkHit, applyHit, updateAI, CPU_DIFFICULTY, updateProjectiles, drawProjectiles, loseStock } from './fighter.js';
 import {
   drawStickman, drawAttackEffect, drawSuperEffect, drawOffscreenIndicator,
@@ -13,6 +14,7 @@ import PauseMenu from './PauseMenu';
 import { music } from './music.js';
 import { sfx } from './sfx.js';
 import { getKeybinds, readPlayerInput, readSinglePlayerInput, getSchemeKeybinds, getSoloKeybinds } from './keybinds.js';
+import { useClipRecorder } from './useClipRecorder.js';
 import { drawMaterialOverlay } from './materials.js';
 import { getAccessory, drawAccessory, isBehindAccessory, resolveAccColor, getEquippedAccessories } from './cosmetics.js';
 import { getCharRenderColor, getSkinParts } from './skins.js';
@@ -567,6 +569,7 @@ export default function PlatformFighter({
   equippedAccessories = {}, equippedSkins = {}, killFXId = 'none',
   p1Element = 'basic', p2Element = 'basic', infiniteSuper = false, lanConnection = null, lanRole = null,
   matchTime = 240, settings = {}, localScheme = null, localP2Controller = true,
+  p1Username = null, p1Title = null,
   customCharsData = {},
   equippedCrossovers = {},
   equippedShikigami = {},
@@ -594,6 +597,7 @@ export default function PlatformFighter({
   const lastResultAwardedRef = useRef(false); // guards against double-paying the same match (rematch vs exit)
   const onMoveRef = useRef(onMove);
   onMoveRef.current = onMove;
+  useClipRecorder(canvasRef);
 
   useEffect(() => {
     const releaseViewport = acquireGameplayViewport();
@@ -1368,7 +1372,11 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
         drawMovementTrail(ctx, f, equippedMovementTrails?.[effId] || equippedMovementTrails?.[f.char.id], movementTrailHistoryRef.current, `slot-${slot}`, fScale);
         // Shikigami — purely cosmetic floating companion (behind + above the fighter)
         drawShikigamiFollower(ctx, f, botShikigamiRef.current?.[effId], f.frame, fScale);
-        if (!flashing) drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote, f.attackData, { vx: f.vx || 0, vy: f.vy || 0, grounded: !!f.grounded, dashTimer: f.dashTimer || 0, dashDir: f.dashDirection || { x: 0, y: 0 }, wallSlide: !!f.wallSlide, wallSide: f.wallSide || 0, hitSide: f._hitSide || 0, memo: (f._rigMemo = f._rigMemo || {}) });
+        // Preserve the authored power-effect layer while retaining the newer
+        // movement-aware character rig and movement-trail rendering.
+        paintPower(ctx, f, f.frame, drawStickman);
+        if (!flashing && !f._pwHide) drawStickman(ctx, f.x, f.y, renderColor, f.facing, f.frame, fScale, renderChar.isSpirit, f.state, renderChar, f.powerActive, false, f._stolenPowerColor, f.emote, f.attackData, { vx: f.vx || 0, vy: f.vy || 0, grounded: !!f.grounded, dashTimer: f.dashTimer || 0, dashDir: f.dashDirection || { x: 0, y: 0 }, wallSlide: !!f.wallSlide, wallSide: f.wallSide || 0, hitSide: f._hitSide || 0, memo: (f._rigMemo = f._rigMemo || {}) });
+        if (!f._pwHide) paintPowerOverlay(ctx, f, f.frame);
         if (!flashing) {
           const skinParts = getSkinParts(effId, equippedSkins);
           const accs = getEquippedAccessories(botAccessoriesRef.current, effId);
@@ -1520,6 +1528,30 @@ let prevJumps1 = 2, prevDownAir1 = false; // combo mode: track jumps and fastfal
       ctx.restore();
 
       drawTimer(ctx, W, gameRef.current.timer);
+
+      // Profile title and username remain available alongside the compact HUD.
+      if (!settings.hideTopUsername && (p1Username || p1Title)) {
+        ctx.save();
+        ctx.textAlign = 'right';
+        const ux = W - 16;
+        let uy = 22;
+        if (p1Title) {
+          ctx.font = 'bold 12px Orbitron, sans-serif';
+          ctx.fillStyle = '#FFD700';
+          ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 6;
+          ctx.fillText(p1Title.toUpperCase(), ux, uy);
+          ctx.shadowBlur = 0;
+          uy += 18;
+        }
+        if (p1Username) {
+          ctx.font = 'bold 14px Orbitron, sans-serif';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.shadowColor = '#000000'; ctx.shadowBlur = 4;
+          ctx.fillText(p1Username, ux, uy);
+          ctx.shadowBlur = 0;
+        }
+        ctx.restore();
+      }
 
       if (gameRef.current.superFlash1) { const sf = gameRef.current.superFlash1; sf.progress += dt * 0.55; drawSuperFlash(ctx, W, H, sf.name, sf.color, sf.progress); if (sf.progress >= 1) gameRef.current.superFlash1 = null; }
       if (gameRef.current.superFlash2) { const sf = gameRef.current.superFlash2; sf.progress += dt * 0.55; drawSuperFlash(ctx, W, H, sf.name, sf.color, sf.progress); if (sf.progress >= 1) gameRef.current.superFlash2 = null; }

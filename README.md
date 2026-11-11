@@ -1,19 +1,21 @@
-# Party, guest-progress, and super-move recovery patch
+# Element 6 — attack overhaul (693 moves) + power abilities (77)
 
-Copy the eight source files at this package root into the game project root, replacing the same files. Apply the SQL migration only after the party, online-sports, and Table migrations listed below are already installed.
+## Install
+Copy everything in `src/` into your game's `src/` folder.
+- NEW files (add): mvMoves.js, mvArchV2.js, mvArchV2g2.js, mvArchV2g3.js, mvArchV2g5.js, mvArtPhys.js,
+  mvPower.js, mvPowerKit.js, mvPowerFam.js, mvPowerDefs1.js, mvPowerDefs2.js, mvPowerDefs3.js, mvPowerArt.js
+- REPLACE (patched copies of your files): fighter.js, mvBuild.js, mvKB.js, mvMove.js, mvEngine.js, PlatformFighter.jsx
+  (If your copies have changed since you uploaded them, re-apply the edits instead of overwriting; each patch is small and marked with comments.)
 
-## Included changes
+## What is where
+- attack_sheet_all.md  — every one of the 693 attacks: hitbox part, frames, damage, hitstun, notes
+- power_abilities.md   — all 77 power abilities: second press, cooldown, mechanics
+- tests/               — check_v2.mjs (attack structure), power_test.mjs + power_mech.mjs (abilities).
+                         They import fighter.js, which needs files that were not uploaded (character data,
+                         gen1AttackGeometry.js, genPowers.js, ...), so run them in your repo, not standalone.
 
-- Adds party-only Grand Circuit and four-player 2v2 Capture the Flag launch paths using the existing party/table/sports session code.
-- Keeps unauthenticated and anonymous guest progress device-local. If auth initialization stalls, the game opens local guest progress instead of holding the screen on an account-sync overlay; a later confirmed sign-in still switches to account progress.
-- Contains malformed super-move drawing to the fighter-local effect area, skips invalid effect frames, and recovers the gameplay animation loop after a rendering error instead of leaving the cleared canvas blank.
-
-## Database migration
-
-Apply `sql/Supabase-party-grand-circuit-and-ctf.sql` after the existing SQL setup for online sports, party presence/sports, party-linked rooms, party/Table integration, and Table rounds. The migration is intended for the matching schema already used by this project; it is not a replacement for those prerequisite migrations.
-
-## Limits
-
-Grand Circuit reuses the existing online 1v1 fight session for each elimination match. CTF uses the existing host-authoritative sport state transport. This patch does not implement deterministic frame-perfect rollback, nor does it complete a bespoke redesign of every game screen. The Grand Circuit result RPC still relies on a participant report and is not a trusted simulation result.
-
-No production build or multiplayer test was run for this package.
+## Known gaps
+- Not seen rendered; verified numerically through fighter.js with stand-ins for missing files.
+- Hero Codex / Meet the Characters not wired: read MOVE_NAMES from src/mvMoves.js and mvPowerName() from src/mvPower.js.
+- Opponent-projectile interactions (Hana, Osamu, Itto, Magneto, Cable, Volt) assume `projectiles` / `genProjectiles` arrays.
+- Team shields read fighter._allies (not present yet). Cooldowns for powers were chosen by me. Online sync untested.

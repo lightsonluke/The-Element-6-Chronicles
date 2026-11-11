@@ -205,7 +205,7 @@ export function evalFx(m, t, sc = 1) {
     const u = uAt(m, t);
     const r = fn(m, el, t, sc, el.noLate ? 0 : late);
     const stt = CTX.st;
-    const gated = !el.when || (stt && ((el.when === 'dive' && stt.dive) || (el.when === 'land' && stt.landed)));
+    const gated = !el.when || (stt && ((el.when === 'dive' && stt.dive) || (el.when === 'land' && stt.landed) || (el.when === 'counter' && stt.countered)));
     const live = gated && inActive && el.hit !== false && u > win[0] - 1e-6 && (u <= win[1] + 1 / Math.max(1, a) + 1e-6);
     const st = el.st || 0;
     if (live) for (const sh of r.shapes) { sh.st = st; sh.el = i; out.shapes.push(sh); }

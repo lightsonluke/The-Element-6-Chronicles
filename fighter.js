@@ -11,7 +11,9 @@ import { drawWhip } from './whipRenderer.js';
 import { activateGenPower, updateGenProjectiles, onGenPowerExpire } from './genPowers.js';
 import { updateMovementAbilities, onMovementAbilityLanded, resetMovementAbilityState } from './movementAbilities.js';
 import { getAttackSpecForData, getActiveSpecHitboxes, hitboxIntersectsBody, specKnockbackVector } from './attackSpecs.js';
-import { mvTick, mvHitShapes, mvStageShare, mvLaunchFor } from './mvEngine.js';
+import { mvTick, mvHitShapes, mvStageShare, mvLaunchFor, mvLocalResult } from './mvEngine.js';
+import { anchor as mvAnchor } from './mvCore.js';
+import { mvPowerTick, mvPowerHas, mvPowerReset } from './mvPower.js';
 import { FRIC as MV_FRIC } from './mvKB.js';
 
 export const GRAVITY = 0.42;
@@ -29,7 +31,7 @@ export const ACCEL_AIR = 0.9;
 const SIG_COOLDOWN = 0;
 const NORMAL_COOLDOWN = 8;
 const HEAVY_COOLDOWN = 0; // Heavy/signature lockout is governed by attack duration/endlag only.
-const KNOCKBACK_SCALE = 0.36; // another 10% reduction across legacy attacks; heavies get an extra trim below
+const KNOCKBACK_SCALE = 0.36; // reduced legacy knockback; heavy attacks receive an additional trim
 
 // CPU difficulty configs
 // (CPU_DIFFICULTY moved to botAI.js)
@@ -713,7 +715,7 @@ function activatePower(fighter, opponent) {
   if (_savedAllOpps) fighter._allOpponents = _savedAllOpps;
 }
 
-export function activateFighterPower(fighter, opponent) { activatePower(fighter, opponent); }
+export function activateFighterPower(fighter, opponent) { if (mvPowerHas(fighter)) { fighter._pwForcePress = true; return; } activatePower(fighter, opponent); }
 
 export function updateProjectiles(fighter, opponent) {
   if (fighter.genProjectiles && fighter.genProjectiles.length > 0) {
@@ -1159,6 +1161,28 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
   fighter._platforms = platforms;
   if (fighter._dropThroughTimer > 0) fighter._dropThroughTimer--;
 
+  // Authored throw in progress: pinned to the thrower's hands until the throw's release phase, then thrown.
+  if (fighter._mvGrabBy) {
+    const gb = fighter._mvGrabBy, gs = gb && gb.attackData && gb.attackData._mv;
+    if (!gs || !gs.m.grab || gs.grabbed !== fighter || gb.state === 'hitstun' || gb.state === 'dead' || gb.state === 'respawning') {
+      fighter._mvGrabBy = null; if (fighter.state === 'captured') fighter.state = 'falling';          // thrower interrupted → released unharmed
+    } else if ((Number(gs.pc) || 0) >= gs.m.grab.at || gs.f >= gs.total - 1) {
+      fighter._mvGrabBy = null; gs.grabbed = null; gs.grabRelease = true;
+      const _sx = fighter.x; fighter.x = gb.x + (gb.facing || 1) * 24; fighter.y = Math.min(fighter.y, gb.y - 6);
+      applyHit(gb, fighter); gs.grabRelease = false; void _sx;
+      return;
+    } else {
+      const r = mvLocalResult(gb), h = mvAnchor(r.J, 'hands'), fc = gb.facing || 1;
+      fighter.x = gb.x + fc * h[0] + fc * 10; fighter.y = Math.min(gb.y, gb.y + h[1] + 34);
+      fighter.vx = 0; fighter.vy = 0; fighter.grounded = false; fighter.state = 'captured'; fighter.hitstun = 0; fighter.facing = -fc;
+      return;
+    }
+  }
+
+  // Power-button abilities (mvPower.js): owns the power button for every character that has an authored ability.
+  fighter._platforms = platforms;
+  mvPowerTick(fighter, inputs, platforms, stageWidth, stageHeight, opponent);
+
   // Captured fighters cannot steer, jump, attack, or be repeatedly recaptured.
   // The attacker completes the authored move and then releases with a bounded
   // directional throw; if the attacker is interrupted, the victim is released.
@@ -1353,6 +1377,7 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
 
   // Attack state — can't act but still apply physics
   if (fighter.state === 'attacking' || fighter.state === 'superAttack') {
+    fighter._mvStageW = stageWidth;
     const mvOn = mvTick(fighter);
     const fireMove = !mvOn && fighter.char?.id === 'g1_fire' ? fighter.attackData : null;
     const fireElapsed = fireMove ? Math.max(0, (Number(fireMove.duration) || 1) - fighter.attackTimer) : -1;
@@ -1912,6 +1937,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
   const wallPlatforms = [];
   const collectWalls = (f) => {
     if (!f) return;
+    if (f._pwSolids) for (const s of f._pwSolids) wallPlatforms.push({ x: s.x, y: s.y, w: s.w, h: s.h, material: 'normal', _forceSolid: !!s.solid });
     if (f.projectiles) {
       for (const wp of f.projectiles) {
         if (wp.type === 'iron_wall' && wp.life > 0) {
@@ -2238,7 +2264,24 @@ function resonanceHitStage(attacker) {
   return list.findIndex(([lo,hi])=>p>=lo&&p<=hi);
 }
 
+// Counter stances (`counter` in the move def): an attack that connects inside the brace window is turned away
+// (no damage to the defender), the attacker is staggered, and ONLY then does the defender's answer strike go live.
 export function checkHit(attacker, defender) {
+  const hit = checkHitCore(attacker, defender);
+  if (!hit) return false;
+  const dmv = defender.attackData && defender.attackData._mv;
+  if (dmv && dmv.m.counter && !dmv.countered && dmv.f >= (dmv.m.counter.from || 2) && dmv.f < dmv.m.fr[0]) {
+    dmv.countered = true; dmv.f = dmv.m.fr[0] - 1;                       // next tick = first frame of the answer strike
+    if (attacker.attackData) { attacker.attackData._hitboxConsumed = true; attacker.attackData.hitApplied = true; }
+    const away = Math.sign(attacker.x - defender.x) || -(defender.facing || 1);
+    attacker.attackData = null; attacker.attackTimer = 0; attacker.attackHold = null;
+    attacker.state = 'hitstun'; attacker.hitstun = 16; attacker.vx = away * 1.6; attacker.vy = Math.min(attacker.vy || 0, -1.5);
+    defender.hitEffects = defender.hitEffects || []; defender.hitEffects.push({ x: defender.x + (defender.facing || 1) * 24, y: defender.y - 34, color: defender.char.color, spawnFrame: defender.frame });
+    return false;
+  }
+  return true;
+}
+function checkHitCore(attacker, defender) {
   if (!attacker.attackData || attacker.attackData.type === 'attackHold' || attacker.attackData.holding || attacker.attackData._hitboxConsumed) return false;
   const resonanceStage = resonanceHitStage(attacker);
   const multi = !!attacker.attackData.multiHitStages || resonanceStage >= 0;
@@ -2369,6 +2412,17 @@ export function applyHit(attacker, defender) {
     attacker.attackData.hitApplied = false;
   } else {
     attacker.attackData.hitApplied = true;
+  }
+  // Authored throws (move def `grab`): the first confirmed palm contact CAPTURES the target; the throw animation
+  // then carries them along the attacker's hands and the real hit (damage, launch, hitstun) lands at release.
+  {
+    const _mvs = attacker.attackData._mv;
+    if (_mvs && _mvs.m.grab && !_mvs.grabRelease && !defender._mvGrabBy) {
+      defender._mvGrabBy = attacker; _mvs.grabbed = defender; _mvs.grabAt = _mvs.f;
+      defender.trapped = false; defender.attackData = null; defender.attackHold = null; defender.attackTimer = 0;
+      defender.vx = 0; defender.vy = 0; defender.grounded = false; defender.state = 'captured';
+      return;
+    }
   }
   // Capture-style weapon contacts are triggers, not ordinary damage boxes.
   // Only a confirmed overlap enters the captured state; a whiff never throws.
@@ -2573,8 +2627,7 @@ export function applyHit(attacker, defender) {
     defender.hitstun = Math.min(50, Math.max(8, Math.round(L.hitstun * controlHitstunMul)));
     defender._mvLaunch = { fric: MV_FRIC };
   }
-  // Leave a small combo window after the attacker recovers. Count any active
-  // frames still remaining, then add 10–17% of the move's endlag as extra stun.
+  // Preserve a short combo window based on the attacker's remaining lockout/endlag.
   const ad = attacker.attackData;
   const moveSlot = ad._mv?.m?.slot || ad.mvSlot;
   const isHeavyMove = !!ad.isHeavy || !!ad.isGroundPound || ['uh', 'dh', 'sh', 'gp'].includes(moveSlot);
@@ -2608,6 +2661,7 @@ export function applyHit(attacker, defender) {
 }
 
 export function loseStock(fighter, stageWidth, stageHeight) {
+  try { mvPowerReset(fighter); } catch (e) { /* ability cleanup is best-effort */ }
   const rp = fighter.respawnPoint;
   // Life's Rebirth: 50% chance to revive if power is active
   if (fighter.reviveChance && fighter.reviveChance > 0 && fighter.powerActive === 'heal') {
