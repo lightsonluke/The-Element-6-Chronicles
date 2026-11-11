@@ -8,6 +8,7 @@ const SPLIT_CITY_ART_PATH = `${import.meta.env.BASE_URL}art/stages/split-city/ci
 const splitCityArt = typeof Image === 'undefined' ? null : new Image();
 if (splitCityArt) splitCityArt.src = SPLIT_CITY_ART_PATH;
 
+
 const SILVER_MANSION_BACKDROP_PATH = `${import.meta.env.BASE_URL}art/stages/silver-mansion/silver-mansion-backdrop.png`;
 const silverMansionBackdrop = typeof Image === 'undefined' ? null : new Image();
 if (silverMansionBackdrop) silverMansionBackdrop.src = SILVER_MANSION_BACKDROP_PATH;

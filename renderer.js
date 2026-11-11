@@ -23,7 +23,8 @@ if (splitCityStage) splitCityStage.src = `${import.meta.env.BASE_URL}art/stages/
 if (splitCityMovingStage) splitCityMovingStage.src = `${import.meta.env.BASE_URL}art/stages/split-city/split-city-dropthrough-platform.png`;
 if (splitCityBackdrop) splitCityBackdrop.src = `${import.meta.env.BASE_URL}art/stages/split-city/city-backdrop.png`;
 
-// Silver's Mansion — supplied transparent platform artwork.
+
+// Silver's Mansion uses the clean platform PNGs (without collision guides).
 const silverMansionMain = typeof Image === 'undefined' ? null : new Image();
 const silverMansionDropthrough = typeof Image === 'undefined' ? null : new Image();
 const silverMansionTall = typeof Image === 'undefined' ? null : new Image();
@@ -63,6 +64,24 @@ function drawJoinedSplitCityPlatform(ctx, platform, foreground = false) {
   return true;
 }
 
+function drawSilverMansionPlatform(ctx, platform, kind) {
+  const image = kind === 'main' ? silverMansionMain : kind === 'dropthrough' ? silverMansionDropthrough : silverMansionTall;
+  // Keep collision boxes invisible even before their clean art has loaded.
+  if (!imageReady(image)) return true;
+  const visualX = platform._visualX ?? platform.x;
+  const visualW = platform._visualW ?? platform.w;
+  const visualY = platform._visualY ?? platform.y;
+  // Pixel rows from the user's line-reference images: main 159, dropthrough 337, tall 64.
+  const topOffsets = { main: 159, dropthrough: 337, tall: 64 };
+  const scale = visualW / image.naturalWidth;
+  const drawY = visualY - topOffsets[kind] * scale;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(image, visualX, drawY, visualW, image.naturalHeight * scale);
+  ctx.restore();
+  return true;
+}
+
 function drawSplitCityDropthroughPlatform(ctx, platform) {
   // Claim the platform's render slot even while its image is loading, so the
   // generic grey collision rectangle is never shown as a substitute texture.
@@ -74,23 +93,6 @@ function drawSplitCityDropthroughPlatform(ctx, platform) {
   const visualScale = visualW / splitCityMovingStage.naturalWidth;
   const visualH = splitCityMovingStage.naturalHeight * visualScale;
   ctx.drawImage(splitCityMovingStage, visualX, visualY - 280 * visualScale, visualW, visualH);
-  return true;
-}
-
-function drawSilverMansionPlatform(ctx, platform, kind) {
-  const image = kind === 'main' ? silverMansionMain : kind === 'dropthrough' ? silverMansionDropthrough : silverMansionTall;
-  // Suppress the generic collision slab while the image loads.
-  if (!imageReady(image)) return true;
-  const visualX = platform._visualX ?? platform.x;
-  const visualW = platform._visualW ?? platform.w;
-  const visualY = platform._visualY ?? platform.y;
-  const topOffsets = { main: 138, dropthrough: 316, tall: 49 };
-  const scale = visualW / image.naturalWidth;
-  const drawY = visualY - topOffsets[kind] * scale;
-  ctx.save();
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(image, visualX, drawY, visualW, image.naturalHeight * scale);
-  ctx.restore();
   return true;
 }
 
@@ -2036,8 +2038,7 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
     if (p?._freehandSegment || p?._artCollisionOnly) return;
     if (mapId === 'splitcity' && (p?._splitCityMain || p.material === 'split_city_joined') && drawJoinedSplitCityPlatform(ctx, p)) return;
     if (mapId === 'silvermansion' && p?._silverMansionMain) { drawSilverMansionPlatform(ctx, p, 'main'); return; }
-    if (mapId === 'silvermansion' && p?._silverMansionDropthroughArt) { drawSilverMansionPlatform(ctx, p, 'dropthrough'); return; }
-    if (mapId === 'silvermansion' && p?._silverMansionDropthrough) return;
+    if (mapId === 'silvermansion' && p?._silverMansionDropthrough) { drawSilverMansionPlatform(ctx, p, 'dropthrough'); return; }
     if (mapId === 'silvermansion' && p?._silverMansionTall) { drawSilverMansionPlatform(ctx, p, 'tall'); return; }
     if (p?._splitCityDropthrough || (mapId === 'splitcity' && p.material === 'split_city_dropthrough')) {
       if (drawSplitCityDropthroughPlatform(ctx, p)) return;
