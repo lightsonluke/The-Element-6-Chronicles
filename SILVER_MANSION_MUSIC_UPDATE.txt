@@ -1,0 +1,9 @@
+SILVER'S MANSION MUSIC UPDATE — CORRECTED USER-PROVIDED TRACK
+
+Silver's Mansion uses the exact soundtrack file supplied by the user: "Our Fallen Solider.mp3". It is bundled at public/audio/our-fallen-solider.mp3.
+
+PlatformFighter.jsx selects this dedicated looping track whenever mapId is 'silvermansion'. The existing music manager handles playback, looping, volume, and its browser-autoplay retry after user interaction. The effect re-runs when the selected stage changes or a match is entered. Other stages retain their existing game-mode music.
+
+Install by replacing PlatformFighter.jsx and copying public/audio/our-fallen-solider.mp3 into the same path in the project. This is a correction to the earlier music add-on: do not install the incorrect Blade of Dawn audio file.
+
+Playback is still subject to the player's music mute/volume settings and browser autoplay policy.

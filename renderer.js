@@ -23,6 +23,14 @@ if (splitCityStage) splitCityStage.src = `${import.meta.env.BASE_URL}art/stages/
 if (splitCityMovingStage) splitCityMovingStage.src = `${import.meta.env.BASE_URL}art/stages/split-city/split-city-dropthrough-platform.png`;
 if (splitCityBackdrop) splitCityBackdrop.src = `${import.meta.env.BASE_URL}art/stages/split-city/city-backdrop.png`;
 
+// Silver's Mansion — supplied transparent platform artwork.
+const silverMansionMain = typeof Image === 'undefined' ? null : new Image();
+const silverMansionDropthrough = typeof Image === 'undefined' ? null : new Image();
+const silverMansionTall = typeof Image === 'undefined' ? null : new Image();
+if (silverMansionMain) silverMansionMain.src = `${import.meta.env.BASE_URL}art/stages/silver-mansion/silver-mansion-main-platform.png`;
+if (silverMansionDropthrough) silverMansionDropthrough.src = `${import.meta.env.BASE_URL}art/stages/silver-mansion/silver-mansion-dropthrough-platform.png`;
+if (silverMansionTall) silverMansionTall.src = `${import.meta.env.BASE_URL}art/stages/silver-mansion/silver-mansion-tall-platform.png`;
+
 function imageReady(image) {
   return Boolean(image && image.complete && image.naturalWidth && image.naturalHeight);
 }
@@ -66,6 +74,23 @@ function drawSplitCityDropthroughPlatform(ctx, platform) {
   const visualScale = visualW / splitCityMovingStage.naturalWidth;
   const visualH = splitCityMovingStage.naturalHeight * visualScale;
   ctx.drawImage(splitCityMovingStage, visualX, visualY - 280 * visualScale, visualW, visualH);
+  return true;
+}
+
+function drawSilverMansionPlatform(ctx, platform, kind) {
+  const image = kind === 'main' ? silverMansionMain : kind === 'dropthrough' ? silverMansionDropthrough : silverMansionTall;
+  // Suppress the generic collision slab while the image loads.
+  if (!imageReady(image)) return true;
+  const visualX = platform._visualX ?? platform.x;
+  const visualW = platform._visualW ?? platform.w;
+  const visualY = platform._visualY ?? platform.y;
+  const topOffsets = { main: 138, dropthrough: 316, tall: 49 };
+  const scale = visualW / image.naturalWidth;
+  const drawY = visualY - topOffsets[kind] * scale;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(image, visualX, drawY, visualW, image.naturalHeight * scale);
+  ctx.restore();
   return true;
 }
 
@@ -2010,6 +2035,10 @@ export function drawPlatforms(ctx, platforms, frame = 0, mapId = 'splitcity') {
     // rendered once by the stage/match renderer.
     if (p?._freehandSegment || p?._artCollisionOnly) return;
     if (mapId === 'splitcity' && (p?._splitCityMain || p.material === 'split_city_joined') && drawJoinedSplitCityPlatform(ctx, p)) return;
+    if (mapId === 'silvermansion' && p?._silverMansionMain) { drawSilverMansionPlatform(ctx, p, 'main'); return; }
+    if (mapId === 'silvermansion' && p?._silverMansionDropthroughArt) { drawSilverMansionPlatform(ctx, p, 'dropthrough'); return; }
+    if (mapId === 'silvermansion' && p?._silverMansionDropthrough) return;
+    if (mapId === 'silvermansion' && p?._silverMansionTall) { drawSilverMansionPlatform(ctx, p, 'tall'); return; }
     if (p?._splitCityDropthrough || (mapId === 'splitcity' && p.material === 'split_city_dropthrough')) {
       if (drawSplitCityDropthroughPlatform(ctx, p)) return;
     }

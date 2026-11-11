@@ -8,6 +8,10 @@ const SPLIT_CITY_ART_PATH = `${import.meta.env.BASE_URL}art/stages/split-city/ci
 const splitCityArt = typeof Image === 'undefined' ? null : new Image();
 if (splitCityArt) splitCityArt.src = SPLIT_CITY_ART_PATH;
 
+const SILVER_MANSION_BACKDROP_PATH = `${import.meta.env.BASE_URL}art/stages/silver-mansion/silver-mansion-backdrop.png`;
+const silverMansionBackdrop = typeof Image === 'undefined' ? null : new Image();
+if (silverMansionBackdrop) silverMansionBackdrop.src = SILVER_MANSION_BACKDROP_PATH;
+
 function drawSplitCityArtwork(ctx, w, h) {
   if (!splitCityArt?.complete || !splitCityArt.naturalWidth) return false;
   ctx.drawImage(splitCityArt, 0, 0, w, h);
@@ -890,6 +894,10 @@ function drawDepthVignette(ctx, w, h, pal) {
 // ── MAIN ──
 export function drawStageBackground(ctx, w, h, frame, mapId, mapData, eventColor) {
   if (mapId === 'splitcity' && drawSplitCityArtwork(ctx, w, h)) return;
+  if (mapId === 'silvermansion' && silverMansionBackdrop?.complete && silverMansionBackdrop.naturalWidth) {
+    ctx.drawImage(silverMansionBackdrop, 0, 0, w, h);
+    return;
+  }
   const isEventStage = mapId && mapId.startsWith && mapId.startsWith('event_stage_');
   let pal;
   if (isEventStage) {

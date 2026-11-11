@@ -1,0 +1,27 @@
+ELEMENT 6 CHRONICLES — STAGE ART & COLLISION UPDATE
+
+This package contains only the stage files changed or added for this update.
+
+REPLACEMENT FILES (copy to the same paths in the project):
+- PlatformFighter.jsx
+- renderer.js
+- stageBackgrounds.js
+
+NEW ASSETS:
+- public/art/stages/silver-mansion/silver-mansion-backdrop.png
+- public/art/stages/silver-mansion/silver-mansion-main-platform.png
+- public/art/stages/silver-mansion/silver-mansion-dropthrough-platform.png
+- public/art/stages/silver-mansion/silver-mansion-tall-platform.png
+
+WHAT CHANGED:
+- Silver's Mansion uses the supplied moonlit Japanese estate backdrop and its
+  own main, drop-through, and tall platform artwork. These images are loaded
+  only when the selected map is `silvermansion`.
+- Silver's Mansion collision lines are defined separately from its artwork:
+  the main floor, left/right deck tops, lower center bridge, and tall platform.
+- Split City's main platform collider is a 10px top-surface collision shape with a separate side-wall boundary
+  extending to the visible front-wall bottom. This keeps landing accurate
+  without using the full transparent image bounds as the walkable top.
+- Split City artwork and its existing art assets remain assigned to Split City.
+
+No other characters, attacks, game modes, or stages are changed.

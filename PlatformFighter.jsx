@@ -42,23 +42,27 @@ const H = 720;
 
 const MAP_PLATFORMS = {
   splitcity: [
-    // Collision lines follow only the black top-face strokes in the supplied
-    // reference PNGs. The art is drawn at its natural aspect ratio.
-    // The invisible collider follows the complete visible depth of the main
-    // platform art: from its top surface (image y=205) to the image bottom.
-    { x: 49, y: 570, w: 1182, h: 318, material: 'split_city_joined', _splitCityMain: true, _visualX: 0, _visualW: 1280, _visualY: 570 },
+    // Split City's main collider separates the 10px walkable top face from
+    // the visible front-wall depth. The art is drawn at its natural aspect
+    // ratio; side collision extends to the image bottom via _collisionBottom.
+    { x: 49, y: 570, w: 1182, h: 10, _collisionBottom: 888, material: 'split_city_joined', _splitCityMain: true, _visualX: 0, _visualW: 1280, _visualY: 570 },
     { x: 431, y: 420, w: 419, h: 10, material: 'split_city_dropthrough', _splitCityDropthrough: true, _visualX: 400, _visualW: 480, _visualY: 420 },
   ],
   // Basic — Split City backdrop with a single flat normal-material platform
   basic: [
     { x: 40, y: 620, w: 1200, h: 48 },
   ],
+  // Silver's Mansion — the invisible physics lines are aligned to the
+  // top-face strokes in the three supplied transparent platform drawings.
+  // Art is rendered separately by renderer.js at the same world positions.
   silvermansion: [
-    { x: 40,   y: 620, w: 1200, h: 48 },
-    { x: 100, y: 440, w: 300,  h: 20 },
-    { x: 880, y: 440, w: 300,  h: 20 },
-    { x: 480, y: 260, w: 320,  h: 20 },
-    { x: 570, y: 440, w: 140,  h: 20 },
+    { x: 55, y: 570, w: 1172, h: 1, material: 'silver_mansion_main', _silverMansionMain: true, _visualX: 40, _visualW: 1200, _visualY: 570 },
+    // The side decks and the lower central bridge have distinct top heights
+    // in the supplied drawing; preserve those separate collision strokes.
+    { x: 100, y: 410, w: 362, h: 1, material: 'silver_mansion_dropthrough', _silverMansionDropthrough: true, _silverMansionDropthroughArt: true, _visualX: 90, _visualW: 1100, _visualY: 410 },
+    { x: 462, y: 438, w: 357, h: 1, material: 'silver_mansion_dropthrough', _silverMansionDropthrough: true },
+    { x: 819, y: 410, w: 363, h: 1, material: 'silver_mansion_dropthrough', _silverMansionDropthrough: true },
+    { x: 165, y: 160, w: 179, h: 1, material: 'silver_mansion_tall', _silverMansionTall: true, _visualX: 105, _visualW: 300, _visualY: 160 },
   ],
   controllerforest: [
     { x: 40,   y: 620, w: 1200, h: 48 },
@@ -642,7 +646,14 @@ export default function PlatformFighter({
   useEffect(() => {
     music.setVolume(musicVolume);
     sfx.setVolume(sfxVolume);
-    music.play(gameMode === 'soccer' || gameMode === 'soccertournament' ? 'soccer' : 'fight', { stageId: mapId });
+    // Silver's Mansion always uses its dedicated looping soundtrack.
+    // This effect reruns on every stage entry/change, so the correct track
+    // is selected each time the stage is played.
+    if (mapId === 'silvermansion') {
+      music.playTrack(`${import.meta.env.BASE_URL}audio/our-fallen-solider.mp3`);
+    } else {
+      music.play(gameMode === 'soccer' || gameMode === 'soccertournament' ? 'soccer' : 'fight');
+    }
     return () => music.stop();
   }, [musicVolume, sfxVolume, gameMode, mapId]);
 
