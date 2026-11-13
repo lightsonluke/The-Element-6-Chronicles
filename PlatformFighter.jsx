@@ -53,15 +53,26 @@ const MAP_PLATFORMS = {
   basic: [
     { x: 40, y: 620, w: 1200, h: 48 },
   ],
-  // Silver's Mansion — invisible collision strips mapped to the black line
-  // references supplied for the three separate platform artworks. Each box
-  // follows the line's full horizontal span and scaled line thickness.
+  // Silver's Mansion — all colliders are invisible. Coordinates below are
+  // mapped from the supplied collision-guide PNGs at the same scale as the
+  // clean artwork drawn by renderer.js (the guide images are never rendered).
   silvermansion: [
-    { x: 55, y: 570, w: 1172, h: 8, _silverMansionMain: true, _visualX: 40, _visualW: 1200, _visualY: 570 },
-    // The narrow-middle / wide-end platform is deliberately reduced in size.
-    { x: 258, y: 410, w: 767, h: 8, _silverMansionDropthrough: true, _visualX: 250, _visualW: 780, _visualY: 410 },
-    // The tall stone platform is larger and moved to the far right side.
-    { x: 989, y: 160, w: 247, h: 8, _silverMansionTall: true, _visualX: 900, _visualW: 420, _visualY: 160 },
+    // Main floor: solid. Its top collision edge follows the guide's long
+    // horizontal top-face line; the clean art remains 1200px wide.
+    { x: 97, y: 570, w: 1118, h: 8, _silverMansionMain: true, _visualX: 40, _visualW: 1200, _visualY: 570 },
+
+    // Ornamental bridge: three independent one-way/drop-through sections.
+    // Outer decks are thicker/higher; the narrow center span has its own
+    // lower top edge, so it does not inherit the outer sections' collision.
+    { x: 266, y: 404, w: 233, h: 8, _silverMansionDropthrough: true, _silverMansionDropSection: 'left', _visualX: 250, _visualW: 780, _visualY: 410 },
+    { x: 499, y: 418, w: 282, h: 8, _silverMansionDropthrough: true, _silverMansionDropSection: 'center', _visualX: 250, _visualW: 780, _visualY: 410 },
+    { x: 781, y: 404, w: 229, h: 8, _silverMansionDropthrough: true, _silverMansionDropSection: 'right', _visualX: 250, _visualW: 780, _visualY: 410 },
+
+    // Tall stone wall: placed immediately to the right of the bridge with a
+    // small visual gap. Its collider traces the tall guide's solid perimeter;
+    // it is deliberately NOT one-way, so fighters can wall-slide on either
+    // vertical face. All geometry stays inside the 1280px stage width.
+    { x: 1056, y: 160, w: 159, h: 400, material: 'normal', _forceSolid: true, _silverMansionTall: true, _visualX: 990, _visualW: 290, _visualY: 160 },
   ],
   controllerforest: [
     { x: 40,   y: 620, w: 1200, h: 48 },

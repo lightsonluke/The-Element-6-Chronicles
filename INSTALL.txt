@@ -1,20 +1,30 @@
-Element 6 — single-stage Split City and articulated character package
+SILVER'S MANSION COLLISION + WALL-SLIDE FIX
 
-Upload all archive contents to the matching project-root paths.
+REPLACEMENT FILES (copy to the repository root, replacing the existing files):
+- PlatformFighter.jsx
+- fighter.js
+- movementAbilities.js
 
-This package replaces prior Split City packages. It uses only the supplied
-neon-crystal-floating-stage.png for the playable platform; platform-left.png
-and platform-right.png are not used.
+WHAT CHANGED
 
-The platform is drawn once behind fighters and a clipped front-lip pass is
-drawn after fighters. Collision is 45px below the visible top, so feet and
-lower shins appear embedded in the stage rather than floating over it.
+Silver's Mansion:
+- The main floor keeps its existing clean artwork and has an invisible solid top collider mapped to the supplied main-platform guide.
+- The ornamental bridge has three separate invisible one-way colliders. The left and right thick decks have their own higher collision lines; the thin center span has its own lower collision line.
+- The tall stone platform is positioned on the far right, separated from the bridge, and its invisible solid collider follows the tall guide's side/top/bottom perimeter. It is not drop-through and supports wall sliding.
+- The supplied collision-guide images are not used as platform artwork. The existing clean Silver's Mansion artwork and renderer remain unchanged.
 
-The stage has one playable top surface plus invisible underside segments that
-trace the visible crystal hull and corners. These segments are physics-only;
-they never draw generic blocks on the supplied artwork.
+Wall-slide departure rewards:
+- Only actual solid-wall slide contact arms a departure reward. One-way platforms cannot trigger it.
+- Leaving the wall grants exactly two airborne jumps and one independent air dodge.
+- Spending either jump no longer reduces the air-dodge inventory.
+- The reward can be granted on three separate wall departures before landing. A fourth departure grants nothing.
+- Touching the wall again re-arms the next departure. Landing resets the chain and restores normal resources.
+- A dash away from a wall does not count as a wall-slide departure.
 
-Characters retain their existing design and full size. Arms and legs use
-continuous two-bone motion with visible elbow/knee crease lines. Running,
-jumping, attacks, hitstun, and emotes use the same continuously calculated
-limb angles—no sprite-frame swapping is used.
+VALIDATION PERFORMED
+- JavaScript syntax checks passed for fighter.js and movementAbilities.js.
+- JSX/JavaScript parse check passed for PlatformFighter.jsx.
+- Isolated movement-logic tests passed for all three rewards, the fourth-departure cap, independent jump/dodge use, landing reset, and ignoring one-way platforms as walls.
+
+LIMITATION
+The project was not launched in a browser/game runtime in this environment. These checks verify the edited logic and syntax, but they are not a substitute for a live gameplay test with your build.

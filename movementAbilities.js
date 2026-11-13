@@ -73,9 +73,10 @@ function startDash(fighter, x, y) {
 
   fighter.dashDirection = { x, y };
 
-  // Preserve wallContactActive so leaving a wall during a dash
-  // can still be detected and processed.
+  // A dash is not a wall-slide departure. Clear the wall latch so a dash
+  // away from a wall cannot award wall-slide resources.
   fighter.wallSlide = false;
+  fighter.wallContactActive = false;
 
   fighter.vx =
     x *
@@ -174,6 +175,10 @@ function getWallContact(platforms, fighter) {
       continue;
     }
 
+    // One-way/jump-through platforms are not climbable walls. Silver's
+    // tall mansion wall is explicitly _forceSolid and remains eligible.
+    if (!p._forceSolid && p.h <= 20) continue;
+
     if (
       p._deleted > 0 ||
       !Number.isFinite(p.x) ||
@@ -227,17 +232,18 @@ function grantWallDepartureResources(fighter) {
   ) {
     fighter.wallGrantsUsed = grantsUsed + 1;
 
-    const maxJumps = Number.isFinite(fighter.maxJumps)
-      ? fighter.maxJumps
-      : 3;
+    // fighter.js consumes `fighter.jumps` directly for airborne jumps.
+    // Restore exactly two usable jumps on every valid wall departure.
+    fighter.jumps = MOVEMENT_ABILITY_CONFIG.jumpsPerWallDeparture;
+    fighter.jumpsUsed = 0;
 
-    fighter.jumpsUsed = Math.max(
-      0,
-      maxJumps - MOVEMENT_ABILITY_CONFIG.jumpsPerWallDeparture
-    );
-
+    // Dodge inventory is independent from the jump counter. fighter.js must
+    // never clamp it to the remaining jumps; both resources are usable.
     fighter.airDodgeUses =
       MOVEMENT_ABILITY_CONFIG.dodgesPerWallDeparture;
+    // A newly granted wall-departure dodge must be immediately available even
+    // if a previous dash put the shared dash cooldown on the fighter.
+    fighter.dashCooldown = 0;
   }
 
   // Consume this departure event exactly once.
@@ -307,10 +313,14 @@ export function updateMovementAbilities(fighter, inputs, platforms) {
     grantWallDepartureResources(fighter);
   }
 
-  // Record wall contact, including during a dash.
-  if (physicalWallContact) {
+  // Only an actual wall-slide contact arms a departure reward. Merely
+  // brushing a wall, touching a one-way platform, or dashing past a wall
+  // cannot grant the extra resources.
+  if (physicalWallContact && !fighter.gravityInverted && fighter.dashTimer <= 0) {
     fighter.wallContactActive = true;
     fighter.wallSide = detectedWallSide;
+  } else if (fighter.gravityInverted) {
+    fighter.wallContactActive = false;
   }
 
   // Do not allow directional double-taps while control is locked.

@@ -1582,7 +1582,6 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
         fighter.vy = fighter.gravityInverted ? -force : force;
         if (useGroundJump) {
           fighter.jumps = fighter.maxJumps - 1;
-          fighter.airDodgeUses = Math.min(fighter.airDodgeUses, fighter.jumps);
           fighter.coyoteTime = 0;
           for (let i = 0; i < 8; i++) {
             const angle = Math.PI + (Math.random() - 0.5) * Math.PI * 0.8;
@@ -1599,7 +1598,6 @@ export function updateFighter(fighter, inputs, platforms, stageWidth, stageHeigh
           }
         } else {
           fighter.jumps--;
-          fighter.airDodgeUses = Math.min(fighter.airDodgeUses, fighter.jumps);
           for (let i = 0; i < 14; i++) {
             const angle = Math.PI * 0.5 + (Math.random() - 0.5) * 1.6;
             fighter.doubleJumpParticles.push({
