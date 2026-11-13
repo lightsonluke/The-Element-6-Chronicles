@@ -2157,6 +2157,25 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     const fighterTop = fighter.y - 55;
     const verticalOverlap = fighter.y > sideTop && fighterTop < sideBottom;
     if (!verticalOverlap) continue;
+    // Silver's Mansion main platform has a broad underside collider, but its
+    // side walls are only the narrow left/right edge faces. Treating the entire
+    // underside width as a side wall used to shove fighters sideways when they
+    // merely touched the bottom from below or moved beneath it.
+    if (p._silverMansionMain) {
+      const edgeWidth = 12;
+      const touchesLeftFace = fighter.x + charHalfW > p.x && fighter.x - charHalfW < p.x + edgeWidth;
+      const touchesRightFace = fighter.x + charHalfW > p.x + p.w - edgeWidth && fighter.x - charHalfW < p.x + p.w;
+      if (touchesLeftFace) {
+        fighter.x = p.x - charHalfW;
+        fighter.wallSide = -1;
+        if (fighter.vx > 0) fighter.vx = 0;
+      } else if (touchesRightFace) {
+        fighter.x = p.x + p.w + charHalfW;
+        fighter.wallSide = 1;
+        if (fighter.vx < 0) fighter.vx = 0;
+      }
+      continue;
+    }
     // Check horizontal overlap
     if (fighter.x + charHalfW > p.x && fighter.x - charHalfW < p.x + p.w) {
       // Swept side collision: also catch a fast dash that crosses a wall between

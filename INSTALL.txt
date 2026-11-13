@@ -1,20 +1,27 @@
-SILVER'S MANSION COLLISION UPDATE — V4
+SILVER'S MANSION — COLLISION & PLATFORM UPDATE (V5)
 
-Replacement files:
+Replace these files in the same locations in your project:
 - PlatformFighter.jsx
 - fighter.js
 
-Install:
-1. Back up your current files.
-2. Replace PlatformFighter.jsx and fighter.js with the versions in this package.
-3. Keep the files in the same directories as their existing counterparts.
+WHAT CHANGED
+1. Tall platform moved farther right and enlarged.
+   - Artwork: x=1450, width=380, top reference y=105.
+   - Solid invisible collider: x=1536, y=105, width=208, height=520.
+   - It remains solid and is NOT drop-through.
+2. Main platform underside collision no longer treats the entire underside
+   width as a side wall. The ceiling collision catches upward contact from
+   below; side-wall resolution is limited to the narrow left/right edge faces.
+   This prevents touching the underside from teleporting/shoving the fighter
+   sideways while retaining the main platform's side collisions.
+3. The main platform's shortened underside depth and the three independent
+   drop-through bridge sections are preserved.
 
-Change in this version:
-- The main platform's underside/bottom collision depth is reduced from 302px to 101px (approximately one-third of its previous size, removing about two-thirds).
-- The top collision remains at y=570.
-- The left and right side-wall collision still extends to the platform base at y=872. Only the underside collision depth is shortened; the side walls are not shortened.
-- All collision remains invisible. The original platform artwork is unchanged.
+The collision shapes are invisible. The clean Silver's Mansion platform art
+continues to be rendered by the existing renderer assets; reference-guide PNGs
+are not used as platform artwork.
 
-The other Silver's Mansion platform positions and the previous wall-movement changes are preserved from V3.
-
-Validation note: fighter.js passed Node's syntax check. This package has not been tested in a live browser/gameplay session.
+VALIDATION
+- fighter.js passed Node syntax checking.
+- PlatformFighter.jsx was checked for balanced source structure and the stage
+  coordinates were inspected. A live browser/gameplay test has not been run.

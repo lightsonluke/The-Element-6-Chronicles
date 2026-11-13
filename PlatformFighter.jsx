@@ -77,7 +77,7 @@ const MAP_PLATFORMS = {
     // horizontal gap. It remains solid (not drop-through) and wall-slidable.
     // The stage camera follows fighters, so the off-center placement remains
     // reachable when play moves toward this side of the arena.
-    { x: 1306, y: 160, w: 159, h: 400, material: 'normal', _forceSolid: true, _silverMansionTall: true, _visualX: 1240, _visualW: 290, _visualY: 160 },
+    { x: 1536, y: 105, w: 208, h: 520, material: 'normal', _forceSolid: true, _silverMansionTall: true, _visualX: 1450, _visualW: 380, _visualY: 105 },
   ],
   controllerforest: [
     { x: 40,   y: 620, w: 1200, h: 48 },
