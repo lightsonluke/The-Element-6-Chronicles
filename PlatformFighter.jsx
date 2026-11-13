@@ -57,9 +57,11 @@ const MAP_PLATFORMS = {
   // mapped from the supplied collision-guide PNGs at the same scale as the
   // clean artwork drawn by renderer.js (the guide images are never rendered).
   silvermansion: [
-    // Main floor: solid. Its top collision edge follows the guide's long
-    // horizontal top-face line; the clean art remains 1200px wide.
-    { x: 97, y: 570, w: 1118, h: 8, _silverMansionMain: true, _visualX: 40, _visualW: 1200, _visualY: 570 },
+    // Main floor: one invisible solid rectangle. Its top edge follows the
+    // supplied guide; its 302px depth follows the clean platform art down to its actual bottom edge,
+    // adding solid side walls and a true underside/bottom collision.
+    // Keeping this as ONE collider avoids seams between top/side/bottom pieces.
+    { x: 97, y: 570, w: 1118, h: 302, _forceSolid: true, _silverMansionMain: true, _visualX: 40, _visualW: 1200, _visualY: 570 },
 
     // Ornamental bridge: three independent one-way/drop-through sections.
     // Outer decks are thicker/higher; the narrow center span has its own
@@ -68,11 +70,13 @@ const MAP_PLATFORMS = {
     { x: 499, y: 418, w: 282, h: 8, _silverMansionDropthrough: true, _silverMansionDropSection: 'center', _visualX: 250, _visualW: 780, _visualY: 410 },
     { x: 781, y: 404, w: 229, h: 8, _silverMansionDropthrough: true, _silverMansionDropSection: 'right', _visualX: 250, _visualW: 780, _visualY: 410 },
 
-    // Tall stone wall: placed immediately to the right of the bridge with a
-    // small visual gap. Its collider traces the tall guide's solid perimeter;
-    // it is deliberately NOT one-way, so fighters can wall-slide on either
-    // vertical face. All geometry stays inside the 1280px stage width.
-    { x: 1056, y: 160, w: 159, h: 400, material: 'normal', _forceSolid: true, _silverMansionTall: true, _visualX: 990, _visualW: 290, _visualY: 160 },
+    // Tall stone wall: moved far to the right so its clean artwork starts
+    // exactly beyond the main floor artwork (main visual ends at x=1240).
+    // Its collider is likewise beyond the main floor collider, with a 91px
+    // horizontal gap. It remains solid (not drop-through) and wall-slidable.
+    // The stage camera follows fighters, so the off-center placement remains
+    // reachable when play moves toward this side of the arena.
+    { x: 1306, y: 160, w: 159, h: 400, material: 'normal', _forceSolid: true, _silverMansionTall: true, _visualX: 1240, _visualW: 290, _visualY: 160 },
   ],
   controllerforest: [
     { x: 40,   y: 620, w: 1200, h: 48 },

@@ -8,9 +8,9 @@ REPLACEMENT FILES (copy to the repository root, replacing the existing files):
 WHAT CHANGED
 
 Silver's Mansion:
-- The main floor keeps its existing clean artwork and has an invisible solid top collider mapped to the supplied main-platform guide.
+- The main floor keeps its existing clean artwork and now uses one invisible solid rectangular collider: the guided top edge, full-height left/right side walls, and a bottom/underside aligned with the actual bottom edge of the platform artwork.
 - The ornamental bridge has three separate invisible one-way colliders. The left and right thick decks have their own higher collision lines; the thin center span has its own lower collision line.
-- The tall stone platform is positioned on the far right, separated from the bridge, and its invisible solid collider follows the tall guide's side/top/bottom perimeter. It is not drop-through and supports wall sliding.
+- The tall stone platform is moved farther right: its artwork begins at the main floor artwork's right edge, and its solid collider is separated from the main floor collider. It is not drop-through and supports wall sliding. The camera follows fighters as play moves toward it.
 - The supplied collision-guide images are not used as platform artwork. The existing clean Silver's Mansion artwork and renderer remain unchanged.
 
 Wall-slide departure rewards:
