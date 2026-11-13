@@ -1,30 +1,20 @@
-SILVER'S MANSION COLLISION + WALL-SLIDE FIX
+SILVER'S MANSION COLLISION UPDATE — V4
 
-REPLACEMENT FILES (copy to the repository root, replacing the existing files):
+Replacement files:
 - PlatformFighter.jsx
 - fighter.js
-- movementAbilities.js
 
-WHAT CHANGED
+Install:
+1. Back up your current files.
+2. Replace PlatformFighter.jsx and fighter.js with the versions in this package.
+3. Keep the files in the same directories as their existing counterparts.
 
-Silver's Mansion:
-- The main floor keeps its existing clean artwork and now uses one invisible solid rectangular collider: the guided top edge, full-height left/right side walls, and a bottom/underside aligned with the actual bottom edge of the platform artwork.
-- The ornamental bridge has three separate invisible one-way colliders. The left and right thick decks have their own higher collision lines; the thin center span has its own lower collision line.
-- The tall stone platform is moved farther right: its artwork begins at the main floor artwork's right edge, and its solid collider is separated from the main floor collider. It is not drop-through and supports wall sliding. The camera follows fighters as play moves toward it.
-- The supplied collision-guide images are not used as platform artwork. The existing clean Silver's Mansion artwork and renderer remain unchanged.
+Change in this version:
+- The main platform's underside/bottom collision depth is reduced from 302px to 101px (approximately one-third of its previous size, removing about two-thirds).
+- The top collision remains at y=570.
+- The left and right side-wall collision still extends to the platform base at y=872. Only the underside collision depth is shortened; the side walls are not shortened.
+- All collision remains invisible. The original platform artwork is unchanged.
 
-Wall-slide departure rewards:
-- Only actual solid-wall slide contact arms a departure reward. One-way platforms cannot trigger it.
-- Leaving the wall grants exactly two airborne jumps and one independent air dodge.
-- Spending either jump no longer reduces the air-dodge inventory.
-- The reward can be granted on three separate wall departures before landing. A fourth departure grants nothing.
-- Touching the wall again re-arms the next departure. Landing resets the chain and restores normal resources.
-- A dash away from a wall does not count as a wall-slide departure.
+The other Silver's Mansion platform positions and the previous wall-movement changes are preserved from V3.
 
-VALIDATION PERFORMED
-- JavaScript syntax checks passed for fighter.js and movementAbilities.js.
-- JSX/JavaScript parse check passed for PlatformFighter.jsx.
-- Isolated movement-logic tests passed for all three rewards, the fourth-departure cap, independent jump/dodge use, landing reset, and ignoring one-way platforms as walls.
-
-LIMITATION
-The project was not launched in a browser/game runtime in this environment. These checks verify the edited logic and syntax, but they are not a substitute for a live gameplay test with your build.
+Validation note: fighter.js passed Node's syntax check. This package has not been tested in a live browser/gameplay session.

@@ -2148,7 +2148,7 @@ function resolveCollisions(fighter, platforms, stageWidth, stageHeight) {
     // Split City uses independent top/side/bottom collision boundaries. The
     // top surface is raised, while side walls begin at the visible wall face.
     const sideTop = p._splitCityMain ? p.y : p.y;
-    const sideBottom = p._splitCityMain ? (p._collisionBottom ?? p.y + p.h) : p.y + p.h;
+    const sideBottom = (p._splitCityMain || p._silverMansionMain) ? (p._collisionBottom ?? p.y + p.h) : p.y + p.h;
     // Skip if standing on top of this platform
     if (fighter.grounded && Math.abs(fighter.y - p.y) < 3) continue;
     // Resolve side collisions whenever any part of the fighter overlaps the

@@ -58,10 +58,11 @@ const MAP_PLATFORMS = {
   // clean artwork drawn by renderer.js (the guide images are never rendered).
   silvermansion: [
     // Main floor: one invisible solid rectangle. Its top edge follows the
-    // supplied guide; its 302px depth follows the clean platform art down to its actual bottom edge,
-    // adding solid side walls and a true underside/bottom collision.
-    // Keeping this as ONE collider avoids seams between top/side/bottom pieces.
-    { x: 97, y: 570, w: 1118, h: 302, _forceSolid: true, _silverMansionMain: true, _visualX: 40, _visualW: 1200, _visualY: 570 },
+    // supplied guide. The underside collision is shortened to 101px (about one-third
+    // of its former 302px depth); the separate side-wall extent is retained through
+    // _collisionBottom so the left and right sides still reach the platform's base.
+    // This keeps top, side and underside collision invisible and gap-free.
+    { x: 97, y: 570, w: 1118, h: 101, _collisionBottom: 872, _forceSolid: true, _silverMansionMain: true, _visualX: 40, _visualW: 1200, _visualY: 570 },
 
     // Ornamental bridge: three independent one-way/drop-through sections.
     // Outer decks are thicker/higher; the narrow center span has its own
